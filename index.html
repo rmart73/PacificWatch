@@ -185,7 +185,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .api-setup-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);margin-bottom:6px}
 .api-setup-desc{font-size:11px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:10px;font-family:'Source Serif 4',serif}
 .api-input-row{display:flex;gap:8px}
-.api-key-input{flex:1;font-family:'Syne',sans-serif;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);color:#fff;padding:8px 12px;outline:none}
+/* Not type="password" on purpose: that makes browsers offer to save the
+   Anthropic key as a site login, filing a third-party secret under this
+   origin and syncing a copy to the user's password manager. Masked with
+   text-security instead (Chromium/Safari/Edge; Firefox shows the value
+   while typing, and the field is cleared on save either way). */
+.api-key-input{flex:1;font-family:'Syne',sans-serif;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);color:#fff;padding:8px 12px;outline:none;-webkit-text-security:disc;text-security:disc}
+.api-key-input:placeholder-shown{-webkit-text-security:none;text-security:none}
 .api-key-input::placeholder{color:rgba(255,255,255,.25)}
 .api-key-input:focus{border-color:var(--sky3)}
 .api-save-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;background:var(--sky2);color:#fff;padding:8px 14px;border-radius:var(--r);cursor:pointer}
@@ -418,7 +424,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
         <div class="api-setup-title">Claude API Key</div>
         <p class="api-setup-desc">Enter your Anthropic API key to enable AI digests. Stored locally on this device only. Get a key at console.anthropic.com</p>
         <div class="api-input-row">
-          <input class="api-key-input" type="password" id="api-key-main" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+          <input class="api-key-input" type="text" id="api-key-main" placeholder="sk-ant-…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
           <button class="api-save-btn" onclick="saveKey('main')">Save</button>
         </div>
       </div>
@@ -747,7 +753,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
           </div>
           <div style="padding:0 16px 14px">
             <div class="api-input-row" id="api-setup-settings" style="margin-top:8px;display:none">
-              <input class="api-key-input" type="password" id="api-key-settings" placeholder="sk-ant-…" style="background:var(--surf);border-color:var(--rule);color:var(--ink)" autocomplete="off">
+              <input class="api-key-input" type="text" id="api-key-settings" placeholder="sk-ant-…" style="background:var(--surf);border-color:var(--rule);color:var(--ink)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
               <button class="api-save-btn" onclick="saveKey('settings')">Save</button>
             </div>
             <div style="font-size:10px;color:var(--ink4);margin-top:6px">Stored locally on this device. Get a key at console.anthropic.com</div>
