@@ -27,7 +27,14 @@ source API. Keep it that way — only add a function when CORS genuinely blocks 
 | HIEMA | Static link to `dod.hawaii.gov/hiema` | Emergency management info |
 | poweroutage.us | Static link | Outage data |
 
-All of the above are called directly from the browser — no backend/proxy. Note: `protect.genasys.com` (the real evacuation-zone alert system used by HI counties) was evaluated but does NOT expose CORS-enabled JSON, so it can't be fetched client-side; only a static link-out is possible without adding a serverless proxy.
+Everything in this table is called **directly from the browser** — no backend. News headlines are the
+one exception and go through `/api/news` (see below), because the outlet RSS feeds send no CORS
+headers. Same reason `protect.genasys.com` (the evacuation-zone alert system HI counties actually
+use) is a link-out only rather than a live feed — it returns HTML with no CORS.
+
+Before adding a source, `curl -H "Origin: https://pacific-watch.vercel.app" <url> -D -` and check for
+`Access-Control-Allow-Origin`. If it's there, fetch it from the browser and add the origin to the CSP
+`connect-src`. If it isn't, it needs a serverless function.
 
 ## Island station mappings
 
@@ -53,25 +60,52 @@ const TIDE_STATIONS = {
 
 ## AI Digest feature
 
-The Generate and Summarize buttons call the Claude API directly from the browser.
-The user enters their Anthropic API key in Settings → it's stored in `localStorage`.
-Model: `claude-haiku-4-5-20251001` · Max tokens: 600
+The Generate and Summarize buttons call the Claude API directly from the browser, using a key the
+user supplies. Model: `claude-haiku-4-5-20251001` · max tokens 600 · key in
+`localStorage.getItem('pw_api_key')`.
 
-The key is stored as `localStorage.getItem('pw_api_key')`.
+- **Both digest panels are hidden entirely unless a key is set** (`updateApiLabel()` toggles
+  `#digest-panel-alerts` / `#digest-panel-news`). They default to `hidden` in the markup so an
+  unkeyed visitor never sees them flash. Settings → Claude API is the only way to add a key, since
+  hiding the panel also hides its inline Setup link.
+- **The key inputs are `type="text"` with `-webkit-text-security` masking, not `type="password"`.**
+  Don't "fix" this back: `type="password"` makes browsers offer to save an Anthropic key as a login
+  for this origin, duplicating a third-party secret into the user's password manager.
+  `autocomplete="off"` does not suppress that — browsers ignore it on password fields.
+
+**Planned direction:** eventually the digests should work for all visitors, which means a server-side
+key. That would be `api/digest.js` reading `ANTHROPIC_API_KEY` from a Vercel env var. Two constraints
+if you build it: the function must **fetch NWS itself and build the prompt server-side** (never accept
+a client-supplied prompt, or the endpoint becomes a free Claude API on the owner's key), and it should
+**cache per island+type at the edge** — the digest isn't personalized, so one generation serves every
+visitor in the window, which is what keeps the cost bounded. Add a per-IP rate limit for cache misses.
 
 ## Architecture
 
 All state is in one object `S`:
 ```js
 const S = {
-  apiKey:      '',         // Claude API key from localStorage
+  apiKey:      '',          // Claude API key from localStorage
+  theme:       'system',    // system | light | dark  (localStorage pw_theme)
   island:      'statewide', // active island tab
-  alertsCache: [],         // last fetched NWS alert features
+  newsFilter:  'hazard',    // hazard | all — Latest Headlines filter, defaults to hazard
+  alertsCache: [],          // last fetched NWS alert features
 };
 ```
 
-Views: `alerts`, `news`, `maps`, `settings` — switched via bottom nav.
-Data refreshes every 5 minutes via `setInterval(refreshAll, 5 * 60 * 1000)`.
+Views: `alerts`, `news`, `maps`, `settings`. On mobile the bottom nav switches all four. On desktop
+(≥768px) the Alerts rail is pinned as a sidebar and always visible, while `.desktop-tabs` switches
+News / Maps / Settings in the main column — `switchView()` syncs both bars. Note the desktop rule is
+scoped to `.desktop-sidebar .view`; a bare `.view{display:block!important}` would make all three main
+views render stacked at once with no way to switch, which is what it used to do.
+
+Data refreshes every 5 minutes via `setInterval(refreshAll, 5 * 60 * 1000)`; volcano webcams refresh
+on their own 2-minute timer.
+
+The Alerts rail leads with `#hazard-banner`, driven by `updateHazardBanner()` off the island-filtered
+NWS results: red for warnings, amber for advisories/watches, neutral for all-clear. HIEMA, FEMA and
+Global Hazards sit in a collapsed "Reference & Resources" section so reference material doesn't
+compete with live feeds.
 
 ## Color tokens
 
@@ -196,13 +230,27 @@ npm run dev:api    # vercel dev — needed to test headlines locally
 Then open http://localhost:3000. All NWS/NOAA/USGS/FEMA fetches work on plain `npm run dev`;
 only the news headlines need `dev:api`.
 
-## Deploy to Vercel
+## Deploy / hosting
 
-```bash
-npm run deploy     # vercel --prod
-```
+**`git push` is the deploy.** The GitHub repo (`rmart73/PacificWatch`) is connected to Vercel and
+auto-deploys `main` — verified live. `npm run deploy` (`vercel --prod`) is only needed to ship
+something without committing it.
 
-Or just `git push` if you connect the repo to Vercel for automatic deploys.
+Vercel *is* the web host — static files on their CDN plus the serverless function. Nothing else is
+required to be public. GitHub is source control only.
+
+**Free-tier caveats worth knowing before this gets real traffic** (Hobby plan, 2026):
+- **No commercial use.** Vercel defines that broadly — ads, affiliate links, payments, *and asking
+  for donations* all count, as does being paid to build it. A "support this project" button would
+  put the site in violation. Pro is $20/seat/mo.
+- **~100 GB data transfer, 1M edge requests, 1M function invocations per month**, and there is **no
+  overage billing** — deployments pause when you hit the cap.
+- That last point matters more here than for a normal side project: **an emergency app's traffic
+  spikes precisely during an emergency**. A hurricane that puts the site in front of a lot of people
+  is exactly when hitting the cap would take it offline. At ~85 KB per page load the ceiling is
+  roughly a million views/month, which is generous — but if this ever gets shared widely during a
+  storm, upgrading to Pro beforehand is cheap insurance.
+- A custom domain (e.g. `pacificwatch.org`) works on the free plan; you only pay the registrar.
 
 ## File structure
 
