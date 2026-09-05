@@ -29,10 +29,21 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 /* Outlet feeds carry national wire copy too; this flags the locally actionable ones. */
 const HAZARD_RE = /hurricane|tropical storm|tsunami|flood|flash flood|storm|evacuat|wildfire|brush fire|earthquake|erupt|volcan|lava|vog|high surf|swell|shelter|power outage|outage|emergency|warning|advisory|watch|closure|closed|landslide|rockfall/i;
 
+/* Entities are decoded BEFORE tags are stripped, and stripping repeats until
+   stable. Decoding last would turn "&lt;img onerror=...&gt;" back into live
+   markup after the strip had already run — which is exactly how encoded HTML
+   in a feed title used to survive this function. */
 function decode(s) {
+  let out = String(s == null ? '' : s).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+  out = decodeEntities(out);
+  let prev;
+  do { prev = out; out = out.replace(/<[^>]*>/g, ''); } while (out !== prev);
+  /* Any angle brackets left after stripping are literal text — neutralize them. */
+  return out.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function decodeEntities(s) {
   return s
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]+>/g, '')
     .replace(/&#8217;|&#x2019;/g, '’')
     .replace(/&#8216;|&#x2018;/g, '‘')
     .replace(/&#8220;/g, '“').replace(/&#8221;/g, '”')

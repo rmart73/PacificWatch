@@ -92,6 +92,37 @@ ice `#d6e7ec` · maroon `#571a0e` · vermilion `#cc3110` · orange `#ea8a2e`
 ```
 Badge colors are tokenized (`--b-*`) so they invert correctly in dark mode.
 
+## Security (read before touching any render code)
+
+Everything this app displays comes from an external source — NWS, USGS, FEMA, five third-party
+news RSS feeds, and the Claude API — and it all lands in `innerHTML`. An injected script would run
+on our origin and could read the user's Anthropic key out of `localStorage`, so escaping is not
+cosmetic here.
+
+**Rules:**
+1. **Every interpolated external value goes through `esc()`.** No exceptions, including fields that
+   "look safe" like `severity` or a formatted date.
+2. **Every `href` built from external data goes through `safeUrl()`**, which allows only `http(s)`
+   and returns `#` otherwise. RSS `<link>` values are attacker-controlled; `javascript:` in an href
+   is a live XSS.
+3. **Escape model output before adding markup.** `callClaude()` does `esc(text)` *then* applies the
+   `**bold**` → `<strong>` transform, so HTML the model emits stays inert. Never reverse that order.
+4. **In `api/news.js`, `decode()` decodes entities BEFORE stripping tags**, loops until stable, and
+   removes leftover angle brackets. The original version stripped first and decoded second, which
+   turned `&lt;img onerror=...&gt;` in a feed title back into live markup after the strip had run.
+5. `target="_blank"` always carries `rel="noopener noreferrer"`.
+
+**CSP** is set in `vercel.json`. `script-src` still needs `'unsafe-inline'` because the app uses
+inline `<script>` blocks and ~30 `onclick=` attributes, so CSP is not a complete XSS backstop — the
+escaping above is the real defense. What CSP *does* buy: `connect-src` is limited to the known APIs,
+so injected script cannot exfiltrate the key to an arbitrary host, plus `object-src`/`base-uri`/
+`form-action`/`frame-ancestors` are locked to `none`. If you add a data source, add its origin to
+`connect-src` or the fetch will fail silently in the browser console.
+
+To close the `'unsafe-inline'` gap properly you'd move the 30 `onclick=` handlers to
+`addEventListener` and give the two inline scripts nonces/hashes. Worth doing before this gets
+significant public traffic.
+
 ## Theming
 
 Three states, stored in `localStorage.getItem('pw_theme')` as `system` | `light` | `dark`:

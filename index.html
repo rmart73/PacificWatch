@@ -907,6 +907,24 @@ function truncate(str, n) {
   return str && str.length > n ? str.slice(0, n - 1) + '…' : (str || '');
 }
 
+/* SECURITY — everything rendered here comes from an external source (NWS, USGS,
+   FEMA, five news RSS feeds, and the Claude API). All of it lands in innerHTML,
+   so every interpolated value MUST go through esc(), and every href through
+   safeUrl(). An injected script would run on our origin and could read the
+   user's API key out of localStorage, so this is not cosmetic. */
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* Only http(s) links may reach an href — blocks javascript:, data:, vbscript:. */
+function safeUrl(u) {
+  const s = String(u == null ? '' : u).trim();
+  if (!/^https?:\/\//i.test(s)) return '#';
+  return esc(s);
+}
+
 function getBadgeClass(severity, event) {
   if (/warning|emergency/i.test(event) || severity === 'Extreme' || severity === 'Severe') return 'badge-alert';
   if (/watch|advisory/i.test(event) || severity === 'Moderate') return 'badge-warn';
@@ -1098,7 +1116,7 @@ function renderAlerts(features) {
   if (!container) return;
   const filtered = features.filter(f => alertMatchesIsland(f, S.island));
   updateHazardBanner(filtered);
-  const ptwcNote = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No tsunami warnings in effect statewide</div><div class="alert-meta">Pacific Tsunami Warning Center · <a href="https://www.tsunami.gov" target="_blank" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  const ptwcNote = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No tsunami warnings in effect statewide</div><div class="alert-meta">Pacific Tsunami Warning Center · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   if (filtered.length === 0) {
     const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
     container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${name}</div><div class="alert-meta">NWS Honolulu · Checked ${fmtTime(new Date())}</div></div>${ptwcNote}`;
@@ -1110,7 +1128,7 @@ function renderAlerts(features) {
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
     const expires = p.expires ? fmtTime(new Date(p.expires)) : 'Until further notice';
     const area = truncate(p.areaDesc || '', 90);
-    return `<div class="alert-item"><span class="badge ${badge}">${(p.severity||'ALERT').toUpperCase()}</span><div class="alert-title">${p.event}${area?' — '+area:''}</div><div class="alert-meta">${issued?'Issued '+issued+' · ':''}Expires ${expires} · NWS Honolulu</div></div>`;
+    return `<div class="alert-item"><span class="badge ${badge}">${esc((p.severity||'ALERT').toUpperCase())}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
   }).join('') + ptwcNote;
 }
 
@@ -1261,7 +1279,7 @@ async function fetchEarthquakes() {
     container.innerHTML = quakes.slice(0,8).map(f => {
       const p = f.properties;
       const mag = p.mag != null ? p.mag.toFixed(1) : '?';
-      return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${mag}</span><div class="alert-title">${truncate(p.place||'Unknown location',90)}</div><div class="alert-meta">${timeAgo(p.time)} · USGS</div></div>`;
+      return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${esc(mag)}</span><div class="alert-title">${esc(truncate(p.place||'Unknown location',90))}</div><div class="alert-meta">${esc(timeAgo(p.time))} · USGS</div></div>`;
     }).join('');
   } catch(e) {
     container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
@@ -1284,7 +1302,7 @@ async function fetchFema() {
     }
     container.innerHTML = items.map(d => {
       const date = d.declarationDate ? new Date(d.declarationDate).toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}) : '';
-      return `<div class="alert-item"><span class="badge badge-warn">${(d.incidentType||'DISASTER').toUpperCase()}</span><div class="alert-title">${d.declarationTitle||'Untitled declaration'}</div><div class="alert-meta">${date?'Declared '+date+' · ':''}FEMA · ${d.designatedArea||'Statewide'}</div></div>`;
+      return `<div class="alert-item"><span class="badge badge-warn">${esc((d.incidentType||'DISASTER').toUpperCase())}</span><div class="alert-title">${esc(d.declarationTitle||'Untitled declaration')}</div><div class="alert-meta">${date?'Declared '+esc(date)+' · ':''}FEMA · ${esc(d.designatedArea||'Statewide')}</div></div>`;
     }).join('');
   } catch(e) {
     container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">FEMA data temporarily unavailable</div><div class="alert-meta">Could not reach fema.gov</div></div>`;
@@ -1331,10 +1349,10 @@ async function fetchNews() {
       container.innerHTML = items.map(it => {
         const when = it.published ? timeAgo(Date.parse(it.published)) : '';
         const haz = it.hazard ? '<span class="news-hazard-tag">HAZARD</span>' : '';
-        return `<a class="news-item" href="${it.link}" target="_blank" rel="noopener">
-          <div class="news-source-tag">${it.source}${when ? ' · ' + when : ''}${haz}</div>
-          <div class="news-headline">${it.title}</div>
-          ${it.summary ? `<div class="news-byline">${truncate(it.summary, 130)}</div>` : ''}
+        return `<a class="news-item" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
+          <div class="news-source-tag">${esc(it.source)}${when ? ' · ' + esc(when) : ''}${haz}</div>
+          <div class="news-headline">${esc(it.title)}</div>
+          ${it.summary ? `<div class="news-byline">${esc(truncate(it.summary, 130))}</div>` : ''}
         </a>`;
       }).join('');
     }
@@ -1388,7 +1406,9 @@ async function callClaude(sys, user, outEl, tsEl, btnEl, label) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));
     const text = (data.content || []).map(b => b.text || '').join('');
-    const html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').split('\n\n').filter(p=>p.trim()).map(p=>'<p>'+p.trim()+'</p>').join('');
+    /* Escape first, then add our own markup — so any HTML the model emits (or
+       echoes back from alert text) renders as inert text, not live elements. */
+    const html = esc(text).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').split('\n\n').filter(p=>p.trim()).map(p=>'<p>'+p.trim()+'</p>').join('');
     outEl.innerHTML = html || '<p>No summary generated.</p>';
     if (tsEl) tsEl.textContent = 'Generated ' + fmtTime(new Date());
   } catch(err) {
@@ -1398,7 +1418,7 @@ async function callClaude(sys, user, outEl, tsEl, btnEl, label) {
     } else if (/rate|429/i.test(msg)) {
       outEl.innerHTML = '<div style="color:rgba(255,200,100,.8);font-size:12px">Too many requests — please wait a moment and try again.</div>';
     } else {
-      outEl.innerHTML = '<div style="color:rgba(255,100,100,.8);font-size:12px">Error: ' + msg + '</div>';
+      outEl.innerHTML = '<div style="color:rgba(255,100,100,.8);font-size:12px">Error: ' + esc(msg) + '</div>';
     }
   } finally {
     btnEl.classList.remove('loading');
