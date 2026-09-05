@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0507" id="meta-theme-color">
+<title>Pacific Watch</title>
+<script>
+/* Apply the saved theme before first paint so there's no flash of the wrong theme. */
+(function(){
+  try {
+    var t = localStorage.getItem('pw_theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+/* PALETTE
+   ink #0a0507 · azure #1b7bb5 · navy #153a63 · steel #7bb0c6
+   ice #d6e7ec · maroon #571a0e · vermilion #cc3110 · orange #ea8a2e   */
+:root {
+  --navy:#0a0507; --navy2:#153a63; --navy3:#1b4a7a;
+  --sky:#166694; --sky2:#1b7bb5; --sky3:#7bb0c6;
+  --ice:#d6e7ec; --ice2:#b4d2de;
+  --alert:#cc3110; --warn:#ea8a2e; --ok:#3d8299; --info:#1b7bb5;
+  --ink:#0a0507; --ink2:#2a3b4a; --ink3:#5d7484; --ink4:#63798a;
+  --rule:#dce7ec; --surf:#f1f5f7; --card:#ffffff;
+  --b-alert-bg:#fbe3dd; --b-alert-fg:#571a0e;
+  --b-warn-bg:#fdeedc; --b-warn-fg:#8a4a08;
+  --b-ok-bg:#ddebf1;    --b-ok-fg:#1f5a70;
+  --b-info-bg:#d6e7ec;  --b-info-fg:#12547e;
+  --b-global-bg:#e8eef1;--b-global-fg:#2a3b4a;
+  --r:8px; --r2:14px; --r3:20px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --navy:#050203; --navy2:#0f2740; --navy3:#153a63;
+    --sky:#2e92cc; --sky2:#1b7bb5; --sky3:#7bb0c6;
+    --ice:#0f2a3d; --ice2:#173b52;
+    --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc;
+    --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
+    --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
+    --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
+    --b-warn-bg:#3a2408;  --b-warn-fg:#efae68;
+    --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
+    --b-info-bg:#0f2a3d;  --b-info-fg:#6fb4dc;
+    --b-global-bg:#16232b;--b-global-fg:#93a9b5;
+  }
+}
+:root[data-theme="dark"]{
+  --navy:#050203; --navy2:#0f2740; --navy3:#153a63;
+  --sky:#2e92cc; --sky2:#1b7bb5; --sky3:#7bb0c6;
+  --ice:#0f2a3d; --ice2:#173b52;
+  --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc;
+  --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
+  --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
+  --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
+  --b-warn-bg:#3a2408;  --b-warn-fg:#efae68;
+  --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
+  --b-info-bg:#0f2a3d;  --b-info-fg:#6fb4dc;
+  --b-global-bg:#16232b;--b-global-fg:#93a9b5;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Syne',sans-serif;background:var(--surf);color:var(--ink);min-height:100dvh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--ice2);border-radius:2px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+
+/* HEADER */
+.app-header{position:sticky;top:0;z-index:100;background:var(--navy);padding-top:var(--safe-top);box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.header-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:34px;height:34px;border-radius:8px;background:var(--sky2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark svg{width:18px;height:18px}
+.brand-text-main{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1}
+.brand-text-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.live-pill{display:flex;align-items:center;gap:5px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:20px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+.clock-display{font-size:11px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;display:none}
+.theme-btn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);transition:background .18s,transform .1s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.theme-btn:hover{background:rgba(255,255,255,.16)}
+.theme-btn:active{transform:scale(.92)}
+.theme-btn svg{width:15px;height:15px;stroke:rgba(255,255,255,.85);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* SEGMENTED CONTROL */
+.seg{display:inline-flex;background:var(--surf);border:1px solid var(--rule);border-radius:9px;padding:2px;gap:2px;flex-shrink:0}
+.seg-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;padding:6px 12px;border-radius:7px;color:var(--ink3);transition:background .16s,color .16s;-webkit-tap-highlight-color:transparent}
+.seg-btn:hover{color:var(--ink2)}
+.seg-btn.active{background:var(--sky2);color:#fff}
+.seg-btn-sm{padding:4px 10px;font-size:10px;letter-spacing:.04em}
+.news-hazard-tag{display:inline-flex;align-items:center;font-size:8.5px;font-weight:700;letter-spacing:.09em;padding:1px 5px;border-radius:3px;background:var(--b-warn-bg);color:var(--b-warn-fg);margin-left:6px;vertical-align:1px}
+
+.ticker{display:flex;align-items:center;overflow:hidden;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.06);min-height:32px}
+.ticker-tag{flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--warn);padding:0 12px;border-right:1px solid rgba(255,255,255,.08);white-space:nowrap}
+.ticker-wrap{flex:1;overflow:hidden;padding:7px 0}
+.ticker-track{display:inline-block;white-space:nowrap;font-size:11px;color:rgba(255,255,255,.65);animation:ticker 70s linear infinite}
+
+.island-tabs{display:flex;gap:4px;padding:8px 14px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,.06)}
+.island-tabs::-webkit-scrollbar{display:none}
+.island-tab{flex-shrink:0;font-family:'Syne',sans-serif;font-size:11px;font-weight:600;padding:5px 13px;border-radius:20px;color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.12);transition:all .2s;-webkit-tap-highlight-color:transparent}
+.island-tab.active{background:var(--sky2);border-color:var(--sky2);color:#fff}
+.island-tab:active{transform:scale(.95)}
+
+/* STAT BAR */
+.stat-bar{display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-bottom:2px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.stat-bar::-webkit-scrollbar{display:none}
+.stat-cell{padding:10px 12px;border-right:1px solid var(--rule);min-width:88px;transition:background .15s}
+.stat-cell:last-child{border-right:none}
+.stat-cell:active{background:var(--ice)}
+.stat-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.s-dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
+.stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.stat-unit{font-size:11px;font-weight:400;color:var(--ink3)}
+.stat-note{font-size:9px;color:var(--ink4);margin-top:3px;line-height:1.3}
+/* Link-style stat cells (no live feed available — these route out to the source) */
+.stat-cell-link{display:block;text-decoration:none;color:inherit}
+.stat-val-link{font-size:13px;font-weight:700;color:var(--sky);line-height:1.15;letter-spacing:.01em;display:flex;align-items:center;gap:3px}
+.stat-val-link svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5;flex-shrink:0}
+
+/* LAYOUT */
+.desktop-layout{display:flex;flex-direction:column}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 10px;border-bottom:1px solid var(--rule);background:var(--card)}
+.sec-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:7px}
+.sec-title svg{width:13px;height:13px;flex-shrink:0}
+.sec-link{font-size:11px;font-weight:600;color:var(--sky);display:flex;align-items:center;gap:3px}
+.sec-link:active{opacity:.7}
+.card{background:var(--card);border-bottom:1px solid var(--rule)}
+
+/* ALERTS */
+.alert-item{padding:13px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:5px;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.alert-item:last-child{border-bottom:none}
+.alert-item:active{background:var(--surf)}
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:3px;width:fit-content}
+.badge-warn{background:var(--b-warn-bg);color:var(--b-warn-fg)}
+.badge-alert{background:var(--b-alert-bg);color:var(--b-alert-fg)}
+.badge-ok{background:var(--b-ok-bg);color:var(--b-ok-fg)}
+.badge-info{background:var(--b-info-bg);color:var(--b-info-fg)}
+.badge-update{background:var(--b-info-bg);color:var(--b-info-fg)}
+.badge-global{background:var(--b-global-bg);color:var(--b-global-fg)}
+.alert-title{font-size:13px;font-weight:600;color:var(--ink);line-height:1.4}
+.alert-meta{font-size:11px;color:var(--ink3)}
+
+/* NEWS */
+.news-item{padding:13px 16px;border-bottom:1px solid var(--rule);transition:background .15s;-webkit-tap-highlight-color:transparent;display:block}
+.news-item:last-child{border-bottom:none}
+.news-item:active{background:var(--ice)}
+.news-source-tag{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sky);margin-bottom:4px}
+.news-headline{font-family:'Source Serif 4',serif;font-size:14px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:4px}
+.news-byline{font-size:11px;color:var(--ink4)}
+.skeleton{background:linear-gradient(90deg,var(--surf) 25%,var(--rule) 50%,var(--surf) 75%);background-size:800px 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:12px;margin:4px 0}
+.skeleton.tall{height:40px}.skeleton.short{width:60%}
+
+/* AI DIGEST */
+.digest-panel{background:var(--navy);color:#fff;padding:16px;position:relative;overflow:hidden}
+.digest-panel::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at top right,rgba(27,123,181,.32) 0%,rgba(87,26,14,.14) 55%,transparent 78%);pointer-events:none}
+.digest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.digest-label{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sky3)}
+.digest-label svg{width:14px;height:14px}
+.digest-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:20px;background:var(--sky2);color:#fff;display:flex;align-items:center;gap:5px;transition:background .15s,transform .1s;-webkit-tap-highlight-color:transparent}
+.digest-btn:active{background:var(--sky);transform:scale(.96)}
+.digest-btn.loading{background:var(--navy3);color:rgba(255,255,255,.5);pointer-events:none}
+.spin-icon{animation:spin .8s linear infinite}
+.digest-content{font-family:'Source Serif 4',serif;font-size:14px;line-height:1.7;color:rgba(255,255,255,.82)}
+.digest-content p+p{margin-top:10px}
+.digest-content strong{color:#fff;font-weight:600}
+.digest-placeholder{font-size:13px;color:rgba(255,255,255,.35);font-family:'Source Serif 4',serif;font-style:italic;line-height:1.6}
+.digest-ts{font-size:10px;color:rgba(255,255,255,.3);margin-top:10px;letter-spacing:.04em}
+.digest-api-note{font-size:10px;color:rgba(255,255,255,.25);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between}
+.api-setup{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r2);padding:14px;margin-top:10px}
+.api-setup-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);margin-bottom:6px}
+.api-setup-desc{font-size:11px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:10px;font-family:'Source Serif 4',serif}
+.api-input-row{display:flex;gap:8px}
+.api-key-input{flex:1;font-family:'Syne',sans-serif;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);color:#fff;padding:8px 12px;outline:none}
+.api-key-input::placeholder{color:rgba(255,255,255,.25)}
+.api-key-input:focus{border-color:var(--sky3)}
+.api-save-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;background:var(--sky2);color:#fff;padding:8px 14px;border-radius:var(--r);cursor:pointer}
+.api-save-btn:active{background:var(--sky)}
+
+/* MAPS */
+.map-section{padding:12px;background:var(--surf)}
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.map-tile{background:var(--card);border:1px solid var(--rule);border-radius:var(--r2);overflow:hidden;transition:transform .15s;-webkit-tap-highlight-color:transparent;display:block}
+.map-tile:active{transform:scale(.97)}
+.map-tile-full{grid-column:1/-1}
+.map-tile-head{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between}
+.map-tile-name{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.map-tile-arrow{font-size:12px;color:var(--sky);font-weight:700}
+.map-tile-body{padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.map-tile-icon{width:32px;height:32px;background:var(--ice);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.map-tile-icon svg{width:18px;height:18px;stroke:var(--sky);fill:none;stroke-width:1.5}
+.map-tile-desc{font-size:11px;color:var(--ink3);text-align:center;line-height:1.5}
+/* Ventusky renders a dark basemap in both themes, so this tile is deliberately dark
+   in light mode too — a media panel, rather than a dark rectangle in a light card. */
+.map-tile-dark{background:var(--navy);border-color:var(--navy2)}
+.map-tile-dark .map-tile-head{border-bottom-color:rgba(255,255,255,.13)}
+.map-tile-dark .map-tile-name{color:rgba(255,255,255,.74)}
+.map-tile-dark .map-tile-arrow{color:var(--sky3)}
+.radar-frame{display:block;width:100%;height:330px;border:0;background:var(--navy)}
+@media(min-width:768px){.radar-frame{height:440px}}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--card);border-top:1px solid var(--rule);display:flex;padding-bottom:var(--safe-bot);box-shadow:0 -4px 20px rgba(0,0,0,.08)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;color:var(--ink4);font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;transition:color .15s;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.nav-item.active{color:var(--sky)}
+.nav-item:active{opacity:.7}
+.nav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+.content-spacer{height:72px}
+
+.section-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);padding:14px 16px 8px;background:var(--surf);border-bottom:1px solid var(--rule)}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block;animation:fadeUp .3s ease both}
+
+/* HAZARD STATUS BANNER */
+.hazard-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--card);transition:background .2s}
+.hazard-banner.is-alert{background:var(--alert);border-bottom-color:var(--alert)}
+.hazard-banner.is-warn{background:var(--warn);border-bottom-color:var(--warn)}
+.hazard-banner.is-ok{background:var(--card)}
+.hazard-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.18)}
+.hazard-banner.is-ok .hazard-icon{background:var(--b-ok-bg)}
+.hazard-icon svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.2}
+.hazard-banner.is-ok .hazard-icon svg{stroke:var(--ok)}
+.hazard-txt{min-width:0}
+.hazard-headline{font-size:13px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:-.01em}
+.hazard-sub{font-size:10.5px;color:rgba(255,255,255,.75);margin-top:2px;letter-spacing:.02em}
+.hazard-banner.is-ok .hazard-headline{color:var(--ink)}
+.hazard-banner.is-ok .hazard-sub{color:var(--ink3)}
+/* White on the amber advisory state is only 2.6:1 — use ink instead (7.9:1). */
+.hazard-banner.is-warn .hazard-headline{color:#0a0507}
+.hazard-banner.is-warn .hazard-sub{color:rgba(10,5,7,.74)}
+.hazard-banner.is-warn .hazard-icon{background:rgba(10,5,7,.14)}
+.hazard-banner.is-warn .hazard-icon svg{stroke:#0a0507}
+.hazard-banner.is-warn .hazard-pulse{background:#0a0507}
+.hazard-pulse{margin-left:auto;flex-shrink:0;width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+.hazard-banner.is-ok .hazard-pulse{display:none}
+
+/* COLLAPSIBLE */
+.collapse-head{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--card);border-bottom:1px solid var(--rule);cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.collapse-head:active{background:var(--surf)}
+.collapse-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
+.collapse-label svg{width:13px;height:13px;flex-shrink:0}
+.collapse-chev{width:14px;height:14px;stroke:var(--ink4);fill:none;stroke-width:2.5;transition:transform .22s ease}
+.collapse-chev.open{transform:rotate(180deg)}
+.collapse-body{display:none}
+.collapse-body.open{display:block;animation:fadeUp .25s ease both}
+.collapse-count{font-size:9px;font-weight:700;color:var(--ink4);background:var(--surf);border:1px solid var(--rule);border-radius:10px;padding:1px 7px;letter-spacing:.06em}
+
+/* NEWS TILE GRID */
+.news-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;background:var(--surf)}
+.news-tile{background:var(--card);border:1px solid var(--rule);border-radius:var(--r2);padding:12px 13px;display:flex;flex-direction:column;gap:3px;transition:transform .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+.news-tile:active{transform:scale(.97);border-color:var(--ice2)}
+.news-tile-name{font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:-.01em;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.news-tile-name span{color:var(--sky);font-size:11px;flex-shrink:0}
+.news-tile-desc{font-size:10.5px;color:var(--ink3);line-height:1.45}
+
+/* DESKTOP TAB BAR */
+.desktop-tabs{display:none;gap:4px;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--rule);position:sticky;top:160px;z-index:50}
+.dtab{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 16px;border-radius:20px;color:var(--ink3);border:1px solid var(--rule);transition:all .18s}
+.dtab:hover{color:var(--ink2);border-color:var(--ice2)}
+.dtab.active{background:var(--sky2);border-color:var(--sky2);color:#fff}
+
+/* SETTINGS */
+.settings-section{padding:16px}
+.settings-card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r2);overflow:hidden;margin-bottom:16px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--rule)}
+.settings-row:last-child{border-bottom:none}
+.settings-row-label{font-size:13px;font-weight:500;color:var(--ink)}
+.settings-row-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.settings-val{font-size:12px;color:var(--sky);font-weight:600}
+.toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
+.toggle.on{background:var(--sky2)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+
+/* DESKTOP */
+@media(min-width:768px){
+  .bottom-nav{display:none}
+  .content-spacer{display:none}
+  .clock-display{display:block}
+  .desktop-layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 160px)}
+  .desktop-sidebar{border-right:1px solid var(--rule);background:var(--card);overflow-y:auto;max-height:calc(100vh - 160px);position:sticky;top:160px}
+  /* Alerts rail is always visible on desktop; the main column stays tabbed. */
+  .desktop-sidebar .view{display:block!important;animation:none}
+  .desktop-tabs{display:flex}
+  .map-grid{grid-template-columns:repeat(3,1fr)}
+  .news-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(min-width:1024px){
+  .map-grid{grid-template-columns:repeat(4,1fr)}
+  .desktop-layout{grid-template-columns:360px 1fr}
+}
+
+/* TOAST */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surf);font-size:12px;font-weight:600;padding:9px 18px;border-radius:20px;z-index:9999;font-family:'Syne',sans-serif;letter-spacing:.04em;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:opacity .3s;pointer-events:none;opacity:0}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-bar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+          <path d="M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3"/>
+          <path d="M2 7c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+          <path d="M2 17c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-text-main">Pacific Watch</div>
+        <div class="brand-text-sub">Hawaiʻi Situational Awareness</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-pill"><span class="live-dot"></span>LIVE</div>
+      <div class="clock-display" id="clock">Loading…</div>
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode"></button>
+    </div>
+  </div>
+  <div class="ticker">
+    <div class="ticker-tag">ALERTS</div>
+    <div class="ticker-wrap">
+      <span class="ticker-track" id="ticker-track">Loading live alerts…</span>
+    </div>
+  </div>
+  <div class="island-tabs">
+    <button class="island-tab active" data-island="statewide">Statewide</button>
+    <button class="island-tab" data-island="oahu">Oahu</button>
+    <button class="island-tab" data-island="maui">Maui</button>
+    <button class="island-tab" data-island="hawaii">Hawaii Is.</button>
+    <button class="island-tab" data-island="kauai">Kauai</button>
+    <button class="island-tab" data-island="molokai">Molokai</button>
+  </div>
+</header>
+
+<div class="stat-bar">
+  <div class="stat-cell">
+    <div class="stat-lbl"><span class="s-dot ok" id="dot-rain"></span>Rain</div>
+    <div class="stat-val" id="stat-rain">—<span class="stat-unit">"</span></div>
+    <div class="stat-note" id="stat-rain-note">1-hr · loading…</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-lbl"><span class="s-dot ok" id="dot-wind"></span>Wind</div>
+    <div class="stat-val" id="stat-wind">—<span class="stat-unit"> mph</span></div>
+    <div class="stat-note" id="stat-wind-note">Sustained · loading…</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-lbl"><span class="s-dot ok"></span>Tide</div>
+    <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
+    <div class="stat-note" id="stat-tide-note">loading…</div>
+  </div>
+  <a class="stat-cell stat-cell-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">
+    <div class="stat-lbl"><span class="s-dot warn"></span>Shelter</div>
+    <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
+    <div class="stat-note">HIEMA shelter status</div>
+  </a>
+  <a class="stat-cell stat-cell-link" href="https://poweroutage.us/area/state/hawaii" target="_blank" rel="noopener">
+    <div class="stat-lbl"><span class="s-dot ok" id="dot-outage"></span>Outages</div>
+    <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
+    <div class="stat-note">poweroutage.us live map</div>
+  </a>
+</div>
+
+<main>
+<div class="desktop-layout">
+
+  <div class="desktop-sidebar">
+  <div id="view-alerts" class="view active">
+
+    <div class="hazard-banner is-ok" id="hazard-banner">
+      <div class="hazard-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div class="hazard-txt">
+        <div class="hazard-headline" id="hazard-headline">Checking conditions…</div>
+        <div class="hazard-sub" id="hazard-sub">Loading NWS alerts for Hawaii</div>
+      </div>
+      <div class="hazard-pulse"></div>
+    </div>
+
+    <div class="digest-panel">
+      <div class="digest-header">
+        <div class="digest-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          AI Situation Digest
+        </div>
+        <button class="digest-btn" id="digest-btn" onclick="generateDigest()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-7.83"/></svg>
+          Generate
+        </button>
+      </div>
+      <div class="digest-content" id="digest-output">
+        <div class="digest-placeholder">Tap Generate for an AI summary of current conditions.</div>
+      </div>
+      <div class="digest-ts" id="digest-ts"></div>
+      <div class="digest-api-note">
+        <span id="api-status-label">API key required</span>
+        <button onclick="toggleApiSetup('main')" style="font-size:10px;color:rgba(255,255,255,.4);text-decoration:underline;cursor:pointer;background:none;border:none;font-family:inherit">Setup</button>
+      </div>
+      <div class="api-setup" id="api-setup-main" style="display:none">
+        <div class="api-setup-title">Claude API Key</div>
+        <p class="api-setup-desc">Enter your Anthropic API key to enable AI digests. Stored locally on this device only. Get a key at console.anthropic.com</p>
+        <div class="api-input-row">
+          <input class="api-key-input" type="password" id="api-key-main" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+          <button class="api-save-btn" onclick="saveKey('main')">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-head">
+        <div class="sec-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          NWS Live Alerts
+        </div>
+        <a class="sec-link" href="https://www.weather.gov/hfo" target="_blank" rel="noopener">NWS HFO &#8599;</a>
+      </div>
+      <div id="nws-alerts-container">
+        <div class="alert-item">
+          <div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>
+          <div class="skeleton tall" style="margin-top:6px"></div>
+          <div class="skeleton short" style="margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-head">
+        <div class="sec-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 22h20L12 2z"/><line x1="12" y1="10" x2="12" y2="15"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          Recent Earthquakes
+        </div>
+        <a class="sec-link" href="https://earthquake.usgs.gov/earthquakes/map/" target="_blank" rel="noopener">USGS &#8599;</a>
+      </div>
+      <div id="earthquakes-container">
+        <div class="alert-item">
+          <div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>
+          <div class="skeleton tall" style="margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="collapse-head" onclick="toggleCollapse('ref-resources',this)" aria-expanded="false" aria-controls="ref-resources">
+        <div class="collapse-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+          Reference &amp; Resources
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span class="collapse-count">HIEMA · FEMA · GLOBAL</span>
+          <svg class="collapse-chev" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </button>
+      <div class="collapse-body" id="ref-resources">
+
+        <div class="sec-head" style="border-top:1px solid var(--rule)">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--sky)" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            HIEMA
+          </div>
+          <a class="sec-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">HIEMA &#8599;</a>
+        </div>
+        <div class="alert-item">
+          <span class="badge badge-info">LIVE</span>
+          <div class="alert-title">Visit HIEMA for current emergency information</div>
+          <div class="alert-meta"><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" style="color:var(--sky)">dod.hawaii.gov/hiema ↗</a> · Hawaii Emergency Management Agency</div>
+        </div>
+
+        <div class="sec-head">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1"/></svg>
+            FEMA Declarations
+          </div>
+          <a class="sec-link" href="https://www.fema.gov/disaster/declarations" target="_blank" rel="noopener">FEMA &#8599;</a>
+        </div>
+        <div id="fema-container">
+          <div class="alert-item">
+            <div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>
+            <div class="skeleton tall" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            Global Hazards
+          </div>
+        </div>
+        <div class="alert-item">
+          <span class="badge badge-global">GDACS</span>
+          <div class="alert-title">Global Disaster Alert &amp; Coordination System</div>
+          <div class="alert-meta"><a href="https://gdacs.org" target="_blank" rel="noopener" style="color:var(--sky)">gdacs.org</a> · Real-time worldwide hazards</div>
+        </div>
+        <div class="alert-item">
+          <span class="badge badge-global">RSOE EDIS</span>
+          <div class="alert-title">Emergency &amp; Disaster Information Service</div>
+          <div class="alert-meta"><a href="https://rsoe-edis.org/eventMap" target="_blank" rel="noopener" style="color:var(--sky)">rsoe-edis.org/eventMap</a> · Live event map</div>
+        </div>
+        <div class="alert-item">
+          <span class="badge badge-global">PDC</span>
+          <div class="alert-title">Pacific Disaster Center — DisasterAWARE</div>
+          <div class="alert-meta"><a href="https://www.pdc.org" target="_blank" rel="noopener" style="color:var(--sky)">pdc.org</a> · Pacific-basin hazard intelligence</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="padding:10px 16px;font-size:9px;color:var(--ink4);text-align:right;letter-spacing:.04em" id="alerts-last-updated"></div>
+  </div>
+  </div>
+
+  <div class="desktop-main">
+
+    <div class="desktop-tabs">
+      <button class="dtab active" data-view="news" onclick="switchView('news',this)">News</button>
+      <button class="dtab" data-view="maps" onclick="switchView('maps',this)">Maps &amp; Live</button>
+      <button class="dtab" data-view="settings" onclick="switchView('settings',this)">Settings</button>
+    </div>
+
+    <div id="view-news" class="view">
+      <div class="digest-panel" style="border-bottom:1px solid rgba(255,255,255,.08)">
+        <div class="digest-header">
+          <div class="digest-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            AI News Digest
+          </div>
+          <button class="digest-btn" id="news-digest-btn" onclick="generateNewsDigest()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-7.83"/></svg>
+            Summarize
+          </button>
+        </div>
+        <div class="digest-content" id="news-digest-output">
+          <div class="digest-placeholder">Tap Summarize for an AI-written briefing based on current live alerts and conditions.</div>
+        </div>
+        <div class="digest-ts" id="news-digest-ts"></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--sky)" stroke-width="2" stroke-linecap="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+            Latest Headlines
+          </div>
+          <div class="seg" id="news-filter">
+            <button class="seg-btn seg-btn-sm active" data-news-filter="all" onclick="setNewsFilter('all')">All</button>
+            <button class="seg-btn seg-btn-sm" data-news-filter="hazard" onclick="setNewsFilter('hazard')">Hazard</button>
+          </div>
+        </div>
+        <div id="news-headlines">
+          <div class="news-item">
+            <div class="skeleton" style="width:90px;height:10px;border-radius:3px"></div>
+            <div class="skeleton tall" style="margin-top:6px"></div>
+            <div class="skeleton short" style="margin-top:4px"></div>
+          </div>
+        </div>
+        <div style="padding:9px 16px;font-size:9px;color:var(--ink4);text-align:right;letter-spacing:.04em" id="news-updated"></div>
+      </div>
+
+      <div class="section-label">Local News Sources</div>
+      <div class="news-grid">
+        <a class="news-tile" href="https://www.hawaiinewsnow.com" target="_blank" rel="noopener">
+          <div class="news-tile-name">Hawaii News Now<span>&#8599;</span></div>
+          <div class="news-tile-desc">KGMB/KHNL · breaking news &amp; weather</div>
+        </a>
+        <a class="news-tile" href="https://www.civilbeat.org" target="_blank" rel="noopener">
+          <div class="news-tile-name">Civil Beat<span>&#8599;</span></div>
+          <div class="news-tile-desc">Investigative reporting · no paywall</div>
+        </a>
+        <a class="news-tile" href="https://www.staradvertiser.com" target="_blank" rel="noopener">
+          <div class="news-tile-name">Star-Advertiser<span>&#8599;</span></div>
+          <div class="news-tile-desc">Hawaii's largest daily newspaper</div>
+        </a>
+        <a class="news-tile" href="https://www.kitv.com" target="_blank" rel="noopener">
+          <div class="news-tile-name">KITV 4<span>&#8599;</span></div>
+          <div class="news-tile-desc">Island News · Honolulu coverage</div>
+        </a>
+        <a class="news-tile" href="https://www.khon2.com" target="_blank" rel="noopener">
+          <div class="news-tile-name">KHON2<span>&#8599;</span></div>
+          <div class="news-tile-desc">News, sports &amp; weather</div>
+        </a>
+        <a class="news-tile" href="https://www.weather.gov/hfo" target="_blank" rel="noopener">
+          <div class="news-tile-name">NWS Honolulu<span>&#8599;</span></div>
+          <div class="news-tile-desc">Official forecasts &amp; discussions</div>
+        </a>
+      </div>
+      <div class="content-spacer"></div>
+    </div>
+
+    <div id="view-maps" class="view">
+      <div class="section-label">Live Conditions</div>
+      <div class="map-section">
+        <div class="map-tile map-tile-full map-tile-dark" style="margin-bottom:10px">
+          <div class="map-tile-head">
+            <div class="map-tile-name">Live Radar — Ventusky</div>
+            <a href="https://www.ventusky.com/?p=20.7;-157.5;7&amp;l=radar" target="_blank" rel="noopener" class="map-tile-arrow">&#8599;</a>
+          </div>
+          <iframe class="radar-frame" src="https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=radar&amp;w=soft" title="Ventusky live radar — Hawaii" loading="lazy" allowfullscreen></iframe>
+        </div>
+        <div class="map-grid" id="volcano-cams-grid">
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · F1</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="F1cam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/F1cam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO F1 webcam">
+          </a>
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · KW</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="KWcam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/KWcam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO KW webcam">
+          </a>
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/mauna-loa/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · MK</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="MKcam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/MKcam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO MK webcam">
+          </a>
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · V1</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="V1cam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/V1cam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO V1 webcam">
+          </a>
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · V2</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="V2cam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/V2cam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO V2 webcam">
+          </a>
+          <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">HVO Cam · V3</div><div class="map-tile-arrow">&#8599;</div></div>
+            <img class="volcano-cam-img" data-cam="V3cam" src="https://volcanoes.usgs.gov/observatories/hvo/cams/V3cam/images/M.jpg" style="width:100%;display:block;aspect-ratio:4/3;object-fit:cover" alt="HVO V3 webcam">
+          </a>
+        </div>
+        <div style="font-size:9px;color:var(--ink4);text-align:right;padding:8px 4px 0;letter-spacing:.04em">USGS HVO webcams · images refresh every 2 min</div>
+      </div>
+
+      <div class="section-label">Reference Maps &amp; Portals</div>
+      <div class="map-section">
+        <div class="map-grid">
+          <a class="map-tile map-tile-full" href="https://hawaiiema.maps.arcgis.com" target="_blank" rel="noopener">
+            <div class="map-tile-head">
+              <div class="map-tile-name">Hawaii EMA — ArcGIS Hub</div>
+              <div class="map-tile-arrow">&#8599;</div>
+            </div>
+            <div class="map-tile-body" style="flex-direction:row;justify-content:flex-start;gap:14px;padding:14px">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"/><path d="M9 3v15M15 6v15"/></svg></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:3px">Statewide incident &amp; hazard maps</div>
+                <div style="font-size:11px;color:var(--ink3)">Hawaii Emergency Management Agency · ArcGIS Hub</div>
+              </div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://rsoe-edis.org/eventMap" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">RSOE EDIS</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20"/></svg></div>
+              <div class="map-tile-desc">Global disaster event map</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://gdacs.org" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">GDACS</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+              <div class="map-tile-desc">Global disaster alerts</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://fhat.hawaii.gov" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">FHAT Hawaii</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+              <div class="map-tile-desc">State flood hazard assessment &amp; planning</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://www.pdc.org" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">Pacific Disaster Ctr</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+              <div class="map-tile-desc">DisasterAWARE Pacific hazard data</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://www.weather.gov/hfo" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">NWS Honolulu</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 116.71-9h1.79a4.5 4.5 0 110 9z"/></svg></div>
+              <div class="map-tile-desc">Weather, radar, marine &amp; surf</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://tidesandcurrents.noaa.gov/stationhome.html?id=1612340" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">NOAA Tides</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3"/></svg></div>
+              <div class="map-tile-desc">Tides &amp; currents · Honolulu Harbor</div>
+            </div>
+          </a>
+          <a class="map-tile" href="https://poweroutage.us/area/state/hawaii" target="_blank" rel="noopener">
+            <div class="map-tile-head"><div class="map-tile-name">Power Outages</div><div class="map-tile-arrow">&#8599;</div></div>
+            <div class="map-tile-body">
+              <div class="map-tile-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+              <div class="map-tile-desc">Live outage tracker statewide</div>
+            </div>
+          </a>
+        </div>
+      </div>
+      <div class="content-spacer"></div>
+    </div>
+
+    <div id="view-settings" class="view">
+      <div class="settings-section">
+        <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Appearance</div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Theme</div>
+              <div class="settings-row-sub" id="theme-status">Following system</div>
+            </div>
+            <div class="seg" id="theme-seg">
+              <button class="seg-btn" data-theme-mode="system" onclick="applyTheme('system')">Auto</button>
+              <button class="seg-btn" data-theme-mode="light" onclick="applyTheme('light')">Light</button>
+              <button class="seg-btn" data-theme-mode="dark" onclick="applyTheme('dark')">Dark</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Claude API</div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">API Key</div>
+              <div class="settings-row-sub" id="key-status-display">Not configured</div>
+            </div>
+            <button onclick="toggleApiSetup('settings')" style="font-size:11px;font-weight:600;color:var(--sky);background:var(--ice);border:1px solid var(--ice2);border-radius:6px;padding:6px 12px;font-family:inherit;cursor:pointer">Edit</button>
+          </div>
+          <div style="padding:0 16px 14px">
+            <div class="api-input-row" id="api-setup-settings" style="margin-top:8px;display:none">
+              <input class="api-key-input" type="password" id="api-key-settings" placeholder="sk-ant-…" style="background:var(--surf);border-color:var(--rule);color:var(--ink)" autocomplete="off">
+              <button class="api-save-btn" onclick="saveKey('settings')">Save</button>
+            </div>
+            <div style="font-size:10px;color:var(--ink4);margin-top:6px">Stored locally on this device. Get a key at console.anthropic.com</div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">AI Model</div>
+              <div class="settings-row-sub">claude-haiku-4-5 (fastest, lowest cost)</div>
+            </div>
+            <div class="settings-val">Haiku 4.5</div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Live Data</div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">NWS Alerts</div><div class="settings-row-sub">api.weather.gov · No key required</div></div>
+            <div class="settings-val">Live</div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Weather Obs.</div><div class="settings-row-sub">NWS station observations</div></div>
+            <div class="settings-val">Live</div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Tides</div><div class="settings-row-sub">NOAA CO-OPS · per island</div></div>
+            <div class="settings-val">Live</div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Auto-refresh</div><div class="settings-row-sub">Every 5 minutes</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">News Sources</div>
+          </div>
+          <div class="settings-row"><div><div class="settings-row-label">Hawaii News Now</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">Civil Beat</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">Star-Advertiser</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">KITV / KHON2</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">NWS / NOAA</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">HIEMA</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div><div class="settings-row-label">GDACS / RSOE / PDC</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+
+        <div style="font-size:11px;color:var(--ink4);text-align:center;padding:8px;line-height:1.7">
+          Pacific Watch · Hawaii Situational Awareness<br>
+          Data: NWS api.weather.gov · NOAA CO-OPS · poweroutage.us
+        </div>
+      </div>
+      <div class="content-spacer"></div>
+    </div>
+
+  </div>
+</div>
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-item" data-view="alerts" onclick="switchView('alerts',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    Alerts
+  </button>
+  <button class="nav-item active" data-view="news" onclick="switchView('news',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg></div>
+    News
+  </button>
+  <button class="nav-item" data-view="maps" onclick="switchView('maps',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"/><path d="M9 3v15M15 6v15"/></svg></div>
+    Maps
+  </button>
+  <button class="nav-item" data-view="settings" onclick="switchView('settings',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+    Settings
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+const S = {
+  apiKey: localStorage.getItem('pw_api_key') || '',
+  theme: localStorage.getItem('pw_theme') || 'system',
+  island: 'statewide',
+  newsFilter: 'all',
+  alertsCache: []
+};
+
+/* THEME — 'system' follows the OS, 'light'/'dark' force it via [data-theme] on <html>.
+   The matching CSS token blocks already exist for all three states. */
+const THEME_ICONS = {
+  toDark:  '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+  toLight: '<circle cx="12" cy="12" r="4"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>'
+};
+const darkMQ = window.matchMedia('(prefers-color-scheme:dark)');
+
+function effectiveTheme() {
+  return S.theme === 'system' ? (darkMQ.matches ? 'dark' : 'light') : S.theme;
+}
+
+function applyTheme(mode) {
+  S.theme = mode;
+  const root = document.documentElement;
+  if (mode === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+  try { localStorage.setItem('pw_theme', mode); } catch(e) {}
+  updateThemeUI();
+}
+
+function toggleTheme() {
+  applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark');
+}
+
+function updateThemeUI() {
+  const eff = effectiveTheme();
+  const btn = document.getElementById('theme-btn');
+  if (btn) {
+    /* icon shows what you'd switch TO */
+    btn.innerHTML = `<svg viewBox="0 0 24 24">${eff === 'dark' ? THEME_ICONS.toLight : THEME_ICONS.toDark}</svg>`;
+    const target = eff === 'dark' ? 'light' : 'dark';
+    btn.title = 'Switch to ' + target + ' mode';
+    btn.setAttribute('aria-label', 'Switch to ' + target + ' mode');
+  }
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(el => {
+    el.classList.toggle('active', el.dataset.themeMode === S.theme);
+  });
+  const status = document.getElementById('theme-status');
+  if (status) status.textContent = S.theme === 'system' ? `Following system (${eff})` : `Always ${S.theme}`;
+  const meta = document.getElementById('meta-theme-color');
+  if (meta) meta.setAttribute('content', eff === 'dark' ? '#050203' : '#0a0507');
+}
+
+applyTheme(S.theme);
+darkMQ.addEventListener('change', () => { if (S.theme === 'system') updateThemeUI(); });
+
+function updateClock() {
+  const el = document.getElementById('clock');
+  if (!el) return;
+  el.textContent = new Date().toLocaleString('en-US',{
+    timeZone:'Pacific/Honolulu',month:'short',day:'numeric',year:'numeric',
+    hour:'2-digit',minute:'2-digit',hour12:true
+  }).replace(',','') + ' HST';
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+function fmtTime(d) {
+  return d.toLocaleString('en-US',{
+    timeZone:'Pacific/Honolulu',month:'short',day:'numeric',
+    hour:'2-digit',minute:'2-digit',hour12:true
+  }) + ' HST';
+}
+
+function truncate(str, n) {
+  return str && str.length > n ? str.slice(0, n - 1) + '…' : (str || '');
+}
+
+function getBadgeClass(severity, event) {
+  if (/warning|emergency/i.test(event) || severity === 'Extreme' || severity === 'Severe') return 'badge-alert';
+  if (/watch|advisory/i.test(event) || severity === 'Moderate') return 'badge-warn';
+  return 'badge-info';
+}
+
+function alertMatchesIsland(alert, island) {
+  if (island === 'statewide') return true;
+  const area = (alert.properties.areaDesc || '').toLowerCase();
+  const zones = (alert.properties.geocode?.UGC || []).join(',').toUpperCase();
+  const keywords = {
+    oahu:    ['oahu','honolulu','ewa','north shore','waianae','koolau','windward'],
+    maui:    ['maui','kahului','lahaina','hana','lanai','wailuku','kihei'],
+    hawaii:  ['hawaii','hilo','kona','kohala','puna','kau','summit','waimea','hamakua'],
+    kauai:   ['kauai','lihue','kapaa','waimea','princeville'],
+    molokai: ['molokai','kalaupapa']
+  };
+  const kw = keywords[island] || [];
+  const textMatch = kw.some(k => area.includes(k));
+  const zoneMap = {
+    oahu:    /HIZ00[1-9]|HIZ01[0]/,
+    maui:    /HIZ01[1-9]|HIZ02[0-3]/,
+    hawaii:  /HIZ02[4-9]|HIZ0[3-4][0-9]|HIZ05[0-2]/,
+    kauai:   /HIZ05[3-6]/,
+    molokai: /HIZ02[01]/
+  };
+  const zoneMatch = zoneMap[island] ? zoneMap[island].test(zones) : false;
+  return textMatch || zoneMatch;
+}
+
+function updateApiLabel() {
+  const lbl = document.getElementById('api-status-label');
+  const kd  = document.getElementById('key-status-display');
+  const hasKey = !!S.apiKey;
+  if (lbl) lbl.textContent = hasKey ? 'API key saved' : 'API key required';
+  if (kd)  kd.textContent  = hasKey ? 'sk-ant-…' + S.apiKey.slice(-4) : 'Not configured';
+}
+updateApiLabel();
+
+function toggleApiSetup(context) {
+  const id = context === 'settings' ? 'api-setup-settings' : 'api-setup-main';
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function saveKey(context) {
+  const inputId = context === 'settings' ? 'api-key-settings' : 'api-key-main';
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const key = input.value.trim();
+  if (!key) return;
+  S.apiKey = key;
+  localStorage.setItem('pw_api_key', key);
+  input.value = '';
+  document.getElementById(context === 'settings' ? 'api-setup-settings' : 'api-setup-main').style.display = 'none';
+  updateApiLabel();
+  showToast('API key saved');
+}
+
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  const t = document.getElementById('view-' + v);
+  if (t) { t.classList.add('active'); window.scrollTo(0,0); }
+  /* keep the mobile bottom nav and the desktop tab bar in sync, whichever was clicked */
+  document.querySelectorAll('.nav-item, .dtab').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === v);
+  });
+}
+
+function toggleCollapse(id, btn) {
+  const body = document.getElementById(id);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (btn) {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const chev = btn.querySelector('.collapse-chev');
+    if (chev) chev.classList.toggle('open', open);
+  }
+}
+
+document.querySelectorAll('.island-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.island-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    S.island = tab.dataset.island;
+    renderAlerts(S.alertsCache);
+    fetchWeather();
+    fetchTides();
+    fetchEarthquakes();
+  });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+}
+
+async function fetchAlerts() {
+  const container = document.getElementById('nws-alerts-container');
+  container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
+  try {
+    const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
+      headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
+    });
+    if (!res.ok) throw new Error('NWS returned ' + res.status);
+    const data = await res.json();
+    S.alertsCache = data.features || [];
+    renderAlerts(S.alertsCache);
+    updateTicker(S.alertsCache);
+    const lu = document.getElementById('alerts-last-updated');
+    if (lu) lu.textContent = 'NWS alerts updated ' + fmtTime(new Date());
+  } catch(e) {
+    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">NWS alerts temporarily unavailable</div><div class="alert-meta">Could not reach api.weather.gov. <a href="https://www.weather.gov/hfo" target="_blank" rel="noopener" style="color:var(--sky)">View NWS HFO directly ↗</a> · <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" style="color:var(--sky)">HIEMA ↗</a></div></div>`;
+    const banner = document.getElementById('hazard-banner');
+    const head = document.getElementById('hazard-headline');
+    const sub = document.getElementById('hazard-sub');
+    if (banner && head && sub) {
+      banner.className = 'hazard-banner is-ok';
+      head.textContent = 'Alert status unavailable';
+      sub.textContent = 'Could not reach api.weather.gov — check NWS HFO directly';
+    }
+  }
+}
+
+const HAZARD_ICONS = {
+  ok:    '<path d="M20 6L9 17l-5-5"/>',
+  warn:  '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  alert: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+};
+
+function updateHazardBanner(filtered) {
+  const banner = document.getElementById('hazard-banner');
+  const head = document.getElementById('hazard-headline');
+  const sub = document.getElementById('hazard-sub');
+  if (!banner || !head || !sub) return;
+  const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
+  const severe = filtered.filter(f => {
+    const p = f.properties;
+    return p.severity === 'Extreme' || p.severity === 'Severe' || /warning|emergency/i.test(p.event || '');
+  });
+  let level, headline, subtext;
+  if (severe.length) {
+    level = 'alert';
+    headline = `${severe.length} active warning${severe.length === 1 ? '' : 's'} — ${name}`;
+    subtext = truncate(severe.map(f => f.properties.event).join(' · '), 68);
+  } else if (filtered.length) {
+    level = 'warn';
+    headline = `${filtered.length} advisory${filtered.length === 1 ? '' : ' / watches'} — ${name}`;
+    subtext = truncate(filtered.map(f => f.properties.event).join(' · '), 68);
+  } else {
+    level = 'ok';
+    headline = `All clear — ${name}`;
+    subtext = 'No active NWS alerts · updated ' + fmtTime(new Date());
+  }
+  banner.className = 'hazard-banner is-' + level;
+  banner.querySelector('.hazard-icon svg').innerHTML = HAZARD_ICONS[level];
+  head.textContent = headline;
+  sub.textContent = subtext;
+}
+
+function renderAlerts(features) {
+  const container = document.getElementById('nws-alerts-container');
+  if (!container) return;
+  const filtered = features.filter(f => alertMatchesIsland(f, S.island));
+  updateHazardBanner(filtered);
+  const ptwcNote = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No tsunami warnings in effect statewide</div><div class="alert-meta">Pacific Tsunami Warning Center · <a href="https://www.tsunami.gov" target="_blank" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  if (filtered.length === 0) {
+    const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
+    container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${name}</div><div class="alert-meta">NWS Honolulu · Checked ${fmtTime(new Date())}</div></div>${ptwcNote}`;
+    return;
+  }
+  container.innerHTML = filtered.slice(0,12).map(f => {
+    const p = f.properties;
+    const badge = getBadgeClass(p.severity, p.event);
+    const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
+    const expires = p.expires ? fmtTime(new Date(p.expires)) : 'Until further notice';
+    const area = truncate(p.areaDesc || '', 90);
+    return `<div class="alert-item"><span class="badge ${badge}">${(p.severity||'ALERT').toUpperCase()}</span><div class="alert-title">${p.event}${area?' — '+area:''}</div><div class="alert-meta">${issued?'Issued '+issued+' · ':''}Expires ${expires} · NWS Honolulu</div></div>`;
+  }).join('') + ptwcNote;
+}
+
+function updateTicker(features) {
+  const track = document.getElementById('ticker-track');
+  if (!track) return;
+  if (!features || features.length === 0) {
+    track.textContent = '✓ No active NWS alerts for Hawaii · Pacific Tsunami Warning Center — No tsunami warnings in effect · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Pacific Tsunami Warning Center — No tsunami warnings in effect';
+    return;
+  }
+  const items = features.map(f => {
+    const p = f.properties;
+    const exp = p.expires ? ' · Expires ' + fmtTime(new Date(p.expires)) : '';
+    return `⚠ ${p.event} — ${truncate(p.areaDesc||'Hawaii',70)}${exp} · NWS`;
+  });
+  const line = items.join('  ·  ');
+  track.textContent = line + '  ·  ' + line;
+}
+
+const WEATHER_STATIONS = {
+  statewide:{id:'PHNL',label:'HNL Intl'},oahu:{id:'PHNL',label:'HNL Intl'},
+  maui:{id:'PHOG',label:'Kahului'},hawaii:{id:'PHTO',label:'Hilo Intl'},
+  kauai:{id:'PHLI',label:'Lihue'},molokai:{id:'PHNL',label:'HNL Intl'}
+};
+
+async function fetchWeather() {
+  const sta = WEATHER_STATIONS[S.island] || WEATHER_STATIONS.statewide;
+  try {
+    const res = await fetch(`https://api.weather.gov/stations/${sta.id}/observations/latest`, {
+      headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
+    });
+    if (!res.ok) throw new Error('obs ' + res.status);
+    const data = await res.json();
+    const p = data.properties;
+    const windRaw = p.windSpeed?.value, gustRaw = p.windGust?.value;
+    const windMph = windRaw != null ? Math.round(windRaw * 2.237) : null;
+    const gustMph = gustRaw != null ? Math.round(gustRaw * 2.237) : null;
+    const windEl = document.getElementById('stat-wind');
+    const windNote = document.getElementById('stat-wind-note');
+    const dotWind = document.getElementById('dot-wind');
+    if (windEl) {
+      if (windMph != null) {
+        windEl.innerHTML = `${windMph}<span class="stat-unit"> mph</span>`;
+        if (windNote) windNote.textContent = `${gustMph?'G'+gustMph+'mph · ':''}${sta.label}`;
+        if (dotWind) dotWind.className = 's-dot ' + (windMph>35?'alert':windMph>20?'warn':'ok');
+      } else if (gustMph != null) {
+        windEl.innerHTML = `${gustMph}<span class="stat-unit"> mph</span>`;
+        if (windNote) windNote.textContent = `Gust, sustained N/A · ${sta.label}`;
+        if (dotWind) dotWind.className = 's-dot ' + (gustMph>35?'alert':gustMph>20?'warn':'ok');
+      } else {
+        windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+        if (windNote) windNote.textContent = `Not reported · ${sta.label}`;
+        if (dotWind) dotWind.className = 's-dot ok';
+      }
+    }
+    const rainRaw = p.precipitationLastHour?.value;
+    const rainIn = rainRaw != null ? (rainRaw/25.4).toFixed(2) : '0.00';
+    const rainEl = document.getElementById('stat-rain');
+    const rainNote = document.getElementById('stat-rain-note');
+    const dotRain = document.getElementById('dot-rain');
+    if (rainEl) {
+      rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
+      if (rainNote) rainNote.textContent = `1-hr · ${sta.label}`;
+      if (dotRain) dotRain.className = 's-dot ' + (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok');
+    }
+  } catch(e) {
+    const rainEl = document.getElementById('stat-rain');
+    const windEl = document.getElementById('stat-wind');
+    if (rainEl) { rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>'; }
+    if (windEl) { windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>'; }
+    const rainNote = document.getElementById('stat-rain-note');
+    const windNote = document.getElementById('stat-wind-note');
+    if (rainNote) rainNote.textContent = 'unavailable';
+    if (windNote) windNote.textContent = 'unavailable';
+    console.warn('Weather fetch failed:', e.message);
+  }
+}
+
+const TIDE_STATIONS = {
+  statewide:{id:'1612340',name:'HNL Harbor'},oahu:{id:'1612340',name:'HNL Harbor'},
+  maui:{id:'1615680',name:'Kahului, Maui'},hawaii:{id:'1617760',name:'Hilo, Hawaii'},
+  kauai:{id:'1611400',name:'Nawiliwili, Kauai'},molokai:{id:'1612340',name:'HNL Harbor'}
+};
+
+async function fetchTides() {
+  const sta = TIDE_STATIONS[S.island] || TIDE_STATIONS.statewide;
+  const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=pacific_watch&date=latest&station=${sta.id}&time_zone=lst_ldt&units=english&datum=MLLW&format=json`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const latest = data.data?.[data.data.length-1];
+    if (!latest) throw new Error('No tide data');
+    const ft = parseFloat(latest.v).toFixed(1);
+    const tideEl = document.getElementById('stat-tide');
+    const tideNote = document.getElementById('stat-tide-note');
+    if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
+    if (tideNote) tideNote.textContent = sta.name;
+  } catch(e) {
+    const tideEl = document.getElementById('stat-tide');
+    const tideNote = document.getElementById('stat-tide-note');
+    if (tideEl) tideEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+    if (tideNote) tideNote.textContent = 'unavailable';
+    console.warn('Tide fetch failed:', e.message);
+  }
+}
+
+const EARTHQUAKE_STATIONS = {
+  statewide:{lat:20.5,lon:-157,radiusKm:500},
+  oahu:{lat:21.3069,lon:-157.8583,radiusKm:200},
+  maui:{lat:20.7984,lon:-156.3319,radiusKm:200},
+  hawaii:{lat:19.5429,lon:-155.6659,radiusKm:200},
+  kauai:{lat:22.0964,lon:-159.5261,radiusKm:200},
+  molokai:{lat:21.13,lon:-157.02,radiusKm:150}
+};
+
+function eqBadgeClass(mag) {
+  if (mag >= 5) return 'badge-alert';
+  if (mag >= 3.5) return 'badge-warn';
+  return 'badge-info';
+}
+
+function timeAgo(ms) {
+  const mins = Math.round((Date.now() - ms) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.round(hrs / 24) + 'd ago';
+}
+
+async function fetchEarthquakes() {
+  const container = document.getElementById('earthquakes-container');
+  if (!container) return;
+  const sta = EARTHQUAKE_STATIONS[S.island] || EARTHQUAKE_STATIONS.statewide;
+  container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div></div>`;
+  try {
+    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${sta.lat}&longitude=${sta.lon}&maxradiuskm=${sta.radiusKm}&minmagnitude=2.0&orderby=time&limit=10`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('USGS returned ' + res.status);
+    const data = await res.json();
+    const quakes = data.features || [];
+    if (quakes.length === 0) {
+      const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
+      container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No M2.0+ earthquakes near ${name} in the last month</div><div class="alert-meta">USGS · Checked ${fmtTime(new Date())}</div></div>`;
+      return;
+    }
+    container.innerHTML = quakes.slice(0,8).map(f => {
+      const p = f.properties;
+      const mag = p.mag != null ? p.mag.toFixed(1) : '?';
+      return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${mag}</span><div class="alert-title">${truncate(p.place||'Unknown location',90)}</div><div class="alert-meta">${timeAgo(p.time)} · USGS</div></div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
+    console.warn('Earthquake fetch failed:', e.message);
+  }
+}
+
+async function fetchFema() {
+  const container = document.getElementById('fema-container');
+  if (!container) return;
+  try {
+    const url = "https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=state eq 'HI'&$orderby=declarationDate desc&$top=5";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('FEMA returned ' + res.status);
+    const data = await res.json();
+    const items = data.DisasterDeclarationsSummaries || [];
+    if (items.length === 0) {
+      container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">NONE</span><div class="alert-title">No FEMA disaster declarations found for Hawaii</div></div>`;
+      return;
+    }
+    container.innerHTML = items.map(d => {
+      const date = d.declarationDate ? new Date(d.declarationDate).toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}) : '';
+      return `<div class="alert-item"><span class="badge badge-warn">${(d.incidentType||'DISASTER').toUpperCase()}</span><div class="alert-title">${d.declarationTitle||'Untitled declaration'}</div><div class="alert-meta">${date?'Declared '+date+' · ':''}FEMA · ${d.designatedArea||'Statewide'}</div></div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">FEMA data temporarily unavailable</div><div class="alert-meta">Could not reach fema.gov</div></div>`;
+    console.warn('FEMA fetch failed:', e.message);
+  }
+}
+
+function refreshVolcanoCams() {
+  document.querySelectorAll('.volcano-cam-img').forEach(img => {
+    const base = img.src.split('?')[0];
+    img.src = base + '?t=' + Date.now();
+  });
+}
+refreshVolcanoCams();
+setInterval(refreshVolcanoCams, 2 * 60 * 1000);
+
+/* Headlines come from /api/news — the outlet RSS feeds send no CORS headers,
+   so they can't be fetched directly from the browser. See api/news.js. */
+function setNewsFilter(f) {
+  S.newsFilter = f;
+  document.querySelectorAll('#news-filter .seg-btn').forEach(el => {
+    el.classList.toggle('active', el.dataset.newsFilter === f);
+  });
+  fetchNews();
+}
+
+async function fetchNews() {
+  const container = document.getElementById('news-headlines');
+  const stamp = document.getElementById('news-updated');
+  if (!container) return;
+  container.innerHTML = `<div class="news-item"><div class="skeleton" style="width:90px;height:10px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
+  try {
+    const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';
+    const res = await fetch('/api/news' + q);
+    if (res.status === 404) throw new Error('NO_API');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const items = data.items || [];
+    if (!items.length) {
+      container.innerHTML = `<div class="news-item"><div class="news-headline">${S.newsFilter === 'hazard' ? 'No hazard-related headlines right now' : 'No headlines available'}</div><div class="news-byline">Checked ${fmtTime(new Date())}</div></div>`;
+    } else {
+      container.innerHTML = items.map(it => {
+        const when = it.published ? timeAgo(Date.parse(it.published)) : '';
+        const haz = it.hazard ? '<span class="news-hazard-tag">HAZARD</span>' : '';
+        return `<a class="news-item" href="${it.link}" target="_blank" rel="noopener">
+          <div class="news-source-tag">${it.source}${when ? ' · ' + when : ''}${haz}</div>
+          <div class="news-headline">${it.title}</div>
+          ${it.summary ? `<div class="news-byline">${truncate(it.summary, 130)}</div>` : ''}
+        </a>`;
+      }).join('');
+    }
+    if (stamp) {
+      const failed = (data.errors || []).length;
+      stamp.textContent = `${items.length} headlines · updated ${fmtTime(new Date())}` + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
+    }
+  } catch(e) {
+    if (e.message === 'NO_API') {
+      container.innerHTML = `<div class="news-item"><span class="badge badge-info">LOCAL DEV</span><div class="news-headline" style="margin-top:6px">Headlines need the API running</div><div class="news-byline">The RSS feeds have no CORS, so they're fetched by <code>/api/news</code>. Run <code>npm run dev:api</code> (vercel dev) to enable it locally — it works automatically once deployed.</div></div>`;
+    } else {
+      container.innerHTML = `<div class="news-item"><span class="badge badge-info">UNAVAILABLE</span><div class="news-headline" style="margin-top:6px">Headlines temporarily unavailable</div><div class="news-byline">Browse the sources below directly.</div></div>`;
+    }
+    if (stamp) stamp.textContent = '';
+    console.warn('News fetch failed:', e.message);
+  }
+}
+
+async function refreshAll() {
+  await Promise.allSettled([fetchAlerts(), fetchWeather(), fetchTides(), fetchEarthquakes(), fetchFema(), fetchNews()]);
+}
+refreshAll();
+setInterval(refreshAll, 5 * 60 * 1000);
+
+switchView('news');
+
+async function callClaude(sys, user, outEl, tsEl, btnEl, label) {
+  if (!S.apiKey) {
+    outEl.innerHTML = '<div style="color:rgba(255,255,255,.5);font-size:13px;font-style:italic">Add your Claude API key in Settings to enable AI digests.</div>';
+    return;
+  }
+  btnEl.classList.add('loading');
+  btnEl.innerHTML = '<svg class="spin-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Thinking...';
+  outEl.innerHTML = '<div class="skeleton tall"></div><div class="skeleton" style="width:85%;margin-top:8px"></div><div class="skeleton short" style="margin-top:4px"></div>';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': S.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: sys,
+        messages: [{ role: 'user', content: user }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));
+    const text = (data.content || []).map(b => b.text || '').join('');
+    const html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').split('\n\n').filter(p=>p.trim()).map(p=>'<p>'+p.trim()+'</p>').join('');
+    outEl.innerHTML = html || '<p>No summary generated.</p>';
+    if (tsEl) tsEl.textContent = 'Generated ' + fmtTime(new Date());
+  } catch(err) {
+    const msg = err.message || 'Unknown error';
+    if (/authentication|api key|401/i.test(msg)) {
+      outEl.innerHTML = '<div style="color:rgba(255,255,255,.45);font-size:12px">Invalid API key. Check it in Settings and try again.</div>';
+    } else if (/rate|429/i.test(msg)) {
+      outEl.innerHTML = '<div style="color:rgba(255,200,100,.8);font-size:12px">Too many requests — please wait a moment and try again.</div>';
+    } else {
+      outEl.innerHTML = '<div style="color:rgba(255,100,100,.8);font-size:12px">Error: ' + msg + '</div>';
+    }
+  } finally {
+    btnEl.classList.remove('loading');
+    btnEl.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-7.83"/></svg> ' + label;
+  }
+}
+
+function generateDigest() {
+  const island = S.island === 'statewide' ? 'all Hawaiian islands' : S.island;
+  const activeAlerts = S.alertsCache.filter(f=>alertMatchesIsland(f,S.island)).slice(0,8)
+    .map(f=>`- ${f.properties.event}: ${truncate(f.properties.areaDesc||'',80)} (${f.properties.severity})`).join('\n') || '- No active NWS alerts';
+  callClaude(
+    'You are a concise emergency communications officer for Hawaii. Write a brief, calm, factual situation digest for the public. Use plain language. No jargon. Max 3 short paragraphs. No bullet points. Do not add a title or heading — start directly with the first paragraph.',
+    `Current conditions for ${island} as of ${fmtTime(new Date())}:\n\nACTIVE NWS ALERTS:\n${activeAlerts}\n\nWrite a clear situation digest for the public.`,
+    document.getElementById('digest-output'),document.getElementById('digest-ts'),document.getElementById('digest-btn'),'Refresh'
+  );
+}
+
+function generateNewsDigest() {
+  const activeAlerts = S.alertsCache.slice(0,6).map(f=>`- ${f.properties.event}: ${truncate(f.properties.areaDesc||'',60)}`).join('\n') || '- No active NWS alerts statewide';
+  callClaude(
+    'You are a Hawaii local news editor writing a concise daily briefing. Be factual and helpful. Write 2-3 paragraphs max. No bullet points. Focus on what matters most to Hawaii residents right now. Do not add a title or heading — start directly with the first paragraph.',
+    `Write a news briefing for Hawaii residents as of ${fmtTime(new Date())}.\n\nCURRENT NWS ALERTS:\n${activeAlerts}\n\nSources active: Hawaii News Now, Civil Beat, Star-Advertiser, KITV, KHON2, NWS HFO, HIEMA. Write a cohesive briefing covering safety conditions and key local context.`,
+    document.getElementById('news-digest-output'),document.getElementById('news-digest-ts'),document.getElementById('news-digest-btn'),'Refresh'
+  );
+}
+</script>
+
+</body>
+</html>
