@@ -65,6 +65,7 @@
   --b-global-bg:#16232b;--b-global-fg:#93a9b5;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{font-family:'Syne',sans-serif;background:var(--surf);color:var(--ink);min-height:100dvh;overflow-x:hidden}
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -394,7 +395,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
       <div class="hazard-pulse"></div>
     </div>
 
-    <div class="digest-panel">
+    <div class="digest-panel" id="digest-panel-alerts" hidden>
       <div class="digest-header">
         <div class="digest-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
@@ -534,7 +535,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     </div>
 
     <div id="view-news" class="view">
-      <div class="digest-panel" style="border-bottom:1px solid rgba(255,255,255,.08)">
+      <div class="digest-panel" id="digest-panel-news" style="border-bottom:1px solid rgba(255,255,255,.08)" hidden>
         <div class="digest-header">
           <div class="digest-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -558,8 +559,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
             Latest Headlines
           </div>
           <div class="seg" id="news-filter">
-            <button class="seg-btn seg-btn-sm active" data-news-filter="all" onclick="setNewsFilter('all')">All</button>
-            <button class="seg-btn seg-btn-sm" data-news-filter="hazard" onclick="setNewsFilter('hazard')">Hazard</button>
+            <button class="seg-btn seg-btn-sm" data-news-filter="all" onclick="setNewsFilter('all')">All</button>
+            <button class="seg-btn seg-btn-sm active" data-news-filter="hazard" onclick="setNewsFilter('hazard')">Hazard</button>
           </div>
         </div>
         <div id="news-headlines">
@@ -739,7 +740,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
               <div class="settings-row-label">API Key</div>
               <div class="settings-row-sub" id="key-status-display">Not configured</div>
             </div>
-            <button onclick="toggleApiSetup('settings')" style="font-size:11px;font-weight:600;color:var(--sky);background:var(--ice);border:1px solid var(--ice2);border-radius:6px;padding:6px 12px;font-family:inherit;cursor:pointer">Edit</button>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button onclick="toggleApiSetup('settings')" style="font-size:11px;font-weight:600;color:var(--sky);background:var(--ice);border:1px solid var(--ice2);border-radius:6px;padding:6px 12px;font-family:inherit;cursor:pointer">Edit</button>
+              <button id="api-key-remove" onclick="clearKey()" hidden style="font-size:11px;font-weight:600;color:var(--b-alert-fg);background:var(--b-alert-bg);border:1px solid var(--b-alert-bg);border-radius:6px;padding:6px 12px;font-family:inherit;cursor:pointer">Remove</button>
+            </div>
           </div>
           <div style="padding:0 16px 14px">
             <div class="api-input-row" id="api-setup-settings" style="margin-top:8px;display:none">
@@ -830,7 +834,7 @@ const S = {
   apiKey: localStorage.getItem('pw_api_key') || '',
   theme: localStorage.getItem('pw_theme') || 'system',
   island: 'statewide',
-  newsFilter: 'all',
+  newsFilter: 'hazard',
   alertsCache: []
 };
 
@@ -934,13 +938,36 @@ function alertMatchesIsland(alert, island) {
 }
 
 function updateApiLabel() {
+  const hasKey = !!S.apiKey;
   const lbl = document.getElementById('api-status-label');
   const kd  = document.getElementById('key-status-display');
-  const hasKey = !!S.apiKey;
   if (lbl) lbl.textContent = hasKey ? 'API key saved' : 'API key required';
   if (kd)  kd.textContent  = hasKey ? 'sk-ant-…' + S.apiKey.slice(-4) : 'Not configured';
+  /* The digest panels are dead weight without a key — hide them entirely.
+     Settings › Claude API stays visible as the way to add one. */
+  ['digest-panel-alerts','digest-panel-news'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !hasKey;
+  });
+  const rm = document.getElementById('api-key-remove');
+  if (rm) rm.hidden = !hasKey;
 }
 updateApiLabel();
+
+function clearKey() {
+  S.apiKey = '';
+  try { localStorage.removeItem('pw_api_key'); } catch(e) {}
+  ['digest-output','news-digest-output'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="digest-placeholder">Tap Generate for an AI summary of current conditions.</div>';
+  });
+  ['digest-ts','news-digest-ts'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+  updateApiLabel();
+  showToast('API key removed');
+}
 
 function toggleApiSetup(context) {
   const id = context === 'settings' ? 'api-setup-settings' : 'api-setup-main';
@@ -1297,7 +1324,9 @@ async function fetchNews() {
     const data = await res.json();
     const items = data.items || [];
     if (!items.length) {
-      container.innerHTML = `<div class="news-item"><div class="news-headline">${S.newsFilter === 'hazard' ? 'No hazard-related headlines right now' : 'No headlines available'}</div><div class="news-byline">Checked ${fmtTime(new Date())}</div></div>`;
+      container.innerHTML = S.newsFilter === 'hazard'
+        ? `<div class="news-item"><span class="badge badge-ok">ALL CLEAR</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${fmtTime(new Date())} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
+        : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${fmtTime(new Date())}</div></div>`;
     } else {
       container.innerHTML = items.map(it => {
         const when = it.published ? timeAgo(Date.parse(it.published)) : '';
