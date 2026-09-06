@@ -80,6 +80,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Amber hazard banner uses ink text, not white | White on `--warn` is 2.6:1 and fails WCAG AA | Theming |
 | Desktop view rule is scoped to `.desktop-sidebar .view` | A bare `.view{display:block!important}` stacks all three views at once | Architecture |
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
+| `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -87,6 +88,13 @@ alone. Do not silently change it.
 
 ## Non-negotiables for new work
 
+- **`ok` means "we checked and it is fine" — never "we do not know".** A failed fetch, a null
+  observation, or a feed with no data source wired up must render as `unknown`
+  (`--unknown`, `.s-dot.unknown`, `.badge-unknown`, `.hazard-banner.is-unknown`), which is
+  visually distinct from `ok` and carries no checkmark. Never display a hazard all-clear that
+  was not read from a source you actually queried — this is an emergency app, and a false
+  all-clear is the worst output it can produce. An "all clear" is only legitimate when the
+  authoritative fetch succeeded and genuinely returned nothing.
 - **Escaping is not optional.** Everything rendered comes from an external feed and lands in
   `innerHTML`, on an origin that holds the user's Anthropic key in `localStorage`. Every
   interpolated external value goes through `esc()`; every `href` from external data goes through
