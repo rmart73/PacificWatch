@@ -91,6 +91,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
 | `alertTier()` ignores CAP `severity` except for `Extreme` | Severity is `Severe` for both a Tropical Storm Warning and a Flood Watch, so a severity-first test renders a watch as a warning. That was a real defect, not a hypothetical | Alert severity model |
 | `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
+| `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -225,6 +226,7 @@ const S = {
   theme:       'system',    // system | light | dark  (localStorage pw_theme)
   island:      'statewide', // active island tab
   newsFilter:  'hazard',    // hazard | all — Latest Headlines filter, defaults to hazard
+  newsSources: Set,         // enabled outlets (localStorage pw_news_sources)
   alertsCache: [],          // last fetched NWS alert features
 };
 ```
@@ -419,6 +421,14 @@ Alerts are tiered on the **NWS product type**, not on CAP `severity`. Edit `ALER
 Ordering lives in `compareAlerts()`: tier, then CAP urgency, then most recent.
 
 ## News headlines (`/api/news`)
+
+**Settings → News Sources filters which of these outlets is displayed.** The names in
+`NEWS_SOURCES` must match the `source` field `api/news.js` emits, character for character —
+the filter compares them directly, so a rename on either side silently hides an outlet.
+Enabled outlets persist in `localStorage.pw_news_sources`; a saved list is intersected with
+`NEWS_SOURCES` on load so a retired name cannot resurrect itself or hide everything.
+Filtering is display-only — every feed is still fetched, and toggling re-renders from cache
+rather than refetching, so flipping a switch does not hit five outlets.
 
 Merges RSS from Hawaii News Now, Civil Beat, Star-Advertiser, KHON2 and KITV, deduped by link and
 by identical title (outlets carry the same wire copy), sorted newest first.

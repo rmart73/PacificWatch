@@ -834,13 +834,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
           <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
             <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">News Sources</div>
           </div>
-          <div class="settings-row"><div><div class="settings-row-label">Hawaii News Now</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">Civil Beat</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">Star-Advertiser</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">KITV / KHON2</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">NWS / NOAA</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">HIEMA</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="settings-row"><div><div class="settings-row-label">GDACS / RSOE / PDC</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div id="news-source-rows"></div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Filters which outlets appear under Latest Headlines. Every outlet is fetched regardless — this only changes what is shown, and the setting is stored on this device.</div>
         </div>
 
         <div style="font-size:11px;color:var(--ink4);text-align:center;padding:8px;line-height:1.7">
@@ -882,6 +877,8 @@ const S = {
   theme: localStorage.getItem('pw_theme') || 'system',
   island: 'statewide',
   newsFilter: 'hazard',
+  newsSources: null,   // Set of enabled outlet names; populated below
+
   alertsCache: []
 };
 
@@ -1565,13 +1562,90 @@ function setNewsFilter(f) {
   fetchNews();
 }
 
+/* NEWS SOURCE FILTER
+   These names must match the `source` field api/news.js emits, exactly — the filter compares
+   them directly. The previous card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC, none of which
+   produce headlines, so three of its seven toggles could never have controlled anything even
+   if they had been wired up. */
+const NEWS_SOURCES = ['Hawaii News Now', 'Civil Beat', 'Star-Advertiser', 'KHON2', 'KITV 4'];
+
+function loadNewsSources() {
+  try {
+    const raw = localStorage.getItem('pw_news_sources');
+    if (!raw) return new Set(NEWS_SOURCES);
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved)) return new Set(NEWS_SOURCES);
+    /* Intersect with the known list so a renamed or retired outlet cannot resurrect itself,
+       and an unknown saved name cannot silently hide everything. */
+    const known = saved.filter(x => NEWS_SOURCES.indexOf(x) !== -1);
+    return new Set(known);
+  } catch (e) {
+    return new Set(NEWS_SOURCES);
+  }
+}
+
+function saveNewsSources() {
+  try { localStorage.setItem('pw_news_sources', JSON.stringify(Array.from(S.newsSources))); }
+  catch (e) { /* private mode or blocked storage — the filter still works for this session */ }
+}
+
+function renderNewsSourceRows() {
+  const host = document.getElementById('news-source-rows');
+  if (!host) return;
+  host.innerHTML = NEWS_SOURCES.map(name =>
+    '<div class="settings-row"><div><div class="settings-row-label">' + esc(name) + '</div></div>'
+    + '<div class="toggle' + (S.newsSources.has(name) ? ' on' : '') + '" role="switch" tabindex="0"'
+    + ' aria-checked="' + (S.newsSources.has(name) ? 'true' : 'false') + '"'
+    + ' aria-label="' + esc(name) + '" data-news-source="' + esc(name) + '"></div></div>'
+  ).join('');
+}
+
+function toggleNewsSource(name) {
+  if (S.newsSources.has(name)) S.newsSources.delete(name);
+  else S.newsSources.add(name);
+  saveNewsSources();
+  renderNewsSourceRows();
+  /* Re-render from cache rather than refetching: this is a display preference, and hitting
+     five RSS feeds because someone flipped a switch would be rude to the outlets. */
+  const cached = S.cache.news;
+  if (cached) renderNews(cached.data, isStale('news'));
+}
+
+/* addEventListener rather than another inline onclick — AGENTS.md notes the CSP still needs
+   'unsafe-inline' because of the existing handlers, and adding more works against closing that. */
+function enableAllNewsSources() {
+  S.newsSources = new Set(NEWS_SOURCES);
+  saveNewsSources();
+  renderNewsSourceRows();
+  const cached = S.cache.news;
+  if (cached) renderNews(cached.data, isStale('news'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest) return;
+  const all = e.target.closest('[data-enable-all-sources]');
+  if (all) { e.preventDefault(); enableAllNewsSources(); return; }
+  const t = e.target.closest('[data-news-source]');
+  if (t) toggleNewsSource(t.getAttribute('data-news-source'));
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const t = e.target.closest && e.target.closest('[data-news-source]');
+  if (t) { e.preventDefault(); toggleNewsSource(t.getAttribute('data-news-source')); }
+});
+
 function renderNews(data, stale) {
   const container = document.getElementById('news-headlines');
   const stamp = document.getElementById('news-updated');
   if (!container) return;
-  const items = data.items || [];
+  const all = data.items || [];
+  const items = all.filter(it => S.newsSources.has(it.source));
+  const hiddenBySource = all.length - items.length;
   const note = stale ? staleNote('news') : '';
-  if (!items.length) {
+  if (!items.length && hiddenBySource) {
+    /* Do not let a filter masquerade as an absence of news. */
+    container.innerHTML = note + `<div class="news-item"><span class="badge badge-unknown">FILTERED</span><div class="news-headline" style="margin-top:6px">${hiddenBySource} headline${hiddenBySource === 1 ? '' : 's'} hidden by your source filter</div><div class="news-byline">No enabled outlet has a matching story. <a href="#" data-enable-all-sources style="color:var(--sky)">Enable all sources</a></div></div>`;
+  } else if (!items.length) {
     container.innerHTML = note + (S.newsFilter === 'hazard'
       ? `<div class="news-item"><span class="badge badge-unknown">NO MATCHES</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${esc(fmtTime(new Date()))} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
       : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${esc(fmtTime(new Date()))}</div></div>`);
@@ -1590,7 +1664,9 @@ function renderNews(data, stale) {
     const failed = (data.errors || []).length;
     stamp.textContent = stale
       ? `${items.length} headlines · last verified ${verifiedAge('news')}`
-      : `${items.length} headlines · updated ${fmtTime(new Date())}` + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
+      : `${items.length} headlines · updated ${fmtTime(new Date())}`
+        + (hiddenBySource ? ` · ${hiddenBySource} hidden by filter` : '')
+        + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
   }
 }
 
@@ -1766,6 +1842,9 @@ function updateLivePill() {
   pill.setAttribute('title', hint);
   pill.innerHTML = '<span class="live-dot"></span>' + word;
 }
+
+S.newsSources = loadNewsSources();
+renderNewsSourceRows();
 
 renderSourceHealth();
 
