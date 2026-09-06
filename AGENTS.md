@@ -108,6 +108,13 @@ alone. Do not silently change it.
   hardcoded in markup. The Shelter and Outages cells are the deliberate exceptions: both are
   link-outs with no data source in the app, so they stay `unknown` until one is wired up.
   Neither may show `ok` or `warn` — a hardcoded amber dot asserts an advisory nothing verified.
+- **Production and runtime stay dependency-free.** `index.html` and `api/news.js` must keep
+  running with nothing installed — that is the property that makes this app cheap to host,
+  fast to load, and impossible to break with a bad transitive update, which matters more than
+  usual for something people open during an emergency. `devDependencies` are permitted for
+  **verification only** (currently jsdom, for `npm run test:dom`). Two hard lines: `npm test`
+  must keep working with nothing installed, and a runtime `dependencies` entry is never added.
+  Anything a visitor loads is written by hand or fetched from a documented source.
 - **Escaping is not optional.** Everything rendered comes from an external feed and lands in
   `innerHTML`, on an origin that holds the user's Anthropic key in `localStorage`. Every
   interpolated external value goes through `esc()`; every `href` from external data goes through
@@ -388,6 +395,10 @@ pacific-watch/
 ├── api/
 │   └── news.js     ← serverless RSS merge (only because feeds lack CORS)
 ├── vercel.json     ← cache headers + routing (excludes /api from the SPA rewrite)
-├── package.json    ← dev server + deploy scripts
+├── package.json    ← dev server, deploy and test scripts (no runtime dependencies)
+├── package-lock.json ← locks the jsdom devDependency only
+├── test/
+│   ├── phase1-source-health.test.js  ← pure logic, no dependencies (`npm test`)
+│   └── dom-behavior.test.js          ← degraded-state behaviour in jsdom (`npm run test:dom`)
 └── .gitignore
 ```

@@ -183,7 +183,7 @@ jsdom verifies **behaviour and DOM state, not appearance**. It confirms the dot 
 
 **Note:** no `package-lock.json` is included, to keep this PR reviewable while the decision is open. If you accept, a lockfile should be committed in a follow-up.
 
-**Decision:** Pending Codex review.
+**Decision:** **Accepted by Codex** — jsdom devDependency plus lockfile; production and runtime remain dependency-free. `package-lock.json` is committed (64 packages, dev-only; root `dependencies` is empty). The boundary is now recorded in `AGENTS.md` as a durable rule rather than living only in this thread.
 
 #### Files affected
 - `test/dom-behavior.test.js` — new
