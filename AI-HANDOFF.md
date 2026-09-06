@@ -6,6 +6,104 @@ This file tracks active collaboration between **Claude Code** and **ChatGPT Code
 It is intentionally lightweight and is **not** authoritative architecture documentation.
 Durable technical decisions belong in `AGENTS.md`.
 
+## Current Work
+
+### Pause point and subsequent reconciliation — 2026-09-06
+
+**Requested pause snapshot:** F002/F004 were merged and live; F003 was implemented in
+open PR #8 but not yet merged; F005 was confirmed and unclaimed. The planned sequence
+was **F003 → F005 → v2 overview**.
+
+**Latest repository check:** while this documentation task was in progress, PR #8 merged
+as `64879b8`, followed by Claude's documentation PR #9 as `e4a98f8`. The final branch
+is based on that updated main and preserves both PRs. The earlier unmerged state is history,
+not the current F003 status.
+
+| Item | Current status | Next action |
+|---|---|---|
+| F002 + F004 | Merged in #7 (`155ffbf`), live per Claude's report relayed by the user | Closed; preserve documented semantics |
+| F003 | Implemented and merged in #8 (`64879b8`) | Visual verification was outstanding in Claude's handoff; no fresh browser/production verification performed by this documentation task |
+| F005 | Findings confirmed; remediation not started, **unclaimed** | Claim and verify all eight links in a browser |
+| v2 overview | Planned | After F005 |
+
+**Remaining planned sequence:** F005 → v2 overview. A merge is not itself evidence of
+a completed visual pass. Do not discard the outstanding F003 appearance check.
+
+### CLAIM — pause-point documentation
+
+**Agent:** ChatGPT Codex
+**Branch:** `codex/docs-pause-2026-09-06`
+**Claimed:** 2026-09-06 before edits; original claim published as `a9fb18e`.
+**Status:** Documentation complete, ready for review.
+**Scope:** current coordination here, durable UI truthfulness/documentation rules in
+`AGENTS.md`, and a small roadmap prerequisite clarification. No production code changes.
+**Coordination:** initially inspected main `155ffbf` and PR #8 head `aeb0263`.
+Refreshed main before publication, discovered #8/#9 merged, and rebased onto `e4a98f8`.
+Claude's F003 implementation documentation and #9 audit are preserved. F005 remains
+unclaimed. Q006 board compaction remains open; older content is retained as history below.
+
+### F003 — implementation record
+
+The five real RSS outlets are Hawaii News Now, Civil Beat, Star-Advertiser, KHON2 and
+KITV 4. The previous NWS/NOAA, HIEMA and GDACS/RSOE/PDC toggles had no headline feeds;
+KITV / KHON2 incorrectly combined two outlets.
+
+PR #8 implements persisted display preferences, cache-only rerendering on toggle, explicit
+hidden-headline counts and an enable-all link when the filter hides every matching headline.
+Claude reported zero inert toggles, 49 pure-logic assertions and 57 DOM assertions (up from
+45). The original handoff explicitly left switch-row and FILTERED-state appearance unverified.
+
+### F005 — Reference Maps & Portals link audit
+
+**Status:** Confirmed findings; remediation not started. **Unclaimed.**
+The user found links leading to generic homepages. Claude checked all eight; these are his
+reported findings, preserved from PR #8 rather than a new browser audit:
+
+| Tile | Existing target | Reported finding |
+|---|---|---|
+| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | Redirects to `/home/index.html`, a 1.3 KB empty shell with no title; not a Hawaii EMA map. |
+| Pacific Disaster Ctr | `www.pdc.org` | Caption promises “DisasterAWARE Pacific hazard data”, but target is the corporate homepage, not the DisasterAWARE tool. |
+| GDACS | `gdacs.org` | Site root; arguably appropriate for global disaster alerts, but not Pacific-scoped. |
+| RSOE EDIS | `rsoe-edis.org/eventMap` | Correct, specific event map. |
+| FHAT Hawaii | `fhat.hawaii.gov` | Correct Flood Hazard Assessment Tool. |
+| NWS Honolulu | `weather.gov/hfo` | Correct Honolulu office page. |
+| NOAA Tides | `stationhome.html?id=1612340` | Correct station-specific page. |
+| Power Outages | `poweroutage.us/area/state/hawaii` | Correct Hawaii path; browser verification outstanding. |
+
+**Method caveat:** `pdc.org` and `poweroutage.us` returned HTTP 403 to curl because of
+Cloudflare bot challenges. This is not evidence that either is broken for browser users.
+The ArcGIS destination and PDC caption/target mismatch are established findings; do not
+claim the full browser audit is complete.
+
+**Next owner:** verify all eight destinations in a browser for relevant, current, authoritative,
+publicly accessible information. Replace generic targets with stable direct tools/maps when
+available. If no stable deep link exists, label the destination honestly as an agency portal.
+Distinguish “Live Map” or “Direct tool” from “Agency Portal” according to what actually opens.
+Do not treat a successful HTTP response alone as proof that a link fulfills its label.
+
+
+## Active Branches
+
+| Agent | Branch | Work | Status |
+|---|---|---|---|
+| ChatGPT Codex | `codex/docs-pause-2026-09-06` | Pause-point documentation | Ready for review |
+| — | — | F005 remediation | Unclaimed |
+
+## Review Queue
+
+F003 PR #8 and documentation PR #9 are merged. This documentation branch is ready for
+review. Preserve the recorded F003 visual-verification gap until evidence closes it.
+
+---
+
+# Historical handoff snapshot
+
+The sections below preserve Claude's board and logs, including the pending Q006 compaction
+discussion. Their status fields, claims and next actions describe earlier points in time, even
+where headings say “Current Work”, “Active Branches” or “Review Queue”. The current
+sections above supersede them. No broad archival deletion is performed in this update.
+
+
 ---
 
 ## Current Work
