@@ -1,5 +1,33 @@
 # Pacific Watch v2 — Product, UX, and Implementation Plan
 
+> **Status as of 2026-09-06.** This document is the original product intent and is kept
+> unedited below. Some of it has shipped, and two parts shipped *differently* from what is
+> proposed here — where the plan and the code disagree, the code and `AGENTS.md` are correct.
+>
+> | Plan item | State |
+> |---|---|
+> | 3 — Alert Severity System | **Shipped, but not as specified.** See the deviation note below. |
+> | 7 — Data Freshness | **Shipped.** Per-source ages, `LIVE`/`STALE`/`DEGRADED` header pill. |
+> | 8 — Source Health Monitor | **Shipped** as Settings → Data Sources. |
+> | 13 — News as Operational Intelligence | **Partial.** Hazard flagging and per-outlet filtering exist; AI classification does not. |
+> | 4 — Remove user API-key requirement | Not started. Constraints recorded in `AGENTS.md`. |
+> | 1, 2, 5, 6, 9-12, 14-16 | Not started. |
+>
+> **Deviation 1 — severity.** Item 3 maps CAP severity levels to colours. That does not work:
+> NWS returns `severity: Severe` for both a Tropical Storm Warning and a Flood Watch, verified
+> live. Alerts are tiered on **NWS product type** instead, with severity kept only as a
+> safety-biased override. See the Alert severity model section of `AGENTS.md`.
+>
+> **Deviation 2 — green.** Item 3 and the SITREP examples use 🟢 for NORMAL. The palette has no
+> green, and "all clear" is steel blue so the alert/advisory/clear triad stays readable with
+> red-green colour blindness. Do not introduce green from these examples.
+>
+> **The plan was right about one thing worth calling out:** "Never use color as the only
+> severity indicator". That is now enforced — every status state differs in shape as well as
+> hue, after a user confirmed the colours were not readable at a glance at 6px.
+
+---
+
 ## Product Vision
 
 **Pacific Watch** should evolve from a useful collection of Hawaiʻi situational-awareness feeds into a civilian **Common Operating Picture (COP)** for Hawaiʻi and the broader Pacific.

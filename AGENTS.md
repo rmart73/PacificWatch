@@ -59,7 +59,7 @@ protects only clones where it has been installed — the ruleset is the real gat
 
 ## Coordinating edits to `index.html`
 
-The entire front end is one ~1,450-line file, so two agents editing "different features" routinely
+The entire front end is one ~1,930-line file, so two agents editing "different features" routinely
 means editing the same file within a few dozen lines of each other. Git will merge cleanly and the
 page will still be broken.
 
@@ -297,13 +297,13 @@ cosmetic here.
 5. `target="_blank"` always carries `rel="noopener noreferrer"`.
 
 **CSP** is set in `vercel.json`. `script-src` still needs `'unsafe-inline'` because the app uses
-inline `<script>` blocks and ~30 `onclick=` attributes, so CSP is not a complete XSS backstop — the
+inline `<script>` blocks and 22 `onclick=` attributes, so CSP is not a complete XSS backstop — the
 escaping above is the real defense. What CSP *does* buy: `connect-src` is limited to the known APIs,
 so injected script cannot exfiltrate the key to an arbitrary host, plus `object-src`/`base-uri`/
 `form-action`/`frame-ancestors` are locked to `none`. If you add a data source, add its origin to
 `connect-src` or the fetch will fail silently in the browser console.
 
-To close the `'unsafe-inline'` gap properly you'd move the 30 `onclick=` handlers to
+To close the `'unsafe-inline'` gap properly you'd move the remaining 22 `onclick=` handlers to
 `addEventListener` and give the two inline scripts nonces/hashes. Worth doing before this gets
 significant public traffic.
 
@@ -453,6 +453,33 @@ npm run dev:api    # vercel dev — needed to test headlines locally
 Then open http://localhost:3000. All NWS/NOAA/USGS/FEMA fetches work on plain `npm run dev`;
 only the news headlines need `dev:api`.
 
+## Testing
+
+```bash
+npm test        # pure logic, no dependencies, no runner
+npm run test:dom  # behaviour in a headless DOM — needs `npm i` for jsdom
+```
+
+| Suite | Covers |
+|---|---|
+| `test/phase1-source-health.test.js` | health state machine, per-source thresholds, retention, stale-window withdrawal, island-scoped cache invalidation |
+| `test/severity-model.test.js` | alert tiering, the Extreme override, urgency fallback, word-boundary matching, ordering |
+| `test/dom-behavior.test.js` | the degraded states, the critical-source rule, statement-only banner, news source filtering |
+
+The first two **extract the functions straight out of `index.html`** with regexes rather than
+importing them — there is no module system to import from. That means a rename can break
+extraction, and the tests fail loudly rather than silently passing. That is deliberate.
+
+`npm test` must keep working with **nothing installed**; jsdom is a devDependency used only by
+`test:dom`. Verify by copying `test/`, `package.json` and `index.html` to an empty directory
+and running it there.
+
+**What the tests cannot do is look at the page.** Every visual property — whether the hollow
+ring reads at 6px, whether the triangles are distinguishable, whether an icon draws at all —
+has needed a human on the Vercel preview. The DOM suite asserts that a class is applied, which
+a malformed SVG path would pass while rendering nothing. Plan for a visual pass on anything
+that changes appearance; the preview is behind Vercel SSO, so neither agent can do it.
+
 ## Deploy / hosting
 
 **`git push` is the deploy.** The GitHub repo (`rmart73/PacificWatch`) is connected to Vercel and
@@ -470,7 +497,7 @@ required to be public. GitHub is source control only.
   overage billing** — deployments pause when you hit the cap.
 - That last point matters more here than for a normal side project: **an emergency app's traffic
   spikes precisely during an emergency**. A hurricane that puts the site in front of a lot of people
-  is exactly when hitting the cap would take it offline. At ~103 KB per page load (Phase 1 added the source-health engine) the ceiling is
+  is exactly when hitting the cap would take it offline. At ~108 KB per page load the ceiling is
   roughly a million views/month, which is generous — but if this ever gets shared widely during a
   storm, upgrading to Pro beforehand is cheap insurance.
 - A custom domain (e.g. `pacificwatch.org`) works on the free plan; you only pay the registrar.
