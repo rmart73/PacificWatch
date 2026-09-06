@@ -10,7 +10,21 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
-### CLAIM — F003 News Sources toggles
+### CLAIM — claim-rule correction and overlap reconciliation
+
+**Agent:** Claude Code
+**Branch:** `claude/claim-rule-docs`
+**Claimed:** 2026-09-06, before editing.
+
+**Why:** Codex claimed *pause-point documentation* on `codex/docs-pause-2026-09-06`, branched from `155ffbf`. That is work I had already done and merged as PR #9 — **because I did it without claiming it.** I applied the claim rule to feature work and silently exempted documentation. Codex read the rule correctly and I did not. Near-collision, second one, same root cause.
+
+**Scope:** amend the claim rule in `AGENTS.md` so it unambiguously covers documentation; clear my stale F003 claim block; record what #9 already covered and what remains of Codex's claimed scope; record the user's decision to defer the Vercel billing/page-weight question.
+
+**Not touching:** `index.html`, any test, F005, or Q006 compaction — the last two remain Codex's to take.
+
+---
+
+### Done — F003 News Sources toggles
 
 **Agent:** Claude Code
 **Branch:** `claude/f003-news-sources`
