@@ -54,6 +54,27 @@ Durable Phase 0 semantics are now documented in `AGENTS.md`. The key outcome is 
 
 ---
 
+### F003 — seven Settings toggles do nothing
+
+**Status:** Not started. Unclaimed.
+
+**Found by:** the user, while looking for the Data Sources card.
+
+Every toggle under **News Sources** is `onclick="this.classList.toggle('on')"`. It flips a CSS class and nothing reads it — `grep` for any news-source preference returns nothing. Turning off Star-Advertiser does not stop Star-Advertiser headlines appearing.
+
+This is the Phase 0 defect class applied to controls rather than indicators: the UI asserts a capability it does not have. It is arguably worse than a false label, because a user can *act* on it and reasonably believe the setting took effect.
+
+**Two honest options, both defensible:**
+
+1. **Implement it.** `/api/news` already knows each item's source, so it could accept a source filter, or the client could filter the merged list. Persist to `localStorage` alongside `pw_theme`. This is real work but a real feature.
+2. **Remove the toggles.** Show the outlet list as information rather than controls.
+
+What is not acceptable is leaving them. Needs a product decision before implementation.
+
+**Already fixed in PR #5:** the *Live Data* card had the same problem and additionally contradicted the new Data Sources card — three hardcoded `Live` labels updated by no code, plus an inert Auto-refresh toggle. Removed, since Data Sources now reports the real state of all six feeds. Note that if the Auto-refresh control is ever wanted back it must actually gate the interval, and it is worth asking whether an emergency dashboard should offer to stop refreshing at all.
+
+---
+
 ### Follow-ups identified during Phase 0
 
 **F001 — `unknown` needs a shape difference, not only a colour difference.**
@@ -149,6 +170,38 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Live Data card removed; F003 raised
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+The user, looking for the new Data Sources card, surfaced a Settings card neither of us had examined. **Live Data** displayed `Live` against NWS Alerts, Weather Obs. and Tides — three hardcoded labels updated by no code — plus an Auto-refresh toggle that only flipped a CSS class.
+
+That card had become actively contradictory: with Phase 1 in place, NWS Alerts could read `Stale` in Data Sources and `Live` in Live Data, on the same screen, at the same moment. Removed in full. Data Sources reports real state for all six feeds and supersedes it.
+
+#### Findings
+- **Phase 0 checked indicators, not controls.** We swept every status dot and badge and never looked at whether the switches did anything. Eight toggles in Settings were `onclick="this.classList.toggle('on')"` — one removed with the Live Data card, seven remain under News Sources and are raised as F003.
+- A control that does nothing is arguably worse than a label that lies, because the user can act on it and reasonably believe it took effect.
+- Worth generalising: **the audit question is not "is this indicator accurate" but "does this element do what it appears to do".** Recommend that framing for future sweeps.
+
+#### Verification
+- Removal asserted an exact single match on the full card markup.
+- No `settings-val">Live<` remains; toggle count down from 8 to 7 as expected; Settings card order is Data Sources → Appearance → Claude API → News Sources.
+- `npm test` 25/25, `npm run test:dom` 26/26, inline JS parses.
+
+#### Next requested action
+- F003 needs a product decision — implement per-source news filtering, or remove the toggles. Not something to settle inside a source-health PR.
+
+#### Files affected
+- `index.html` — Live Data card removed, Data Sources footer copy
+- `AI-HANDOFF.md` — F003, this entry
+
+#### Commit / PR
+- PR #5, follow-up commit
+
+---
 
 ### 2026-09-06 — Degraded states verified end to end
 

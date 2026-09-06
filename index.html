@@ -757,7 +757,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
             <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
           </div>
           <div id="source-health-list"></div>
-          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data. Freshness thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data, read from the fetches themselves. Freshness thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
         </div>
 
         <div class="settings-card">
@@ -804,28 +804,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
               <div class="settings-row-sub">claude-haiku-4-5 (fastest, lowest cost)</div>
             </div>
             <div class="settings-val">Haiku 4.5</div>
-          </div>
-        </div>
-
-        <div class="settings-card">
-          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
-            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Live Data</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">NWS Alerts</div><div class="settings-row-sub">api.weather.gov · No key required</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Weather Obs.</div><div class="settings-row-sub">NWS station observations</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Tides</div><div class="settings-row-sub">NOAA CO-OPS · per island</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Auto-refresh</div><div class="settings-row-sub">Every 5 minutes</div></div>
-            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
           </div>
         </div>
 
