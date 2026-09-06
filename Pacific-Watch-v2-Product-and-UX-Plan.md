@@ -663,6 +663,12 @@ Use a highly legible sans-serif UI font with clear numerical rendering. Prioriti
 
 # Recommended Build Priority
 
+This is the broad v2 priority order, not the active work queue. Before expanding the overview,
+complete the news-source control corrections and Reference Maps & Portals audit so the new
+interface inherits truthful controls and relevant destinations. Preserve the existing alert-tier,
+accessibility and source-health foundations rather than rebuilding them as unstarted features.
+Current ownership, PR/merge status and the immediate sequence live in `AI-HANDOFF.md`.
+
 1. Operational overview redesign
 2. Unified Hawaiʻi map
 3. Real alert severity model
