@@ -24,7 +24,7 @@
   --navy:#0a0507; --navy2:#153a63; --navy3:#1b4a7a;
   --sky:#166694; --sky2:#1b7bb5; --sky3:#7bb0c6;
   --ice:#d6e7ec; --ice2:#b4d2de;
-  --alert:#cc3110; --warn:#ea8a2e; --ok:#3d8299; --info:#1b7bb5;
+  --alert:#cc3110; --warn:#ea8a2e; --ok:#3d8299; --info:#1b7bb5; --unknown:#94a5b0;
   --ink:#0a0507; --ink2:#2a3b4a; --ink3:#5d7484; --ink4:#63798a;
   --rule:#dce7ec; --surf:#f1f5f7; --card:#ffffff;
   --b-alert-bg:#fbe3dd; --b-alert-fg:#571a0e;
@@ -32,6 +32,7 @@
   --b-ok-bg:#ddebf1;    --b-ok-fg:#1f5a70;
   --b-info-bg:#d6e7ec;  --b-info-fg:#12547e;
   --b-global-bg:#e8eef1;--b-global-fg:#2a3b4a;
+  --b-unknown-bg:#e8eef1;--b-unknown-fg:#41535f;
   --r:8px; --r2:14px; --r3:20px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
@@ -41,7 +42,7 @@
     --navy:#050203; --navy2:#0f2740; --navy3:#153a63;
     --sky:#2e92cc; --sky2:#1b7bb5; --sky3:#7bb0c6;
     --ice:#0f2a3d; --ice2:#173b52;
-    --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc;
+    --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc; --unknown:#5f7788;
     --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
     --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
     --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
@@ -49,13 +50,14 @@
     --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
     --b-info-bg:#0f2a3d;  --b-info-fg:#6fb4dc;
     --b-global-bg:#16232b;--b-global-fg:#93a9b5;
+    --b-unknown-bg:#16232b;--b-unknown-fg:#93a9b5;
   }
 }
 :root[data-theme="dark"]{
   --navy:#050203; --navy2:#0f2740; --navy3:#153a63;
   --sky:#2e92cc; --sky2:#1b7bb5; --sky3:#7bb0c6;
   --ice:#0f2a3d; --ice2:#173b52;
-  --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc;
+  --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc; --unknown:#5f7788;
   --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
   --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
   --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
@@ -63,6 +65,7 @@
   --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
   --b-info-bg:#0f2a3d;  --b-info-fg:#6fb4dc;
   --b-global-bg:#16232b;--b-global-fg:#93a9b5;
+  --b-unknown-bg:#16232b;--b-unknown-fg:#93a9b5;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
@@ -123,7 +126,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .stat-cell:active{background:var(--ice)}
 .stat-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:4px;margin-bottom:4px}
 .s-dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
-.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
+.s-dot.unknown{background:var(--unknown)}.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
 .stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .stat-unit{font-size:11px;font-weight:400;color:var(--ink3)}
 .stat-note{font-size:9px;color:var(--ink4);margin-top:3px;line-height:1.3}
@@ -152,6 +155,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .badge-info{background:var(--b-info-bg);color:var(--b-info-fg)}
 .badge-update{background:var(--b-info-bg);color:var(--b-info-fg)}
 .badge-global{background:var(--b-global-bg);color:var(--b-global-fg)}
+.badge-unknown{background:var(--b-unknown-bg);color:var(--b-unknown-fg)}
 .alert-title{font-size:13px;font-weight:600;color:var(--ink);line-height:1.4}
 .alert-meta{font-size:11px;color:var(--ink3)}
 
@@ -256,6 +260,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .hazard-banner.is-warn .hazard-pulse{background:#0a0507}
 .hazard-pulse{margin-left:auto;flex-shrink:0;width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
 .hazard-banner.is-ok .hazard-pulse{display:none}
+/* "Unknown" is deliberately NOT styled like "ok". A failed fetch means we are blind,
+   which must never read as an all-clear. Neutral ground, muted icon, no checkmark. */
+.hazard-banner.is-unknown{background:var(--card)}
+.hazard-banner.is-unknown .hazard-icon{background:var(--b-unknown-bg)}
+.hazard-banner.is-unknown .hazard-icon svg{stroke:var(--unknown)}
+.hazard-banner.is-unknown .hazard-headline{color:var(--ink)}
+.hazard-banner.is-unknown .hazard-sub{color:var(--ink3)}
+.hazard-banner.is-unknown .hazard-pulse{display:none}
 
 /* COLLAPSIBLE */
 .collapse-head{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--card);border-bottom:1px solid var(--rule);cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
@@ -358,27 +370,27 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
 <div class="stat-bar">
   <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot ok" id="dot-rain"></span>Rain</div>
+    <div class="stat-lbl"><span class="s-dot unknown" id="dot-rain"></span>Rain</div>
     <div class="stat-val" id="stat-rain">—<span class="stat-unit">"</span></div>
     <div class="stat-note" id="stat-rain-note">1-hr · loading…</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot ok" id="dot-wind"></span>Wind</div>
+    <div class="stat-lbl"><span class="s-dot unknown" id="dot-wind"></span>Wind</div>
     <div class="stat-val" id="stat-wind">—<span class="stat-unit"> mph</span></div>
     <div class="stat-note" id="stat-wind-note">Sustained · loading…</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot ok"></span>Tide</div>
+    <div class="stat-lbl"><span class="s-dot unknown" id="dot-tide"></span>Tide</div>
     <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
     <div class="stat-note" id="stat-tide-note">loading…</div>
   </div>
   <a class="stat-cell stat-cell-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">
-    <div class="stat-lbl"><span class="s-dot warn"></span>Shelter</div>
+    <div class="stat-lbl"><span class="s-dot unknown"></span>Shelter</div>
     <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
     <div class="stat-note">HIEMA shelter status</div>
   </a>
   <a class="stat-cell stat-cell-link" href="https://poweroutage.us/area/state/hawaii" target="_blank" rel="noopener">
-    <div class="stat-lbl"><span class="s-dot ok" id="dot-outage"></span>Outages</div>
+    <div class="stat-lbl"><span class="s-dot unknown" id="dot-outage"></span>Outages</div>
     <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
     <div class="stat-note">poweroutage.us live map</div>
   </a>
@@ -1074,7 +1086,9 @@ async function fetchAlerts() {
     const head = document.getElementById('hazard-headline');
     const sub = document.getElementById('hazard-sub');
     if (banner && head && sub) {
-      banner.className = 'hazard-banner is-ok';
+      banner.className = 'hazard-banner is-unknown';
+      const icon = banner.querySelector('.hazard-icon svg');
+      if (icon) icon.innerHTML = HAZARD_ICONS.unknown;
       head.textContent = 'Alert status unavailable';
       sub.textContent = 'Could not reach api.weather.gov — check NWS HFO directly';
     }
@@ -1082,7 +1096,8 @@ async function fetchAlerts() {
 }
 
 const HAZARD_ICONS = {
-  ok:    '<path d="M20 6L9 17l-5-5"/>',
+  ok:      '<path d="M20 6L9 17l-5-5"/>',
+  unknown: '<circle cx="12" cy="12" r="9"/><line x1="8.5" y1="12" x2="15.5" y2="12"/>',
   warn:  '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   alert: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
@@ -1122,7 +1137,11 @@ function renderAlerts(features) {
   if (!container) return;
   const filtered = features.filter(f => alertMatchesIsland(f, S.island));
   updateHazardBanner(filtered);
-  const ptwcNote = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No tsunami warnings in effect statewide</div><div class="alert-meta">Pacific Tsunami Warning Center · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  // This row must never assert a tsunami all-clear: Pacific Watch does not poll PTWC.
+  // It must equally not imply tsunamis are unmonitored — NWS distributes PTWC products
+  // through the alerts feed above, so a real Tsunami Warning for Hawaii renders in this
+  // same list as a normal alert. The row states both facts and asserts no status.
+  const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   if (filtered.length === 0) {
     const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
     container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${name}</div><div class="alert-meta">NWS Honolulu · Checked ${fmtTime(new Date())}</div></div>${ptwcNote}`;
@@ -1142,7 +1161,7 @@ function updateTicker(features) {
   const track = document.getElementById('ticker-track');
   if (!track) return;
   if (!features || features.length === 0) {
-    track.textContent = '✓ No active NWS alerts for Hawaii · Pacific Tsunami Warning Center — No tsunami warnings in effect · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Pacific Tsunami Warning Center — No tsunami warnings in effect';
+    track.textContent = '✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov';
     return;
   }
   const items = features.map(f => {
@@ -1187,18 +1206,25 @@ async function fetchWeather() {
       } else {
         windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
         if (windNote) windNote.textContent = `Not reported · ${sta.label}`;
-        if (dotWind) dotWind.className = 's-dot ok';
+        if (dotWind) dotWind.className = 's-dot unknown';
       }
     }
     const rainRaw = p.precipitationLastHour?.value;
-    const rainIn = rainRaw != null ? (rainRaw/25.4).toFixed(2) : '0.00';
     const rainEl = document.getElementById('stat-rain');
     const rainNote = document.getElementById('stat-rain-note');
     const dotRain = document.getElementById('dot-rain');
     if (rainEl) {
-      rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
-      if (rainNote) rainNote.textContent = `1-hr · ${sta.label}`;
-      if (dotRain) dotRain.className = 's-dot ' + (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok');
+      if (rainRaw != null) {
+        const rainIn = (rainRaw/25.4).toFixed(2);
+        rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
+        if (rainNote) rainNote.textContent = `1-hr · ${sta.label}`;
+        if (dotRain) dotRain.className = 's-dot ' + (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok');
+      } else {
+        // A null observation is missing data, not a measured zero.
+        rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+        if (rainNote) rainNote.textContent = `Not reported · ${sta.label}`;
+        if (dotRain) dotRain.className = 's-dot unknown';
+      }
     }
   } catch(e) {
     const rainEl = document.getElementById('stat-rain');
@@ -1209,6 +1235,10 @@ async function fetchWeather() {
     const windNote = document.getElementById('stat-wind-note');
     if (rainNote) rainNote.textContent = 'unavailable';
     if (windNote) windNote.textContent = 'unavailable';
+    const dotRainErr = document.getElementById('dot-rain');
+    const dotWindErr = document.getElementById('dot-wind');
+    if (dotRainErr) dotRainErr.className = 's-dot unknown';
+    if (dotWindErr) dotWindErr.className = 's-dot unknown';
     console.warn('Weather fetch failed:', e.message);
   }
 }
@@ -1233,11 +1263,15 @@ async function fetchTides() {
     const tideNote = document.getElementById('stat-tide-note');
     if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
     if (tideNote) tideNote.textContent = sta.name;
+    const dotTide = document.getElementById('dot-tide');
+    if (dotTide) dotTide.className = 's-dot ok';
   } catch(e) {
     const tideEl = document.getElementById('stat-tide');
     const tideNote = document.getElementById('stat-tide-note');
     if (tideEl) tideEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
     if (tideNote) tideNote.textContent = 'unavailable';
+    const dotTide = document.getElementById('dot-tide');
+    if (dotTide) dotTide.className = 's-dot unknown';
     console.warn('Tide fetch failed:', e.message);
   }
 }
@@ -1279,7 +1313,7 @@ async function fetchEarthquakes() {
     const quakes = data.features || [];
     if (quakes.length === 0) {
       const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-      container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No M2.0+ earthquakes near ${name} in the last month</div><div class="alert-meta">USGS · Checked ${fmtTime(new Date())}</div></div>`;
+      container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">NO EVENTS</span><div class="alert-title">No M2.0+ earthquakes near ${name} in the last month</div><div class="alert-meta">USGS · Checked ${fmtTime(new Date())}</div></div>`;
       return;
     }
     container.innerHTML = quakes.slice(0,8).map(f => {
@@ -1349,7 +1383,7 @@ async function fetchNews() {
     const items = data.items || [];
     if (!items.length) {
       container.innerHTML = S.newsFilter === 'hazard'
-        ? `<div class="news-item"><span class="badge badge-ok">ALL CLEAR</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${fmtTime(new Date())} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
+        ? `<div class="news-item"><span class="badge badge-unknown">NO MATCHES</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${fmtTime(new Date())} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
         : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${fmtTime(new Date())}</div></div>`;
     } else {
       container.innerHTML = items.map(it => {
