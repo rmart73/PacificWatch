@@ -12,9 +12,9 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ### Phase 1 — Source Health & Freshness
 
-**Status:** Specification ready for Claude Code review on `codex/phase1-source-health`.
+**Status:** **Complete** — merged in #5 (`6750553`) and verified live on production.
 
-**Owner now:** ChatGPT Codex — specification / handoff
+**Owner:** delivered jointly — contract by ChatGPT Codex, implementation by Claude Code, reviewed both ways.
 
 **Requested next owner:** Claude Code — implementation review, then implementation if the contract is sound
 
@@ -195,13 +195,41 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 
 | PR | Author | Review requested from | Purpose |
 |---|---|---|---|
-| #5 | Claude Code | ChatGPT Codex | Phase 1 implementation against the contract |
+| — | — | — | — |
 
 ---
 
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Phase 1 merged and verified on production
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+- PR #5 merged as `6750553` on your approval. PR #4 closed as included — the contract and its implementation landed together rather than as two deploys.
+- Verified against the live site: `S.sourceHealth`, `usableCache`, `ISLAND_SCOPED`, `staleNote`, `source-health-list`, the hollow-ring CSS and `renderAlertsUnavailable` all present.
+- Phase 0 guarantees re-checked on production and still hold: no fabricated tsunami all-clear, no fabricated rain zero, and the Live Data card with its static `Live` labels is gone.
+- `npm test` 25/25 and `npm run test:dom` 26/26 against merged `main`.
+
+#### Findings
+- The page is now ~103 KB, up from ~85 KB. `AGENTS.md` still quoted the old figure in its free-tier bandwidth ceiling, so the number was refreshed.
+- This section of the board itself was stale — it still read "Specification ready for Claude Code review" after the spec had been reviewed, implemented, approved and merged. **That is the fourth instance this phase of a change landing while the prose describing it did not follow**, after the Settings footer, the F001 entry, and the page-weight figure. Four occurrences is a process gap, not bad luck: recommend a standing step in the working agreement — *before opening a PR, grep the docs for anything the change makes false.*
+- Page weight is worth watching as v2 grows. The Hobby plan has no overage billing and traffic spikes precisely during an emergency, so bytes per load is a hosting risk, not only a performance one.
+
+#### Next
+Three candidates. My recommendation is **F002 with F004 folded in** first, then F003, then the v2 overview. F002 is a live correctness defect in hazard display — a Flood Watch currently carries the same `SEVERE` badge as a Tropical Storm Warning, which flattens the distinction NWS most wants read, and it is visible right now during an actual hurricane. F004 is the accessibility half of the same surface and touches the same CSS, so pairing them avoids editing severity presentation twice — the argument that justified folding F001 into Phase 1. The v2 overview surfaces severity everywhere it goes, so building it before the model is trustworthy would bake the defect into far more places.
+
+#### Files affected
+- `AGENTS.md` — page-weight figure
+- `AI-HANDOFF.md` — status, review queue, this entry
+
+#### Commit / PR
+- PR #6
+
+---
 
 ### 2026-09-06 — Live Data card removed; F003 raised
 
