@@ -10,6 +10,39 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
+### CLAIM — F002 severity model, with F004 folded in
+
+**Agent:** Claude Code
+**Branch:** `claude/f002-severity-model`
+**Claimed:** 2026-09-06, before any edit. First use of the claim-before-editing rule.
+
+**Status:** Implemented, in review on PR #7.
+
+**Scope — what I am touching:**
+- `getBadgeClass()` → replaced by a product-type tier model
+- `renderAlerts()` — badge class, badge text, and ordering
+- `updateHazardBanner()` — the `severe` count and headline wording
+- `.s-dot.warn` / `.s-dot.alert` CSS and a `prefers-reduced-motion` block (F004)
+- `AGENTS.md` severity documentation; a new `test/severity-model.test.js`
+
+**Scope — what I am NOT touching:** the source-health engine, retention, any fetch function, `api/news.js`, the News Sources toggles (F003 stays unclaimed and free).
+
+**Empirical basis, from the live feed during Hurricane Lowell:**
+
+```
+event                             severity   urgency    certainty
+Tropical Storm Warning            Severe     Immediate  Likely
+Flood Watch                       Severe     Future     Possible
+High Surf Advisory                Minor      Expected   Likely
+Tropical Cyclone Local Statement  Moderate   Expected   Likely
+```
+
+**`severity: Severe` covers both a Tropical Storm Warning and a Flood Watch.** Severity alone provably cannot separate act-now from be-prepared — this is not a styling preference, it is the field carrying less information than the UI needs. `getBadgeClass()` tests `severity === 'Severe'` before anything else, so a Flood Watch currently renders with the same `badge-alert` class *and* the same literal `SEVERE` text as a Tropical Storm Warning.
+
+Note that CAP `urgency` does draw the distinction (Immediate vs Future), and the product type in the event name draws it explicitly. The plan is to tier on product type — the classification NWS itself publishes and the public is trained on — with severity retained only as a safety-biased override so an `Extreme` product can never be under-ranked.
+
+---
+
 ### Phase 1 — Source Health & Freshness
 
 **Status:** **Complete** — merged in #5 (`6750553`) and verified live on production.
@@ -86,7 +119,7 @@ Folded into Phase 1 rather than kept separate, since the source-health UI needed
 
 Shape reads at a glance; hue does not. That is exactly the outcome F001 was aiming for, so **F001 is closed** — and the second half of that sentence is a new finding, raised as F004.
 
-**F004 — `ok` and `warn` dots differ by hue alone; `alert` relies on unguarded motion.**
+**F004 — `ok` and `warn` dots differ by hue alone; `alert` relies on unguarded motion. — FIXED in PR #7.**
 
 **Found by:** the user, confirming F001 — "I have to lean in to see the color."
 
@@ -112,7 +145,7 @@ Not a Phase 1 blocker: F001 covered verification state, which now works. This is
 
 ---
 
-**F002 — watches and warnings currently render too similarly.**
+**F002 — watches and warnings currently render too similarly. — FIXED in PR #7.**
 NWS `severity` alone flattens distinctions such as Flood Watch vs Tropical Storm Warning. This remains queued for the later severity-model work; do not mix it into Phase 1 unless required for source-health correctness.
 
 ---
@@ -202,6 +235,93 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Codex blocking review of PR #7 addressed
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### The regression was real and it was mine
+Correct call, and worse than a missed branch. `updateHazardBanner()` previously used a single `filtered.length` catch-all, so **any** active product produced a non-all-clear banner. Tiering replaced that with enumerated branches for warning/watch/advisory; `statement` was counted but never reported, so a statement-only feed fell through to "All clear — Hawaii" on a perfectly current fetch. I narrowed a catch-all into cases without proving the cases were exhaustive.
+
+#### Fix
+- **New `is-info` banner state.** You left the state unprescribed, so: `is-info` means *active, current, nothing at hazard tier* — neutral ground with an azure info icon. Deliberately not `unknown`, which means we failed to check; here the fetch succeeded and we know exactly what is active.
+- **Statements are reported when nothing more actionable is present.** Beside six warnings they would be noise; alone they are the whole picture.
+- **An exhaustiveness guard.** If anything is active and no tier branch described it, the banner reports the raw count rather than falling through to a state that asserts safety. That defends against the *shape* of the bug, not only this instance.
+
+#### Findings
+- **The guard is unreachable through `alertTier()` today** — it can only return one of four known tiers. It exists for the next tier someone adds, which is exactly how this happened. Rather than leave it untested, the test overrides `alertTier` to return an unlisted tier, confirms the banner still refuses to say all clear, then restores it. An untested guard against a future mistake is not much of a guard.
+- My first version of that test asserted the wrong thing: an unrecognised product name resolves to `statement` via the urgency fallback, so it reports "1 statement", not "1 active alert". The code was right and the test was wrong — corrected rather than bent to pass.
+- **The standing docs check caught another one.** `AGENTS.md` described the banner as "red for warnings, amber for advisories/watches, neutral for all-clear" — three states, when there are now five, two of which look alike and mean opposite things. Replaced with a precedence table, plus a note that `is-info`, `is-ok` and `is-unknown` mean *active but not hazardous*, *verified empty*, and *not checked* respectively and must not be collapsed.
+
+#### Verification
+- `npm run test:dom` — **45 assertions**, up from 31. New coverage: §6 the statement-only regression (no all-clear, factual headline, `is-info` not `is-ok`, not `is-unknown`, ticker not claiming no active alerts), §7 the urgency fallback, §7b the guard under a simulated future tier, §8 a genuinely empty feed still permitted to say all clear.
+- `npm test` — 49 assertions, unchanged.
+- Inline JS parses.
+
+#### Still not verified
+Appearance, as before: the four badge tiers in the rail, warn-vs-alert triangle readability, the reduced-motion static ring, and now the `is-info` banner.
+
+#### Files affected
+- `index.html` — `is-info` CSS and icon, statement reporting, exhaustiveness guard
+- `AGENTS.md` — banner state precedence table, the exhaustiveness lesson, a load-bearing row for `is-info`
+- `test/dom-behavior.test.js` — switchable alert payload, sections 6 to 8
+
+#### Commit / PR
+- PR #7, follow-up commit
+
+---
+
+### 2026-09-06 — F002 severity model implemented, F004 folded in
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### The defect, established from data rather than argued
+Pulled the live feed before designing anything. During Hurricane Lowell, `api.weather.gov` returned:
+
+| event | severity | urgency | certainty |
+|---|---|---|---|
+| Tropical Storm Warning | Severe | Immediate | Likely |
+| Flood Watch | **Severe** | Future | Possible |
+| High Surf Advisory | Minor | Expected | Likely |
+| Tropical Cyclone Local Statement | Moderate | Expected | Likely |
+
+`severity: Severe` covers **both** a Tropical Storm Warning and a Flood Watch. Severity provably cannot separate act-now from be-prepared. `getBadgeClass()` tested `severity === 'Severe'` first, so a Flood Watch rendered with the same red badge *and the same literal text `SEVERE`* as a Tropical Storm Warning — flattening the one distinction NWS most wants read, live on production during a hurricane.
+
+#### What changed
+- **`ALERT_TIERS` + `alertTier()`** replace `getBadgeClass()`. Tier comes from the NWS product type in `event` — the classification NWS publishes and the public is trained on. Severity survives only as a safety-biased override so an `Extreme` product is never under-ranked whatever it is called. CAP `urgency` is the fallback for product names following no convention, and it draws the same distinction (Immediate vs Future).
+- **The badge shows the tier**, not CAP severity. `WARNING` / `WATCH` / `ADVISORY` / `STATEMENT`. "SEVERE" on a Flood Watch told the reader nothing and read as a warning.
+- **`compareAlerts()`** orders by tier, then urgency, then most recent. The rail, ticker and banner subtitle all use it, so the most actionable item is always first — previously it was raw feed order.
+- **The banner counts tiers separately** — "6 warnings · 2 watches — Hawaii" instead of "8 active warnings". It was counting Flood Watches as warnings.
+
+#### F004, folded in
+- Every dot state now differs in **shape**: `ok` circle, `unknown` hollow ring, `warn` triangle, `alert` larger triangle. Hue only reinforces.
+- A `prefers-reduced-motion` block honours the preference — and because the pulse is a genuine second channel for `alert`, a static ring **substitutes** for it rather than the distinction silently disappearing. That was the specific risk in F004: removing motion for accessibility would have re-created a colour-only encoding for exactly the users least able to rely on it.
+
+#### Findings
+- **`\b` word boundaries matter.** Without them a substring match misclassifies. Covered by tests.
+- **I shipped a bug and caught it by reading my own diff**, not by testing: a pluralisation expression that produced "2 advisoryadvisories". Demonstrated it failing before fixing it. Worth noting that the tests would not have caught it — no fixture had two advisories.
+- **The standing docs check earned itself immediately.** `AGENTS.md` contained "Change alert severity colors: maps NWS severity strings … Extreme/Severe → --alert", which this change made false, plus a Known-gap note for F004 that had just been fixed. Both would have shipped as confident, wrong documentation. Fifth instance of the pattern, first one caught before merge.
+
+#### Verification
+- `npm test` — **49 assertions** (25 source-health + 24 severity model). The severity suite uses the live fixtures above, so it pins the actual defect.
+- `npm run test:dom` — **31 assertions**, up from 26. New coverage: warning badged WARNING, watch badged WATCH, no raw `SEVERE` badge, banner counting tiers separately, and the warning rendering above the watch.
+- The DOM fixture was corrected to give the Flood Watch `severity: Severe`, as NWS actually sends it. The old fixture said Moderate, which would have let the bug pass.
+- Inline JS parses.
+
+#### Not verified
+Appearance. The triangles and the reduced-motion substitute have never been rendered. Worth a look at the stat bar with wind above 20 mph (`warn`) and at the alerts rail, plus one pass with reduced motion enabled at the OS level.
+
+#### Files affected
+- `index.html` — `ALERT_TIERS`/`alertTier()`/`tierRank()`/`compareAlerts()`, `updateHazardBanner()`, alert row rendering, ticker ordering, dot shape CSS, reduced-motion block
+- `AGENTS.md` — new Alert severity model section, corrected common-task entry, F004 note replaced, two load-bearing rows, file structure
+- `test/severity-model.test.js` — new; `test/dom-behavior.test.js`, `package.json` — extended
+
+#### Commit / PR
+- PR #7
+
+---
 
 ### 2026-09-06 — Phase 1 merged and verified on production
 

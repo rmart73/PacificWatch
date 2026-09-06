@@ -12,9 +12,10 @@ const MIN = 60000;
 const future = new Date(Date.now() + 45 * MIN).toISOString();
 
 let mode = 'ok';
+let alertFeatures = null;   // when set, overrides the default alert payload
 function body(url) {
   const u = String(url);
-  if (u.includes('/alerts/active')) return { features: [
+  if (u.includes('/alerts/active')) return { features: alertFeatures || [
     { properties: { event: 'Tropical Storm Warning', severity: 'Severe', areaDesc: 'Kauai South',
                     sent: new Date().toISOString(), expires: future } },
     { properties: { event: 'Flood Watch', severity: 'Moderate', areaDesc: 'Oahu',
@@ -74,6 +75,15 @@ function has(label, sel, needle, expected) {
   has('alerts rail shows the warning', '#nws-alerts-container', 'Tropical Storm Warning', true);
   has('no stale note when current', '#nws-alerts-container', 'last verified', false);
   check('hazard banner is the alert state', $('#hazard-banner').className, 'hazard-banner is-alert');
+
+  console.log('\n1b. Severity model (F002) — a Severe watch must not read as a warning:');
+  has('warning row badged WARNING', '#nws-alerts-container', 'WARNING', true);
+  has('watch row badged WATCH', '#nws-alerts-container', 'WATCH', true);
+  has('raw CAP severity no longer used as a badge', '#nws-alerts-container', '>SEVERE<', false);
+  check('banner counts the tiers separately', txt('#hazard-headline'), '1 warning · 1 watch — Hawaii');
+  check('warning renders above the watch',
+    d.querySelector('#nws-alerts-container .alert-item .badge').textContent, 'WARNING');
+
   check('rain rendered its value', txt('#stat-rain').includes('0.10'), true);
   check('tide dot verified', $('#dot-tide').className, 's-dot ok');
 
@@ -114,6 +124,57 @@ function has(label, sel, needle, expected) {
   has('expired retained alerts are gone', '#nws-alerts-container', 'Tropical Storm Warning', false);
   has('banner says status unavailable', '#hazard-headline', 'Alert status unavailable', true);
   has('still no all-clear', '#hazard-headline', 'All clear', false);
+
+  console.log('\n6. Statement-only feed — regression: must not read as an all-clear:');
+  alertFeatures = [
+    { properties: { event: 'Tropical Cyclone Local Statement', severity: 'Moderate',
+                    urgency: 'Expected', areaDesc: 'Niihau; Kauai', sent: new Date().toISOString(),
+                    expires: future } }
+  ];
+  w.fetch = makeFetch(null);
+  await w.fetchAlerts();
+  await settle();
+  has('banner does NOT say all clear', '#hazard-headline', 'All clear', false);
+  check('banner reports the statement factually', txt('#hazard-headline'), '1 statement — Hawaii');
+  check('banner uses the informational state, not ok', $('#hazard-banner').className, 'hazard-banner is-info');
+  check('and not unknown, which would mean we failed to check',
+    $('#hazard-banner').className.indexOf('is-unknown'), -1);
+  has('the product is listed in the rail', '#nws-alerts-container', 'Tropical Cyclone Local Statement', true);
+  has('badged STATEMENT', '#nws-alerts-container', 'STATEMENT', true);
+  has('ticker does not claim no active alerts', '#ticker-track', 'No active NWS alerts', false);
+
+  console.log('\n7. Unrecognised product names still resolve to a tier:');
+  alertFeatures = [
+    { properties: { event: 'Zzz Unknown Product', severity: 'Minor', urgency: 'Future',
+                    areaDesc: 'Oahu', sent: new Date().toISOString(), expires: future } }
+  ];
+  await w.fetchAlerts();
+  await settle();
+  has('no all-clear', '#hazard-headline', 'All clear', false);
+  check('falls back to statement via the urgency rule', txt('#hazard-headline'), '1 statement — Hawaii');
+
+  console.log('\n7b. Exhaustiveness guard — reachable only if a future tier is added:');
+  /* alertTier() can only return one of the four known tiers, so the guard is unreachable
+     through normal input. It exists for the next tier someone adds and forgets to report —
+     which is exactly how the statement-only all-clear regression happened. Simulate that
+     by making alertTier return a tier the banner does not enumerate. */
+  w.eval("ALERT_TIERS.experimental = { rank: 4, badge: 'badge-unknown', label: 'EXPERIMENTAL' };" +
+         "var __realAlertTier = alertTier; alertTier = function () { return 'experimental'; };");
+  await w.fetchAlerts();
+  await settle();
+  has('an unenumerated tier still blocks all-clear', '#hazard-headline', 'All clear', false);
+  has('and is reported plainly', '#hazard-headline', 'active alert', true);
+  w.eval('alertTier = __realAlertTier;');
+  await w.fetchAlerts();
+  await settle();
+  check('restored', txt('#hazard-headline'), '1 statement — Hawaii');
+
+  console.log('\n8. A genuinely empty feed is still allowed to say all clear:');
+  alertFeatures = [];
+  await w.fetchAlerts();
+  await settle();
+  has('empty verified feed reads all clear', '#hazard-headline', 'All clear', true);
+  check('and uses the ok state', $('#hazard-banner').className, 'hazard-banner is-ok');
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
