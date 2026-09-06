@@ -87,6 +87,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Desktop view rule is scoped to `.desktop-sidebar .view` | A bare `.view{display:block!important}` stacks all three views at once | Architecture |
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
 | `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
+| `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -307,11 +308,15 @@ A small script in `<head>` applies the saved theme *before first paint* — don'
 bottom or the page will flash the wrong theme on load. When adding new colors, define them as
 tokens in all three blocks rather than hardcoding hex in component CSS.
 
-**Two accessibility constraints to preserve when editing colors:**
+**Three accessibility constraints to preserve when editing colors:**
 - White text on `--warn` orange is only 2.6:1 — the amber hazard-banner state uses ink `#0a0507`
   text instead (7.9:1). Don't revert it to white.
 - "All clear" is steel blue, not green: the palette has no green. This also keeps the
   alert/advisory/clear triad distinguishable for red-green color blindness.
+- **Verification state is never carried by colour alone.** `--ok` steel blue and `--unknown`
+  grey are too close to separate reliably at 6px, so `.s-dot.unknown` is a hollow ring and
+  `.src-state-unavailable` is outlined rather than filled — shape carries the distinction and
+  hue only reinforces it. Any new status indicator must differ in more than colour.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography

@@ -77,8 +77,10 @@ What is not acceptable is leaving them. Needs a product decision before implemen
 
 ### Follow-ups identified during Phase 0
 
-**F001 — `unknown` needs a shape difference, not only a colour difference.**
-The 5px `ok` and `unknown` dots remain difficult to distinguish by hue alone. Proposal: hollow ring for `unknown`. Claude should decide whether to fold this into Phase 1 because source-health UI already needs non-colour semantics, or leave it for a focused follow-up PR.
+**F001 — `unknown` needs a shape difference, not only a colour difference. — IMPLEMENTED in PR #5.**
+Folded into Phase 1 rather than kept separate, since the source-health UI needed non-colour semantics anyway and shipping a colour-only version first would have meant touching the same CSS twice. `.s-dot.unknown` is now a hollow ring (`box-shadow:inset 0 0 0 1.5px`, transparent fill) and `.src-state-unavailable` is outlined rather than filled. Dots were also raised from 5px to 6px so the ring has a visible interior. The rule is recorded in `AGENTS.md` as a third accessibility constraint, and the CSS is protected by a load-bearing-decisions row so it is not later "simplified" back to a fill.
+
+**Still open:** whether the ring is *legible enough* at 6px. jsdom can confirm the class is applied but not that a human can see it. This is the last outstanding item on Phase 1 and needs eyes on Settings → Data Sources.
 
 **F002 — watches and warnings currently render too similarly.**
 NWS `severity` alone flattens distinctions such as Flood Watch vs Tropical Storm Warning. This remains queued for the later severity-model work; do not mix it into Phase 1 unless required for source-health correctness.
