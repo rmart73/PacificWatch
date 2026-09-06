@@ -17,6 +17,12 @@ if you learn something durable about the project, record it **here** so both age
 `main` auto-deploys to Vercel. **A merge to `main` is a production deploy**, so `main` is protected
 and nothing lands without a pull request.
 
+- **Claim the work in `AI-HANDOFF.md` before editing anything.** The claim names the agent,
+  the branch, and the scope. **The claim is the concurrency lock; the PR is the review
+  artifact.** Checking open PRs is not sufficient — in Phase 1 both agents began work on the
+  same item at the same time and neither had opened a PR yet, so there was nothing to see.
+  If the board already shows a claim overlapping your scope, coordinate in the handoff log
+  instead of starting.
 - Branch from up-to-date `main`. Prefix by agent so ownership is visible at a glance:
   `claude/<topic>` · `codex/<topic>`
 - **Never commit directly to `main`.**
@@ -81,6 +87,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Desktop view rule is scoped to `.desktop-sidebar .view` | A bare `.view{display:block!important}` stacks all three views at once | Architecture |
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
 | `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
+| `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -102,6 +109,13 @@ alone. Do not silently change it.
   hardcoded in markup. The Shelter and Outages cells are the deliberate exceptions: both are
   link-outs with no data source in the app, so they stay `unknown` until one is wired up.
   Neither may show `ok` or `warn` — a hardcoded amber dot asserts an advisory nothing verified.
+- **Production and runtime stay dependency-free.** `index.html` and `api/news.js` must keep
+  running with nothing installed — that is the property that makes this app cheap to host,
+  fast to load, and impossible to break with a bad transitive update, which matters more than
+  usual for something people open during an emergency. `devDependencies` are permitted for
+  **verification only** (currently jsdom, for `npm run test:dom`). Two hard lines: `npm test`
+  must keep working with nothing installed, and a runtime `dependencies` entry is never added.
+  Anything a visitor loads is written by hand or fetched from a documented source.
 - **Escaping is not optional.** Everything rendered comes from an external feed and lands in
   `innerHTML`, on an origin that holds the user's Anthropic key in `localStorage`. Every
   interpolated external value goes through `esc()`; every `href` from external data goes through
@@ -294,11 +308,18 @@ A small script in `<head>` applies the saved theme *before first paint* — don'
 bottom or the page will flash the wrong theme on load. When adding new colors, define them as
 tokens in all three blocks rather than hardcoding hex in component CSS.
 
-**Two accessibility constraints to preserve when editing colors:**
+**Three accessibility constraints to preserve when editing colors:**
 - White text on `--warn` orange is only 2.6:1 — the amber hazard-banner state uses ink `#0a0507`
   text instead (7.9:1). Don't revert it to white.
 - "All clear" is steel blue, not green: the palette has no green. This also keeps the
   alert/advisory/clear triad distinguishable for red-green color blindness.
+- **Verification state is never carried by colour alone.** `--ok` steel blue and `--unknown`
+  grey are too close to separate reliably at 6px, so `.s-dot.unknown` is a hollow ring and
+  `.src-state-unavailable` is outlined rather than filled — shape carries the distinction and
+  hue only reinforces it. Any new status indicator must differ in more than colour.
+  **Known gap (F004):** the pre-existing `.s-dot.ok` and `.s-dot.warn` still differ by hue
+  alone, and `.s-dot.alert`'s second channel is an unguarded `animation: pulse`. Confirmed
+  unreadable at a glance by a user on the live preview. Fix tracked in `AI-HANDOFF.md`.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
@@ -382,6 +403,10 @@ pacific-watch/
 ├── api/
 │   └── news.js     ← serverless RSS merge (only because feeds lack CORS)
 ├── vercel.json     ← cache headers + routing (excludes /api from the SPA rewrite)
-├── package.json    ← dev server + deploy scripts
+├── package.json    ← dev server, deploy and test scripts (no runtime dependencies)
+├── package-lock.json ← locks the jsdom devDependency only
+├── test/
+│   ├── phase1-source-health.test.js  ← pure logic, no dependencies (`npm test`)
+│   └── dom-behavior.test.js          ← degraded-state behaviour in jsdom (`npm run test:dom`)
 └── .gitignore
 ```

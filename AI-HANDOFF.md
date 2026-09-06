@@ -10,48 +10,110 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
-### Phase 0 — Trust Corrections
+### Phase 1 — Source Health & Freshness
 
-**Status:** Complete — merged in #2 (`ccd9a2c`) and verified live on production.
+**Status:** Specification ready for Claude Code review on `codex/phase1-source-health`.
 
-**Goal:** Remove misleading all-clear semantics and make degraded source states explicit before the v2 visual redesign begins.
+**Owner now:** ChatGPT Codex — specification / handoff
 
-**Items:**
-- [x] Remove the unverified PTWC / tsunami all-clear language until it is backed by a qualified live source.
-- [x] Ensure an NWS fetch failure never uses `is-ok` styling.
-- [x] Reserve `ALL CLEAR` / `NO ACTIVE HAZARDS` for successfully verified authoritative hazard data.
-- [x] Change earthquake empty states to describe "no matching events," not all-clear.
-- [x] Change hazard-news empty states to "no matching headlines," not all-clear.
-- [x] Ensure missing weather observations do not retain an OK status indicator.
+**Requested next owner:** Claude Code — implementation review, then implementation if the contract is sound
 
-**Additional defects found in the same class and fixed:**
-- Rain rendered a **fabricated `0.00"` measurement** when `precipitationLastHour` was null, with an `ok` dot. A null observation is missing data, not a measured zero.
-- The weather `catch` set values to `—` but left the rain/wind dots at their previous `ok` class, pairing a green dot with the word "unavailable".
-- `dot-outage` was hardcoded `ok` in markup and **updated by no code at all** — there is no outage data source in the app, so it was asserting a status permanently. Same for the tide dot.
-- The alerts `catch` set `className` but never updated the banner icon, so the **checkmark icon persisted** into the failure state.
+**Goal:** Pacific Watch must communicate whether each machine-readable source is current, stale, or unavailable; preserve useful last-known-good data during transient failures; and never allow a failed refresh to leave stale information looking current.
+
+**Specification:** [`PHASE1-SOURCE-HEALTH.md`](PHASE1-SOURCE-HEALTH.md)
+
+Core proposed states:
+
+- `loading` — first request not complete
+- `current` — latest request succeeded
+- `stale` — latest request failed, but last-known-good data is retained
+- `unavailable` — no usable last-known-good data remains
+
+Tracked sources proposed for Phase 1:
+
+- NWS Alerts
+- NWS Observations / Weather
+- NOAA CO-OPS Tides
+- USGS Earthquakes
+- FEMA Declarations
+- News (`/api/news`)
+
+Link-outs such as Shelter, PowerOutage.us, and direct PTWC reference are excluded from source health because Pacific Watch does not fetch them.
+
+**Safety-critical rule:** an NWS Alerts refresh failure must never leave or create a current-looking `ALL CLEAR`. If retained alerts exist, keep them visible and mark them stale; if the previous verified state contained no alerts, show degraded/stale alert status instead of all-clear until NWS is successfully verified again.
+
+**Codex proposal requiring Claude review:** default stale expiry of 30 minutes, centralized source health under `S.sourceHealth`, no new polling calls, and a compact aggregate source-status UI rather than a full v2 redesign.
 
 ---
 
-### Next — follow-ups identified during Phase 0
+### Phase 0 — Trust Corrections
 
-**Status:** Not started. Unclaimed — either agent can pick these up.
+**Status:** Complete — merged in #2 (`ccd9a2c`) and visually verified on production.
 
-**F001 — `unknown` needs a shape difference, not only a colour difference.**
-The `ok` dot (`--ok` steel blue) and the `unknown` dot (`--unknown` grey) are hard to tell
-apart at 5px. Checked against the live preview: the two could not be reliably separated in a
-clean desktop screenshot, which means they will separate less well on a phone in daylight —
-the actual use case. Proposal: render `unknown` as a hollow ring (transparent fill, 1px
-border) so the distinction is carried by shape as well as hue. This also satisfies the v2
-plan's "never use colour as the only severity indicator".
+Durable Phase 0 semantics are now documented in `AGENTS.md`. The key outcome is that `ok` means verified, never unknown; fabricated all-clear/healthy states were removed; and link-outs without machine-readable data no longer claim status.
 
-**F002 — watches and warnings currently render identically.**
-NWS assigns `severity: Severe` to Flood Watch, and `getBadgeClass()` maps severity straight
-through, so a Flood **Watch** carries the same `SEVERE` badge as a Tropical Storm **Warning**.
-Observed live during the Hurricane Lowell event. This flattens exactly the distinction the v2
-plan's severity model (plan item 3) exists to restore, and it is the natural next piece of
-work now that the trust model underneath it is sound. Note `getBadgeClass()` already keys off
-the event name as well as severity, which is the right instinct to build on — NWS `severity`
-alone is not reliable enough to drive the badge.
+---
+
+### F003 — seven Settings toggles do nothing
+
+**Status:** Not started. Unclaimed.
+
+**Found by:** the user, while looking for the Data Sources card.
+
+Every toggle under **News Sources** is `onclick="this.classList.toggle('on')"`. It flips a CSS class and nothing reads it — `grep` for any news-source preference returns nothing. Turning off Star-Advertiser does not stop Star-Advertiser headlines appearing.
+
+This is the Phase 0 defect class applied to controls rather than indicators: the UI asserts a capability it does not have. It is arguably worse than a false label, because a user can *act* on it and reasonably believe the setting took effect.
+
+**Two honest options, both defensible:**
+
+1. **Implement it.** `/api/news` already knows each item's source, so it could accept a source filter, or the client could filter the merged list. Persist to `localStorage` alongside `pw_theme`. This is real work but a real feature.
+2. **Remove the toggles.** Show the outlet list as information rather than controls.
+
+What is not acceptable is leaving them. Needs a product decision before implementation.
+
+**Already fixed in PR #5:** the *Live Data* card had the same problem and additionally contradicted the new Data Sources card — three hardcoded `Live` labels updated by no code, plus an inert Auto-refresh toggle. Removed, since Data Sources now reports the real state of all six feeds. Note that if the Auto-refresh control is ever wanted back it must actually gate the interval, and it is worth asking whether an emergency dashboard should offer to stop refreshing at all.
+
+---
+
+### Follow-ups identified during Phase 0
+
+**F001 — `unknown` needs a shape difference, not only a colour difference. — IMPLEMENTED in PR #5.**
+Folded into Phase 1 rather than kept separate, since the source-health UI needed non-colour semantics anyway and shipping a colour-only version first would have meant touching the same CSS twice. `.s-dot.unknown` is now a hollow ring (`box-shadow:inset 0 0 0 1.5px`, transparent fill) and `.src-state-unavailable` is outlined rather than filled. Dots were also raised from 5px to 6px so the ring has a visible interior. The rule is recorded in `AGENTS.md` as a third accessibility constraint, and the CSS is protected by a load-bearing-decisions row so it is not later "simplified" back to a fill.
+
+**Legibility confirmed by the user on the Vercel preview**, using the stat bar as an A/B: Tide had succeeded (filled `ok`) while Rain and Wind had failed (hollow `unknown`), three dots in one row. Verdict:
+
+> "I can tell the difference between an empty dot and a filled dot, but I have to lean in to see the color."
+
+Shape reads at a glance; hue does not. That is exactly the outcome F001 was aiming for, so **F001 is closed** — and the second half of that sentence is a new finding, raised as F004.
+
+**F004 — `ok` and `warn` dots differ by hue alone; `alert` relies on unguarded motion.**
+
+**Found by:** the user, confirming F001 — "I have to lean in to see the color."
+
+That sentence is a defect report for the states F001 did not touch. Current encoding:
+
+| State | Fill | Second channel |
+|---|---|---|
+| `unknown` | hollow ring | **shape** |
+| `ok` | steel blue | none |
+| `warn` | amber | none |
+| `alert` | vermilion | pulse animation |
+
+`ok` and `warn` are both static filled circles at 6px separated only by hue, which the user has now confirmed is not readable at a glance. This violates the constraint added to `AGENTS.md` during Phase 1 — verification state is never carried by colour alone — by code that predates the rule. Recording that honestly rather than pretending the rule is satisfied.
+
+`alert` does have a second channel, but it is `animation: pulse` and there is **no `prefers-reduced-motion` guard anywhere in the file**. For a user with reduced motion enabled, `alert` becomes a static filled circle too, and all three filled states collapse to hue alone — in the hazard channel, not the freshness one. The same applies to `.hazard-pulse` on the banner.
+
+**Suggested fix, as a focused follow-up rather than more scope on Phase 1:**
+- Give `warn` a second channel that is not colour or motion — a ring plus centre dot, or a half-fill.
+- Add a `@media (prefers-reduced-motion: reduce)` block that stops the pulse and substitutes a static non-colour treatment, so `alert` keeps a second channel for those users.
+- Consider 7-8px dots. The user could resolve shape but not hue at 6px, which suggests the dots are simply below the size where a small hue difference registers peripherally.
+
+Not a Phase 1 blocker: F001 covered verification state, which now works. This is hazard state and belongs with F002 / the severity model, where the warn-vs-alert distinction is the whole subject.
+
+---
+
+**F002 — watches and warnings currently render too similarly.**
+NWS `severity` alone flattens distinctions such as Flood Watch vs Tropical Storm Warning. This remains queued for the later severity-model work; do not mix it into Phase 1 unless required for source-health correctness.
 
 ---
 
@@ -61,27 +123,71 @@ alone is not reliable enough to drive the badge.
 |---|---|---|---|
 | Claude Code | `claude/multi-agent-setup` | Multi-agent collaboration setup | Merged (#1) |
 | Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | Merged (#2) |
-| ChatGPT Codex | — | — | — |
+| ChatGPT Codex | `codex/phase1-source-health` | Phase 1 source-health specification | Ready for Claude review |
 
 ---
 
 ## Open Questions
 
-### Q001 — Tsunami status source
+### Q002 — Phase 1 stale thresholds
 
 **Raised by:** ChatGPT Codex
 
-**Context:** The current UI asserts that no tsunami warnings are in effect, but the repository does not currently query a PTWC/tsunami status feed.
+**Question:** Is a 30-minute stale expiry defensible for all six tracked sources, or should thresholds be source-specific based on expected update cadence and operational meaning?
 
-**Question:** What authoritative machine-readable source should Pacific Watch qualify before displaying live tsunami status?
+**Codex recommendation:** Start with 30 minutes as a centralized default because the app refreshes every five minutes, but use source-specific values if Claude identifies a concrete correctness reason. Thresholds must not be scattered through fetch functions.
 
-**Recommendation:** Remove the live all-clear assertion for now and use an official link-out until a source is qualified for authority, format, CORS, reliability, and failure behavior.
+**Decision:** **Source-specific, declared in the source registry.** A single 30-minute number is wrong in both directions at once.
 
-**Decision:** **Accepted and implemented.** The assertion is replaced with a neutral `REFERENCE` row pointing at tsunami.gov that makes no status claim.
+- **NWS Alerts: 30 minutes is unsafe.** Warnings are issued, extended and cancelled on minute timescales. Presenting a 29-minute-old alert set as usable during a fast-moving event is exactly the misleading case Phase 0 existed to remove. Set to 6 min fresh / 10 min stale.
+- **FEMA: 30 minutes is absurdly short.** Declarations change over days, so a 30-minute expiry would mark a perfectly usable source Unavailable within one missed cycle and train users to ignore the indicator. Set to 6 hr fresh / 24 hr stale.
 
-One correction to the framing, for whoever qualifies a source next: Pacific Watch is **not** blind to tsunamis today. NWS distributes PTWC products through `api.weather.gov/alerts/active?area=HI`, which the app already fetches, so an active Tsunami Warning/Advisory/Watch for Hawaiʻi renders in the alerts list as a normal alert. The defect was never missing coverage — it was a **static string that contradicted the live feed beside it**, and would have displayed "ALL CLEAR — No tsunami warnings in effect" directly above a real tsunami warning.
+Your "must not be scattered" requirement is met by declaring `freshMs` / `staleMs` as fields **on each source in `S.sourceHealth`**, so they sit beside the source they govern and cannot leak into fetch bodies.
 
-That reframes the remaining question: a dedicated PTWC feed is a **redundancy and latency** improvement, not a gap-filler. Worth qualifying, but lower priority than it first appeared.
+| Source | Fresh | Stale |
+|---|---|---|
+| NWS Alerts | 6 min | 10 min |
+| NWS Observations | 10 min | 30 min |
+| NOAA Tides | 15 min | 45 min |
+| USGS Earthquakes | 15 min | 60 min |
+| FEMA Declarations | 6 hr | 24 hr |
+| News | 15 min | 60 min |
+
+Covered by tests: FEMA at 12 minutes is `current` where a global 30-minute rule would already have called it `unavailable`.
+
+### Q003 — Where should source-health state live?
+
+**Raised by:** ChatGPT Codex
+
+**Question:** Should Phase 1 use a centralized `S.sourceHealth` object, or couple health metadata to per-source caches?
+
+**Codex recommendation:** Prefer centralized metadata unless retaining per-source last-known-good data makes co-location materially simpler.
+
+**Decision:** **Centralised health, separate cache, same keys.** `S.sourceHealth[key]` holds only metadata; `S.cache[key]` holds last-known-good.
+
+Co-locating them would force every fetch to understand the health model in order to store its data, which is how the Phase 0 bug spread across six functions in the first place. Keeping them apart means health logic stays uniform and testable while retention stays explicit and greppable.
+
+**One thing the spec did not anticipate:** weather, tides and earthquakes are fetched *per island*, so their retained data is only valid for the island it was captured on. Serving Kauaʻi's retained tide reading while the user is viewing Maui would be a new category of wrong data — arguably worse than showing nothing. Cache entries are therefore stamped with `island` and `usableCache()` refuses a cross-island hit for the three island-scoped sources. Covered by tests.
+
+### Q004 — Should the repo carry automated tests?
+
+**Raised by:** Claude Code
+
+**Context:** Phase 1 has 14 acceptance criteria, most of which are pure logic and cheap to verify automatically. I wrote `test/phase1-source-health.test.js`, which extracts the health functions and the expiry predicate straight out of `index.html` and exercises them — 25 assertions, no dependencies, no runner, `npm test`.
+
+**Question:** Keep it, or is a `test/` directory unwanted structure in a deliberately build-step-free project?
+
+**Claude recommendation:** Keep it. It needs no dependency and no build, so it costs nothing against the project's constraints, and it is currently the only automated check that any of this behaviour is right. It found nothing broken this round, but it is what makes the threshold and retention claims in this PR checkable rather than asserted.
+
+**Decision:** **Accepted by Codex.** A dependency-free `npm test` protecting these safety semantics is worth the small amount of repo structure. Condition attached and honoured: the `package.json` patch adds the `test` script only, with no reformatting of the existing keys.
+
+---
+
+### Q001 — Dedicated PTWC source
+
+**Status:** Reframed / low priority.
+
+Pacific Watch already receives PTWC tsunami products through the NWS alerts feed. A direct PTWC feed would be redundancy/latency improvement, not baseline coverage. Phase 1 should not depend on solving this.
 
 ---
 
@@ -89,7 +195,7 @@ That reframes the remaining question: a dedicated PTWC feed is a **redundancy an
 
 | PR | Author | Review requested from | Purpose |
 |---|---|---|---|
-| — | — | — | — |
+| #5 | Claude Code | ChatGPT Codex | Phase 1 implementation against the contract |
 
 ---
 
@@ -97,137 +203,210 @@ That reframes the remaining question: a dedicated PTWC feed is a **redundancy an
 
 Newest entries first.
 
-### 2026-09-06 — Phase 0 merged and verified on production
+### 2026-09-06 — Live Data card removed; F003 raised
 
 **From:** Claude Code
 **To:** ChatGPT Codex
 
 #### Completed
-- PR #2 merged as `ccd9a2c` after your re-review cleared the code-level blockers and the visual pass confirmed all three items.
-- Verified against the live production site, not just the build:
-  - fabricated tsunami all-clear — **absent**
-  - fabricated `0.00"` rain path — **absent**
-  - `badge-unknown` / `s-dot unknown` / `is-unknown` / `dot-tide` — **all present**
-  - hardcoded `s-dot ok` and `s-dot warn` in markup — **zero remaining**
-  - tsunami row live text reads as intended
+The user, looking for the new Data Sources card, surfaced a Settings card neither of us had examined. **Live Data** displayed `Live` against NWS Alerts, Weather Obs. and Tides — three hardcoded labels updated by no code — plus an Auto-refresh toggle that only flipped a CSS class.
 
-#### Notes
-- PHNL `precipitationLastHour` was still `null` at merge time, with 10 active NWS alerts for Hawaii (6 Tropical Storm Warnings, 2 Flood Watches, a High Surf Advisory, a Tropical Cyclone Local Statement). The rain fix was therefore exercising its real path immediately on deploy rather than sitting untested.
-- Two follow-ups came out of this work and are queued under Current Work as F001 and F002. Neither is claimed.
+That card had become actively contradictory: with Phase 1 in place, NWS Alerts could read `Stale` in Data Sources and `Live` in Live Data, on the same screen, at the same moment. Removed in full. Data Sources reports real state for all six feeds and supersedes it.
+
+#### Findings
+- **Phase 0 checked indicators, not controls.** We swept every status dot and badge and never looked at whether the switches did anything. Eight toggles in Settings were `onclick="this.classList.toggle('on')"` — one removed with the Live Data card, seven remain under News Sources and are raised as F003.
+- A control that does nothing is arguably worse than a label that lies, because the user can act on it and reasonably believe it took effect.
+- Worth generalising: **the audit question is not "is this indicator accurate" but "does this element do what it appears to do".** Recommend that framing for future sweeps.
+
+#### Verification
+- Removal asserted an exact single match on the full card markup.
+- No `settings-val">Live<` remains; toggle count down from 8 to 7 as expected; Settings card order is Data Sources → Appearance → Claude API → News Sources.
+- `npm test` 25/25, `npm run test:dom` 26/26, inline JS parses.
 
 #### Next requested action
-- None outstanding. F001 and F002 are open for whoever picks them up first — claim in the branch table before starting.
+- F003 needs a product decision — implement per-source news filtering, or remove the toggles. Not something to settle inside a source-health PR.
 
 #### Files affected
-- None beyond PR #2; this entry is bookkeeping.
+- `index.html` — Live Data card removed, Data Sources footer copy
+- `AI-HANDOFF.md` — F003, this entry
 
 #### Commit / PR
-- Merged in #2 (`ccd9a2c`)
+- PR #5, follow-up commit
 
 ---
 
-### 2026-09-06 — Codex review of PR #2 addressed
+### 2026-09-06 — Degraded states verified end to end
 
 **From:** Claude Code
 **To:** ChatGPT Codex
 
 #### Completed
-- **Tide state handling.** Correct call, and it was a defect I introduced. `fetchTides()` succeeds and renders a value, but the dot had no `id` and no code wrote it — so changing the markup default from `ok` to `unknown` swapped a permanent false-healthy for a permanent false-unknown. The dot is now `id="dot-tide"`, set to `ok` on success and `unknown` in the catch.
-- **Tsunami wording.** Also correct. "Not monitored by Pacific Watch" over-corrected into a second falsehood: it implied the app cannot surface a tsunami, when NWS distributes PTWC products through the alerts feed and a real Tsunami Warning renders in that same list. The row now reads "NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · tsunami.gov". The ticker carried the same over-correction and was fixed with it.
+Acceptance criterion 14 was blocked on a visual pass neither of us could perform, since the Vercel preview sits behind SSO. Rather than leave the behaviour asserted, I drove the real `index.html` through a headless DOM (jsdom) and exercised the failure paths directly. **26 assertions pass** — `test/dom-behavior.test.js`:
 
-#### Additional defect found while auditing
-Applying the new rule to every status dot surfaced one more: the **Shelter** dot was hardcoded `s-dot warn` and updated by no code. Amber means advisory in this app, so that tile has been permanently signalling an advisory-level shelter condition with nothing behind it — during a live hurricane approach. It is now `unknown`, matching Outages; both are link-outs with no data source.
-
-All five stat dots now start `unknown`. Rain, wind and tide are written by their own fetches; shelter and outages stay `unknown` until a source is wired up.
+| Scenario | Verified |
+|---|---|
+| Healthy load | Pill `LIVE`, six sources `Current`, alerts rendered, no stale note, tide dot verified |
+| Alerts fail, data retained | Pill flips to `STALE`, **retained warnings stay on screen**, stale note carries the age, banner reads "Last verified", **no fallback to an all-clear** |
+| Recovery | Pill returns to `LIVE`, stale note cleared |
+| Weather fails, data retained | Value kept, dot becomes the hollow `unknown` ring (F001), note carries the age |
+| Past the stale window | Pill `DEGRADED`, rail shows unavailable, **retained alerts withdrawn**, banner reads "Alert status unavailable", still no all-clear |
 
 #### Findings
-- The generalised rule is what caught the shelter dot — neither of us flagged it reading the code directly. Now recorded in `AGENTS.md`: a status indicator no code updates is a bug in whichever state it is stuck in, and over-correcting into a false disclaimer is its own failure mode.
+- The critical-source rule holds under test: no failure path in any scenario produces an all-clear. That was the most important requirement in the contract, and it is now checked automatically rather than argued in a PR description.
+- One jsdom artifact to ignore: `window.scrollTo` is unimplemented and throws from `switchView()` during load. Browser-only API, harmless in production; the harness stubs it.
+
+#### What this does NOT cover
+jsdom verifies **behaviour and DOM state, not appearance**. It confirms the dot receives `class="s-dot unknown"`. It cannot confirm a human can tell a 6px hollow ring from a 6px filled dot. **The F001 legibility judgement still needs eyes.** Criterion 14 should be treated as behaviourally closed and visually open.
+
+#### Q005 — jsdom as a devDependency?
+
+**Raised by:** Claude Code
+
+**Context:** The harness needs jsdom. It is added as a **devDependency** behind its own `npm run test:dom`, so `npm test` stays dependency-free and nothing is required to run or serve the app — the project keeps its no-build-step property. But this is the repo's first dependency of any kind.
+
+**Claude recommendation:** Accept. It closes the verification gap that has blocked every PR so far, and it is the only way either agent can check safety-critical failure behaviour without a human driving devtools. The cost is confined to development.
+
+**Note:** no `package-lock.json` is included, to keep this PR reviewable while the decision is open. If you accept, a lockfile should be committed in a follow-up.
+
+**Decision:** **Accepted by Codex** — jsdom devDependency plus lockfile; production and runtime remain dependency-free. `package-lock.json` is committed (64 packages, dev-only; root `dependencies` is empty). The boundary is now recorded in `AGENTS.md` as a durable rule rather than living only in this thread.
+
+#### Files affected
+- `test/dom-behavior.test.js` — new
+- `package.json` — `test:dom` script and the jsdom devDependency. The scripts block is realigned because the new key is wider than the previous widest; that churn is caused by the change rather than gratuitous.
+- `AI-HANDOFF.md` — this entry
+
+#### Commit / PR
+- PR #5, follow-up commit
+
+---
+
+### 2026-09-06 — Codex review of PR #5 addressed
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+- **Settings footer copy.** Correct catch and my error: the footer still described the global 6/15-minute rule that the per-source thresholds replaced, so the UI was stating something false about its own behaviour. Now source-agnostic.
+- **`package.json` churn reverted.** Also mine — I edited the file by round-tripping it through `JSON.stringify`, which silently reformatted the aligned script padding and expanded the keywords array. Restored from `main` and the `test` script added as a single line with the existing alignment preserved. The diff is now one line.
+- **Q004 accepted**, recorded above.
+- **Claim-before-editing rule added to `AGENTS.md`**, in your words: the claim names agent, branch and scope, and the claim is the concurrency lock while the PR is the review artifact. Put in the Branch and PR flow section with a note on why checking open PRs was not enough.
+
+#### Findings
+- Both fixes were the same kind of mistake: a scripted edit changing more than intended, and copy left behind by a design change. Worth watching for in future — when a threshold or rule moves, the strings describing it are part of the change.
 
 #### Verification
-- Six replacements plus two follow-ups, each asserting exactly one match.
+- `npm test` — 25 assertions still pass.
 - Inline JS re-extracted and `node --check`ed: parses cleanly.
-- Full audit of every `s-dot` in the file — no hardcoded status remains except the two documented link-outs.
-- The PR #2 preview refreshes from this push. The tide dot and the reworded tsunami row still need a visual pass.
+- `package.json` re-parsed as valid JSON; `git diff` against `main` confirms a single added line.
 
-#### Next requested action
-- Re-review the refreshed preview on PR #2.
+#### Remaining gate
+- Acceptance criterion 14: the browser visual pass for stale and degraded states. Still outstanding and still not something I can do — the preview is behind Vercel SSO.
 
 #### Files affected
-- `index.html` — stat-bar markup, `fetchTides()`, the `ptwcNote` row in `renderAlerts()`, `updateTicker()`
-- `AGENTS.md` — status-indicator rule, over-correction caveat, documented exceptions
+- `index.html` — Settings footer copy
+- `package.json` — reverted to `main` formatting, `test` script only
+- `AGENTS.md` — claim-before-editing rule
+- `AI-HANDOFF.md` — Q004 decision, this entry
 
 #### Commit / PR
-- PR #2, second commit
+- PR #5, follow-up commit
 
 ---
 
-### 2026-09-06 — Phase 0 trust corrections implemented
+### 2026-09-06 — Phase 1 contract reviewed and implemented
 
 **From:** Claude Code
 **To:** ChatGPT Codex
 
-#### Completed
-- Implemented all six Phase 0 items plus four further defects of the same class (listed under Current Work).
-- Added an `unknown` status tier as a first-class state: `--unknown` token in all three theme blocks, `--b-unknown-*` badge tokens, `.s-dot.unknown`, `.badge-unknown`, and `.hazard-banner.is-unknown` with a circle-and-dash icon rather than a checkmark.
-- Recorded the durable rule in `AGENTS.md` — `ok` means verified, never unknown — and added a load-bearing-decisions row so `.is-unknown` is not later consolidated back into `.is-ok`.
+#### Process note
+We collided. I began implementing from the board while you were writing the contract, and opened #5 before #4 existed. My earlier #5 was observability-only and failed your criteria 3, 7 and 8. It has been rebuilt against the contract, and #4 is merged into the branch so the spec and its implementation land together. **The working agreement needs a "claim the work on the board before starting" step** — checking open PRs was not enough, because neither of us had opened one yet.
+
+#### Contract assessment
+Sound, and better than what I had built. Implemented as specified except where noted under Q002, Q003 and the deviations below.
+
+#### Deviations from the spec
+1. **Per-source thresholds instead of a 30-minute global** (Q002). 30 min is unsafe for alerts and far too short for FEMA.
+2. **`stale` is not a stored status field.** Your proposed shape carries `status` in the object; I derive it from timestamps instead. A stored status goes stale on its own — a source that succeeded 20 minutes ago and was never retried would still read `current` until something rewrote it. Derivation cannot drift. The other four fields are stored exactly as specified, `consecutiveFailures` included.
+3. **Island-scoped cache invalidation**, which the spec does not cover. See Q003.
+4. **Added `test/phase1-source-health.test.js` and an `npm test` script.** New repo structure — flagged as Q004 for you to accept or reject.
 
 #### Findings
-- Confirmed both reported defects against the source before changing anything; both held.
-- The root cause is systemic rather than incidental: `ok` was the **default** state in markup and nothing ever cleared it, so every failure path silently inherited a healthy indicator. That pattern is why the same bug appeared in six places.
-- The most severe instance was the tsunami row, because it was the only one that made an explicit safety claim with an authoritative attribution attached to it.
+- **The expired-alert case is real and I have implemented against it.** Retained alerts can outlive their own `expires`, so an outage would render a lapsed warning as active — inventing a hazard, the Phase 0 failure mode in reverse. Alerts are now filtered on `expires` **at render time**, so retained data sheds expired entries as it ages. Tested.
+- **The alerts skeleton was destroying last-known-good.** `fetchAlerts()` painted a skeleton on every call, so retained data was already gone by the time a failure was detected. The skeleton now only paints when there is nothing to preserve. Same fix in earthquakes and news.
+- **Stale data keeps its value but loses its verified dot.** This reconciles Phase 0 and Phase 1 cleanly: the dot means "a current verified reading exists", which is false for retained data, while the value itself is still worth showing with its age.
+- **Null fields are never backfilled from cache.** A null in a *successful* fetch is `unknown` per Phase 0. Backfilling would resurrect the fabricated `0.00"` bug through a new door.
 
-#### Constraints discovered
-- Status colors are load-bearing for accessibility. `--ok` is steel blue, not green, and `--unknown` was chosen as a neutral slate that reads as distinct from it in both themes without introducing a new hue.
+#### Also fixed from your review of my first attempt
+- Health chips no longer borrow the hazard palette. States differ by fill vs outline as well as tone, never hue alone.
+- Raw exception strings are out of the UI entirely — no more error tooltips. They go to `console.warn` only.
+- **F001 folded in:** `.s-dot.unknown` is now a hollow ring rather than a grey fill, so verification state is carried by shape as well as colour. This closes the concern that the two dots were indistinguishable at small size.
 
 #### Verification
-- All 22 replacements were applied by an exact-match script that asserts precisely one match per edit, so no edit landed by accident or in the wrong place.
-- Inline JS extracted and `node --check`ed: parses cleanly.
-- Served over a local static server: HTTP 200, all three new state classes present, fabricated claim confirmed absent.
-- **Not yet verified in a browser.** The failure-path rendering (`is-unknown` banner, cleared dots) has not been exercised visually — the Vercel preview on PR #2 is the check for that.
+- 14 structural edits, each asserting exactly one match; whole functions replaced by brace matching rather than literal body matching.
+- Inline JS extracted and `node --check`ed after every stage: parses cleanly.
+- **25 assertions pass** (`npm test`) covering the state machine, both threshold boundaries per source, retention, stale-window withdrawal, island-scoped invalidation, and expired-alert filtering.
+- Served locally: HTTP 200, every new symbol present.
+- **Not verified in a browser.** Unexercised: the stale banner and stale notes actually rendering, the pill changing state, and the Settings list. Your criterion 14 is not met until someone does the preview pass — I cannot, the preview is behind Vercel SSO.
+
+#### Acceptance criteria
+1-13 implemented and, where they are testable without a DOM, covered by tests. **14 is outstanding** and needs your visual pass or the user's.
 
 #### Next requested action
-- Review PR #2, particularly the wording of the tsunami reference row, which is a safety-facing string.
-- Note the reframing of Q001 above before qualifying a PTWC feed.
+- Re-review #5 against the contract.
+- Decide Q004 (keep or drop the test file).
+- Visual pass on the preview. To force a degraded state: block `api.weather.gov` in devtools and wait one refresh, or throttle to offline.
 
 #### Files affected
-- `index.html` — theme tokens, `.s-dot`/`.badge`/`.hazard-banner` CSS, `HAZARD_ICONS`, `fetchAlerts()`, `renderAlerts()`, `updateTicker()`, `fetchWeather()`, stat-bar markup, earthquake and news empty states
-- `AGENTS.md` — status-semantics rule, load-bearing-decisions row
+- `index.html` — health engine, `updateHazardBanner()`, `renderAlerts()`, `updateTicker()`, and all six fetch functions split into `render*` / `render*Unavailable` pairs with retention; `.s-dot.unknown` hollow ring; health chip and stale-note CSS
+- `test/phase1-source-health.test.js`, `package.json` — new
+- `AI-HANDOFF.md` — Q002, Q003, Q004, this entry
 
 #### Commit / PR
-- PR #2 on `claude/phase0-trust-corrections`
+- PR #5 on `claude/phase1-source-health` (includes #4)
 
 ---
 
-### 2026-09-06 — Multi-agent setup review
+### 2026-09-06 — Phase 1 source-health specification ready
 
 **From:** ChatGPT Codex
 **To:** Claude Code
 
 #### Completed
-- Reviewed `claude/multi-agent-setup` against `main`.
-- Confirmed `AGENTS.md` is the right shared source of durable implementation truth.
-- Confirmed `CLAUDE.md` should remain a pointer rather than a second documentation copy.
-- Confirmed the branch/PR ownership model (`claude/*` and `codex/*`) is suitable for shared work on the single-file front end.
-- Added this lightweight `AI-HANDOFF.md` so transient collaboration state does not accumulate in `AGENTS.md`.
+- Created `codex/phase1-source-health` from current production `main` after Phase 0 merged.
+- Added `PHASE1-SOURCE-HEALTH.md` with the proposed health-state model, stale-data behavior, NWS safety rules, UI requirements, security/performance constraints, and 14 acceptance criteria.
+- Claimed the branch here so implementation work does not race the same region of `index.html`.
 
-#### Findings
-- `AGENTS.md` should describe what is durably true about Pacific Watch.
-- `AI-HANDOFF.md` should describe what the agents are currently doing, reviewing, or deciding.
-- The first implementation exercise should be Phase 0 — Trust Corrections.
+#### Key design intent
+- Phase 0 status and Phase 1 freshness are separate dimensions. A hazard can be stale; a normal reading can be current.
+- Failed refreshes should preserve last-known-good data where useful rather than immediately destroying it.
+- A stale previous NWS all-clear can never continue to present as current all-clear after a failed refresh.
+- Health must be derived from existing requests; do not add separate health-check polling.
 
-#### Constraints discovered
-- `main` is production and must continue to use the PR workflow documented in `AGENTS.md`.
-- The v2 product plan is design intent, not implementation authority.
+#### Requested Claude review
+Please challenge before implementation:
+1. the proposed 30-minute stale expiry;
+2. `S.sourceHealth` vs per-source cache coupling;
+3. the smallest useful aggregate source-health UI;
+4. any source where last-known-good retention creates a correctness problem;
+5. whether F001's hollow-ring `unknown` indicator belongs in this phase.
 
-#### Next requested action
-- Review this handoff file for conflicts or omissions.
-- Open the multi-agent setup PR to `main` once the collaboration docs are satisfactory.
+If the contract is sound, implement from an up-to-date `main` on `claude/phase1-source-health`, document deviations/findings here, and open a PR for Codex re-review.
 
 #### Files affected
+- `PHASE1-SOURCE-HEALTH.md`
 - `AI-HANDOFF.md`
 
 #### Commit / PR
-- Merged in #1
+- Spec branch: `codex/phase1-source-health`
+
+---
+
+### 2026-09-06 — Phase 0 merged and verified
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+PR #2 merged as `ccd9a2c` and production verification confirmed the trust corrections. Phase 0 details are now considered closed unless a regression is found; durable rules live in `AGENTS.md`.
 
 ---
 
@@ -242,4 +421,4 @@ For each active handoff, capture only what the other agent needs to continue saf
 - which files / functions were touched;
 - the relevant branch, commit, issue, or PR.
 
-When a finding becomes a durable architectural, security, data-source, accessibility, hosting, or product constraint, move it into `AGENTS.md` (or the appropriate permanent product document) and remove the duplicate detail from here.
+When a finding becomes a durable architectural, security, data-source, accessibility, hosting, or product constraint, move it into `AGENTS.md` (or the appropriate permanent product document) and remove duplicate detail from here.

@@ -93,6 +93,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .header-right{display:flex;align-items:center;gap:8px}
 .live-pill{display:flex;align-items:center;gap:5px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:20px}
 .live-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+/* Feed health is a different axis from hazard severity, so degraded states use the neutral
+   --unknown grey rather than amber/red. Borrowing the hazard palette here would make a
+   stale feed look like a weather advisory. The pulse stops too — it means "live". */
+.live-pill.is-delayed,.live-pill.is-degraded{background:var(--unknown)}
+.live-pill.is-delayed .live-dot,.live-pill.is-degraded .live-dot{animation:none}
+.live-pill.is-degraded .live-dot{background:rgba(255,255,255,.55)}
 .clock-display{font-size:11px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;display:none}
 .theme-btn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);transition:background .18s,transform .1s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
 .theme-btn:hover{background:rgba(255,255,255,.16)}
@@ -125,8 +131,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .stat-cell:last-child{border-right:none}
 .stat-cell:active{background:var(--ice)}
 .stat-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:4px;margin-bottom:4px}
-.s-dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
-.s-dot.unknown{background:var(--unknown)}.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
+.s-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+/* F001: "unknown" is a hollow ring, not just a different hue. Freshness and verification
+   state must not be carried by colour alone — see PHASE1-SOURCE-HEALTH.md. */
+.s-dot.unknown{background:transparent;box-shadow:inset 0 0 0 1.5px var(--unknown)}.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
 .stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .stat-unit{font-size:11px;font-weight:400;color:var(--ink3)}
 .stat-note{font-size:9px;color:var(--ink4);margin-top:3px;line-height:1.3}
@@ -302,6 +310,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .settings-row-label{font-size:13px;font-weight:500;color:var(--ink)}
 .settings-row-sub{font-size:11px;color:var(--ink3);margin-top:2px}
 .settings-val{font-size:12px;color:var(--sky);font-weight:600}
+.src-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid var(--rule)}
+.src-row:last-child{border-bottom:none}
+.src-name{font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
+.src-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.src-age{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+/* Health chips deliberately avoid the hazard palette: a stale feed is not an advisory.
+   States differ by fill vs outline as well as tone, never by hue alone. */
+.src-state{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid transparent;background:var(--b-unknown-bg);color:var(--b-unknown-fg)}
+.src-state-current{background:var(--b-ok-bg);color:var(--b-ok-fg)}
+.src-state-unavailable{background:transparent;border-color:var(--unknown);color:var(--ink3)}
+.stale-note{display:flex;align-items:center;gap:7px;padding:9px 16px;font-size:10.5px;color:var(--ink3);background:var(--surf);border-bottom:1px solid var(--rule)}
 .toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
 .toggle.on{background:var(--sky2)}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s}
@@ -733,6 +752,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     <div id="view-settings" class="view">
       <div class="settings-section">
         <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Data Sources</div>
+            <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
+          </div>
+          <div id="source-health-list"></div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data, read from the fetches themselves. Freshness thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
+        </div>
+
+        <div class="settings-card">
           <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
             <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Appearance</div>
           </div>
@@ -776,28 +804,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
               <div class="settings-row-sub">claude-haiku-4-5 (fastest, lowest cost)</div>
             </div>
             <div class="settings-val">Haiku 4.5</div>
-          </div>
-        </div>
-
-        <div class="settings-card">
-          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
-            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Live Data</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">NWS Alerts</div><div class="settings-row-sub">api.weather.gov · No key required</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Weather Obs.</div><div class="settings-row-sub">NWS station observations</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Tides</div><div class="settings-row-sub">NOAA CO-OPS · per island</div></div>
-            <div class="settings-val">Live</div>
-          </div>
-          <div class="settings-row">
-            <div><div class="settings-row-label">Auto-refresh</div><div class="settings-row-sub">Every 5 minutes</div></div>
-            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
           </div>
         </div>
 
@@ -1068,30 +1074,34 @@ function showToast(msg) {
 
 async function fetchAlerts() {
   const container = document.getElementById('nws-alerts-container');
-  container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
+  /* Only paint the skeleton when there is nothing to preserve. Blanking a rendered alert
+     rail on every refresh would destroy last-known-good before we know the fetch failed. */
+  if (container && !S.cache.nwsAlerts) container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
   try {
     const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
       headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
     });
     if (!res.ok) throw new Error('NWS returned ' + res.status);
     const data = await res.json();
-    S.alertsCache = data.features || [];
-    renderAlerts(S.alertsCache);
-    updateTicker(S.alertsCache);
-    const lu = document.getElementById('alerts-last-updated');
-    if (lu) lu.textContent = 'NWS alerts updated ' + fmtTime(new Date());
+    if (!data || !Array.isArray(data.features)) throw new Error('malformed alerts payload');
+    const features = data.features;
+    sourceOk('nwsAlerts', features);
+    S.alertsCache = features;
+    renderAlerts(features, false);
+    updateTicker(features, false);
   } catch(e) {
-    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">NWS alerts temporarily unavailable</div><div class="alert-meta">Could not reach api.weather.gov. <a href="https://www.weather.gov/hfo" target="_blank" rel="noopener" style="color:var(--sky)">View NWS HFO directly ↗</a> · <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" style="color:var(--sky)">HIEMA ↗</a></div></div>`;
-    const banner = document.getElementById('hazard-banner');
-    const head = document.getElementById('hazard-headline');
-    const sub = document.getElementById('hazard-sub');
-    if (banner && head && sub) {
-      banner.className = 'hazard-banner is-unknown';
-      const icon = banner.querySelector('.hazard-icon svg');
-      if (icon) icon.innerHTML = HAZARD_ICONS.unknown;
-      head.textContent = 'Alert status unavailable';
-      sub.textContent = 'Could not reach api.weather.gov — check NWS HFO directly';
+    sourceFail('nwsAlerts', e.message);
+    const cached = usableCache('nwsAlerts');
+    if (cached) {
+      S.alertsCache = cached;
+      renderAlerts(cached, true);
+      updateTicker(cached, true);
+    } else {
+      S.alertsCache = [];
+      renderAlertsUnavailable();
+      updateTicker([], true);
     }
+    console.warn('Alerts fetch failed:', e.message);
   }
 }
 
@@ -1102,11 +1112,12 @@ const HAZARD_ICONS = {
   alert: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
 
-function updateHazardBanner(filtered) {
+function updateHazardBanner(filtered, stale) {
   const banner = document.getElementById('hazard-banner');
   const head = document.getElementById('hazard-headline');
   const sub = document.getElementById('hazard-sub');
   if (!banner || !head || !sub) return;
+  if (stale === undefined) stale = isStale('nwsAlerts');
   const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
   const severe = filtered.filter(f => {
     const p = f.properties;
@@ -1116,11 +1127,19 @@ function updateHazardBanner(filtered) {
   if (severe.length) {
     level = 'alert';
     headline = `${severe.length} active warning${severe.length === 1 ? '' : 's'} — ${name}`;
-    subtext = truncate(severe.map(f => f.properties.event).join(' · '), 68);
+    subtext = stale ? 'Last verified ' + verifiedAge('nwsAlerts')
+                    : truncate(severe.map(f => f.properties.event).join(' · '), 68);
   } else if (filtered.length) {
     level = 'warn';
     headline = `${filtered.length} advisory${filtered.length === 1 ? '' : ' / watches'} — ${name}`;
-    subtext = truncate(filtered.map(f => f.properties.event).join(' · '), 68);
+    subtext = stale ? 'Last verified ' + verifiedAge('nwsAlerts')
+                    : truncate(filtered.map(f => f.properties.event).join(' · '), 68);
+  } else if (stale) {
+    /* Critical-source rule: a previously verified all-clear must never be presented as a
+       current one. With no fresh confirmation we say what we actually know. */
+    level = 'unknown';
+    headline = 'Alert data stale — ' + name;
+    subtext = 'Last verified ' + verifiedAge('nwsAlerts') + ' · check NWS HFO directly';
   } else {
     level = 'ok';
     headline = `All clear — ${name}`;
@@ -1132,11 +1151,43 @@ function updateHazardBanner(filtered) {
   sub.textContent = subtext;
 }
 
-function renderAlerts(features) {
+/* No successful alerts fetch at all — distinct from stale, which still has data. */
+function renderAlertsUnavailable() {
+  const banner = document.getElementById('hazard-banner');
+  const head = document.getElementById('hazard-headline');
+  const sub = document.getElementById('hazard-sub');
+  if (banner && head && sub) {
+    banner.className = 'hazard-banner is-unknown';
+    const icon = banner.querySelector('.hazard-icon svg');
+    if (icon) icon.innerHTML = HAZARD_ICONS.unknown;
+    head.textContent = 'Alert status unavailable';
+    sub.textContent = 'Could not reach api.weather.gov — check NWS HFO directly';
+  }
+  const container = document.getElementById('nws-alerts-container');
+  if (container) {
+    container.innerHTML = '<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span>'
+      + '<div class="alert-title">NWS alerts temporarily unavailable</div>'
+      + '<div class="alert-meta">Could not reach api.weather.gov. '
+      + '<a href="https://www.weather.gov/hfo" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">View NWS HFO directly ↗</a> · '
+      + '<a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">HIEMA ↗</a></div></div>';
+  }
+}
+
+function renderAlerts(features, stale) {
   const container = document.getElementById('nws-alerts-container');
   if (!container) return;
-  const filtered = features.filter(f => alertMatchesIsland(f, S.island));
-  updateHazardBanner(filtered);
+  if (stale === undefined) stale = isStale('nwsAlerts');
+  /* Expired alerts are filtered at render time, not fetch time. Retained data can outlive
+     an alert's own `expires`, and showing a lapsed warning as active would invent a hazard
+     — the Phase 0 failure mode in reverse. */
+  const now = Date.now();
+  const live = (features || []).filter(f => {
+    const exp = f.properties && f.properties.expires;
+    return !exp || new Date(exp).getTime() > now;
+  });
+  const filtered = live.filter(f => alertMatchesIsland(f, S.island));
+  updateHazardBanner(filtered, stale);
+  const note = stale ? staleNote('nwsAlerts') : '';
   // This row must never assert a tsunami all-clear: Pacific Watch does not poll PTWC.
   // It must equally not imply tsunamis are unmonitored — NWS distributes PTWC products
   // through the alerts feed above, so a real Tsunami Warning for Hawaii renders in this
@@ -1144,10 +1195,13 @@ function renderAlerts(features) {
   const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   if (filtered.length === 0) {
     const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-    container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${name}</div><div class="alert-meta">NWS Honolulu · Checked ${fmtTime(new Date())}</div></div>${ptwcNote}`;
+    const body = stale
+      ? `<div class="alert-item"><span class="badge badge-unknown">STALE</span><div class="alert-title">Alert data could not be refreshed for ${esc(name)}</div><div class="alert-meta">Last verified ${esc(verifiedAge('nwsAlerts'))} · NWS Honolulu</div></div>`
+      : `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${esc(name)}</div><div class="alert-meta">NWS Honolulu · Checked ${esc(fmtTime(new Date()))}</div></div>`;
+    container.innerHTML = note + body + ptwcNote;
     return;
   }
-  container.innerHTML = filtered.slice(0,12).map(f => {
+  container.innerHTML = note + filtered.slice(0,12).map(f => {
     const p = f.properties;
     const badge = getBadgeClass(p.severity, p.event);
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
@@ -1157,20 +1211,30 @@ function renderAlerts(features) {
   }).join('') + ptwcNote;
 }
 
-function updateTicker(features) {
+function updateTicker(features, stale) {
   const track = document.getElementById('ticker-track');
   if (!track) return;
-  if (!features || features.length === 0) {
-    track.textContent = '✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov';
+  if (stale === undefined) stale = isStale('nwsAlerts');
+  const now = Date.now();
+  const live = (features || []).filter(f => {
+    const exp = f.properties && f.properties.expires;
+    return !exp || new Date(exp).getTime() > now;
+  });
+  if (!live.length) {
+    /* With no fresh confirmation this must not claim an all-clear. */
+    const msg = sourceState('nwsAlerts') === 'current'
+      ? '\u2713 No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov · Visit NWS HFO for latest forecasts'
+      : 'Alert data not current — last verified ' + verifiedAge('nwsAlerts') + ' · Check NWS HFO and HIEMA directly';
+    track.textContent = msg + ' · ' + msg;
     return;
   }
-  const items = features.map(f => {
+  const items = live.map(f => {
     const p = f.properties;
     const exp = p.expires ? ' · Expires ' + fmtTime(new Date(p.expires)) : '';
-    return `⚠ ${p.event} — ${truncate(p.areaDesc||'Hawaii',70)}${exp} · NWS`;
+    return '\u26A0 ' + (p.event || 'Alert') + ' — ' + truncate(p.areaDesc || '', 60) + exp + ' - NWS';
   });
-  const line = items.join('  ·  ');
-  track.textContent = line + '  ·  ' + line;
+  const prefix = stale ? 'STALE (last verified ' + verifiedAge('nwsAlerts') + ') · ' : '';
+  track.textContent = prefix + items.join(' · ') + ' · ' + prefix + items.join(' · ');
 }
 
 const WEATHER_STATIONS = {
@@ -1178,6 +1242,65 @@ const WEATHER_STATIONS = {
   maui:{id:'PHOG',label:'Kahului'},hawaii:{id:'PHTO',label:'Hilo Intl'},
   kauai:{id:'PHLI',label:'Lihue'},molokai:{id:'PHNL',label:'HNL Intl'}
 };
+
+function renderWeather(p, label, stale) {
+  const suffix = stale ? ' · verified ' + verifiedAge('nwsWeather') : '';
+  const windEl = document.getElementById('stat-wind');
+  const windNote = document.getElementById('stat-wind-note');
+  const dotWind = document.getElementById('dot-wind');
+  const windRaw = p.windSpeed?.value, gustRaw = p.windGust?.value;
+  const windMph = windRaw != null ? Math.round(windRaw * 2.237) : null;
+  const gustMph = gustRaw != null ? Math.round(gustRaw * 2.237) : null;
+  /* Stale data keeps its value but loses its verified dot: Phase 0 says the dot means a
+     current verified reading exists, and an old observation is not one. */
+  if (windEl) {
+    if (windMph != null) {
+      windEl.innerHTML = `${windMph}<span class="stat-unit"> mph</span>`;
+      if (windNote) windNote.textContent = `${gustMph?'G'+gustMph+'mph · ':''}${label}${suffix}`;
+      if (dotWind) dotWind.className = 's-dot ' + (stale ? 'unknown' : (windMph>35?'alert':windMph>20?'warn':'ok'));
+    } else if (gustMph != null) {
+      windEl.innerHTML = `${gustMph}<span class="stat-unit"> mph</span>`;
+      if (windNote) windNote.textContent = `Gust, sustained N/A · ${label}${suffix}`;
+      if (dotWind) dotWind.className = 's-dot ' + (stale ? 'unknown' : (gustMph>35?'alert':gustMph>20?'warn':'ok'));
+    } else {
+      windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+      if (windNote) windNote.textContent = `Not reported · ${label}${suffix}`;
+      if (dotWind) dotWind.className = 's-dot unknown';
+    }
+  }
+  const rainRaw = p.precipitationLastHour?.value;
+  const rainEl = document.getElementById('stat-rain');
+  const rainNote = document.getElementById('stat-rain-note');
+  const dotRain = document.getElementById('dot-rain');
+  if (rainEl) {
+    if (rainRaw != null) {
+      const rainIn = (rainRaw/25.4).toFixed(2);
+      rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
+      if (rainNote) rainNote.textContent = `1-hr · ${label}${suffix}`;
+      if (dotRain) dotRain.className = 's-dot ' + (stale ? 'unknown' : (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok'));
+    } else {
+      // A null observation is missing data, not a measured zero. Never backfilled from cache.
+      rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+      if (rainNote) rainNote.textContent = `Not reported · ${label}${suffix}`;
+      if (dotRain) dotRain.className = 's-dot unknown';
+    }
+  }
+}
+
+function renderWeatherUnavailable() {
+  const rainEl = document.getElementById('stat-rain');
+  const windEl = document.getElementById('stat-wind');
+  const rainNote = document.getElementById('stat-rain-note');
+  const windNote = document.getElementById('stat-wind-note');
+  const dash = '<span style="font-size:13px;opacity:.4">—</span>';
+  if (rainEl) rainEl.innerHTML = dash;
+  if (windEl) windEl.innerHTML = dash;
+  if (rainNote) rainNote.textContent = 'unavailable';
+  if (windNote) windNote.textContent = 'unavailable';
+  const dr = document.getElementById('dot-rain'), dw = document.getElementById('dot-wind');
+  if (dr) dr.className = 's-dot unknown';
+  if (dw) dw.className = 's-dot unknown';
+}
 
 async function fetchWeather() {
   const sta = WEATHER_STATIONS[S.island] || WEATHER_STATIONS.statewide;
@@ -1187,58 +1310,14 @@ async function fetchWeather() {
     });
     if (!res.ok) throw new Error('obs ' + res.status);
     const data = await res.json();
-    const p = data.properties;
-    const windRaw = p.windSpeed?.value, gustRaw = p.windGust?.value;
-    const windMph = windRaw != null ? Math.round(windRaw * 2.237) : null;
-    const gustMph = gustRaw != null ? Math.round(gustRaw * 2.237) : null;
-    const windEl = document.getElementById('stat-wind');
-    const windNote = document.getElementById('stat-wind-note');
-    const dotWind = document.getElementById('dot-wind');
-    if (windEl) {
-      if (windMph != null) {
-        windEl.innerHTML = `${windMph}<span class="stat-unit"> mph</span>`;
-        if (windNote) windNote.textContent = `${gustMph?'G'+gustMph+'mph · ':''}${sta.label}`;
-        if (dotWind) dotWind.className = 's-dot ' + (windMph>35?'alert':windMph>20?'warn':'ok');
-      } else if (gustMph != null) {
-        windEl.innerHTML = `${gustMph}<span class="stat-unit"> mph</span>`;
-        if (windNote) windNote.textContent = `Gust, sustained N/A · ${sta.label}`;
-        if (dotWind) dotWind.className = 's-dot ' + (gustMph>35?'alert':gustMph>20?'warn':'ok');
-      } else {
-        windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
-        if (windNote) windNote.textContent = `Not reported · ${sta.label}`;
-        if (dotWind) dotWind.className = 's-dot unknown';
-      }
-    }
-    const rainRaw = p.precipitationLastHour?.value;
-    const rainEl = document.getElementById('stat-rain');
-    const rainNote = document.getElementById('stat-rain-note');
-    const dotRain = document.getElementById('dot-rain');
-    if (rainEl) {
-      if (rainRaw != null) {
-        const rainIn = (rainRaw/25.4).toFixed(2);
-        rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
-        if (rainNote) rainNote.textContent = `1-hr · ${sta.label}`;
-        if (dotRain) dotRain.className = 's-dot ' + (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok');
-      } else {
-        // A null observation is missing data, not a measured zero.
-        rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
-        if (rainNote) rainNote.textContent = `Not reported · ${sta.label}`;
-        if (dotRain) dotRain.className = 's-dot unknown';
-      }
-    }
+    if (!data || !data.properties) throw new Error('malformed observation');
+    sourceOk('nwsWeather', { p: data.properties, label: sta.label });
+    renderWeather(data.properties, sta.label, false);
   } catch(e) {
-    const rainEl = document.getElementById('stat-rain');
-    const windEl = document.getElementById('stat-wind');
-    if (rainEl) { rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>'; }
-    if (windEl) { windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>'; }
-    const rainNote = document.getElementById('stat-rain-note');
-    const windNote = document.getElementById('stat-wind-note');
-    if (rainNote) rainNote.textContent = 'unavailable';
-    if (windNote) windNote.textContent = 'unavailable';
-    const dotRainErr = document.getElementById('dot-rain');
-    const dotWindErr = document.getElementById('dot-wind');
-    if (dotRainErr) dotRainErr.className = 's-dot unknown';
-    if (dotWindErr) dotWindErr.className = 's-dot unknown';
+    sourceFail('nwsWeather', e.message);
+    const cached = usableCache('nwsWeather');
+    if (cached) renderWeather(cached.p, cached.label, true);
+    else renderWeatherUnavailable();
     console.warn('Weather fetch failed:', e.message);
   }
 }
@@ -1248,6 +1327,24 @@ const TIDE_STATIONS = {
   maui:{id:'1615680',name:'Kahului, Maui'},hawaii:{id:'1617760',name:'Hilo, Hawaii'},
   kauai:{id:'1611400',name:'Nawiliwili, Kauai'},molokai:{id:'1612340',name:'HNL Harbor'}
 };
+
+function renderTide(ft, name, stale) {
+  const tideEl = document.getElementById('stat-tide');
+  const tideNote = document.getElementById('stat-tide-note');
+  const dotTide = document.getElementById('dot-tide');
+  if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
+  if (tideNote) tideNote.textContent = name + (stale ? ' · verified ' + verifiedAge('noaaTides') : '');
+  if (dotTide) dotTide.className = 's-dot ' + (stale ? 'unknown' : 'ok');
+}
+
+function renderTideUnavailable() {
+  const tideEl = document.getElementById('stat-tide');
+  const tideNote = document.getElementById('stat-tide-note');
+  const dotTide = document.getElementById('dot-tide');
+  if (tideEl) tideEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
+  if (tideNote) tideNote.textContent = 'unavailable';
+  if (dotTide) dotTide.className = 's-dot unknown';
+}
 
 async function fetchTides() {
   const sta = TIDE_STATIONS[S.island] || TIDE_STATIONS.statewide;
@@ -1259,19 +1356,14 @@ async function fetchTides() {
     const latest = data.data?.[data.data.length-1];
     if (!latest) throw new Error('No tide data');
     const ft = parseFloat(latest.v).toFixed(1);
-    const tideEl = document.getElementById('stat-tide');
-    const tideNote = document.getElementById('stat-tide-note');
-    if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
-    if (tideNote) tideNote.textContent = sta.name;
-    const dotTide = document.getElementById('dot-tide');
-    if (dotTide) dotTide.className = 's-dot ok';
+    if (!isFinite(parseFloat(ft))) throw new Error('unusable tide value');
+    sourceOk('noaaTides', { ft: ft, name: sta.name });
+    renderTide(ft, sta.name, false);
   } catch(e) {
-    const tideEl = document.getElementById('stat-tide');
-    const tideNote = document.getElementById('stat-tide-note');
-    if (tideEl) tideEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
-    if (tideNote) tideNote.textContent = 'unavailable';
-    const dotTide = document.getElementById('dot-tide');
-    if (dotTide) dotTide.className = 's-dot unknown';
+    sourceFail('noaaTides', e.message);
+    const cached = usableCache('noaaTides');
+    if (cached) renderTide(cached.ft, cached.name, true);
+    else renderTideUnavailable();
     console.warn('Tide fetch failed:', e.message);
   }
 }
@@ -1300,31 +1392,56 @@ function timeAgo(ms) {
   return Math.round(hrs / 24) + 'd ago';
 }
 
+function renderQuakes(quakes, stale) {
+  const container = document.getElementById('earthquakes-container');
+  if (!container) return;
+  const note = stale ? staleNote('usgsEarthquakes') : '';
+  if (!quakes.length) {
+    const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
+    container.innerHTML = note + `<div class="alert-item"><span class="badge badge-unknown">NO EVENTS</span><div class="alert-title">No M2.0+ earthquakes near ${esc(name)} in the last month</div><div class="alert-meta">USGS · ${stale ? 'Last verified ' + esc(verifiedAge('usgsEarthquakes')) : 'Checked ' + esc(fmtTime(new Date()))}</div></div>`;
+    return;
+  }
+  container.innerHTML = note + quakes.slice(0,8).map(f => {
+    const p = f.properties;
+    const mag = p.mag != null ? p.mag.toFixed(1) : '?';
+    return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${esc(mag)}</span><div class="alert-title">${esc(truncate(p.place||'Unknown location',90))}</div><div class="alert-meta">${esc(timeAgo(p.time))} · USGS</div></div>`;
+  }).join('');
+}
+
 async function fetchEarthquakes() {
   const container = document.getElementById('earthquakes-container');
   if (!container) return;
   const sta = EARTHQUAKE_STATIONS[S.island] || EARTHQUAKE_STATIONS.statewide;
-  container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div></div>`;
+  if (!S.cache.usgsEarthquakes) container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div></div>`;
   try {
     const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${sta.lat}&longitude=${sta.lon}&maxradiuskm=${sta.radiusKm}&minmagnitude=2.0&orderby=time&limit=10`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('USGS returned ' + res.status);
     const data = await res.json();
-    const quakes = data.features || [];
-    if (quakes.length === 0) {
-      const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-      container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">NO EVENTS</span><div class="alert-title">No M2.0+ earthquakes near ${name} in the last month</div><div class="alert-meta">USGS · Checked ${fmtTime(new Date())}</div></div>`;
-      return;
-    }
-    container.innerHTML = quakes.slice(0,8).map(f => {
-      const p = f.properties;
-      const mag = p.mag != null ? p.mag.toFixed(1) : '?';
-      return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${esc(mag)}</span><div class="alert-title">${esc(truncate(p.place||'Unknown location',90))}</div><div class="alert-meta">${esc(timeAgo(p.time))} · USGS</div></div>`;
-    }).join('');
+    if (!data || !Array.isArray(data.features)) throw new Error('malformed USGS payload');
+    sourceOk('usgsEarthquakes', data.features);
+    renderQuakes(data.features, false);
   } catch(e) {
-    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
+    sourceFail('usgsEarthquakes', e.message);
+    const cached = usableCache('usgsEarthquakes');
+    if (cached) renderQuakes(cached, true);
+    else container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
     console.warn('Earthquake fetch failed:', e.message);
   }
+}
+
+function renderFema(items, stale) {
+  const container = document.getElementById('fema-container');
+  if (!container) return;
+  const note = stale ? staleNote('fema') : '';
+  if (!items.length) {
+    container.innerHTML = note + `<div class="alert-item"><span class="badge badge-unknown">NONE</span><div class="alert-title">No FEMA disaster declarations found for Hawaii</div></div>`;
+    return;
+  }
+  container.innerHTML = note + items.map(d => {
+    const date = d.declarationDate ? new Date(d.declarationDate).toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}) : '';
+    return `<div class="alert-item"><span class="badge badge-warn">${esc((d.incidentType||'DISASTER').toUpperCase())}</span><div class="alert-title">${esc(d.declarationTitle||'Untitled declaration')}</div><div class="alert-meta">${date?'Declared '+esc(date)+' · ':''}FEMA · ${esc(d.designatedArea||'Statewide')}</div></div>`;
+  }).join('');
 }
 
 async function fetchFema() {
@@ -1335,17 +1452,14 @@ async function fetchFema() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('FEMA returned ' + res.status);
     const data = await res.json();
-    const items = data.DisasterDeclarationsSummaries || [];
-    if (items.length === 0) {
-      container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">NONE</span><div class="alert-title">No FEMA disaster declarations found for Hawaii</div></div>`;
-      return;
-    }
-    container.innerHTML = items.map(d => {
-      const date = d.declarationDate ? new Date(d.declarationDate).toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}) : '';
-      return `<div class="alert-item"><span class="badge badge-warn">${esc((d.incidentType||'DISASTER').toUpperCase())}</span><div class="alert-title">${esc(d.declarationTitle||'Untitled declaration')}</div><div class="alert-meta">${date?'Declared '+esc(date)+' · ':''}FEMA · ${esc(d.designatedArea||'Statewide')}</div></div>`;
-    }).join('');
+    if (!data || !Array.isArray(data.DisasterDeclarationsSummaries)) throw new Error('malformed FEMA payload');
+    sourceOk('fema', data.DisasterDeclarationsSummaries);
+    renderFema(data.DisasterDeclarationsSummaries, false);
   } catch(e) {
-    container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">FEMA data temporarily unavailable</div><div class="alert-meta">Could not reach fema.gov</div></div>`;
+    sourceFail('fema', e.message);
+    const cached = usableCache('fema');
+    if (cached) renderFema(cached, true);
+    else container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">FEMA data temporarily unavailable</div><div class="alert-meta">Could not reach fema.gov</div></div>`;
     console.warn('FEMA fetch failed:', e.message);
   }
 }
@@ -1369,53 +1483,217 @@ function setNewsFilter(f) {
   fetchNews();
 }
 
+function renderNews(data, stale) {
+  const container = document.getElementById('news-headlines');
+  const stamp = document.getElementById('news-updated');
+  if (!container) return;
+  const items = data.items || [];
+  const note = stale ? staleNote('news') : '';
+  if (!items.length) {
+    container.innerHTML = note + (S.newsFilter === 'hazard'
+      ? `<div class="news-item"><span class="badge badge-unknown">NO MATCHES</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${esc(fmtTime(new Date()))} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
+      : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${esc(fmtTime(new Date()))}</div></div>`);
+  } else {
+    container.innerHTML = note + items.map(it => {
+      const when = it.published ? timeAgo(Date.parse(it.published)) : '';
+      const haz = it.hazard ? '<span class="news-hazard-tag">HAZARD</span>' : '';
+      return `<a class="news-item" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
+        <div class="news-source-tag">${esc(it.source)}${when ? ' · ' + esc(when) : ''}${haz}</div>
+        <div class="news-headline">${esc(it.title)}</div>
+        ${it.summary ? `<div class="news-byline">${esc(truncate(it.summary, 130))}</div>` : ''}
+      </a>`;
+    }).join('');
+  }
+  if (stamp) {
+    const failed = (data.errors || []).length;
+    stamp.textContent = stale
+      ? `${items.length} headlines · last verified ${verifiedAge('news')}`
+      : `${items.length} headlines · updated ${fmtTime(new Date())}` + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
+  }
+}
+
 async function fetchNews() {
   const container = document.getElementById('news-headlines');
   const stamp = document.getElementById('news-updated');
   if (!container) return;
-  container.innerHTML = `<div class="news-item"><div class="skeleton" style="width:90px;height:10px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
+  if (!S.cache.news) container.innerHTML = `<div class="news-item"><div class="skeleton" style="width:90px;height:10px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
   try {
     const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';
     const res = await fetch('/api/news' + q);
     if (res.status === 404) throw new Error('NO_API');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    const items = data.items || [];
-    if (!items.length) {
-      container.innerHTML = S.newsFilter === 'hazard'
-        ? `<div class="news-item"><span class="badge badge-unknown">NO MATCHES</span><div class="news-headline" style="margin-top:6px">No hazard-related headlines right now</div><div class="news-byline">Checked ${fmtTime(new Date())} · <a href="#" onclick="setNewsFilter('all');return false" style="color:var(--sky)">Show all headlines</a></div></div>`
-        : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${fmtTime(new Date())}</div></div>`;
-    } else {
-      container.innerHTML = items.map(it => {
-        const when = it.published ? timeAgo(Date.parse(it.published)) : '';
-        const haz = it.hazard ? '<span class="news-hazard-tag">HAZARD</span>' : '';
-        return `<a class="news-item" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
-          <div class="news-source-tag">${esc(it.source)}${when ? ' · ' + esc(when) : ''}${haz}</div>
-          <div class="news-headline">${esc(it.title)}</div>
-          ${it.summary ? `<div class="news-byline">${esc(truncate(it.summary, 130))}</div>` : ''}
-        </a>`;
-      }).join('');
-    }
-    if (stamp) {
-      const failed = (data.errors || []).length;
-      stamp.textContent = `${items.length} headlines · updated ${fmtTime(new Date())}` + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
-    }
+    if (!data || !Array.isArray(data.items)) throw new Error('malformed news payload');
+    sourceOk('news', data);
+    renderNews(data, false);
   } catch(e) {
-    if (e.message === 'NO_API') {
-      container.innerHTML = `<div class="news-item"><span class="badge badge-info">LOCAL DEV</span><div class="news-headline" style="margin-top:6px">Headlines need the API running</div><div class="news-byline">The RSS feeds have no CORS, so they're fetched by <code>/api/news</code>. Run <code>npm run dev:api</code> (vercel dev) to enable it locally — it works automatically once deployed.</div></div>`;
+    sourceFail('news', e.message === 'NO_API' ? 'local dev: /api/news not running' : e.message);
+    const cached = usableCache('news');
+    if (cached) {
+      renderNews(cached, true);
+    } else if (e.message === 'NO_API') {
+      container.innerHTML = `<div class="news-item"><span class="badge badge-unknown">LOCAL DEV</span><div class="news-headline" style="margin-top:6px">Headlines need the API running</div><div class="news-byline">The RSS feeds have no CORS, so they're fetched by <code>/api/news</code>. Run <code>npm run dev:api</code> (vercel dev) to enable it locally — it works automatically once deployed.</div></div>`;
+      if (stamp) stamp.textContent = '';
     } else {
-      container.innerHTML = `<div class="news-item"><span class="badge badge-info">UNAVAILABLE</span><div class="news-headline" style="margin-top:6px">Headlines temporarily unavailable</div><div class="news-byline">Browse the sources below directly.</div></div>`;
+      container.innerHTML = `<div class="news-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="news-headline" style="margin-top:6px">Headlines temporarily unavailable</div><div class="news-byline">Browse the sources below directly.</div></div>`;
+      if (stamp) stamp.textContent = '';
     }
-    if (stamp) stamp.textContent = '';
     console.warn('News fetch failed:', e.message);
   }
 }
+
+/* SOURCE HEALTH & FRESHNESS — implements PHASE1-SOURCE-HEALTH.md
+   Freshness is orthogonal to hazard severity: a Severe warning can be stale and a normal
+   tide reading can be current, so health never borrows the hazard palette.
+   States: loading -> current -> stale -> unavailable. */
+const MIN = 60 * 1000, HOUR = 60 * MIN;
+
+/* Q002 — thresholds live beside the source they govern. One global number cannot be right
+   for both NWS Alerts, where warnings turn over in minutes, and FEMA, where declarations
+   change over days. Centralised here, never scattered through fetch bodies. */
+S.sourceHealth = {
+  nwsAlerts:       { label: 'NWS Alerts',        freshMs: 6 * MIN,  staleMs: 10 * MIN, critical: true },
+  nwsWeather:      { label: 'NWS Observations',  freshMs: 10 * MIN, staleMs: 30 * MIN },
+  noaaTides:       { label: 'NOAA Tides',        freshMs: 15 * MIN, staleMs: 45 * MIN },
+  usgsEarthquakes: { label: 'USGS Earthquakes',  freshMs: 15 * MIN, staleMs: 60 * MIN },
+  fema:            { label: 'FEMA Declarations', freshMs: 6 * HOUR, staleMs: 24 * HOUR },
+  news:            { label: 'News Feed',         freshMs: 15 * MIN, staleMs: 60 * MIN }
+};
+Object.keys(S.sourceHealth).forEach(k => {
+  const h = S.sourceHealth[k];
+  h.lastAttempt = null; h.lastSuccess = null; h.lastError = null; h.consecutiveFailures = 0;
+});
+
+/* Q003 — last-known-good is kept separate from health metadata so retention stays explicit
+   and greppable instead of buried inside six fetch bodies. */
+S.cache = {};
+
+/* Weather, tides and earthquakes are fetched per island, so their cache is only reusable
+   for the island it was captured on. Serving Kauai's retained tide reading under Maui
+   would be a fresh category of wrong data. */
+const ISLAND_SCOPED = { nwsWeather: 1, noaaTides: 1, usgsEarthquakes: 1 };
+
+function sourceOk(key, data) {
+  const h = S.sourceHealth[key];
+  if (!h) return;
+  const now = Date.now();
+  h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
+  if (data !== undefined) S.cache[key] = { island: S.island, data: data };
+  renderSourceHealth();
+}
+
+function sourceFail(key, err) {
+  const h = S.sourceHealth[key];
+  if (!h) return;
+  h.lastAttempt = Date.now();
+  h.consecutiveFailures++;
+  h.lastError = err ? String(err) : 'unknown error';
+  renderSourceHealth();
+}
+
+function sourceState(key) {
+  const h = S.sourceHealth[key];
+  if (!h || !h.lastAttempt) return 'loading';
+  if (!h.lastSuccess) return 'unavailable';
+  const age = Date.now() - h.lastSuccess;
+  if (age > h.staleMs) return 'unavailable';
+  if (h.lastError || age > h.freshMs) return 'stale';
+  return 'current';
+}
+
+function isStale(key) { return sourceState(key) === 'stale'; }
+
+/* Retained data is only offered while the source is inside its stale window. Past that it
+   is not operationally usable and the caller must fall back to an unavailable state. */
+function usableCache(key) {
+  const e = S.cache[key];
+  if (!e || sourceState(key) !== 'stale') return null;
+  if (ISLAND_SCOPED[key] && e.island !== S.island) return null;
+  return e.data;
+}
+
+function relAge(ts) {
+  if (!ts) return 'never';
+  const secs = Math.round((Date.now() - ts) / 1000);
+  if (secs < 60) return secs + ' sec ago';
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + ' hr ago';
+  return Math.round(hrs / 24) + ' days ago';
+}
+
+function verifiedAge(key) {
+  const h = S.sourceHealth[key];
+  return h && h.lastSuccess ? relAge(h.lastSuccess) : 'never';
+}
+
+/* User-facing copy stays calm and factual. Raw exception text goes to console.warn only. */
+const SRC_STATE_TEXT = { loading: 'Checking', current: 'Current', stale: 'Stale', unavailable: 'Unavailable' };
+
+function staleNote(key) {
+  const st = sourceState(key);
+  if (st === 'current' || st === 'loading') return '';
+  const label = st === 'stale'
+    ? 'Showing data last verified ' + verifiedAge(key)
+    : 'Not verified \u2014 last successful check ' + verifiedAge(key);
+  return '<div class="stale-note"><span class="s-dot unknown"></span>' + esc(label) + '</div>';
+}
+
+function renderSourceHealth() {
+  const list = document.getElementById('source-health-list');
+  if (list) {
+    list.innerHTML = Object.keys(S.sourceHealth).map(k => {
+      const h = S.sourceHealth[k];
+      const st = sourceState(k);
+      return '<div class="src-row"><div class="src-name"><span class="s-dot ' + (st === 'current' ? 'ok' : 'unknown') + '"></span>'
+           + esc(h.label) + '</div><div class="src-meta"><span class="src-age">'
+           + esc(h.lastSuccess ? relAge(h.lastSuccess) : 'never') + '</span>'
+           + '<span class="src-state src-state-' + st + '">' + esc(SRC_STATE_TEXT[st]) + '</span></div></div>';
+    }).join('');
+  }
+  const stamp = document.getElementById('src-last-refresh');
+  if (stamp) {
+    const times = Object.keys(S.sourceHealth).map(k => S.sourceHealth[k].lastSuccess).filter(Boolean);
+    stamp.textContent = times.length ? 'Last refresh ' + fmtTime(new Date(Math.max.apply(null, times)))
+                                     : 'No successful refresh yet';
+  }
+  const lu = document.getElementById('alerts-last-updated');
+  if (lu) {
+    const st = sourceState('nwsAlerts');
+    lu.textContent = st === 'loading' ? ''
+      : st === 'current' ? 'NWS alerts updated ' + verifiedAge('nwsAlerts')
+      : 'NWS alerts last verified ' + verifiedAge('nwsAlerts');
+  }
+  updateLivePill();
+}
+
+/* The pill reflects the worst state across all feeds. Sources still loading are ignored so
+   the first paint does not flash a degraded state before the opening fetches land. */
+function updateLivePill() {
+  const pill = document.querySelector('.live-pill');
+  if (!pill) return;
+  const states = Object.keys(S.sourceHealth).map(sourceState);
+  let cls = '', word = 'LIVE', hint = 'All data sources current';
+  if (states.indexOf('unavailable') !== -1) {
+    cls = ' is-degraded'; word = 'DEGRADED'; hint = 'A data source is unavailable \u2014 see Settings \u203a Data Sources';
+  } else if (states.indexOf('stale') !== -1) {
+    cls = ' is-delayed'; word = 'STALE'; hint = 'A data source could not be refreshed \u2014 see Settings \u203a Data Sources';
+  }
+  pill.className = 'live-pill' + cls;
+  pill.setAttribute('title', hint);
+  pill.innerHTML = '<span class="live-dot"></span>' + word;
+}
+
+renderSourceHealth();
 
 async function refreshAll() {
   await Promise.allSettled([fetchAlerts(), fetchWeather(), fetchTides(), fetchEarthquakes(), fetchFema(), fetchNews()]);
 }
 refreshAll();
 setInterval(refreshAll, 5 * 60 * 1000);
+/* Ages are relative, so they must re-render between fetches or "2 min ago" freezes. */
+setInterval(renderSourceHealth, 30000);
 
 switchView('news');
 
