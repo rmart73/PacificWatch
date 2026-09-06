@@ -380,12 +380,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     <div class="stat-note" id="stat-wind-note">Sustained · loading…</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot unknown"></span>Tide</div>
+    <div class="stat-lbl"><span class="s-dot unknown" id="dot-tide"></span>Tide</div>
     <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
     <div class="stat-note" id="stat-tide-note">loading…</div>
   </div>
   <a class="stat-cell stat-cell-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">
-    <div class="stat-lbl"><span class="s-dot warn"></span>Shelter</div>
+    <div class="stat-lbl"><span class="s-dot unknown"></span>Shelter</div>
     <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
     <div class="stat-note">HIEMA shelter status</div>
   </a>
@@ -1137,10 +1137,11 @@ function renderAlerts(features) {
   if (!container) return;
   const filtered = features.filter(f => alertMatchesIsland(f, S.island));
   updateHazardBanner(filtered);
-  // Pacific Watch does not query PTWC. This row must therefore never assert a tsunami
-  // all-clear — it is a pointer to the authority, not a status reading. NWS tsunami
-  // products for Hawaii do arrive in the alerts feed above and render as normal alerts.
-  const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">Not monitored by Pacific Watch · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  // This row must never assert a tsunami all-clear: Pacific Watch does not poll PTWC.
+  // It must equally not imply tsunamis are unmonitored — NWS distributes PTWC products
+  // through the alerts feed above, so a real Tsunami Warning for Hawaii renders in this
+  // same list as a normal alert. The row states both facts and asserts no status.
+  const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   if (filtered.length === 0) {
     const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
     container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${name}</div><div class="alert-meta">NWS Honolulu · Checked ${fmtTime(new Date())}</div></div>${ptwcNote}`;
@@ -1160,7 +1161,7 @@ function updateTicker(features) {
   const track = document.getElementById('ticker-track');
   if (!track) return;
   if (!features || features.length === 0) {
-    track.textContent = '✓ No active NWS alerts for Hawaii · Tsunami status not monitored — verify at tsunami.gov · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Tsunami status not monitored — verify at tsunami.gov';
+    track.textContent = '✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov · Visit NWS HFO for latest forecasts · ✓ No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov';
     return;
   }
   const items = features.map(f => {
@@ -1262,11 +1263,15 @@ async function fetchTides() {
     const tideNote = document.getElementById('stat-tide-note');
     if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
     if (tideNote) tideNote.textContent = sta.name;
+    const dotTide = document.getElementById('dot-tide');
+    if (dotTide) dotTide.className = 's-dot ok';
   } catch(e) {
     const tideEl = document.getElementById('stat-tide');
     const tideNote = document.getElementById('stat-tide-note');
     if (tideEl) tideEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
     if (tideNote) tideNote.textContent = 'unavailable';
+    const dotTide = document.getElementById('dot-tide');
+    if (dotTide) dotTide.className = 's-dot unknown';
     console.warn('Tide fetch failed:', e.message);
   }
 }

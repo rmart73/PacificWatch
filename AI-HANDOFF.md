@@ -12,7 +12,7 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ### Phase 0 — Trust Corrections
 
-**Status:** Implemented, in review on `claude/phase0-trust-corrections`
+**Status:** Review feedback addressed; awaiting re-review on PR #2
 
 **Goal:** Remove misleading all-clear semantics and make degraded source states explicit before the v2 visual redesign begins.
 
@@ -37,7 +37,7 @@ Durable technical decisions belong in `AGENTS.md`.
 | Agent | Branch | Work | Status |
 |---|---|---|---|
 | Claude Code | `claude/multi-agent-setup` | Multi-agent collaboration setup | Merged (#1) |
-| Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | In review |
+| Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | Re-review requested (#2) |
 | ChatGPT Codex | — | — | — |
 
 ---
@@ -73,6 +73,41 @@ That reframes the remaining question: a dedicated PTWC feed is a **redundancy an
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Codex review of PR #2 addressed
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+- **Tide state handling.** Correct call, and it was a defect I introduced. `fetchTides()` succeeds and renders a value, but the dot had no `id` and no code wrote it — so changing the markup default from `ok` to `unknown` swapped a permanent false-healthy for a permanent false-unknown. The dot is now `id="dot-tide"`, set to `ok` on success and `unknown` in the catch.
+- **Tsunami wording.** Also correct. "Not monitored by Pacific Watch" over-corrected into a second falsehood: it implied the app cannot surface a tsunami, when NWS distributes PTWC products through the alerts feed and a real Tsunami Warning renders in that same list. The row now reads "NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · tsunami.gov". The ticker carried the same over-correction and was fixed with it.
+
+#### Additional defect found while auditing
+Applying the new rule to every status dot surfaced one more: the **Shelter** dot was hardcoded `s-dot warn` and updated by no code. Amber means advisory in this app, so that tile has been permanently signalling an advisory-level shelter condition with nothing behind it — during a live hurricane approach. It is now `unknown`, matching Outages; both are link-outs with no data source.
+
+All five stat dots now start `unknown`. Rain, wind and tide are written by their own fetches; shelter and outages stay `unknown` until a source is wired up.
+
+#### Findings
+- The generalised rule is what caught the shelter dot — neither of us flagged it reading the code directly. Now recorded in `AGENTS.md`: a status indicator no code updates is a bug in whichever state it is stuck in, and over-correcting into a false disclaimer is its own failure mode.
+
+#### Verification
+- Six replacements plus two follow-ups, each asserting exactly one match.
+- Inline JS re-extracted and `node --check`ed: parses cleanly.
+- Full audit of every `s-dot` in the file — no hardcoded status remains except the two documented link-outs.
+- The PR #2 preview refreshes from this push. The tide dot and the reworded tsunami row still need a visual pass.
+
+#### Next requested action
+- Re-review the refreshed preview on PR #2.
+
+#### Files affected
+- `index.html` — stat-bar markup, `fetchTides()`, the `ptwcNote` row in `renderAlerts()`, `updateTicker()`
+- `AGENTS.md` — status-indicator rule, over-correction caveat, documented exceptions
+
+#### Commit / PR
+- PR #2, second commit
+
+---
 
 ### 2026-09-06 — Phase 0 trust corrections implemented
 

@@ -95,6 +95,13 @@ alone. Do not silently change it.
   was not read from a source you actually queried — this is an emergency app, and a false
   all-clear is the worst output it can produce. An "all clear" is only legitimate when the
   authoritative fetch succeeded and genuinely returned nothing.
+  Equally, do not over-correct into a second falsehood: a disclaimer that implies a hazard is
+  unmonitored when the feed does in fact carry it is its own kind of wrong.
+- **A status indicator no code updates is a bug in whichever state it is stuck in.** Every dot
+  must be written by the fetch that owns it — `ok` on success, `unknown` on failure — not
+  hardcoded in markup. The Shelter and Outages cells are the deliberate exceptions: both are
+  link-outs with no data source in the app, so they stay `unknown` until one is wired up.
+  Neither may show `ok` or `warn` — a hardcoded amber dot asserts an advisory nothing verified.
 - **Escaping is not optional.** Everything rendered comes from an external feed and lands in
   `innerHTML`, on an origin that holds the user's Anthropic key in `localStorage`. Every
   interpolated external value goes through `esc()`; every `href` from external data goes through
