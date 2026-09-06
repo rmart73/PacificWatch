@@ -80,7 +80,37 @@ What is not acceptable is leaving them. Needs a product decision before implemen
 **F001 — `unknown` needs a shape difference, not only a colour difference. — IMPLEMENTED in PR #5.**
 Folded into Phase 1 rather than kept separate, since the source-health UI needed non-colour semantics anyway and shipping a colour-only version first would have meant touching the same CSS twice. `.s-dot.unknown` is now a hollow ring (`box-shadow:inset 0 0 0 1.5px`, transparent fill) and `.src-state-unavailable` is outlined rather than filled. Dots were also raised from 5px to 6px so the ring has a visible interior. The rule is recorded in `AGENTS.md` as a third accessibility constraint, and the CSS is protected by a load-bearing-decisions row so it is not later "simplified" back to a fill.
 
-**Still open:** whether the ring is *legible enough* at 6px. jsdom can confirm the class is applied but not that a human can see it. This is the last outstanding item on Phase 1 and needs eyes on Settings → Data Sources.
+**Legibility confirmed by the user on the Vercel preview**, using the stat bar as an A/B: Tide had succeeded (filled `ok`) while Rain and Wind had failed (hollow `unknown`), three dots in one row. Verdict:
+
+> "I can tell the difference between an empty dot and a filled dot, but I have to lean in to see the color."
+
+Shape reads at a glance; hue does not. That is exactly the outcome F001 was aiming for, so **F001 is closed** — and the second half of that sentence is a new finding, raised as F004.
+
+**F004 — `ok` and `warn` dots differ by hue alone; `alert` relies on unguarded motion.**
+
+**Found by:** the user, confirming F001 — "I have to lean in to see the color."
+
+That sentence is a defect report for the states F001 did not touch. Current encoding:
+
+| State | Fill | Second channel |
+|---|---|---|
+| `unknown` | hollow ring | **shape** |
+| `ok` | steel blue | none |
+| `warn` | amber | none |
+| `alert` | vermilion | pulse animation |
+
+`ok` and `warn` are both static filled circles at 6px separated only by hue, which the user has now confirmed is not readable at a glance. This violates the constraint added to `AGENTS.md` during Phase 1 — verification state is never carried by colour alone — by code that predates the rule. Recording that honestly rather than pretending the rule is satisfied.
+
+`alert` does have a second channel, but it is `animation: pulse` and there is **no `prefers-reduced-motion` guard anywhere in the file**. For a user with reduced motion enabled, `alert` becomes a static filled circle too, and all three filled states collapse to hue alone — in the hazard channel, not the freshness one. The same applies to `.hazard-pulse` on the banner.
+
+**Suggested fix, as a focused follow-up rather than more scope on Phase 1:**
+- Give `warn` a second channel that is not colour or motion — a ring plus centre dot, or a half-fill.
+- Add a `@media (prefers-reduced-motion: reduce)` block that stops the pulse and substitutes a static non-colour treatment, so `alert` keeps a second channel for those users.
+- Consider 7-8px dots. The user could resolve shape but not hue at 6px, which suggests the dots are simply below the size where a small hue difference registers peripherally.
+
+Not a Phase 1 blocker: F001 covered verification state, which now works. This is hazard state and belongs with F002 / the severity model, where the warn-vs-alert distinction is the whole subject.
+
+---
 
 **F002 — watches and warnings currently render too similarly.**
 NWS `severity` alone flattens distinctions such as Flood Watch vs Tropical Storm Warning. This remains queued for the later severity-model work; do not mix it into Phase 1 unless required for source-health correctness.

@@ -317,6 +317,9 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   grey are too close to separate reliably at 6px, so `.s-dot.unknown` is a hollow ring and
   `.src-state-unavailable` is outlined rather than filled — shape carries the distinction and
   hue only reinforces it. Any new status indicator must differ in more than colour.
+  **Known gap (F004):** the pre-existing `.s-dot.ok` and `.s-dot.warn` still differ by hue
+  alone, and `.s-dot.alert`'s second channel is an unguarded `animation: pulse`. Confirmed
+  unreadable at a glance by a user on the live preview. Fix tracked in `AI-HANDOFF.md`.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
