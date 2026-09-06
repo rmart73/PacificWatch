@@ -10,6 +10,30 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
+### Phase 1 — Source Health & Freshness
+
+**Status:** Implemented, in review on `claude/phase1-source-health` (PR #4)
+
+**Goal:** Make it visible how fresh every feed is and whether any source is failing. Covers v2 plan items 7 (Data Freshness) and 8 (Source Health Monitor).
+
+**Delivered:**
+- A source-health registry on `S.sources` covering all six live feeds. Every fetch reports success or failure through `markSource()`.
+- Three health states derived from the data, not asserted: **Current**, **Delayed**, **Unavailable**, plus **Not checked** before the first attempt.
+- A **Data Sources** card at the top of Settings listing every feed with a relative age, a state chip, and the error text as a tooltip on failure.
+- The header pill now reflects the worst state across all feeds — `LIVE` / `DELAYED` / `DEGRADED` — instead of being permanently `LIVE`.
+- The NWS alerts stamp is now a relative age ("updated 2 min ago") rather than a wall-clock time, which is what actually answers "is this current?".
+- A 30-second tick re-renders ages so they do not freeze between the 5-minute fetches.
+
+**Three design calls worth challenging in review:**
+
+1. **Degraded states use neutral grey, not amber or red.** Feed health is a different axis from hazard severity. If a stale feed rendered amber it would read as a weather advisory, and the whole point of Phase 0 was to stop the UI implying hazard states it has not verified. Grey also matches the `unknown` tier already established. The counter-argument — that a failing source during an emergency deserves louder treatment — is reasonable and I did not take it.
+2. **Thresholds are 6 minutes to Delayed and 15 to Unavailable**, against a 5-minute refresh: one missed cycle, then three. Unit-tested, but the numbers themselves are a judgement call.
+3. **Sources not yet checked do not downgrade the header pill.** Otherwise first paint flashes `DELAYED` before the opening fetches land. They still show honestly as "Not checked" in the Settings list.
+
+**Deliberately not in this PR:** the plan's per-source freshness readout on the main dashboard. That belongs with the overview redesign rather than being bolted onto the current stat bar. Settings is the right home for it today.
+
+---
+
 ### Phase 0 — Trust Corrections
 
 **Status:** Complete — merged in #2 (`ccd9a2c`) and verified live on production.
@@ -61,6 +85,7 @@ alone is not reliable enough to drive the badge.
 |---|---|---|---|
 | Claude Code | `claude/multi-agent-setup` | Multi-agent collaboration setup | Merged (#1) |
 | Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | Merged (#2) |
+| Claude Code | `claude/phase1-source-health` | Phase 1 source health & freshness | In review (#4) |
 | ChatGPT Codex | — | — | — |
 
 ---
@@ -89,13 +114,49 @@ That reframes the remaining question: a dedicated PTWC feed is a **redundancy an
 
 | PR | Author | Review requested from | Purpose |
 |---|---|---|---|
-| — | — | — | — |
+| #4 | Claude Code | ChatGPT Codex | Phase 1 source health & freshness |
 
 ---
 
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Phase 1 implemented, ready for review
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+Source health and freshness, as described under Current Work. All six feeds report through a single `markSource()` path; health is derived from timestamps rather than asserted anywhere.
+
+#### Findings
+- Success is marked at parse time, not at the end of the `try` block. `fetchEarthquakes()` and `fetchFema()` both `return` early on an empty result set, so marking at the end would have recorded a successful empty fetch as never having happened — the exact class of bug Phase 0 was about.
+- `fetchNews()` throwing `NO_API` on local dev is recorded as a real failure with the reason attached, rather than being special-cased into looking healthy. On a deployed environment it cannot occur.
+- The health model reuses the Phase 0 vocabulary rather than inventing a parallel one: the same `--unknown` grey, the same `.s-dot` classes, the same badge tokens.
+
+#### Constraints discovered
+- `renderSourceHealth()` runs once at definition time to populate the Settings list before any fetch resolves. It calls `esc()` and `fmtTime()`, which are function declarations at lines 937 and 953 — well before the call site. If either is ever converted to a `const` arrow function below that point, this breaks on load with a TDZ error. Verified as safe, worth knowing.
+
+#### Verification
+- 18 replacements, each asserting exactly one match.
+- Inline JS extracted and `node --check`ed: parses cleanly.
+- **The threshold logic is unit-tested.** `sourceState()` and `relAge()` were extracted from `index.html` and exercised in Node across 15 cases: never-attempted, attempted-but-never-succeeded, fresh, boundary, one missed cycle, three missed cycles, and the recent-data-but-last-fetch-failed case. All pass, plus three sanity assertions tying the thresholds to the 5-minute refresh interval.
+- Served locally: HTTP 200, every new symbol present.
+- **Not verified in a browser.** Specifically unexercised: the pill actually changing to DELAYED/DEGRADED, and the Settings list populating. Both need the preview.
+
+#### Next requested action
+- Review PR #4, particularly the three design calls listed under Current Work. The grey-not-amber decision is the one I would most like a second opinion on.
+- A way to force a failure state for visual review: block `api.weather.gov` in devtools, or set the system clock forward, then open Settings.
+
+#### Files affected
+- `index.html` — `.live-pill` health CSS, `.src-row` CSS, Data Sources settings card, the source-health engine before `refreshAll()`, a 30s tick, and success/failure hooks in all six fetch functions
+- `AI-HANDOFF.md` — this entry
+
+#### Commit / PR
+- PR #4 on `claude/phase1-source-health`
+
+---
 
 ### 2026-09-06 — Phase 0 merged and verified on production
 

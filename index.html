@@ -93,6 +93,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .header-right{display:flex;align-items:center;gap:8px}
 .live-pill{display:flex;align-items:center;gap:5px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:20px}
 .live-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+/* Feed health is a different axis from hazard severity, so degraded states use the neutral
+   --unknown grey rather than amber/red. Borrowing the hazard palette here would make a
+   stale feed look like a weather advisory. The pulse stops too — it means "live". */
+.live-pill.is-delayed,.live-pill.is-degraded{background:var(--unknown)}
+.live-pill.is-delayed .live-dot,.live-pill.is-degraded .live-dot{animation:none}
+.live-pill.is-degraded .live-dot{background:rgba(255,255,255,.55)}
 .clock-display{font-size:11px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;display:none}
 .theme-btn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);transition:background .18s,transform .1s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
 .theme-btn:hover{background:rgba(255,255,255,.16)}
@@ -302,6 +308,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .settings-row-label{font-size:13px;font-weight:500;color:var(--ink)}
 .settings-row-sub{font-size:11px;color:var(--ink3);margin-top:2px}
 .settings-val{font-size:12px;color:var(--sky);font-weight:600}
+.src-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid var(--rule)}
+.src-row:last-child{border-bottom:none}
+.src-name{font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
+.src-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.src-age{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
 .toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
 .toggle.on{background:var(--sky2)}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s}
@@ -733,6 +744,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     <div id="view-settings" class="view">
       <div class="settings-section">
         <div class="settings-card">
+          <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Data Sources</div>
+            <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
+          </div>
+          <div id="source-health-list"></div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data. Pacific Watch refreshes every 5 minutes; a source is Delayed after 6 minutes without a successful fetch and Unavailable after 15.</div>
+        </div>
+
+        <div class="settings-card">
           <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule)">
             <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Appearance</div>
           </div>
@@ -1075,12 +1095,13 @@ async function fetchAlerts() {
     });
     if (!res.ok) throw new Error('NWS returned ' + res.status);
     const data = await res.json();
+    markSource('alerts', true);
     S.alertsCache = data.features || [];
     renderAlerts(S.alertsCache);
     updateTicker(S.alertsCache);
-    const lu = document.getElementById('alerts-last-updated');
-    if (lu) lu.textContent = 'NWS alerts updated ' + fmtTime(new Date());
+    renderSourceHealth();
   } catch(e) {
+    markSource('alerts', false, e.message);
     container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">NWS alerts temporarily unavailable</div><div class="alert-meta">Could not reach api.weather.gov. <a href="https://www.weather.gov/hfo" target="_blank" rel="noopener" style="color:var(--sky)">View NWS HFO directly ↗</a> · <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" style="color:var(--sky)">HIEMA ↗</a></div></div>`;
     const banner = document.getElementById('hazard-banner');
     const head = document.getElementById('hazard-headline');
@@ -1187,6 +1208,7 @@ async function fetchWeather() {
     });
     if (!res.ok) throw new Error('obs ' + res.status);
     const data = await res.json();
+    markSource('weather', true);
     const p = data.properties;
     const windRaw = p.windSpeed?.value, gustRaw = p.windGust?.value;
     const windMph = windRaw != null ? Math.round(windRaw * 2.237) : null;
@@ -1239,6 +1261,7 @@ async function fetchWeather() {
     const dotWindErr = document.getElementById('dot-wind');
     if (dotRainErr) dotRainErr.className = 's-dot unknown';
     if (dotWindErr) dotWindErr.className = 's-dot unknown';
+    markSource('weather', false, e.message);
     console.warn('Weather fetch failed:', e.message);
   }
 }
@@ -1265,6 +1288,7 @@ async function fetchTides() {
     if (tideNote) tideNote.textContent = sta.name;
     const dotTide = document.getElementById('dot-tide');
     if (dotTide) dotTide.className = 's-dot ok';
+    markSource('tides', true);
   } catch(e) {
     const tideEl = document.getElementById('stat-tide');
     const tideNote = document.getElementById('stat-tide-note');
@@ -1272,6 +1296,7 @@ async function fetchTides() {
     if (tideNote) tideNote.textContent = 'unavailable';
     const dotTide = document.getElementById('dot-tide');
     if (dotTide) dotTide.className = 's-dot unknown';
+    markSource('tides', false, e.message);
     console.warn('Tide fetch failed:', e.message);
   }
 }
@@ -1310,6 +1335,7 @@ async function fetchEarthquakes() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('USGS returned ' + res.status);
     const data = await res.json();
+    markSource('quakes', true);
     const quakes = data.features || [];
     if (quakes.length === 0) {
       const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
@@ -1323,6 +1349,7 @@ async function fetchEarthquakes() {
     }).join('');
   } catch(e) {
     container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
+    markSource('quakes', false, e.message);
     console.warn('Earthquake fetch failed:', e.message);
   }
 }
@@ -1335,6 +1362,7 @@ async function fetchFema() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('FEMA returned ' + res.status);
     const data = await res.json();
+    markSource('fema', true);
     const items = data.DisasterDeclarationsSummaries || [];
     if (items.length === 0) {
       container.innerHTML = `<div class="alert-item"><span class="badge badge-ok">NONE</span><div class="alert-title">No FEMA disaster declarations found for Hawaii</div></div>`;
@@ -1346,6 +1374,7 @@ async function fetchFema() {
     }).join('');
   } catch(e) {
     container.innerHTML = `<div class="alert-item"><span class="badge badge-info">UNAVAILABLE</span><div class="alert-title">FEMA data temporarily unavailable</div><div class="alert-meta">Could not reach fema.gov</div></div>`;
+    markSource('fema', false, e.message);
     console.warn('FEMA fetch failed:', e.message);
   }
 }
@@ -1396,6 +1425,7 @@ async function fetchNews() {
         </a>`;
       }).join('');
     }
+    markSource('news', true);
     if (stamp) {
       const failed = (data.errors || []).length;
       stamp.textContent = `${items.length} headlines · updated ${fmtTime(new Date())}` + (failed ? ` · ${failed} source${failed === 1 ? '' : 's'} unavailable` : '');
@@ -1407,15 +1437,119 @@ async function fetchNews() {
       container.innerHTML = `<div class="news-item"><span class="badge badge-info">UNAVAILABLE</span><div class="news-headline" style="margin-top:6px">Headlines temporarily unavailable</div><div class="news-byline">Browse the sources below directly.</div></div>`;
     }
     if (stamp) stamp.textContent = '';
+    markSource('news', false, e.message === 'NO_API' ? 'local dev: /api/news not running' : e.message);
     console.warn('News fetch failed:', e.message);
   }
 }
+
+/* SOURCE HEALTH & FRESHNESS
+   Every fetch reports its outcome here so the UI can show how fresh each feed actually is.
+   Consistent with the Phase 0 rule: "ok" means a fetch genuinely succeeded, never "no data".
+   Thresholds are tied to the 5-minute refresh interval below — one missed cycle is Delayed,
+   three is Unavailable. */
+const FRESH_MS = 6 * 60 * 1000;
+const STALE_MS = 15 * 60 * 1000;
+
+S.sources = {
+  alerts:  { label: 'NWS Alerts' },
+  weather: { label: 'NWS Observations' },
+  tides:   { label: 'NOAA Tides' },
+  quakes:  { label: 'USGS Earthquakes' },
+  fema:    { label: 'FEMA Declarations' },
+  news:    { label: 'News Feed' }
+};
+Object.values(S.sources).forEach(src => { src.lastOk = null; src.lastTry = null; src.error = null; });
+
+function markSource(key, ok, err) {
+  const src = S.sources[key];
+  if (!src) return;
+  src.lastTry = Date.now();
+  if (ok) { src.lastOk = Date.now(); src.error = null; }
+  else { src.error = err ? String(err).slice(0, 120) : 'unavailable'; }
+  renderSourceHealth();
+}
+
+function sourceState(src) {
+  if (!src.lastOk) return src.lastTry ? 'unavailable' : 'unknown';
+  const age = Date.now() - src.lastOk;
+  if (age > STALE_MS) return 'unavailable';
+  if (age > FRESH_MS || src.error) return 'delayed';
+  return 'ok';
+}
+
+const SRC_CHIP = {
+  ok:          ['badge-ok',      'Current'],
+  delayed:     ['badge-warn',    'Delayed'],
+  unavailable: ['badge-alert',   'Unavailable'],
+  unknown:     ['badge-unknown', 'Not checked']
+};
+const SRC_DOT = { ok:'ok', delayed:'warn', unavailable:'alert', unknown:'unknown' };
+
+function relAge(ts) {
+  if (!ts) return 'never';
+  const secs = Math.round((Date.now() - ts) / 1000);
+  if (secs < 60) return secs + ' sec ago';
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.round(mins / 60);
+  return hrs + ' hr ago';
+}
+
+function renderSourceHealth() {
+  const list = document.getElementById('source-health-list');
+  if (list) {
+    list.innerHTML = Object.keys(S.sources).map(k => {
+      const src = S.sources[k];
+      const st = sourceState(src);
+      const chip = SRC_CHIP[st];
+      const title = src.error ? ` title="${esc(src.error)}"` : '';
+      return `<div class="src-row"${title}><div class="src-name"><span class="s-dot ${SRC_DOT[st]}"></span>${esc(src.label)}</div>`
+           + `<div class="src-meta"><span class="src-age">${esc(relAge(src.lastOk))}</span>`
+           + `<span class="badge ${chip[0]}">${esc(chip[1])}</span></div></div>`;
+    }).join('');
+  }
+  const stamp = document.getElementById('src-last-refresh');
+  if (stamp) {
+    const times = Object.keys(S.sources).map(k => S.sources[k].lastOk).filter(Boolean);
+    const newest = times.length ? Math.max.apply(null, times) : null;
+    stamp.textContent = newest ? 'Last refresh ' + fmtTime(new Date(newest)) : 'No successful refresh yet';
+  }
+  const lu = document.getElementById('alerts-last-updated');
+  if (lu) {
+    const a = S.sources.alerts;
+    lu.textContent = a.lastOk ? 'NWS alerts updated ' + relAge(a.lastOk)
+                  : a.lastTry ? 'NWS alerts unavailable' : '';
+  }
+  updateLivePill();
+}
+
+/* The pill reflects the worst state across all feeds. Sources not yet checked are ignored
+   rather than counted as degraded, so the first paint doesn't flash DELAYED before the
+   opening fetches land. */
+function updateLivePill() {
+  const pill = document.querySelector('.live-pill');
+  if (!pill) return;
+  const states = Object.keys(S.sources).map(k => sourceState(S.sources[k]));
+  let cls = '', word = 'LIVE', hint = 'All data sources current';
+  if (states.indexOf('unavailable') !== -1) {
+    cls = ' is-degraded'; word = 'DEGRADED'; hint = 'One or more data sources unavailable — see Settings';
+  } else if (states.indexOf('delayed') !== -1) {
+    cls = ' is-delayed'; word = 'DELAYED'; hint = 'One or more data sources are behind — see Settings';
+  }
+  pill.className = 'live-pill' + cls;
+  pill.setAttribute('title', hint);
+  pill.innerHTML = '<span class="live-dot"></span>' + word;
+}
+
+renderSourceHealth();
 
 async function refreshAll() {
   await Promise.allSettled([fetchAlerts(), fetchWeather(), fetchTides(), fetchEarthquakes(), fetchFema(), fetchNews()]);
 }
 refreshAll();
 setInterval(refreshAll, 5 * 60 * 1000);
+/* Ages are relative, so they must re-render between fetches or "2 min ago" freezes. */
+setInterval(renderSourceHealth, 30000);
 
 switchView('news');
 
