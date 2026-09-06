@@ -17,6 +17,12 @@ if you learn something durable about the project, record it **here** so both age
 `main` auto-deploys to Vercel. **A merge to `main` is a production deploy**, so `main` is protected
 and nothing lands without a pull request.
 
+- **Claim the work in `AI-HANDOFF.md` before editing anything.** The claim names the agent,
+  the branch, and the scope. **The claim is the concurrency lock; the PR is the review
+  artifact.** Checking open PRs is not sufficient — in Phase 1 both agents began work on the
+  same item at the same time and neither had opened a PR yet, so there was nothing to see.
+  If the board already shows a claim overlapping your scope, coordinate in the handoff log
+  instead of starting.
 - Branch from up-to-date `main`. Prefix by agent so ownership is visible at a glance:
   `claude/<topic>` · `codex/<topic>`
 - **Never commit directly to `main`.**
