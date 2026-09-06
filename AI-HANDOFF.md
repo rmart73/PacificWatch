@@ -220,6 +220,18 @@ NWS `severity` alone flattens distinctions such as Flood Watch vs Tropical Storm
 
 ## Open Questions
 
+### Q006 — Should this board be compacted?
+
+**Raised by:** Claude Code
+
+**Context:** This file is now 670+ lines with ten handoff entries. Its own closing guidance says durable findings should move into `AGENTS.md` and the duplicate detail be removed from here — most of them have moved, but nothing has been trimmed.
+
+**Question:** Compact the older entries (multi-agent setup, Phase 0, the early Phase 1 rounds) into one-paragraph summaries, keeping the recent ones intact?
+
+**Claude recommendation:** Yes, but **not unilaterally.** This is shared state you also write to, and a large rewrite would conflict badly with anything in flight. It also destroys context that is cheap to keep and expensive to reconstruct. If you agree, one of us should claim it as its own change rather than folding it into a feature PR.
+
+**Decision:** Pending.
+
 ### Q002 — Phase 1 stale thresholds
 
 **Raised by:** ChatGPT Codex
@@ -293,6 +305,50 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Pause point: documentation audit
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### What this was
+A deliberate stop to check the docs against the code rather than trusting them. Four factual claims in `AGENTS.md` had gone stale, all of them things a reader would reasonably act on:
+
+| Claim | Was | Actual |
+|---|---|---|
+| Page weight, used for the free-tier bandwidth ceiling | ~103 KB | **108 KB** |
+| Front-end size, used to reason about merge risk | ~1,450 lines | **1,930** |
+| Inline `onclick` handlers, used to size the CSP remediation | ~30 | **22** |
+| Same figure in the remediation note | 30 | **22** |
+
+The `onclick` count moved because F003 replaced eight inline handlers with delegated listeners — the CSP gap is measurably smaller than the docs claimed, which is worth knowing before anyone scopes that work.
+
+#### Added
+- **A Testing section in `AGENTS.md`.** Three suites existed and none of it was written down outside the file tree. It records what each covers, that `npm test` must keep working with nothing installed, how to verify that, and — the part that matters — **what the tests cannot do**: the DOM suite asserts a class is applied, which a malformed SVG path would pass while rendering nothing. Anything touching appearance still needs a human on the preview.
+- **A status preamble on the v2 plan.** It read as though nothing had been built. It now maps each item to its state and flags two places where the shipped code deliberately contradicts the plan: severity (CAP severity is unusable as the discriminator) and green (the palette has none, and "all clear" is steel blue for red-green colour blindness). Someone implementing from that document would otherwise reintroduce both.
+
+#### Findings
+- **All four stale numbers were in prose, none in code.** Sixth instance of the pattern. The standing check catches these when it is run at PR time; this pass caught the ones that slipped through before the check existed.
+- The v2 plan was the largest gap — 683 lines of intent that a fresh reader would take as the current roadmap, with no indication that three items are done and two are wrong.
+
+#### Not done
+Board compaction, raised as Q006 rather than performed. Rewriting 670 lines of shared state while a PR is open is exactly the kind of change that should be agreed first.
+
+#### State at pause
+- **Merged and live:** Phase 0 (trust corrections), Phase 1 (source health and freshness), F002 (severity model), F004 (shape channels).
+- **Open:** PR #8 (F003, news source filtering) — tests green, appearance unverified. This documentation PR stacks on that branch.
+- **Unclaimed:** F005 (reference portal links — two confirmed wrong, the rest needs a browser pass).
+- **Tests:** `npm test` 49 · `npm run test:dom` 57.
+
+#### Files affected
+- `AGENTS.md` — four corrected figures, new Testing section
+- `Pacific-Watch-v2-Product-and-UX-Plan.md` — status preamble and deviation notes
+- `AI-HANDOFF.md` — Q006, this entry
+
+#### Commit / PR
+- PR #9
+
+---
 
 ### 2026-09-06 — F003 implemented; F005 raised
 
