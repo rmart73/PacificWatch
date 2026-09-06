@@ -10,7 +10,38 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
-### CLAIM — F002 severity model, with F004 folded in
+### CLAIM — F003 News Sources toggles
+
+**Agent:** Claude Code
+**Branch:** `claude/f003-news-sources`
+**Claimed:** 2026-09-06, before any edit.
+
+**Status:** Implemented, in review on PR #8.
+
+**Scope:** the News Sources card in Settings, filtering inside `renderNews()`, a `pw_news_sources` localStorage key.
+**Not touching:** alerts, the severity model, source health, `api/news.js`, or the reference portal links — that is F005 and is deliberately left unclaimed.
+
+**The defect is larger than "the toggles do nothing".** Comparing the labels against what `/api/news` actually returns:
+
+| Toggle label | Real feed? |
+|---|---|
+| Hawaii News Now | yes |
+| Civil Beat | yes |
+| Star-Advertiser | yes |
+| KITV / KHON2 | two separate feeds collapsed into one toggle |
+| NWS / NOAA | **not a news source** |
+| HIEMA | **not a news source** |
+| GDACS / RSOE / PDC | **not a news source** |
+
+`api/news.js` merges exactly five RSS feeds — Hawaii News Now, Civil Beat, Star-Advertiser, KHON2, KITV 4. Three of the seven toggles name things that produce no headlines at all, so even a correct filtering implementation would leave them controlling nothing. The panel describes a source set that does not exist.
+
+All five real feeds verified healthy: 60 items, `errors[]` empty.
+
+**Plan:** list the five real feeds, implement genuine filtering persisted to `localStorage`, and drop the three non-feeds — they are reference portals and are already linked as such. Where the old card promised a capability it did not have, the replacement should have the capability it promises.
+
+---
+
+### Done — F002 severity model, with F004 folded in
 
 **Agent:** Claude Code
 **Branch:** `claude/f002-severity-model`
@@ -87,7 +118,34 @@ Durable Phase 0 semantics are now documented in `AGENTS.md`. The key outcome is 
 
 ---
 
-### F003 — seven Settings toggles do nothing
+**F005 — Reference Maps & Portals links land on homepages rather than relevant views.**
+
+**Status:** Not started. **Unclaimed.**
+
+**Found by:** the user — "I went to a few and they are not returning any relevant data but rather a homepage."
+
+Confirmed. Checked all eight links in the section:
+
+| Tile | URL | Result |
+|---|---|---|
+| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | **Redirects to `/home/index.html`, a 1.3 KB empty hub shell with no title.** Generic landing page, not a Hawaii EMA map. |
+| Pacific Disaster Ctr | `www.pdc.org` | Labelled "DisasterAWARE Pacific hazard data" but points at the **corporate homepage**, not the DisasterAWARE tool. |
+| GDACS | `gdacs.org` | Site root. Arguably fine for "global disaster alerts", but not Pacific-scoped. |
+| RSOE EDIS | `rsoe-edis.org/eventMap` | Correct — real event map. |
+| FHAT Hawaii | `fhat.hawaii.gov` | Correct — "Flood Hazard Assessment Tool". |
+| NWS Honolulu | `weather.gov/hfo` | Correct — "Honolulu, HI" office page. |
+| NOAA Tides | `stationhome.html?id=1612340` | Correct — station-specific. |
+| Power Outages | `poweroutage.us/area/state/hawaii` | Correct path; see caveat. |
+
+**Caveat on method:** `pdc.org` and `poweroutage.us` returned 403 to `curl` because of Cloudflare bot challenges. That is not evidence they are broken — they very likely load fine in a browser. Only the ArcGIS and PDC *labelling* problems are established; the rest of this needs a browser pass.
+
+This is the same family as F003 and the Live Data card: **the UI promises something specific and delivers something generic.** A tile captioned "DisasterAWARE Pacific hazard data" that opens a corporate homepage is a small lie of the same kind as a toggle that does nothing.
+
+**Suggested approach:** verify each link in a browser, replace the two known-bad targets with deep links to the actual tools, and consider whether a tile whose target cannot be deep-linked should describe itself more modestly.
+
+---
+
+### F003 — seven Settings toggles do nothing — FIXED in PR #8
 
 **Status:** Not started. Unclaimed.
 
@@ -235,6 +293,49 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — F003 implemented; F005 raised
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### F003 was larger than "the toggles do nothing"
+Comparing labels against `/api/news`: the API merges five feeds, and three of the seven toggles named NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines. Even a correct filtering implementation would have left those three controlling nothing. The card described a source set that did not exist, and a fourth toggle collapsed KHON2 and KITV 4 into one label.
+
+#### What shipped
+- The card now lists the **five real outlets**, rendered from `NEWS_SOURCES` rather than hardcoded, so the list cannot drift from the code again without the render changing too.
+- **Filtering actually works**, persisted to `localStorage.pw_news_sources`.
+- **Toggling re-renders from cache rather than refetching.** This is a display preference; hitting five RSS feeds because someone flipped a switch would be rude to the outlets and pointless.
+- **A filter can never masquerade as an absence of news.** Disabling every outlet shows "N headlines hidden by your source filter" with an enable-all link — not "No headlines available", which would be the same class of lie as the fabricated all-clear.
+- The stamp reports the hidden count, so a filtered view never looks like a complete one.
+- Saved lists are **intersected with `NEWS_SOURCES` on load**, so a retired or renamed outlet in someone's stored preferences cannot resurrect itself or silently hide everything.
+
+#### Implementation note
+The toggles use `addEventListener` with delegation and `data-news-source`, not another inline `onclick`. `AGENTS.md` records that CSP still needs `unsafe-inline` because of the existing ~30 inline handlers; adding more works against ever closing that. They are also keyboard-operable and carry `role="switch"` with `aria-checked`, which the old decorative divs did not.
+
+#### Findings
+- **Zero inert toggles remain in the app.** The eight that existed are now five working controls and three deletions.
+- The exact-name coupling between `NEWS_SOURCES` and `api/news.js` is fragile by construction — a rename on either side silently hides an outlet. Recorded in `AGENTS.md` with a load-bearing row rather than left as a trap.
+
+#### Verification
+- `npm run test:dom` — **57 assertions**, up from 45. New section 9 covers: five outlets listed not seven, all enabled by default, a disabled outlet hidden while others remain, the stamp reporting the hidden count, persistence to localStorage, filtering everything out saying so explicitly rather than claiming no news, and enable-all restoring.
+- `npm test` — 49, unchanged. Served locally: HTTP 200, all new symbols present.
+
+#### Not verified
+Appearance. The rendered toggle rows and the FILTERED empty state have not been seen in a browser.
+
+#### F005 raised, unclaimed
+The user reported that Reference Maps & Portals links land on homepages. Confirmed for two of eight — details in the follow-ups section. Deliberately left unclaimed and out of scope for this PR.
+
+#### Files affected
+- `index.html` — News Sources card, `NEWS_SOURCES`, load/save/render/toggle helpers, delegated listeners, filtering in `renderNews()`
+- `AGENTS.md` — state block, news filter documentation, a load-bearing row
+- `test/dom-behavior.test.js` — switchable news payload, section 9
+
+#### Commit / PR
+- PR #8
+
+---
 
 ### 2026-09-06 — Codex blocking review of PR #7 addressed
 

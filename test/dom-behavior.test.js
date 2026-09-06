@@ -13,6 +13,7 @@ const future = new Date(Date.now() + 45 * MIN).toISOString();
 
 let mode = 'ok';
 let alertFeatures = null;   // when set, overrides the default alert payload
+let newsItems = null;       // when set, overrides the default news payload
 function body(url) {
   const u = String(url);
   if (u.includes('/alerts/active')) return { features: alertFeatures || [
@@ -26,7 +27,7 @@ function body(url) {
   if (u.includes('tidesandcurrents')) return { data: [{ v: '1.7' }] };
   if (u.includes('earthquake.usgs.gov')) return { features: [] };
   if (u.includes('fema.gov')) return { DisasterDeclarationsSummaries: [] };
-  if (u.includes('/api/news')) return { items: [], errors: [] };
+  if (u.includes('/api/news')) return { items: newsItems || [], errors: [] };
   return {};
 }
 function makeFetch(failPattern) {
@@ -175,6 +176,41 @@ function has(label, sel, needle, expected) {
   await settle();
   has('empty verified feed reads all clear', '#hazard-headline', 'All clear', true);
   check('and uses the ok state', $('#hazard-banner').className, 'hazard-banner is-ok');
+
+  console.log('\n9. News source filter (F003) — a control that actually controls something:');
+  newsItems = [
+    { source: 'Star-Advertiser', title: 'SA headline', link: 'https://example.com/a', published: new Date().toISOString(), hazard: true },
+    { source: 'Hawaii News Now', title: 'HNN headline', link: 'https://example.com/b', published: new Date().toISOString(), hazard: true },
+    { source: 'KHON2', title: 'KHON headline', link: 'https://example.com/c', published: new Date().toISOString(), hazard: false }
+  ];
+  w.fetch = makeFetch(null);
+  await w.fetchNews();
+  await settle();
+  check('five real outlets listed, not seven labels',
+    d.querySelectorAll('#news-source-rows [data-news-source]').length, 5);
+  check('all enabled by default',
+    d.querySelectorAll('#news-source-rows .toggle.on').length, 5);
+  has('all three headlines shown', '#news-headlines', 'SA headline', true);
+
+  w.toggleNewsSource('Star-Advertiser');
+  await settle();
+  has('disabled outlet is hidden', '#news-headlines', 'SA headline', false);
+  has('other outlets remain', '#news-headlines', 'HNN headline', true);
+  has('stamp reports the hidden count', '#news-updated', 'hidden by filter', true);
+  check('the toggle reflects the state',
+    d.querySelectorAll('#news-source-rows .toggle.on').length, 4);
+  check('persisted to localStorage',
+    JSON.parse(w.localStorage.getItem('pw_news_sources')).indexOf('Star-Advertiser'), -1);
+
+  ['Hawaii News Now', 'KHON2', 'Civil Beat', 'KITV 4'].forEach(s => w.toggleNewsSource(s));
+  await settle();
+  has('filtering everything out says so explicitly', '#news-headlines', 'hidden by your source filter', true);
+  has('and does NOT claim there is no news', '#news-headlines', 'No headlines available', false);
+
+  w.enableAllNewsSources();
+  await settle();
+  has('enable-all restores the headlines', '#news-headlines', 'SA headline', true);
+  check('and all five toggles', d.querySelectorAll('#news-source-rows .toggle.on').length, 5);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
