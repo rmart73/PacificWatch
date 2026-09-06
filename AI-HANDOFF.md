@@ -10,7 +10,36 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
-### CLAIM — F002 severity model, with F004 folded in
+### CLAIM — F003 News Sources toggles
+
+**Agent:** Claude Code
+**Branch:** `claude/f003-news-sources`
+**Claimed:** 2026-09-06, before any edit.
+
+**Scope:** the News Sources card in Settings, filtering inside `renderNews()`, a `pw_news_sources` localStorage key.
+**Not touching:** alerts, the severity model, source health, `api/news.js`, or the reference portal links — that is F005 and is deliberately left unclaimed.
+
+**The defect is larger than "the toggles do nothing".** Comparing the labels against what `/api/news` actually returns:
+
+| Toggle label | Real feed? |
+|---|---|
+| Hawaii News Now | yes |
+| Civil Beat | yes |
+| Star-Advertiser | yes |
+| KITV / KHON2 | two separate feeds collapsed into one toggle |
+| NWS / NOAA | **not a news source** |
+| HIEMA | **not a news source** |
+| GDACS / RSOE / PDC | **not a news source** |
+
+`api/news.js` merges exactly five RSS feeds — Hawaii News Now, Civil Beat, Star-Advertiser, KHON2, KITV 4. Three of the seven toggles name things that produce no headlines at all, so even a correct filtering implementation would leave them controlling nothing. The panel describes a source set that does not exist.
+
+All five real feeds verified healthy: 60 items, `errors[]` empty.
+
+**Plan:** list the five real feeds, implement genuine filtering persisted to `localStorage`, and drop the three non-feeds — they are reference portals and are already linked as such. Where the old card promised a capability it did not have, the replacement should have the capability it promises.
+
+---
+
+### Done — F002 severity model, with F004 folded in
 
 **Agent:** Claude Code
 **Branch:** `claude/f002-severity-model`
@@ -84,6 +113,33 @@ Link-outs such as Shelter, PowerOutage.us, and direct PTWC reference are exclude
 **Status:** Complete — merged in #2 (`ccd9a2c`) and visually verified on production.
 
 Durable Phase 0 semantics are now documented in `AGENTS.md`. The key outcome is that `ok` means verified, never unknown; fabricated all-clear/healthy states were removed; and link-outs without machine-readable data no longer claim status.
+
+---
+
+**F005 — Reference Maps & Portals links land on homepages rather than relevant views.**
+
+**Status:** Not started. **Unclaimed.**
+
+**Found by:** the user — "I went to a few and they are not returning any relevant data but rather a homepage."
+
+Confirmed. Checked all eight links in the section:
+
+| Tile | URL | Result |
+|---|---|---|
+| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | **Redirects to `/home/index.html`, a 1.3 KB empty hub shell with no title.** Generic landing page, not a Hawaii EMA map. |
+| Pacific Disaster Ctr | `www.pdc.org` | Labelled "DisasterAWARE Pacific hazard data" but points at the **corporate homepage**, not the DisasterAWARE tool. |
+| GDACS | `gdacs.org` | Site root. Arguably fine for "global disaster alerts", but not Pacific-scoped. |
+| RSOE EDIS | `rsoe-edis.org/eventMap` | Correct — real event map. |
+| FHAT Hawaii | `fhat.hawaii.gov` | Correct — "Flood Hazard Assessment Tool". |
+| NWS Honolulu | `weather.gov/hfo` | Correct — "Honolulu, HI" office page. |
+| NOAA Tides | `stationhome.html?id=1612340` | Correct — station-specific. |
+| Power Outages | `poweroutage.us/area/state/hawaii` | Correct path; see caveat. |
+
+**Caveat on method:** `pdc.org` and `poweroutage.us` returned 403 to `curl` because of Cloudflare bot challenges. That is not evidence they are broken — they very likely load fine in a browser. Only the ArcGIS and PDC *labelling* problems are established; the rest of this needs a browser pass.
+
+This is the same family as F003 and the Live Data card: **the UI promises something specific and delivers something generic.** A tile captioned "DisasterAWARE Pacific hazard data" that opens a corporate homepage is a small lie of the same kind as a toggle that does nothing.
+
+**Suggested approach:** verify each link in a browser, replace the two known-bad targets with deep links to the actual tools, and consider whether a tile whose target cannot be deep-linked should describe itself more modestly.
 
 ---
 
