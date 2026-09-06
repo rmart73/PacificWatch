@@ -277,6 +277,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .hazard-banner.is-ok .hazard-pulse{display:none}
 /* "Unknown" is deliberately NOT styled like "ok". A failed fetch means we are blind,
    which must never read as an all-clear. Neutral ground, muted icon, no checkmark. */
+/* Informational: a current feed carrying an active product that is not a warning, watch or
+   advisory — a Tropical Cyclone Local Statement, say. Not an all-clear, and not `unknown`,
+   which means we failed to check. */
+.hazard-banner.is-info{background:var(--card)}
+.hazard-banner.is-info .hazard-icon{background:var(--b-info-bg)}
+.hazard-banner.is-info .hazard-icon svg{stroke:var(--info)}
+.hazard-banner.is-info .hazard-headline{color:var(--ink)}
+.hazard-banner.is-info .hazard-sub{color:var(--ink3)}
+.hazard-banner.is-info .hazard-pulse{display:none}
 .hazard-banner.is-unknown{background:var(--card)}
 .hazard-banner.is-unknown .hazard-icon{background:var(--b-unknown-bg)}
 .hazard-banner.is-unknown .hazard-icon svg{stroke:var(--unknown)}
@@ -1160,6 +1169,7 @@ async function fetchAlerts() {
 const HAZARD_ICONS = {
   ok:      '<path d="M20 6L9 17l-5-5"/>',
   unknown: '<circle cx="12" cy="12" r="9"/><line x1="8.5" y1="12" x2="15.5" y2="12"/>',
+  info:    '<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><line x1="12" y1="7.5" x2="12.01" y2="7.5"/>',
   warn:  '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   alert: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
@@ -1179,11 +1189,23 @@ function updateHazardBanner(filtered, stale) {
   if (counts.warning)  parts.push(counts.warning + ' warning' + (counts.warning === 1 ? '' : 's'));
   if (counts.watch)    parts.push(counts.watch + ' watch' + (counts.watch === 1 ? '' : 'es'));
   if (counts.advisory) parts.push(counts.advisory + (counts.advisory === 1 ? ' advisory' : ' advisories'));
+  /* Statements are informational context rather than a hazard tier, so they are surfaced only
+     when nothing more actionable is active — beside a warning they would be noise. But a feed
+     carrying only statements must never read as an all-clear, because it is not one. */
+  if (!parts.length && counts.statement) parts.push(counts.statement + (counts.statement === 1 ? ' statement' : ' statements'));
+  /* Exhaustiveness guard. This function used to have a single `filtered.length` catch-all;
+     enumerating tiers reads better but reintroduces the risk that a tier is counted and never
+     reported, which is exactly how the statement-only all-clear regression happened. If
+     anything at all is active and nothing above described it, say so plainly rather than
+     falling through to a state that asserts safety. */
+  if (!parts.length && filtered.length) parts.push(filtered.length + (filtered.length === 1 ? ' active alert' : ' active alerts'));
   let level, headline, subtext;
   if (counts.warning) {
     level = 'alert';
   } else if (counts.watch || counts.advisory) {
     level = 'warn';
+  } else if (filtered.length) {
+    level = 'info';
   } else if (stale) {
     level = 'unknown';
   } else {

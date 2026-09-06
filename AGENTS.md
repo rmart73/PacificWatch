@@ -87,6 +87,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Desktop view rule is scoped to `.desktop-sidebar .view` | A bare `.view{display:block!important}` stacks all three views at once | Architecture |
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
 | `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
+| `.hazard-banner.is-info` looks like a third duplicate of `.is-ok` | It means "active but nothing at hazard tier". Collapsing it into `is-ok` makes a live Tropical Cyclone Local Statement read as an all-clear | Architecture |
 | `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
 | `alertTier()` ignores CAP `severity` except for `Extreme` | Severity is `Severe` for both a Tropical Storm Warning and a Flood Watch, so a severity-first test renders a watch as a warning. That was a real defect, not a hypothetical | Alert severity model |
 | `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
@@ -238,7 +239,19 @@ Data refreshes every 5 minutes via `setInterval(refreshAll, 5 * 60 * 1000)`; vol
 on their own 2-minute timer.
 
 The Alerts rail leads with `#hazard-banner`, driven by `updateHazardBanner()` off the island-filtered
-NWS results: red for warnings, amber for advisories/watches, neutral for all-clear. HIEMA, FEMA and
+NWS results. Five states, in precedence order:
+
+| State | When | Look |
+|---|---|---|
+| `is-alert` | any warning tier active | red |
+| `is-warn` | watch or advisory active | amber, ink text |
+| `is-info` | something active, none of it warning/watch/advisory | neutral, azure icon |
+| `is-unknown` | the fetch failed — we could not check | neutral, grey ring icon |
+| `is-ok` | verified fetch returned nothing | neutral, check icon |
+
+`is-info` and `is-ok` look similar but mean opposite things, and `is-unknown` means a third
+thing again: *active but not hazardous*, *verified empty*, and *not checked*. Do not collapse them.
+ HIEMA, FEMA and
 Global Hazards sit in a collapsed "Reference & Resources" section so reference material doesn't
 compete with live feeds.
 
@@ -339,6 +352,14 @@ than summing them. Calling two Flood Watches "warnings" overstates them; omittin
 understates the situation.
 
 Covered by `test/severity-model.test.js` (24 assertions), using the live fixtures above.
+
+**`updateHazardBanner()` must never fall through to an all-clear while anything is active.**
+It previously used a single `filtered.length` catch-all; tiering replaced that with enumerated
+branches, and the first version omitted `statement`, so a feed carrying only a Tropical Cyclone
+Local Statement rendered "All clear". Caught in review. There is now an exhaustiveness guard —
+if anything is active and no tier branch described it, the banner reports the raw count rather
+than asserting safety. **When you replace a catch-all with enumerated cases, prove the
+enumeration is exhaustive or keep a fallback.** Covered by `test/dom-behavior.test.js` §6-8.
 
 ## Theming
 
