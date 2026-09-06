@@ -134,7 +134,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .s-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
 /* F001: "unknown" is a hollow ring, not just a different hue. Freshness and verification
    state must not be carried by colour alone — see PHASE1-SOURCE-HEALTH.md. */
-.s-dot.unknown{background:transparent;box-shadow:inset 0 0 0 1.5px var(--unknown)}.s-dot.ok{background:var(--ok)}.s-dot.warn{background:var(--warn)}.s-dot.alert{background:var(--alert);animation:pulse 1.6s infinite}
+/* F004: each state differs in SHAPE, not only hue — a user confirmed hue is not readable
+   at this size without leaning in. Circle = verified, ring = unverified, triangle = caution.
+   Alert is a larger triangle so warn and alert stay separable without relying on the pulse,
+   which disappears under prefers-reduced-motion. */
+.s-dot.unknown{background:transparent;box-shadow:inset 0 0 0 1.5px var(--unknown)}
+.s-dot.ok{background:var(--ok)}
+.s-dot.warn{background:var(--warn);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.s-dot.alert{background:var(--alert);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:9px;height:9px;animation:pulse 1.6s infinite}
 .stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .stat-unit{font-size:11px;font-weight:400;color:var(--ink3)}
 .stat-note{font-size:9px;color:var(--ink4);margin-top:3px;line-height:1.3}
@@ -320,6 +327,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .src-state{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid transparent;background:var(--b-unknown-bg);color:var(--b-unknown-fg)}
 .src-state-current{background:var(--b-ok-bg);color:var(--b-ok-fg)}
 .src-state-unavailable{background:transparent;border-color:var(--unknown);color:var(--ink3)}
+/* Motion is a second channel for .s-dot.alert and .hazard-pulse, so it cannot simply be
+   removed for reduced-motion users — a static ring substitutes for the pulse. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .s-dot.alert{box-shadow:0 0 0 2px var(--b-alert-bg)}
+  .hazard-pulse{box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+}
 .stale-note{display:flex;align-items:center;gap:7px;padding:9px 16px;font-size:10.5px;color:var(--ink3);background:var(--surf);border-bottom:1px solid var(--rule)}
 .toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
 .toggle.on{background:var(--sky2)}
@@ -949,10 +963,48 @@ function safeUrl(u) {
   return esc(s);
 }
 
-function getBadgeClass(severity, event) {
-  if (/warning|emergency/i.test(event) || severity === 'Extreme' || severity === 'Severe') return 'badge-alert';
-  if (/watch|advisory/i.test(event) || severity === 'Moderate') return 'badge-warn';
-  return 'badge-info';
+/* SEVERITY MODEL — tier on the NWS product type, not on CAP severity.
+   Verified against the live feed on 2026-09-06: severity "Severe" covers BOTH a Tropical
+   Storm Warning (urgency Immediate) and a Flood Watch (urgency Future). Severity therefore
+   cannot separate act-now from be-prepared, and the previous getBadgeClass() tested it
+   first, rendering a Flood Watch identically to a Tropical Storm Warning.
+
+   The product type in the event name is the classification NWS publishes and the public is
+   trained on — Warning > Watch > Advisory > Statement — so that is what drives the tier.
+   Severity survives only as a safety-biased override: an Extreme product is never
+   under-ranked, whatever it happens to be called. */
+const ALERT_TIERS = {
+  warning:   { rank: 0, badge: 'badge-alert',   label: 'WARNING'   },
+  watch:     { rank: 1, badge: 'badge-warn',    label: 'WATCH'     },
+  advisory:  { rank: 2, badge: 'badge-info',    label: 'ADVISORY'  },
+  statement: { rank: 3, badge: 'badge-unknown', label: 'STATEMENT' }
+};
+
+function alertTier(p) {
+  if (!p) return 'statement';
+  // Never under-rank an Extreme product, whatever its name.
+  if (p.severity === 'Extreme') return 'warning';
+  const ev = p.event || '';
+  if (/\bwarning\b|\bemergency\b/i.test(ev)) return 'warning';
+  if (/\bwatch\b/i.test(ev)) return 'watch';
+  if (/\badvisory\b/i.test(ev)) return 'advisory';
+  if (/\bstatement\b|\boutlook\b|\bsummary\b|\bforecast\b/i.test(ev)) return 'statement';
+  // Unrecognised product name: fall back to CAP urgency, which draws the same distinction.
+  if (p.urgency === 'Immediate') return 'warning';
+  if (p.urgency === 'Expected') return 'advisory';
+  return 'statement';
+}
+
+function tierRank(p) { return ALERT_TIERS[alertTier(p)].rank; }
+
+/* Most actionable first. Ties break on urgency, then newest. */
+const URGENCY_RANK = { Immediate: 0, Expected: 1, Future: 2, Past: 3, Unknown: 4 };
+function compareAlerts(a, b) {
+  const ra = tierRank(a.properties), rb = tierRank(b.properties);
+  if (ra !== rb) return ra - rb;
+  const ua = URGENCY_RANK[a.properties.urgency] ?? 9, ub = URGENCY_RANK[b.properties.urgency] ?? 9;
+  if (ua !== ub) return ua - ub;
+  return new Date(b.properties.sent || 0) - new Date(a.properties.sent || 0);
 }
 
 function alertMatchesIsland(alert, island) {
@@ -1119,30 +1171,36 @@ function updateHazardBanner(filtered, stale) {
   if (!banner || !head || !sub) return;
   if (stale === undefined) stale = isStale('nwsAlerts');
   const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-  const severe = filtered.filter(f => {
-    const p = f.properties;
-    return p.severity === 'Extreme' || p.severity === 'Severe' || /warning|emergency/i.test(p.event || '');
-  });
+  const counts = { warning: 0, watch: 0, advisory: 0, statement: 0 };
+  filtered.forEach(f => { counts[alertTier(f.properties)]++; });
+  /* Read out every active tier rather than collapsing them. Calling two Flood Watches
+     "warnings" overstates them; omitting them understates the picture. */
+  const parts = [];
+  if (counts.warning)  parts.push(counts.warning + ' warning' + (counts.warning === 1 ? '' : 's'));
+  if (counts.watch)    parts.push(counts.watch + ' watch' + (counts.watch === 1 ? '' : 'es'));
+  if (counts.advisory) parts.push(counts.advisory + (counts.advisory === 1 ? ' advisory' : ' advisories'));
   let level, headline, subtext;
-  if (severe.length) {
+  if (counts.warning) {
     level = 'alert';
-    headline = `${severe.length} active warning${severe.length === 1 ? '' : 's'} — ${name}`;
-    subtext = stale ? 'Last verified ' + verifiedAge('nwsAlerts')
-                    : truncate(severe.map(f => f.properties.event).join(' · '), 68);
-  } else if (filtered.length) {
+  } else if (counts.watch || counts.advisory) {
     level = 'warn';
-    headline = `${filtered.length} advisory${filtered.length === 1 ? '' : ' / watches'} — ${name}`;
-    subtext = stale ? 'Last verified ' + verifiedAge('nwsAlerts')
-                    : truncate(filtered.map(f => f.properties.event).join(' · '), 68);
+  } else if (stale) {
+    level = 'unknown';
+  } else {
+    level = 'ok';
+  }
+  if (parts.length) {
+    headline = parts.join(' · ') + ' — ' + name;
+    subtext = stale
+      ? 'Last verified ' + verifiedAge('nwsAlerts')
+      : truncate(filtered.slice().sort(compareAlerts).map(f => f.properties.event).join(' · '), 68);
   } else if (stale) {
     /* Critical-source rule: a previously verified all-clear must never be presented as a
        current one. With no fresh confirmation we say what we actually know. */
-    level = 'unknown';
     headline = 'Alert data stale — ' + name;
     subtext = 'Last verified ' + verifiedAge('nwsAlerts') + ' · check NWS HFO directly';
   } else {
-    level = 'ok';
-    headline = `All clear — ${name}`;
+    headline = 'All clear — ' + name;
     subtext = 'No active NWS alerts · updated ' + fmtTime(new Date());
   }
   banner.className = 'hazard-banner is-' + level;
@@ -1201,13 +1259,15 @@ function renderAlerts(features, stale) {
     container.innerHTML = note + body + ptwcNote;
     return;
   }
-  container.innerHTML = note + filtered.slice(0,12).map(f => {
+  container.innerHTML = note + filtered.slice().sort(compareAlerts).slice(0,12).map(f => {
     const p = f.properties;
-    const badge = getBadgeClass(p.severity, p.event);
+    const tier = ALERT_TIERS[alertTier(p)];
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
     const expires = p.expires ? fmtTime(new Date(p.expires)) : 'Until further notice';
     const area = truncate(p.areaDesc || '', 90);
-    return `<div class="alert-item"><span class="badge ${badge}">${esc((p.severity||'ALERT').toUpperCase())}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
+    /* The badge shows the product type, not CAP severity. "SEVERE" on a Flood Watch told the
+       reader nothing useful and read identically to a Tropical Storm Warning. */
+    return `<div class="alert-item"><span class="badge ${tier.badge}">${esc(tier.label)}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
   }).join('') + ptwcNote;
 }
 
@@ -1228,7 +1288,7 @@ function updateTicker(features, stale) {
     track.textContent = msg + ' · ' + msg;
     return;
   }
-  const items = live.map(f => {
+  const items = live.slice().sort(compareAlerts).map(f => {
     const p = f.properties;
     const exp = p.expires ? ' · Expires ' + fmtTime(new Date(p.expires)) : '';
     return '\u26A0 ' + (p.event || 'Alert') + ' — ' + truncate(p.areaDesc || '', 60) + exp + ' - NWS';

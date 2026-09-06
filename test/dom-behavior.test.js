@@ -74,6 +74,15 @@ function has(label, sel, needle, expected) {
   has('alerts rail shows the warning', '#nws-alerts-container', 'Tropical Storm Warning', true);
   has('no stale note when current', '#nws-alerts-container', 'last verified', false);
   check('hazard banner is the alert state', $('#hazard-banner').className, 'hazard-banner is-alert');
+
+  console.log('\n1b. Severity model (F002) — a Severe watch must not read as a warning:');
+  has('warning row badged WARNING', '#nws-alerts-container', 'WARNING', true);
+  has('watch row badged WATCH', '#nws-alerts-container', 'WATCH', true);
+  has('raw CAP severity no longer used as a badge', '#nws-alerts-container', '>SEVERE<', false);
+  check('banner counts the tiers separately', txt('#hazard-headline'), '1 warning · 1 watch — Hawaii');
+  check('warning renders above the watch',
+    d.querySelector('#nws-alerts-container .alert-item .badge').textContent, 'WARNING');
+
   check('rain rendered its value', txt('#stat-rain').includes('0.10'), true);
   check('tide dot verified', $('#dot-tide').className, 's-dot ok');
 

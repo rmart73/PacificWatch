@@ -88,6 +88,8 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
 | `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
 | `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
+| `alertTier()` ignores CAP `severity` except for `Extreme` | Severity is `Severe` for both a Tropical Storm Warning and a Flood Watch, so a severity-first test renders a watch as a warning. That was a real defect, not a hypothetical | Alert severity model |
+| `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -290,6 +292,54 @@ To close the `'unsafe-inline'` gap properly you'd move the 30 `onclick=` handler
 `addEventListener` and give the two inline scripts nonces/hashes. Worth doing before this gets
 significant public traffic.
 
+## Alert severity model
+
+Alerts are tiered on the **NWS product type parsed from `event`**, never on CAP `severity`.
+
+This is not a style preference. Verified against the live feed on 2026-09-06, during
+Hurricane Lowell:
+
+| event | severity | urgency | certainty |
+|---|---|---|---|
+| Tropical Storm Warning | Severe | Immediate | Likely |
+| Flood Watch | **Severe** | Future | Possible |
+| High Surf Advisory | Minor | Expected | Likely |
+| Tropical Cyclone Local Statement | Moderate | Expected | Likely |
+
+`severity: Severe` covers **both** a Tropical Storm Warning and a Flood Watch, so severity
+cannot separate act-now from be-prepared. The previous `getBadgeClass()` tested
+`severity === 'Severe'` first and rendered a Flood Watch with the same red badge and the
+same literal text `SEVERE` as a Tropical Storm Warning — flattening the single distinction
+NWS most wants a reader to make.
+
+```js
+const ALERT_TIERS = {
+  warning:   { rank: 0, badge: 'badge-alert',   label: 'WARNING'   },
+  watch:     { rank: 1, badge: 'badge-warn',    label: 'WATCH'     },
+  advisory:  { rank: 2, badge: 'badge-info',    label: 'ADVISORY'  },
+  statement: { rank: 3, badge: 'badge-unknown', label: 'STATEMENT' }
+};
+```
+
+`alertTier()` resolves in this order:
+
+1. **`severity === 'Extreme'` → `warning`.** A safety-biased override so an Extreme product is
+   never under-ranked because of what it happens to be called.
+2. **Word-boundary match on the event name** — warning/emergency, watch, advisory, statement.
+   `\b` boundaries matter: a substring match would misclassify.
+3. **CAP `urgency` fallback** for product names that follow no convention. Immediate →
+   warning, Expected → advisory, otherwise statement.
+
+The badge displays the **tier label**, not `severity`. Ordering is `compareAlerts()`: tier,
+then urgency, then most recent — the alerts rail, the ticker and the hazard-banner subtitle
+all use it, so the most actionable item is always first.
+
+The hazard banner counts each tier separately ("6 warnings · 2 watches — Hawaii") rather
+than summing them. Calling two Flood Watches "warnings" overstates them; omitting them
+understates the situation.
+
+Covered by `test/severity-model.test.js` (24 assertions), using the live fixtures above.
+
 ## Theming
 
 Three states, stored in `localStorage.getItem('pw_theme')` as `system` | `light` | `dark`:
@@ -317,9 +367,10 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   grey are too close to separate reliably at 6px, so `.s-dot.unknown` is a hollow ring and
   `.src-state-unavailable` is outlined rather than filled — shape carries the distinction and
   hue only reinforces it. Any new status indicator must differ in more than colour.
-  **Known gap (F004):** the pre-existing `.s-dot.ok` and `.s-dot.warn` still differ by hue
-  alone, and `.s-dot.alert`'s second channel is an unguarded `animation: pulse`. Confirmed
-  unreadable at a glance by a user on the live preview. Fix tracked in `AI-HANDOFF.md`.
+  Every dot state now differs in shape: `ok` is a circle, `unknown` a hollow ring, `warn` a
+  triangle, `alert` a larger triangle. `prefers-reduced-motion` is honoured, and because the
+  pulse is a real second channel for `alert`, a static ring substitutes for it rather than
+  the distinction simply disappearing (F004, closed).
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
@@ -341,9 +392,10 @@ Find `setInterval(refreshAll, 5 * 60 * 1000)` and adjust the ms value.
 Copy a `.stat-cell` block in the stat bar HTML. Give it a unique `id` for the value
 element and note element. Update `fetchWeather()` or `fetchTides()` to populate it.
 
-**Change alert severity colors**
-The `badge` classes in `renderAlerts()` map NWS severity strings to CSS vars:
-`Extreme/Severe → --alert`, `Moderate → --warn`, else `--info`.
+**Change how alerts are ranked or badged**
+Alerts are tiered on the **NWS product type**, not on CAP `severity`. Edit `ALERT_TIERS` and
+`alertTier()`. Do not reintroduce a severity-first test — see the severity model section.
+Ordering lives in `compareAlerts()`: tier, then CAP urgency, then most recent.
 
 ## News headlines (`/api/news`)
 
@@ -407,6 +459,7 @@ pacific-watch/
 ├── package-lock.json ← locks the jsdom devDependency only
 ├── test/
 │   ├── phase1-source-health.test.js  ← pure logic, no dependencies (`npm test`)
+│   ├── severity-model.test.js        ← alert tiering and ordering (`npm test`)
 │   └── dom-behavior.test.js          ← degraded-state behaviour in jsdom (`npm run test:dom`)
 └── .gitignore
 ```
