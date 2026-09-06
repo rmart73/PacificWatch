@@ -12,7 +12,7 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ### Phase 0 — Trust Corrections
 
-**Status:** Review feedback addressed; awaiting re-review on PR #2
+**Status:** Complete — merged in #2 (`ccd9a2c`) and verified live on production.
 
 **Goal:** Remove misleading all-clear semantics and make degraded source states explicit before the v2 visual redesign begins.
 
@@ -32,12 +32,35 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ---
 
+### Next — follow-ups identified during Phase 0
+
+**Status:** Not started. Unclaimed — either agent can pick these up.
+
+**F001 — `unknown` needs a shape difference, not only a colour difference.**
+The `ok` dot (`--ok` steel blue) and the `unknown` dot (`--unknown` grey) are hard to tell
+apart at 5px. Checked against the live preview: the two could not be reliably separated in a
+clean desktop screenshot, which means they will separate less well on a phone in daylight —
+the actual use case. Proposal: render `unknown` as a hollow ring (transparent fill, 1px
+border) so the distinction is carried by shape as well as hue. This also satisfies the v2
+plan's "never use colour as the only severity indicator".
+
+**F002 — watches and warnings currently render identically.**
+NWS assigns `severity: Severe` to Flood Watch, and `getBadgeClass()` maps severity straight
+through, so a Flood **Watch** carries the same `SEVERE` badge as a Tropical Storm **Warning**.
+Observed live during the Hurricane Lowell event. This flattens exactly the distinction the v2
+plan's severity model (plan item 3) exists to restore, and it is the natural next piece of
+work now that the trust model underneath it is sound. Note `getBadgeClass()` already keys off
+the event name as well as severity, which is the right instinct to build on — NWS `severity`
+alone is not reliable enough to drive the badge.
+
+---
+
 ## Active Branches
 
 | Agent | Branch | Work | Status |
 |---|---|---|---|
 | Claude Code | `claude/multi-agent-setup` | Multi-agent collaboration setup | Merged (#1) |
-| Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | Re-review requested (#2) |
+| Claude Code | `claude/phase0-trust-corrections` | Phase 0 trust corrections | Merged (#2) |
 | ChatGPT Codex | — | — | — |
 
 ---
@@ -66,13 +89,42 @@ That reframes the remaining question: a dedicated PTWC feed is a **redundancy an
 
 | PR | Author | Review requested from | Purpose |
 |---|---|---|---|
-| #2 | Claude Code | ChatGPT Codex | Phase 0 trust corrections |
+| — | — | — | — |
 
 ---
 
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-06 — Phase 0 merged and verified on production
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Completed
+- PR #2 merged as `ccd9a2c` after your re-review cleared the code-level blockers and the visual pass confirmed all three items.
+- Verified against the live production site, not just the build:
+  - fabricated tsunami all-clear — **absent**
+  - fabricated `0.00"` rain path — **absent**
+  - `badge-unknown` / `s-dot unknown` / `is-unknown` / `dot-tide` — **all present**
+  - hardcoded `s-dot ok` and `s-dot warn` in markup — **zero remaining**
+  - tsunami row live text reads as intended
+
+#### Notes
+- PHNL `precipitationLastHour` was still `null` at merge time, with 10 active NWS alerts for Hawaii (6 Tropical Storm Warnings, 2 Flood Watches, a High Surf Advisory, a Tropical Cyclone Local Statement). The rain fix was therefore exercising its real path immediately on deploy rather than sitting untested.
+- Two follow-ups came out of this work and are queued under Current Work as F001 and F002. Neither is claimed.
+
+#### Next requested action
+- None outstanding. F001 and F002 are open for whoever picks them up first — claim in the branch table before starting.
+
+#### Files affected
+- None beyond PR #2; this entry is bookkeeping.
+
+#### Commit / PR
+- Merged in #2 (`ccd9a2c`)
+
+---
 
 ### 2026-09-06 — Codex review of PR #2 addressed
 
