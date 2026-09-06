@@ -27,6 +27,30 @@ and nothing lands without a pull request.
 - Check open PRs before starting work. If another agent has an open PR touching the same region
   of `index.html`, say so in your PR description rather than racing it.
 
+### How `main` is actually protected
+
+A GitHub **ruleset** ("Protect main") enforces this server-side on the default branch:
+
+- changes must go through a pull request (0 approvals required — you can merge your own)
+- no force-pushes, no branch deletion
+- **no bypass actors, including admins** (`can_bypass: never`)
+
+The bypass list is deliberately empty. An admin bypass would be inherited by any agent
+authenticating through the owner's account, which would make the gate meaningless for exactly
+the actor it exists to constrain.
+
+**Emergency hotfix procedure.** There is no push-to-`main` escape hatch by design. To ship fast:
+open a PR and merge it immediately — with 0 required approvals that takes seconds and you still
+get a preview build. If the PR flow itself is broken, disable the ruleset in
+Settings → Rules, push, then re-enable it.
+
+This repo is **public**, which is what makes rulesets free on this plan. Never commit a secret —
+a server-side key belongs in a Vercel environment variable, never in the repo.
+
+A local `pre-push` hook in this clone also blocks direct pushes to `main` with a helpful message,
+so you fail fast instead of at the remote. It is not committed (`.git/hooks` never is), so it
+protects only clones where it has been installed — the ruleset is the real gate.
+
 ## Coordinating edits to `index.html`
 
 The entire front end is one ~1,450-line file, so two agents editing "different features" routinely
