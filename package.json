@@ -3,10 +3,17 @@
   "version": "1.0.0",
   "description": "Hawaii situational awareness — NWS alerts, weather, tides by island",
   "scripts": {
-    "dev":     "npx serve . --listen 3000 --no-clipboard",
+    "dev": "npx serve . --listen 3000 --no-clipboard",
     "dev:api": "npx vercel dev --listen 3000",
-    "deploy":  "npx vercel --prod"
+    "deploy": "npx vercel --prod",
+    "test": "node test/phase1-source-health.test.js"
   },
-  "keywords": ["hawaii", "weather", "alerts", "nws", "situational-awareness"],
+  "keywords": [
+    "hawaii",
+    "weather",
+    "alerts",
+    "nws",
+    "situational-awareness"
+  ],
   "author": "Robert Martinez"
 }
