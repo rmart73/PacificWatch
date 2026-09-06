@@ -10,6 +10,37 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
+### CLAIM — F002 severity model, with F004 folded in
+
+**Agent:** Claude Code
+**Branch:** `claude/f002-severity-model`
+**Claimed:** 2026-09-06, before any edit. First use of the claim-before-editing rule.
+
+**Scope — what I am touching:**
+- `getBadgeClass()` → replaced by a product-type tier model
+- `renderAlerts()` — badge class, badge text, and ordering
+- `updateHazardBanner()` — the `severe` count and headline wording
+- `.s-dot.warn` / `.s-dot.alert` CSS and a `prefers-reduced-motion` block (F004)
+- `AGENTS.md` severity documentation; a new `test/severity-model.test.js`
+
+**Scope — what I am NOT touching:** the source-health engine, retention, any fetch function, `api/news.js`, the News Sources toggles (F003 stays unclaimed and free).
+
+**Empirical basis, from the live feed during Hurricane Lowell:**
+
+```
+event                             severity   urgency    certainty
+Tropical Storm Warning            Severe     Immediate  Likely
+Flood Watch                       Severe     Future     Possible
+High Surf Advisory                Minor      Expected   Likely
+Tropical Cyclone Local Statement  Moderate   Expected   Likely
+```
+
+**`severity: Severe` covers both a Tropical Storm Warning and a Flood Watch.** Severity alone provably cannot separate act-now from be-prepared — this is not a styling preference, it is the field carrying less information than the UI needs. `getBadgeClass()` tests `severity === 'Severe'` before anything else, so a Flood Watch currently renders with the same `badge-alert` class *and* the same literal `SEVERE` text as a Tropical Storm Warning.
+
+Note that CAP `urgency` does draw the distinction (Immediate vs Future), and the product type in the event name draws it explicitly. The plan is to tier on product type — the classification NWS itself publishes and the public is trained on — with severity retained only as a safety-biased override so an `Extreme` product can never be under-ranked.
+
+---
+
 ### Phase 1 — Source Health & Freshness
 
 **Status:** **Complete** — merged in #5 (`6750553`) and verified live on production.
