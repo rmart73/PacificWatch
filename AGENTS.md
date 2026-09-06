@@ -387,7 +387,7 @@ required to be public. GitHub is source control only.
   overage billing** — deployments pause when you hit the cap.
 - That last point matters more here than for a normal side project: **an emergency app's traffic
   spikes precisely during an emergency**. A hurricane that puts the site in front of a lot of people
-  is exactly when hitting the cap would take it offline. At ~85 KB per page load the ceiling is
+  is exactly when hitting the cap would take it offline. At ~103 KB per page load (Phase 1 added the source-health engine) the ceiling is
   roughly a million views/month, which is generous — but if this ever gets shared widely during a
   storm, upgrading to Pro beforehand is cheap insurance.
 - A custom domain (e.g. `pacificwatch.org`) works on the free plan; you only pay the registrar.
