@@ -94,10 +94,25 @@ const mutations = [
     to:   '.nws-strip.is-warn .strip-state{color:var(--warn)}',
     expect: ['light warn'], suite: 'contrast' },
 
-  { name: 'dark unknown reverted to the display value',
-    from: '  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#6a8497;',
-    to:   '  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#5f7788;',
-    expect: ['matches in both dark blocks'], suite: 'contrast' },
+  /* Reverts the [data-theme="dark"] block only, leaving the prefers-color-scheme block
+     correct. Anchored with a newline and two spaces so it cannot match the four-space
+     copy inside the media query. This is the drift a single-block edit would cause. */
+  { name: 'dark unknown reverted in the [data-theme] block only',
+    from: '\n  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#6a8497;',
+    to:   '\n  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#5f7788;',
+    expect: ['--strip-unknown matches in both dark blocks'], suite: 'contrast' },
+
+  /* The ratios are computed from tokens, so the ways a rendered colour could differ from the
+     measured one are themselves asserted. These prove those assertions bite. */
+  { name: 'strip made translucent over the body background',
+    from: '.nws-strip{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card)}',
+    to:   '.nws-strip{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card);opacity:.8}',
+    expect: ['does not make itself translucent'], suite: 'contrast' },
+
+  { name: 'a later !important rule overrides strip text',
+    from: '.nws-strip.is-unknown .strip-state{color:var(--strip-unknown)}',
+    to:   '.nws-strip.is-unknown .strip-state{color:var(--strip-unknown)}\n.strip-state{color:var(--unknown)!important}',
+    expect: ['no !important colour rule exists anywhere'], suite: 'contrast' },
 
   /* Passing contrast by flattening every severity to one colour must not be a way through. */
   { name: 'severity flattened to a single accessible colour',
@@ -112,6 +127,14 @@ let missed = 0;
 mutations.forEach((m, i) => {
   if (!src.includes(m.from)) {
     console.log('  ANCHOR LOST  ' + m.name + '\n               the code it mutates has moved; update this case');
+    missed++;
+    return;
+  }
+  /* String.replace rewrites the FIRST match. A case whose anchor appears more than once can
+     silently mutate unrelated code, and then CAUGHT and MISSED both mean nothing — that
+     happened here with a CSS anchor shared by .sec-head and .nws-strip. */
+  if (src.indexOf(m.from) !== src.lastIndexOf(m.from)) {
+    console.log('  AMBIGUOUS  ' + m.name + '\n             its anchor appears more than once; make it unique');
     missed++;
     return;
   }

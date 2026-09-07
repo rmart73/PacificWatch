@@ -112,6 +112,31 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-07 — Contrast method hardened while Codex was rate-limited
+
+Codex re-reviewed c724b49 as far as its limit allowed: all 94 pure assertions passed
+independently and the lastSuccess timestamps were confirmed on all three surfaces. It was
+checking rendered colours against the tested tokens when it ran out of budget.
+
+Claude narrowed that gap without a browser. The ratios are computed from tokens, which is
+the method WCAG defines, but it is only sound if foreground and background are really what
+the tokens say. The three ways that could silently fail are now asserted rather than
+assumed: the strip paints its own opaque --card background and is not translucent, --card
+is an opaque hex in both themes, and nothing overrides the strip text colour (no !important
+colour rule exists anywhere, and each severity rule follows the base rule with higher
+specificity). The base rule that shows through if a tone is ever missing is checked too.
+
+**The mutation harness had a defect of its own.** String.replace rewrites the first match,
+so a case whose anchor was not unique silently mutated unrelated code — one CSS anchor was
+shared with .sec-head, and the case that appeared to pass was mutating the wrong rule. The
+harness now refuses an ambiguous anchor, which immediately exposed a second case that had
+been reporting CAUGHT by luck. Both are fixed and the guard stays.
+
+**Evidence:** npm test 106, npm run test:dom 138, npm run test:mutation 17/17.
+
+**Still unverified by anyone:** actual rendered pixels and 200% browser zoom. What remains
+for a browser is layout and reflow, not the contrast arithmetic.
+
 ### 2026-09-07 — PR 2 review findings fixed
 
 Both findings confirmed before fixing, and both reproduce on the reviewed head d330678.

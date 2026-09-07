@@ -104,5 +104,38 @@ console.log('\nSeverity stays distinguishable after the accessibility fix:');
   check(pair[0] + ': five states, five distinct colours', new Set(seen).size, 5);
 });
 
+console.log('\nThe tested colours are the ones that actually render:');
+/* These ratios are computed from tokens, not sampled from pixels. That is the method WCAG
+   defines, but it is only sound if the foreground and background are really what the tokens
+   say. Three things could break that silently, so each is asserted rather than assumed. */
+
+/* 1. The strip paints its own opaque background, so the tested --card is the real backdrop
+      and not whatever --surf the body happens to be. */
+const stripRule = src.match(/\.nws-strip\{([^}]*)\}/);
+check('the strip sets its own background', !!stripRule && /background:var\(--card\)/.test(stripRule[1]), true);
+check('and does not make itself translucent',
+  !!stripRule && !/opacity|mix-blend|backdrop-filter/.test(stripRule[1]), true);
+
+/* 2. --card must be an opaque colour. An rgba() or transparent value would let the body
+      background bleed through and change the effective contrast. */
+[['light', light], ['dark', darkMedia]].forEach(pair => {
+  check(pair[0] + ' --card is an opaque hex', /^#[0-9a-f]{6}$/.test(pair[1].card || ''), true);
+});
+
+/* 3. Nothing may override the strip text colour. A later or !important rule would mean the
+      rendered colour is not the token this file measured. */
+check('no !important colour rule exists anywhere', /color\s*:[^;}]*!important/.test(src), false);
+states.forEach(st => {
+  const base = src.indexOf('.nws-strip .strip-state{');
+  const own = src.indexOf('.nws-strip.is-' + st + ' .strip-state{');
+  /* Higher specificity (three classes vs two) and later in source order, so it wins both ways. */
+  check(st + ' rule follows the base rule', own > base && base !== -1, true);
+});
+
+/* If a tone is ever missing, the base rule shows through, so it must clear AA as well. */
+const baseToken = ruleToken('.nws-strip .strip-state');
+meets('light', light, baseToken, 'light fallback (--' + baseToken + ')');
+meets('dark', darkMedia, baseToken, 'dark  fallback (--' + baseToken + ')');
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 if (fail) process.exit(1);
