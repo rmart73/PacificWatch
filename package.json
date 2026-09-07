@@ -7,7 +7,8 @@
     "dev:api":  "npx vercel dev --listen 3000",
     "deploy":   "npx vercel --prod",
     "test":     "node test/phase1-source-health.test.js && node test/severity-model.test.js",
-    "test:dom": "node test/dom-behavior.test.js"
+    "test:dom": "node test/dom-behavior.test.js",
+    "test:mutation": "node test/mutation-check.js"
   },
   "keywords": ["hawaii", "weather", "alerts", "nws", "situational-awareness"],
   "author": "Robert Martinez",

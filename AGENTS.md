@@ -105,6 +105,9 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
 | `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
 | Island-scoped fetches call `beginRequest()` and check `requestIsCurrent()` before using their own response | A response can arrive after the user switches islands. Without the guard, `sourceOk()` stamped the cache with `S.island` at completion, filing one island's reading under another — a slow Maui observation rendered and cached as Kauaʻi's. Removing the check restores that bug silently | Architecture |
+| Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
+| The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
+| `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -287,6 +290,42 @@ thing again: *active but not hazardous*, *verified empty*, and *not checked*. Do
  HIEMA, FEMA and
 Global Hazards sit in a collapsed "Reference & Resources" section so reference material doesn't
 compete with live feeds.
+
+### Shared NWS snapshot, staged strip and the age tick
+
+`nwsSnapshot()` is the single read of alert state. It returns the eligible product set —
+render-time expiry, then selected-area match, then `compareAlerts()` on a copy — along with
+per-tier counts, the highest tier, the selected area, the verification age and a
+`presentation` value. Every alert surface renders from it through `renderAlertSurfaces()`,
+so no caller can refresh three surfaces and forget the fourth.
+
+Two details are easy to get wrong:
+
+- **`usableCache()` returns retained data for STALE sources only.** Asking it about a current
+  source answers `null`. Treating that as "no data" withdraws alerts at the moment they are
+  successfully verified, so `nwsSnapshot()` reads `S.cache.nwsAlerts` directly in the current
+  case and uses `usableCache()` only when stale.
+- **Counts are per product, not per incident.** A watch and a warning covering the same area
+  are two products and are counted twice on purpose. Nothing is deduplicated by area.
+
+`presentation` is one of `checking`, `warning`, `watch`, `statement`, `empty`, `stale-empty`
+or `unavailable`, with `.stale` separating retained active products from current ones. That
+covers the source states in the v2 overview contract; recovery is not a state but the result
+of recomputing after a successful fetch.
+
+The strip (`#nws-strip`) is **staged, not launched**. It renders on every update so its states
+are testable, but ships `hidden`: showing it now would place a second summary beside the hazard
+banner, which the contract rules out until the Overview lands. Append `?strip=1` to reveal it
+for a browser pass. PR 3 places it and drops the flag.
+
+`ageTick()` re-evaluates freshness and expiry from memory once a minute, and on
+`visibilitychange` and navigation. It issues no network request and must never touch
+verification timestamps. `startAgeTick()` is idempotent — one timer and one listener however
+often it is called — because a duplicated tick would multiply renders on every navigation.
+
+On island switch, `renderIslandScopedChecking()` withdraws the previous area's wind, rain,
+tide and earthquake cards immediately. Leaving Maui's wind under a Kauaʻi heading is the same
+false attribution the request-generation guard fixed inside the cache.
 
 ## Color tokens
 
@@ -514,6 +553,20 @@ ring reads at 6px, whether the triangles are distinguishable, whether an icon dr
 has needed a human on the Vercel preview. The DOM suite asserts that a class is applied, which
 a malformed SVG path would pass while rendering nothing. Plan for a visual pass on anything
 that changes appearance; the preview is behind Vercel SSO, so neither agent can do it.
+
+### Mutation check (`npm run test:mutation`)
+
+Review of PR #14 found a regression test that could not fail: both fixtures in the section
+carried the same reading, so the bug it was written to catch would have passed. A green run
+does not distinguish an assertion that works from one that is decorative.
+
+`test/mutation-check.js` breaks one behaviour at a time in a copy of `index.html`, runs the
+DOM suite against the mutant and requires the intended assertion to fail. Production files
+are never modified — mutants are written to a temp directory and deleted.
+
+Add a case when you add a behaviour worth trusting. `ANCHOR LOST` means the code a case
+mutates has moved and the case needs updating; `MISSED` means the assertion covering that
+behaviour is decorative and should be tightened.
 
 ## Deploy / hosting
 

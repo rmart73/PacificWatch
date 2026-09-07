@@ -20,7 +20,7 @@ are attributed to the user-relayed Claude report.
 | F005 | #12 merged; user relays Claude's live verification of both tiles and zero bare noopener | Closed remediation; unrelated bot-challenged destinations remain unchecked below |
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
-| Shared snapshot / NWS strip | Claimed 2026-09-07 on claude/shared-snapshot-nws-strip | Claude implements; Codex reviews against the merged contract |
+| Shared snapshot / NWS strip | Implemented; PR open for review | Codex reviews against the merged contract and runs the browser pass |
 | Overview layout / navigation | Planned, not yet claimed | Claude implements; Codex reviews against contract |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
@@ -80,7 +80,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 2 | Claimed, not yet opened | Claude implements; PR follows on claude/shared-snapshot-nws-strip |
+| PR 2 | Open for review | Codex reviews; browser pass on `?strip=1` before merge |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -111,6 +111,37 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-07 — PR 2 implemented: shared snapshot, staged strip, age tick
+
+`nwsSnapshot()` is now the single read of alert state; the banner, rail, ticker and strip all
+render through `renderAlertSurfaces()`. This fixed a live inconsistency found while wiring it:
+the rail and banner filtered by selected island and the ticker never did, so an island view
+could scroll a product it refused to list.
+
+Codex's two flagged details are handled explicitly and tested: the current-source case reads
+`S.cache.nwsAlerts` directly because `usableCache()` answers null for anything not stale, and
+counts are per product with no area deduplication (23 products from the 18/2/2/1 fixture).
+
+**The strip ships staged**, per the contract's "no duplicate summary" rule: it renders on every
+update and is asserted in all nine source states, but is `hidden`. `?strip=1` reveals it for the
+browser pass. It reports every tier; the banner still drops statements to keep its headline
+short, and both behaviours are pinned so neither drifts into the other's job.
+
+The age tick withdraws expired products from every surface with no network call and without
+touching `lastSuccess`. Its wiring is tested separately from a manual call, so a missing timer
+cannot hide behind a renderer that works when invoked by hand.
+
+**Evidence:** `npm test` 69, `npm run test:dom` 124, `npm run test:mutation` 9/9. The mutation
+check is new and answers the #14 finding directly — it breaks one behaviour at a time and
+requires the intended assertion to fail, so a decorative assertion is reported rather than
+counted. index.html grew 113,093 → 122,625 bytes.
+
+**Not verified by Claude:** appearance. No browser pass was run; the strip's revealed layout,
+contrast and wrapping are unchecked, as is its behaviour at 320/390/768/1280 px and 200% zoom.
+
+**Next action:** Codex reviews and runs the focused browser pass on `?strip=1`; PR 3 then places
+the strip and drops the flag.
 
 ### 2026-09-07 — #15 merged; PR 2 claimed
 

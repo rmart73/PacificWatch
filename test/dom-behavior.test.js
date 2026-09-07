@@ -38,9 +38,11 @@ function body(url) {
   return {};
 }
 let holdPattern = null, releaseHeld = null;   // lets one response be resolved out of order
+let fetchCount = 0;                           // proves the age tick issues no requests
 function makeFetch(failPattern) {
   return (url) => {
     const u = String(url);
+    fetchCount++;
     if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
     if (holdPattern && u.includes(holdPattern)) {
       const payload = body(u);
@@ -297,6 +299,174 @@ function has(label, sel, needle, expected) {
   w.eval("S.island='statewide'");
   newsItems = null;
 
+  console.log('\n11. Shared snapshot — every alert surface reads one eligibility pass:');
+  /* The rail and banner filtered by selected island; the ticker never did. A Kauai-only
+     warning therefore scrolled past in a Maui view. All four surfaces now read nwsSnapshot(). */
+  w.fetch = makeFetch(null);
+  alertFeatures = [
+    { properties: { event: 'Flash Flood Warning', severity: 'Severe', urgency: 'Immediate',
+                    areaDesc: 'Kauai North', sent: new Date().toISOString(), expires: future } }
+  ];
+  await w.fetchAlerts();
+  await settle();
+  w.eval("S.island='maui'");
+  w.renderAlertSurfaces();
+  has('rail omits the Kauai product under Maui', '#nws-alerts-container', 'Flash Flood Warning', false);
+  has('ticker omits it too, as the rail does', '#ticker-track', 'Flash Flood Warning', false);
+  has('banner does not count it', '#hazard-headline', 'warning', false);
+  w.eval("S.island='kauai'");
+  w.renderAlertSurfaces();
+  has('and all three show it again under Kauai', '#nws-alerts-container', 'Flash Flood Warning', true);
+  has('ticker agrees', '#ticker-track', 'Flash Flood Warning', true);
+  check('banner agrees', txt('#hazard-headline'), '1 warning \u2014 Kauai');
+  w.eval("S.island='statewide'");
+
+  console.log('\n12. The nine contract source states, read off the staged strip:');
+  const strip = () => ({ state: txt('#strip-state'), counts: txt('#strip-counts'), meta: txt('#strip-meta'),
+                         tone: $('#nws-strip').className });
+  const feed = async (features) => { alertFeatures = features; w.fetch = makeFetch(null);
+                                     await w.fetchAlerts(); await settle(); };
+  const mk = (event, severity, urgency, area, expires) => ({ properties: { event, severity, urgency,
+                    areaDesc: area || 'Hawaii', sent: new Date().toISOString(), expires: expires || future } });
+
+  /* (1) first load, nothing verified */
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null;');
+  w.renderAlertSurfaces();
+  check('1. checking', strip().state, 'Checking NWS alerts');
+  check('   no count is asserted before anything is verified', strip().counts, '');
+
+  /* (2) current with warnings — the O02 fixture: 18 warnings, 2 watches, 2 advisories, 1 statement */
+  const many = [];
+  for (let i = 0; i < 18; i++) many.push(mk('Flood Warning', 'Severe', 'Immediate', 'Zone ' + i));
+  many.push(mk('Flood Watch', 'Severe', 'Future'), mk('High Wind Watch', 'Severe', 'Future'));
+  many.push(mk('High Surf Advisory', 'Minor', 'Expected'), mk('Small Craft Advisory', 'Minor', 'Expected'));
+  many.push(mk('Tropical Cyclone Local Statement', 'Moderate', 'Expected'));
+  await feed(many);
+  check('2. warnings present -> highest tier leads', strip().state, 'WARNING \u2014 Hawaii');
+  check('   exact counts, every tier reported (O02)', strip().counts,
+    '18 warnings \u00b7 2 watches \u00b7 2 advisories \u00b7 1 statement');
+  check('   counted per product, not per incident', w.eval('nwsSnapshot().total'), 23);
+  check('   strip carries the alert tone', strip().tone, 'nws-strip is-alert');
+  /* The banner deliberately drops statements to stay short; the strip is where the full set
+     stays discoverable. Both are asserted so neither can drift into the other's job. */
+  check('   banner stays short and omits the statement', txt('#hazard-headline'),
+    '18 warnings \u00b7 2 watches \u00b7 2 advisories \u2014 Hawaii');
+
+  /* (3) current, watches and advisories only */
+  await feed([mk('Flood Watch', 'Severe', 'Future'), mk('High Surf Advisory', 'Minor', 'Expected')]);
+  check('3. watch/advisory only', strip().state, 'WATCH \u2014 Hawaii');
+  check('   both tiers counted', strip().counts, '1 watch \u00b7 1 advisory');
+  check('   amber tone, not alert', strip().tone, 'nws-strip is-warn');
+
+  /* (4) current, statements only */
+  await feed([mk('Tropical Cyclone Local Statement', 'Moderate', 'Expected'),
+              mk('Special Weather Statement', 'Moderate', 'Expected')]);
+  check('4. statements only stay informational', strip().state, 'STATEMENT \u2014 Hawaii');
+  check('   and are counted, not hidden', strip().counts, '2 statements');
+  check('   informational tone, never ok', strip().tone, 'nws-strip is-info');
+
+  /* (5) current, verified empty */
+  await feed([]);
+  check('5. verified empty is scoped to the area', strip().state, 'No active NWS alerts for Hawaii');
+  check('   no counts to show', strip().counts, '');
+  check('   and never says Normal operations', strip().state.indexOf('Normal operations'), -1);
+
+  /* (6) stale with retained active products */
+  await feed([mk('Tropical Storm Warning', 'Severe', 'Immediate')]);
+  w.fetch = makeFetch('/alerts/active');
+  await w.fetchAlerts();
+  await settle();
+  check('6. stale retains the product and its severity', strip().state, 'WARNING \u2014 Hawaii');
+  check('   with the verification age beside it', strip().meta.indexOf('Last verified') === 0, true);
+  has('   and the rail still shows it', '#nws-alerts-container', 'Tropical Storm Warning', true);
+
+  /* (7) stale where every retained product has expired */
+  w.fetch = makeFetch(null);
+  await feed([mk('Flood Warning', 'Severe', 'Immediate', 'Hawaii', new Date(Date.now() - 60000).toISOString())]);
+  w.eval("S.sourceHealth.nwsAlerts.lastError = 'forced';");
+  w.renderAlertSurfaces();
+  check('7. all retained products expired -> stale, not empty', strip().state, 'Alert data stale');
+  check('   which is not an all-clear', strip().state.indexOf('No active'), -1);
+  check('   nor a current-looking zero', strip().counts, '');
+
+  /* (8) past the retention window */
+  w.eval('S.sourceHealth.nwsAlerts.lastSuccess = Date.now() - 45*60*1000;');
+  w.fetch = makeFetch('/alerts/active');
+  await w.fetchAlerts();
+  await settle();
+  check('8. unavailable', strip().state, 'Alert status unavailable');
+  check('   unusable content is withdrawn', strip().counts, '');
+
+  /* (9) recovery recomputes every surface */
+  w.fetch = makeFetch(null);
+  await feed([mk('Tropical Storm Warning', 'Severe', 'Immediate')]);
+  check('9. recovery restores the current state', strip().state, 'WARNING \u2014 Hawaii');
+  check('   stale treatment is gone', strip().meta.indexOf('Last verified'), -1);
+  has('   and the rail is coherent again', '#nws-alerts-container', 'Tropical Storm Warning', true);
+
+  console.log('\n13. UI age tick — withdraws expired products with no network calls:');
+  await feed([mk('Flash Flood Warning', 'Severe', 'Immediate', 'Hawaii',
+                 new Date(Date.now() + 30000).toISOString())]);
+  check('before expiry the warning is shown', strip().state, 'WARNING \u2014 Hawaii');
+  has('and is on the rail', '#nws-alerts-container', 'Flash Flood Warning', true);
+  has('and in the ticker', '#ticker-track', 'Flash Flood Warning', true);
+  const fetchesBefore = fetchCount;
+  const verifiedBefore = w.eval('S.sourceHealth.nwsAlerts.lastSuccess');
+  /* Cross the expiry boundary by ageing the retained product, which is what real time does. */
+  w.eval("S.cache.nwsAlerts.data[0].properties.expires = new Date(Date.now() - 1000).toISOString();");
+  w.ageTick();
+  await settle();
+  check('after expiry the strip withdraws it', strip().state, 'No active NWS alerts for Hawaii');
+  has('the rail withdraws it', '#nws-alerts-container', 'Flash Flood Warning', false);
+  has('the ticker withdraws it', '#ticker-track', 'Flash Flood Warning', false);
+  has('the banner withdraws it', '#hazard-headline', 'warning', false);
+  check('the tick issued no network requests', fetchCount, fetchesBefore);
+  check('and did not touch the verification timestamp',
+    w.eval('S.sourceHealth.nwsAlerts.lastSuccess'), verifiedBefore);
+
+  console.log('\n13b. The tick is actually wired, not merely callable:');
+  /* A manually invoked renderer would pass 13 even with no timer installed. */
+  check('a timer exists after load', w.eval('ageTickTimer !== null'), true);
+  const timerId = w.eval('String(ageTickTimer)');
+  w.startAgeTick();
+  check('calling startAgeTick again does not create a second timer',
+    w.eval('String(ageTickTimer)'), timerId);
+  /* Returning to a visible document must re-evaluate without a manual call. */
+  await feed([mk('High Wind Warning', 'Severe', 'Immediate', 'Hawaii',
+                 new Date(Date.now() + 30000).toISOString())]);
+  check('warning shown before the visibility event', strip().state, 'WARNING \u2014 Hawaii');
+  const fetchesBeforeVis = fetchCount;
+  w.eval("S.cache.nwsAlerts.data[0].properties.expires = new Date(Date.now() - 1000).toISOString();");
+  d.dispatchEvent(new w.Event('visibilitychange'));
+  await settle();
+  check('the visibilitychange listener withdrew it', strip().state, 'No active NWS alerts for Hawaii');
+  check('and fetched nothing', fetchCount, fetchesBeforeVis);
+
+  console.log('\n14. Island switch withdraws the previous area before the new one lands:');
+  w.fetch = makeFetch(null);
+  w.eval("S.island='kauai'");
+  await w.fetchWeather();
+  await settle();
+  check('Kauai reading on screen', txt('#stat-wind'), '40 mph');
+  const mauiTab = d.querySelector('.island-tab[data-island="maui"]');
+  check('the Maui tab exists to click', !!mauiTab, true);
+  holdPattern = '/observations/';
+  mauiTab.click();
+  await settle();
+  check('the old reading is withdrawn immediately', txt('#stat-wind').indexOf('40'), -1);
+  has('and the card says it is checking the new area', '#stat-wind-note', 'Checking Maui', true);
+  check('the dot no longer claims a verified value', $('#dot-wind').className, 's-dot unknown');
+  holdPattern = null;
+  releaseHeld();
+  await settle();
+  check('then the Maui reading fills in', txt('#stat-wind'), '10 mph');
+  w.eval("S.island='statewide'");
+
+  console.log('\n15. The strip ships staged, not exposed:');
+  check('it is hidden by default so it cannot duplicate the banner',
+    $('#nws-strip').hasAttribute('hidden'), true);
+  check('but it is present and rendered, so PR 3 only has to place it',
+    strip().state.length > 0, true);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
