@@ -1383,6 +1383,7 @@ function renderWeatherUnavailable() {
 
 async function fetchWeather() {
   const sta = WEATHER_STATIONS[S.island] || WEATHER_STATIONS.statewide;
+  const token = beginRequest('nwsWeather');
   try {
     const res = await fetch(`https://api.weather.gov/stations/${sta.id}/observations/latest`, {
       headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
@@ -1390,9 +1391,11 @@ async function fetchWeather() {
     if (!res.ok) throw new Error('obs ' + res.status);
     const data = await res.json();
     if (!data || !data.properties) throw new Error('malformed observation');
-    sourceOk('nwsWeather', { p: data.properties, label: sta.label });
+    if (!requestIsCurrent(token)) return;   // superseded: the selection moved on
+    sourceOk('nwsWeather', { p: data.properties, label: sta.label }, token);
     renderWeather(data.properties, sta.label, false);
   } catch(e) {
+    if (!requestIsCurrent(token)) return;   // do not fail the current island for an old request
     sourceFail('nwsWeather', e.message);
     const cached = usableCache('nwsWeather');
     if (cached) renderWeather(cached.p, cached.label, true);
@@ -1427,6 +1430,7 @@ function renderTideUnavailable() {
 
 async function fetchTides() {
   const sta = TIDE_STATIONS[S.island] || TIDE_STATIONS.statewide;
+  const token = beginRequest('noaaTides');
   const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=pacific_watch&date=latest&station=${sta.id}&time_zone=lst_ldt&units=english&datum=MLLW&format=json`;
   try {
     const res = await fetch(url);
@@ -1436,9 +1440,11 @@ async function fetchTides() {
     if (!latest) throw new Error('No tide data');
     const ft = parseFloat(latest.v).toFixed(1);
     if (!isFinite(parseFloat(ft))) throw new Error('unusable tide value');
-    sourceOk('noaaTides', { ft: ft, name: sta.name });
+    if (!requestIsCurrent(token)) return;
+    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);
     renderTide(ft, sta.name, false);
   } catch(e) {
+    if (!requestIsCurrent(token)) return;
     sourceFail('noaaTides', e.message);
     const cached = usableCache('noaaTides');
     if (cached) renderTide(cached.ft, cached.name, true);
@@ -1491,6 +1497,7 @@ async function fetchEarthquakes() {
   const container = document.getElementById('earthquakes-container');
   if (!container) return;
   const sta = EARTHQUAKE_STATIONS[S.island] || EARTHQUAKE_STATIONS.statewide;
+  const token = beginRequest('usgsEarthquakes');
   if (!S.cache.usgsEarthquakes) container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div></div>`;
   try {
     const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${sta.lat}&longitude=${sta.lon}&maxradiuskm=${sta.radiusKm}&minmagnitude=2.0&orderby=time&limit=10`;
@@ -1498,9 +1505,11 @@ async function fetchEarthquakes() {
     if (!res.ok) throw new Error('USGS returned ' + res.status);
     const data = await res.json();
     if (!data || !Array.isArray(data.features)) throw new Error('malformed USGS payload');
-    sourceOk('usgsEarthquakes', data.features);
+    if (!requestIsCurrent(token)) return;
+    sourceOk('usgsEarthquakes', data.features, token);
     renderQuakes(data.features, false);
   } catch(e) {
+    if (!requestIsCurrent(token)) return;
     sourceFail('usgsEarthquakes', e.message);
     const cached = usableCache('usgsEarthquakes');
     if (cached) renderQuakes(cached, true);
@@ -1731,12 +1740,37 @@ S.cache = {};
    would be a fresh category of wrong data. */
 const ISLAND_SCOPED = { nwsWeather: 1, noaaTides: 1, usgsEarthquakes: 1 };
 
-function sourceOk(key, data) {
+/* REQUEST-SCOPE GUARD
+   Island-scoped fetches capture their station when the request starts, but a response can
+   arrive after the user has switched islands. Stamping the cache with S.island at completion
+   therefore filed one island's reading under another: a slow Maui observation would be cached
+   as Kauai's and rendered in its place. Each island-scoped fetch now records the island it
+   started under and its completion is discarded if that is no longer the selection. */
+function beginRequest(key) {
+  const h = S.sourceHealth[key];
+  if (!h) return null;
+  h.generation = (h.generation || 0) + 1;
+  return { key: key, generation: h.generation, island: S.island };
+}
+
+/* A completion is current only if it is the newest request for that source AND was started
+   under the island still selected. The generation check also discards an overtaken response
+   for the same island, which would otherwise render older data over newer. */
+function requestIsCurrent(token) {
+  if (!token) return true;
+  const h = S.sourceHealth[token.key];
+  if (!h) return false;
+  if (h.generation !== token.generation) return false;
+  return !ISLAND_SCOPED[token.key] || token.island === S.island;
+}
+
+function sourceOk(key, data, token) {
   const h = S.sourceHealth[key];
   if (!h) return;
   const now = Date.now();
   h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
-  if (data !== undefined) S.cache[key] = { island: S.island, data: data };
+  /* Stamp the island the request STARTED under, never the one selected when it landed. */
+  if (data !== undefined) S.cache[key] = { island: token ? token.island : S.island, data: data };
   renderSourceHealth();
 }
 

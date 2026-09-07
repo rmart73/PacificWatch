@@ -151,6 +151,35 @@ sections above supersede them. No broad archival deletion is performed in this u
 
 ## Current Work
 
+### CLAIM — island request-generation guard (v2 contract O09)
+
+**Agent:** Claude Code
+**Branch:** `claude/island-race-guard`
+**Claimed:** 2026-09-07, before editing.
+**Sequence:** first of the three agreed PRs — race guard → shared snapshot → Overview layout.
+
+**This is a live production bug, not a v2 requirement.** Reproduced against `main` in jsdom:
+
+```
+1. Maui selected; its PHOG request is in flight (unresolved)
+2. Switched to Kauai, its PHLI response landed -> "40 mph"
+3. Late Maui response resolved:
+     wind now shows:       "10 mph"     <- reverted to Maui's reading
+     station note:         "Kahului"
+     cache stamped island: "kauai"      <- poisoned
+     cache holds station:  "Kahului"
+```
+
+`sta` is captured when the request starts; `sourceOk()` stamps `island: S.island` at **completion**. A slow response is cached under whatever island has since been selected, and `usableCache()` will then serve the wrong island's reading on any later stale render. During a hurricane, switching islands on a slow connection can show one island's calmer wind under another island's name.
+
+**Scope:** a request-generation guard for the three island-scoped fetches — `fetchWeather()`, `fetchTides()`, `fetchEarthquakes()` — plus the minimal change `sourceOk()` needs to record the scope a request *started* under rather than the scope current at completion. A regression test reproducing the sequence above.
+
+**Not touching:** layout, navigation, Overview, the shared strip, `renderAlerts()`, the severity model, or `api/news.js`. Those belong to PRs 2 and 3.
+
+**Note for Q006:** merging #10 and #11 left the board with duplicated structure — two `## Current Work`, two `## Active Branches`, two `## Review Queue` sections. That is worse than length; it means a reader can consult the wrong one. Worth folding into the compaction rather than treating it as separate.
+
+---
+
 ### CLAIM — F005 Reference Maps & Portals links
 
 **Agent:** Claude Code
@@ -480,6 +509,58 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-07 — Island request-generation guard implemented (PR #14)
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### First of the three agreed PRs. The bug was live on production.
+Reproduced before fixing, fixed, then re-run to confirm the reproduction no longer shows it:
+
+```
+before:  wind "10 mph" · station "Kahului" · cache island "kauai"   <- Maui data as Kauai
+after:   wind "40 mph" · station "Lihue"   · cache island "kauai"
+```
+
+#### Implementation
+`beginRequest(key)` increments a per-source generation and captures `S.island` at request start. `requestIsCurrent(token)` accepts a completion only if it is the newest request for that source **and** started under the island still selected. `sourceOk()` now stamps the cache with the token's island rather than whatever is selected when the response lands.
+
+Both the success and failure paths are guarded — a superseded request failing must not mark the *current* island's source unhealthy, which would have been a second, quieter version of the same bug.
+
+#### The over-reach case is tested, not assumed
+The obvious way to get this wrong is to reject every late response. News and FEMA are statewide; dropping a news response because the island changed while it was in flight would silently lose headlines. `requestIsCurrent()` only applies the island check to `ISLAND_SCOPED` sources, and there is a test that holds a news request open, switches island, releases it, and asserts it still renders and caches.
+
+#### A test broke, correctly
+`npm test` failed immediately after the change: `could not extract sourceOk`. The pure suite extracts functions from `index.html` by regex, and `sourceOk(key, data)` became `sourceOk(key, data, token)`. **That is the designed behaviour** — the suites fail loudly on a signature change rather than silently testing a stale shape. Fixed the extraction and added the guard helpers to the suite while there.
+
+#### Verification
+
+| Evidence | Result |
+|---|---|
+| `npm test` | **58** assertions (34 source-health incl. 9 new guard-logic + 24 severity) |
+| `npm run test:dom` | **66**, up from 57 — sections 10, 10b, 10c |
+| Reproduction re-run | Bug no longer reproduces |
+| Inline JS | Parses |
+| Local serve | HTTP 200, guard symbols present |
+
+Section 10 covers the exact O09 sequence; 10b covers an overtaken response for the *same* island, which the generation counter catches and an island-only check would not; 10c covers the over-reach.
+
+#### Not verified
+Appearance — but nothing visual changed. No markup, CSS, layout or copy was touched; this is request lifecycle only. Flagging it because "no visual change" is a claim, not an observation.
+
+#### Next
+PR 2 of the sequence: the shared snapshot selector and the NWS strip, with the tier counts and highest-tier state you confirmed. I will claim it once this lands.
+
+#### Files affected
+- `index.html` — `beginRequest()`, `requestIsCurrent()`, `sourceOk()` signature, guards in the three island-scoped fetches
+- `AGENTS.md` — architecture note, load-bearing row
+- `test/phase1-source-health.test.js`, `test/dom-behavior.test.js`
+
+#### Commit / PR
+- PR #14
+
+---
 
 ### 2026-09-07 — F005 review corrections applied
 

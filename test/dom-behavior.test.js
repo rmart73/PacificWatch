@@ -14,6 +14,7 @@ const future = new Date(Date.now() + 45 * MIN).toISOString();
 let mode = 'ok';
 let alertFeatures = null;   // when set, overrides the default alert payload
 let newsItems = null;       // when set, overrides the default news payload
+let windOverrideMph = null; // when set, every observation answers with this reading
 function body(url) {
   const u = String(url);
   if (u.includes('/alerts/active')) return { features: alertFeatures || [
@@ -22,18 +23,30 @@ function body(url) {
     { properties: { event: 'Flood Watch', severity: 'Moderate', areaDesc: 'Oahu',
                     sent: new Date().toISOString(), expires: future } }
   ] };
-  if (u.includes('/observations/latest')) return { properties: {
-    windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 } } };
+  if (u.includes('/observations/latest')) {
+    /* mph values chosen to be unmistakable per station: PHOG 10, PHLI 40, default 18.
+       windOverrideMph wins when set, so two responses for the SAME station can differ. */
+    if (windOverrideMph !== null) return { properties: { windSpeed: { value: windOverrideMph * 0.44704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
+    if (u.includes('PHOG')) return { properties: { windSpeed: { value: 4.4704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
+    if (u.includes('PHLI')) return { properties: { windSpeed: { value: 17.8816 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
+    return { properties: { windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 } } };
+  }
   if (u.includes('tidesandcurrents')) return { data: [{ v: '1.7' }] };
   if (u.includes('earthquake.usgs.gov')) return { features: [] };
   if (u.includes('fema.gov')) return { DisasterDeclarationsSummaries: [] };
   if (u.includes('/api/news')) return { items: newsItems || [], errors: [] };
   return {};
 }
+let holdPattern = null, releaseHeld = null;   // lets one response be resolved out of order
 function makeFetch(failPattern) {
   return (url) => {
-    if (failPattern && String(url).includes(failPattern)) return Promise.reject(new Error('forced failure'));
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body(url)) });
+    const u = String(url);
+    if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
+    if (holdPattern && u.includes(holdPattern)) {
+      const payload = body(u);
+      return new Promise(res => { releaseHeld = () => res({ ok: true, status: 200, json: () => Promise.resolve(payload) }); });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body(u)) });
   };
 }
 
@@ -211,6 +224,78 @@ function has(label, sel, needle, expected) {
   await settle();
   has('enable-all restores the headlines', '#news-headlines', 'SA headline', true);
   check('and all five toggles', d.querySelectorAll('#news-source-rows .toggle.on').length, 5);
+
+  console.log('\n10. Island request-generation guard (contract O09):');
+  /* A slow request started under one island must never be cached or rendered under
+     another. Before the guard this filed Maui's Kahului reading as Kauai's. */
+  w.fetch = makeFetch(null);
+  w.eval("S.island='maui'");
+  holdPattern = 'PHOG';
+  const mauiPending = w.fetchWeather();
+  await settle();
+  holdPattern = null;
+  w.eval("S.island='kauai'");
+  await w.fetchWeather();
+  await settle();
+  check('Kauai reading rendered', txt('#stat-wind').indexOf('40') !== -1, true);
+
+  releaseHeld();
+  await mauiPending.catch(() => {});
+  await settle();
+  check('late Maui response does not overwrite the display',
+    txt('#stat-wind').indexOf('40') !== -1, true);
+  check('and does not poison the cache station',
+    w.eval('S.cache.nwsWeather.data.label'), 'Lihue');
+  check('cache island still matches the selection',
+    w.eval('S.cache.nwsWeather.island'), 'kauai');
+
+  console.log('\n10b. An overtaken response for the SAME island is also discarded:');
+  /* Same island on both requests, so only the generation counter can separate them — an
+     island-only check would let the older one through. The two responses therefore carry
+     DIFFERENT readings; with equal readings this section cannot fail and proves nothing. */
+  windOverrideMph = 40;
+  holdPattern = 'PHLI';
+  const firstKauai = w.fetchWeather();   // held, having captured the 40 mph payload
+  await settle();
+  holdPattern = null;
+  windOverrideMph = 55;
+  await w.fetchWeather();                // newer request, same island, answers 55 and lands first
+  await settle();
+  const genAfter = w.eval('S.sourceHealth.nwsWeather.generation');
+  /* undefined === undefined would pass on a build with no counter at all. */
+  check('generation is actually tracked', typeof genAfter, 'number');
+  check('newer 55 mph response is displayed', txt('#stat-wind'), '55 mph');
+
+  releaseHeld();
+  await firstKauai.catch(() => {});
+  await settle();
+  check('the older 40 mph response does not overwrite the display', txt('#stat-wind'), '55 mph');
+  check('and the cache retains the newer reading',
+    Math.round(w.eval('S.cache.nwsWeather.data.p.windSpeed.value') * 2.237), 55);
+  check('generation did not regress', w.eval('S.sourceHealth.nwsWeather.generation'), genAfter);
+  windOverrideMph = null;
+
+  console.log('\n10c. A non-island-scoped source must NOT be discarded on island change:');
+  /* The guard rejects a completion whose start-island no longer matches — but only for
+     island-scoped sources. News is statewide, so a news response that lands after an
+     island switch must still be accepted, or switching islands would silently drop
+     headlines. This is the guard's most likely over-reach, so it is tested directly. */
+  w.eval("S.island='statewide'");
+  newsItems = [{ source: 'KHON2', title: 'Late news item', link: 'https://example.com/n',
+                 published: new Date().toISOString(), hazard: true }];
+  holdPattern = '/api/news';
+  const newsPending = w.fetchNews();
+  await settle();
+  holdPattern = null;
+  w.eval("S.island='maui'");           // island changes while the news request is in flight
+  releaseHeld();
+  await newsPending.catch(() => {});
+  await settle();
+  has('the late news response is still rendered', '#news-headlines', 'Late news item', true);
+  check('and is still cached', w.eval("S.cache.news && S.cache.news.data.items.length"), 1);
+  check('news is genuinely not island-scoped', w.eval("!!ISLAND_SCOPED.news"), false);
+  w.eval("S.island='statewide'");
+  newsItems = null;
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
