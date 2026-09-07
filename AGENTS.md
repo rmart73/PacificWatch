@@ -108,6 +108,8 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
 | The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
 | `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
+| The strip has its own `--strip-*` colour tokens instead of reusing `--alert`/`--warn`/`--unknown` | Those are display colours for dots and badges, where the 4.5:1 text rule does not apply. As 12px text they failed WCAG AA — light watch 2.57:1, light unknown 2.54:1, dark unknown 3.90:1. The strip tokens are the same hues darkened only as far as compliance needs, so severity stays distinguishable. Repointing a strip rule at a display token fails `test/contrast.test.js` | Theming |
+| Verified-empty surfaces format `snap.checkedAt`, never `new Date()` | Rendering is triggered by age ticks and navigation, not only by fetches. Formatting the current time let a page left open keep advancing the check time it claimed — reporting a fresh verification it had never made | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -567,6 +569,18 @@ are never modified — mutants are written to a temp directory and deleted.
 Add a case when you add a behaviour worth trusting. `ANCHOR LOST` means the code a case
 mutates has moved and the case needs updating; `MISSED` means the assertion covering that
 behaviour is decorative and should be tightened.
+
+### Contrast check (`test/contrast.test.js`, part of `npm test`)
+
+Pure arithmetic over the tokens and CSS rules in `index.html` — no DOM, no dependencies. It
+asserts every strip text colour against `--card` in both themes at 4.5:1, checks the two dark
+blocks (`prefers-color-scheme` and `[data-theme="dark"]`) have not drifted apart, and checks
+the five severities are still five distinct colours, so meeting AA by flattening everything
+to near-black is not a way through.
+
+It reads the real rules, so renaming a token or repointing a rule at a display colour fails
+here rather than in someone's eyes. It only covers the strip; the rest of the palette is
+unaudited, and light `--ok` is 4.33:1 as body text if anyone reuses it that way.
 
 ## Deploy / hosting
 

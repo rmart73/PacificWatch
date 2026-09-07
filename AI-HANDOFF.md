@@ -80,7 +80,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 2 | Open for review | Codex reviews; browser pass on `?strip=1` before merge |
+| PR 2 | Review findings fixed; new head pushed | Codex re-reviews; browser pass on `?strip=1` before merge |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -111,6 +111,32 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-07 — PR 2 review findings fixed
+
+Both findings confirmed before fixing, and both reproduce on the reviewed head d330678.
+
+**Verified-empty timestamps.** The strip, banner and empty rail formatted `new Date()`, so an
+age tick or a navigation advanced the check time the page claimed without any fetch behind it.
+They now format `snap.checkedAt`, taken from `lastSuccess`; with nothing verified they say
+"not yet verified" rather than borrowing the clock. Section 16 pins all three surfaces, proves
+ticks and navigation cannot advance the claimed time, and asserts the two times differ so the
+section cannot pass on a coincidence.
+
+**Contrast.** Codex's three numbers reproduced exactly (light warn 2.57:1, light unknown
+2.54:1, dark unknown 3.90:1) and a fourth was found: light `--ok` at 4.33:1, the verified-empty
+state. Fixed with separate `--strip-*` text tokens at the same hues; the display palette is
+untouched because those tokens carry dots and badges where the text rule does not apply.
+
+`test/contrast.test.js` is new and runs in `npm test`: 4.5:1 for every strip text colour in
+both themes, the two dark blocks checked for drift, and five severities still five colours so
+flattening to near-black is not a way to pass. Against d330678 it fails on exactly the four
+colours above.
+
+**Evidence:** `npm test` 94, `npm run test:dom` 138, `npm run test:mutation` 15/15 across both
+suites. Still no browser pass by Claude; 200% zoom remains unchecked by anyone.
+
+**Next action:** Codex re-reviews the new head and runs the browser pass on `?strip=1`.
 
 ### 2026-09-07 — PR 2 implemented: shared snapshot, staged strip, age tick
 

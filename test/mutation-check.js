@@ -17,7 +17,11 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
-const SUITE = path.join(__dirname, 'dom-behavior.test.js');
+/* Cases name the suite that is supposed to catch them. Both suites take an html path. */
+const SUITES = {
+  dom: path.join(__dirname, 'dom-behavior.test.js'),
+  contrast: path.join(__dirname, 'contrast.test.js')
+};
 const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 const mutations = [
@@ -66,7 +70,40 @@ const mutations = [
   { name: 'stale-with-all-expired reported as verified empty',
     from: "  if (!snap.total) snap.presentation = snap.stale ? 'stale-empty' : 'empty';",
     to:   "  if (!snap.total) snap.presentation = 'empty';",
-    expect: ['7. all retained products expired'] }
+    expect: ['7. all retained products expired'] },
+
+  /* Review of PR #16, finding 1: a claimed check time must come from the fetch. */
+  { name: 'strip check time taken from the render clock',
+    from: "    meta = 'NWS Honolulu \\u00b7 Checked ' + checkedTime(snap);",
+    to:   "    meta = 'NWS Honolulu \\u00b7 Checked ' + fmtTime(new Date());",
+    expect: ['strip does not report the render time'] },
+
+  { name: 'banner check time taken from the render clock',
+    from: "    subtext = 'No active NWS alerts \\u00b7 updated ' + checkedTime(snap);",
+    to:   "    subtext = 'No active NWS alerts \\u00b7 updated ' + fmtTime(new Date());",
+    expect: ['banner does not report the render time'] },
+
+  { name: 'checkedTime falls back to the clock when nothing was verified',
+    from: "  return snap && snap.checkedAt ? fmtTime(new Date(snap.checkedAt)) : 'not yet verified';",
+    to:   "  return fmtTime(new Date(snap && snap.checkedAt ? snap.checkedAt : Date.now()));",
+    expect: ['with nothing verified, no time is invented'] },
+
+  /* Review of PR #16, finding 2: strip text must clear 4.5:1 in both themes. */
+  { name: 'strip watch text reverted to the display token',
+    from: '.nws-strip.is-warn .strip-state{color:var(--strip-warn)}',
+    to:   '.nws-strip.is-warn .strip-state{color:var(--warn)}',
+    expect: ['light warn'], suite: 'contrast' },
+
+  { name: 'dark unknown reverted to the display value',
+    from: '  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#6a8497;',
+    to:   '  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#5f7788;',
+    expect: ['matches in both dark blocks'], suite: 'contrast' },
+
+  /* Passing contrast by flattening every severity to one colour must not be a way through. */
+  { name: 'severity flattened to a single accessible colour',
+    from: '  --strip-alert:#cc3110; --strip-warn:#b05f12; --strip-ok:#3b7d94; --strip-info:#1b7bb5; --strip-unknown:#637886;',
+    to:   '  --strip-alert:#0a0507; --strip-warn:#0a0507; --strip-ok:#0a0507; --strip-info:#0a0507; --strip-unknown:#0a0507;',
+    expect: ['light: five states, five distinct colours'], suite: 'contrast' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
@@ -80,15 +117,16 @@ mutations.forEach((m, i) => {
   }
   const file = path.join(dir, 'mutant' + i + '.html');
   fs.writeFileSync(file, src.replace(m.from, m.to));
+  const suite = SUITES[m.suite || 'dom'];
   let out = '';
-  try { out = execFileSync('node', [SUITE, file], { encoding: 'utf8' }); }
+  try { out = execFileSync('node', [suite, file], { encoding: 'utf8' }); }
   catch (e) { out = (e.stdout || '') + (e.stderr || ''); }
   fs.unlinkSync(file);
 
   const failed = out.split('\n').filter(l => l.trim().startsWith('FAIL')).map(l => l.trim());
   const caught = m.expect.filter(x => failed.some(l => l.includes(x)));
   if (caught.length === m.expect.length) {
-    console.log('  CAUGHT  ' + m.name + '  (' + failed.length + ' assertion(s) failed)');
+    console.log('  CAUGHT  ' + m.name + '  [' + (m.suite || 'dom') + ']  (' + failed.length + ' assertion(s) failed)');
   } else {
     missed++;
     console.log('  MISSED  ' + m.name + '\n          nothing asserted this behaviour; ' + failed.length + ' unrelated failure(s)');

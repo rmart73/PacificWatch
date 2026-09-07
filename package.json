@@ -6,7 +6,7 @@
     "dev":      "npx serve . --listen 3000 --no-clipboard",
     "dev:api":  "npx vercel dev --listen 3000",
     "deploy":   "npx vercel --prod",
-    "test":     "node test/phase1-source-health.test.js && node test/severity-model.test.js",
+    "test":     "node test/phase1-source-health.test.js && node test/severity-model.test.js && node test/contrast.test.js",
     "test:dom": "node test/dom-behavior.test.js",
     "test:mutation": "node test/mutation-check.js"
   },

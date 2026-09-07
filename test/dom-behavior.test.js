@@ -467,6 +467,46 @@ function has(label, sel, needle, expected) {
     $('#nws-strip').hasAttribute('hidden'), true);
   check('but it is present and rendered, so PR 3 only has to place it',
     strip().state.length > 0, true);
+  console.log('\n16. A claimed check time comes from the fetch, never from the render:');
+  /* Review of PR #16: the verified-empty surfaces formatted new Date(), so every age tick and
+     every navigation advanced the time the page claimed to have checked NWS — a page left
+     open overnight kept reporting a fresh check it had never made. */
+  w.fetch = makeFetch(null);
+  await feed([]);
+  /* Move the verification 3 minutes into the past. freshMs for alerts is 6 minutes, so the
+     source stays current and the surfaces keep their verified-empty wording. */
+  w.eval('S.sourceHealth.nwsAlerts.lastSuccess = Date.now() - 3*60*1000;');
+  w.renderAlertSurfaces();
+  const verifiedStr = w.eval('fmtTime(new Date(S.sourceHealth.nwsAlerts.lastSuccess))');
+  const renderStr = w.eval('fmtTime(new Date())');
+  /* Without this the section could pass on two identical strings and prove nothing. */
+  check('the verified time and the render time are actually different',
+    verifiedStr !== renderStr, true);
+  check('strip reports the verified time', strip().meta.indexOf(verifiedStr) !== -1, true);
+  check('strip does not report the render time', strip().meta.indexOf(renderStr), -1);
+  has('banner reports the verified time', '#hazard-sub', verifiedStr, true);
+  has('banner does not report the render time', '#hazard-sub', renderStr, false);
+  has('empty rail reports the verified time', '#nws-alerts-container', verifiedStr, true);
+  has('empty rail does not report the render time', '#nws-alerts-container', renderStr, false);
+
+  const stampBefore = w.eval('S.sourceHealth.nwsAlerts.lastSuccess');
+  const fetchesBeforeStamp = fetchCount;
+  w.ageTick();
+  w.switchView('alerts');
+  await settle();
+  check('an age tick does not advance the claimed check time',
+    strip().meta.indexOf(verifiedStr) !== -1, true);
+  check('navigation does not advance it either', strip().meta.indexOf(renderStr), -1);
+  has('nor on the banner', '#hazard-sub', verifiedStr, true);
+  has('nor on the rail', '#nws-alerts-container', verifiedStr, true);
+  check('and lastSuccess itself was never rewritten',
+    w.eval('S.sourceHealth.nwsAlerts.lastSuccess'), stampBefore);
+  check('none of it fetched anything', fetchCount, fetchesBeforeStamp);
+
+  /* A surface with no successful fetch behind it must say so rather than borrow the clock. */
+  w.eval('S.sourceHealth.nwsAlerts.lastSuccess = null; S.sourceHealth.nwsAlerts.lastAttempt = null;');
+  check('with nothing verified, no time is invented',
+    w.eval("checkedTime(nwsSnapshot())"), 'not yet verified');
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
