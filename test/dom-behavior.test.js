@@ -14,6 +14,7 @@ const future = new Date(Date.now() + 45 * MIN).toISOString();
 let mode = 'ok';
 let alertFeatures = null;   // when set, overrides the default alert payload
 let newsItems = null;       // when set, overrides the default news payload
+let windOverrideMph = null; // when set, every observation answers with this reading
 function body(url) {
   const u = String(url);
   if (u.includes('/alerts/active')) return { features: alertFeatures || [
@@ -23,7 +24,9 @@ function body(url) {
                     sent: new Date().toISOString(), expires: future } }
   ] };
   if (u.includes('/observations/latest')) {
-    /* mph values chosen to be unmistakable per station: PHOG 10, PHLI 40, default 18 */
+    /* mph values chosen to be unmistakable per station: PHOG 10, PHLI 40, default 18.
+       windOverrideMph wins when set, so two responses for the SAME station can differ. */
+    if (windOverrideMph !== null) return { properties: { windSpeed: { value: windOverrideMph * 0.44704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHOG')) return { properties: { windSpeed: { value: 4.4704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHLI')) return { properties: { windSpeed: { value: 17.8816 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     return { properties: { windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 } } };
@@ -247,18 +250,30 @@ function has(label, sel, needle, expected) {
     w.eval('S.cache.nwsWeather.island'), 'kauai');
 
   console.log('\n10b. An overtaken response for the SAME island is also discarded:');
+  /* Same island on both requests, so only the generation counter can separate them — an
+     island-only check would let the older one through. The two responses therefore carry
+     DIFFERENT readings; with equal readings this section cannot fail and proves nothing. */
+  windOverrideMph = 40;
   holdPattern = 'PHLI';
-  const firstKauai = w.fetchWeather();   // held
+  const firstKauai = w.fetchWeather();   // held, having captured the 40 mph payload
   await settle();
   holdPattern = null;
-  await w.fetchWeather();                // newer request for the same island completes
+  windOverrideMph = 55;
+  await w.fetchWeather();                // newer request, same island, answers 55 and lands first
   await settle();
   const genAfter = w.eval('S.sourceHealth.nwsWeather.generation');
+  /* undefined === undefined would pass on a build with no counter at all. */
+  check('generation is actually tracked', typeof genAfter, 'number');
+  check('newer 55 mph response is displayed', txt('#stat-wind'), '55 mph');
+
   releaseHeld();
   await firstKauai.catch(() => {});
   await settle();
+  check('the older 40 mph response does not overwrite the display', txt('#stat-wind'), '55 mph');
+  check('and the cache retains the newer reading',
+    Math.round(w.eval('S.cache.nwsWeather.data.p.windSpeed.value') * 2.237), 55);
   check('generation did not regress', w.eval('S.sourceHealth.nwsWeather.generation'), genAfter);
-  check('display still shows the newer response', txt('#stat-wind').indexOf('40') !== -1, true);
+  windOverrideMph = null;
 
   console.log('\n10c. A non-island-scoped source must NOT be discarded on island change:');
   /* The guard rejects a completion whose start-island no longer matches — but only for
