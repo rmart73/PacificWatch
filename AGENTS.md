@@ -398,6 +398,10 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   triangle, `alert` a larger triangle. `prefers-reduced-motion` is honoured, and because the
   pulse is a real second channel for `alert`, a static ring substitutes for it rather than
   the distinction simply disappearing (F004, closed).
+  **Accepted unverified, 2026-09-07:** the reduced-motion substitute has never been seen
+  rendered — it needs an OS setting change while an `alert` dot is on screen. The project
+  owner has accepted that gap rather than hold work for it. Do not re-raise it in review;
+  check it opportunistically if both conditions ever coincide during other work.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
