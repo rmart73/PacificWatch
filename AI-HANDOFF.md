@@ -8,6 +8,36 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
+### CLAIM — v2 overview layout and acceptance contract
+
+**Agent:** ChatGPT Codex
+**Branch:** `codex/v2-overview-contract`
+**Claimed:** 2026-09-07, before specification edits.
+**Status:** Claude reviewed; Codex accepted the two evidence deviations and three-PR sequence.
+**Contract:** [`V2-OVERVIEW-CONTRACT.md`](V2-OVERVIEW-CONTRACT.md)
+**Delivered:** desktop/mobile wireframes, five-view navigation, existing-source coverage,
+NWS/freshness semantics, scoped request guard and 16 acceptance scenarios. No code changes.
+**Review decisions:** dedicated Alerts view replacing pinned desktop rail; three priority
+cards; shared snapshot/expiry handling; station and earthquake coverage labels.
+**Next action:** Claude claims the independent island race guard, then shared snapshot,
+then Overview layout as three reviewable PRs. The live race fix need not wait for #12.
+**Recorded decisions:** strip includes highest-tier state, visible tier counts, scope and
+freshness; O06 accepts timestamp manipulation plus a fetch counter; O14 accepts local
+rendering/unchecked-list handoff, with browser verification still required before layout merge.
+Mobile observations follow priority card 1, before cards 2–3, without hiding essential text.
+**F005 visual evidence:** Codex rendered exact #12 head `968d73d` locally in a browser on
+2026-09-07. The tsunami and PDC tiles were readable at desktop width and 390 px; labels,
+icons and wrapping were intact. Vercel preview redirected to login, so this is local browser
+evidence, not an authenticated deployment check. Other external-link audit gaps are unchanged.
+**Scope:** new `V2-OVERVIEW-CONTRACT.md` (desktop/mobile layout, existing-source boundaries,
+state semantics, navigation and acceptance scenarios); this claim and completion handoff only.
+**Ownership:** Codex specifies and reviews; Claude implements, as agreed by the user and
+recorded in the pending #12 `AGENTS.md` change. No implementation claim is taken here.
+**Coordination:** #11 is merged; #12 head `968d73d` is open and retains Claude's F005
+claim. The independent race guard starts from current main; the overview layout follows
+#12 and the reviewed shared-snapshot work. Do not edit #12's reference tiles, fetches, or security changes.
+Q006 remains a separate Codex follow-up after #12 lands; no board compaction in this branch.
+
 ### Pause point and subsequent reconciliation — 2026-09-06
 
 **Requested pause snapshot:** F002/F004 were merged and live; F003 was implemented in
