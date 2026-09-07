@@ -127,6 +127,8 @@ sections above supersede them. No broad archival deletion is performed in this u
 **Branch:** `claude/f005-portal-links`
 **Claimed:** 2026-09-07, before editing.
 
+**Status:** Implemented, in review on PR #12.
+
 **Scope:** the eight tiles in the Reference Maps & Portals section of `index.html` — their `href` targets and their captions. Documentation of what was verified and how.
 
 **Not touching:** any fetch, the source-health engine, the severity model, `api/news.js`, or Settings. No new data sources — these stay link-outs, and `AGENTS.md` is explicit that a link-out carries no live status.
@@ -261,7 +263,7 @@ Durable Phase 0 semantics are now documented in `AGENTS.md`. The key outcome is 
 
 ---
 
-**F005 — Reference Maps & Portals links land on homepages rather than relevant views.**
+**F005 — Reference Maps & Portals links land on homepages rather than relevant views. — FIXED in PR #12.**
 
 **Status:** Not started. **Unclaimed.**
 
@@ -448,6 +450,50 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-07 — F005 implemented
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### A correction to my own earlier finding
+My original F005 report called `hiema.maps.arcgis.com` a "1.3 KB empty hub shell with no title". **That was over-confident.** ArcGIS Online org pages are JavaScript applications; 1.3 KB with no title is what any SPA looks like to `curl`. I could not have concluded the page was empty, and I still cannot — WebFetch returns nothing for it either. Exactly the error your caveat rule warns about, made by the person who wrote the caveat.
+
+#### What research established instead — and it is worse
+HI-EMA's own news release publishes a "Know Your Hazards" deep link. That URL returns **647 bytes titled "Item Replacement"** — the ArcGIS item has been removed. A second ArcGIS hazard map found via search returns the same stub. **The agency's own published link is dead**, which is a stronger and more useful finding than "the page looked empty", and one worth passing to HI-EMA.
+
+On PDC: **DisasterAWARE Pro is at `disasteraware.pdc.org` and requires requested access** — the public gets a mobile app. So "DisasterAWARE Pacific hazard data" promised something no visitor could open, in **two** places (the map tile and a reference row in the alerts rail; I had only found one).
+
+#### Fixes
+
+| Was | Now | Why |
+|---|---|---|
+| Hawaii EMA — ArcGIS Hub → `hiema.maps.arcgis.com` | **Tsunami Evacuation Zones** → `dod.hawaii.gov/hiema/tsunami-evacuation-zones/` | Verified 200 / 96 KB real content. Links to statewide and per-county maps. Answers "am I in an evacuation zone", which is the most operationally useful question this section can answer. |
+| Pacific Disaster Ctr → `www.pdc.org`, captioned "DisasterAWARE Pacific hazard data" | **PDC Tsunami Maps** → `static.pdc.org/tsunami/index.html` | Verified 200, titled "Hawaii State Tsunami Evacuation Maps". A public PDC map that HI-EMA itself links to for statewide coverage. The caption now matches what opens. |
+| PDC reference row, "DisasterAWARE · Pacific-basin hazard intelligence" | "Agency portal · DisasterAWARE itself requires approved access" | Per the rule you added: if only a landing page is available, describe it as an agency portal. |
+
+#### Scope expansion, declared rather than slipped in
+My claim covered the eight tiles. While auditing every external link I found **28 of 35 `target="_blank"` links carried `rel="noopener"` without `noreferrer`**, against `AGENTS.md` security rule 5 which requires both. The rule was right and the code was 80% non-compliant. Fixed all 28 — mechanical, verified by count (35/35 now compliant), tests green. Flagging it because it is outside what I claimed.
+
+Security impact is small — `noopener` already prevents reverse tabnabbing, and browsers imply it for `target="_blank"`. The gain is privacy: outbound clicks no longer leak that the visitor came from Pacific Watch.
+
+#### Full link audit, all 23 external URLs
+- **Verified working with real content:** HI-EMA, HI-EMA tsunami zones, USGS earthquake map, FHAT, Google Fonts CSS, GDACS, RSOE, static.pdc.org tsunami, NOAA tides, Civil Beat, Hawaii News Now, KITV, Star-Advertiser, tsunami.gov, Ventusky, NWS Honolulu.
+- **Bot-challenged, not established as broken:** `poweroutage.us` (Cloudflare 403), `khon2.com` (403), `www.pdc.org` (Cloudflare 403), both USGS webcam pages (403), and `fema.gov/disaster/declarations` — which returns **200 with a 2.6 KB Akamai interstitial**, so it looks broken by size and is almost certainly fine in a browser. These need a browser pass; per your rule, a bot challenge alone does not establish breakage and I have not treated any of them as defects.
+
+#### Verification
+- `npm test` 49 · `npm run test:dom` 57 · inline JS parses.
+- Every replacement URL fetched and confirmed to return real content with a correct title, not a stub.
+- **Not verified:** appearance. The two changed tiles have not been seen rendered.
+
+#### Files affected
+- `index.html` — two map tiles, one reference row, 28 `rel` attributes
+- `AI-HANDOFF.md` — this entry
+
+#### Commit / PR
+- PR #12
+
+---
 
 ### 2026-09-07 — F003 appearance verified on production; Phase 1 card confirmed
 
