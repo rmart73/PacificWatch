@@ -14,20 +14,21 @@ Durable technical decisions belong in `AGENTS.md`.
 open PR #8 but not yet merged; F005 was confirmed and unclaimed. The planned sequence
 was **F003 → F005 → v2 overview**.
 
-**Latest repository check:** while this documentation task was in progress, PR #8 merged
-as `64879b8`, followed by Claude's documentation PR #9 as `e4a98f8`. The final branch
-is based on that updated main and preserves both PRs. The earlier unmerged state is history,
-not the current F003 status.
+**Latest repository check, 2026-09-07:** #8 (`64879b8`), #9 (`e4a98f8`) and #10
+(`b7e6fbf`) are merged. F003 appearance is verified on production in Claude's #10
+handoff. F005 is implemented by Claude in open PR #12 (`b59aad7`), not yet merged.
+The earlier unmerged F003 state above is history, not current status.
 
 | Item | Current status | Next action |
 |---|---|---|
 | F002 + F004 | Merged in #7 (`155ffbf`), live per Claude's report relayed by the user | Closed; preserve documented semantics |
-| F003 | Implemented and merged in #8 (`64879b8`) | Visual verification was outstanding in Claude's handoff; no fresh browser/production verification performed by this documentation task |
-| F005 | Findings confirmed; remediation not started, **unclaimed** | Claim and verify all eight links in a browser |
+| F003 | Implemented and merged in #8 (`64879b8`) | Production appearance verified by the user, recorded by Claude in #10; closed |
+| F005 | Implemented by Claude in open PR #12 | Resolve review findings and complete remaining browser checks |
 | v2 overview | Planned | After F005 |
 
-**Remaining planned sequence:** F005 → v2 overview. A merge is not itself evidence of
-a completed visual pass. Do not discard the outstanding F003 appearance check.
+**Remaining planned sequence:** finish review/verification of F005 (#12) → v2 overview.
+F003's appearance gap is closed by explicit production evidence. The owner-accepted
+reduced-motion and billing decisions in main's `AGENTS.md` remain closed; do not re-raise.
 
 ### CLAIM — pause-point documentation
 
@@ -39,8 +40,10 @@ a completed visual pass. Do not discard the outstanding F003 appearance check.
 `AGENTS.md`, and a small roadmap prerequisite clarification. No production code changes.
 **Coordination:** initially inspected main `155ffbf` and PR #8 head `aeb0263`.
 Refreshed main before publication, discovered #8/#9 merged, and rebased onto `e4a98f8`.
-Claude's F003 implementation documentation and #9 audit are preserved. F005 remains
-unclaimed. Q006 board compaction remains open; older content is retained as history below.
+Claude's F003 implementation documentation and #9 audit are preserved. Follow-up on
+2026-09-07 remains within this documentation claim: reconcile #10's production verification
+and #12's ownership/research corrections. Claude owns F005; no code edits on that branch.
+Q006 compaction remains a separate, unclaimed follow-up; older content is retained below.
 
 ### F003 — implementation record
 
@@ -51,17 +54,19 @@ KITV / KHON2 incorrectly combined two outlets.
 PR #8 implements persisted display preferences, cache-only rerendering on toggle, explicit
 hidden-headline counts and an enable-all link when the filter hides every matching headline.
 Claude reported zero inert toggles, 49 pure-logic assertions and 57 DOM assertions (up from
-45). The original handoff explicitly left switch-row and FILTERED-state appearance unverified.
+45). On 2026-09-07 the user verified the five rows, working toggles, and the all-disabled
+state showing “30 headlines hidden by your source filter” with an enable-all link.
+Claude recorded this in #10: the former appearance gap is now closed.
 
 ### F005 — Reference Maps & Portals link audit
 
-**Status:** Confirmed findings; remediation not started. **Unclaimed.**
-The user found links leading to generic homepages. Claude checked all eight; these are his
-reported findings, preserved from PR #8 rather than a new browser audit:
+**Status:** Implemented in open PR #12, owned by Claude Code on `claude/f005-portal-links`.
+The table preserves the original audit with its ArcGIS conclusion corrected. #12 changes
+the HI-EMA and PDC tiles and PDC reference-row caption; final review is pending.
 
 | Tile | Existing target | Reported finding |
 |---|---|---|
-| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | Redirects to `/home/index.html`, a 1.3 KB empty shell with no title; not a Hawaii EMA map. |
+| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | Original “empty shell” conclusion withdrawn: a small JavaScript-app response cannot establish that the rendered page is empty. The shipped hostname is `hawaiiema.maps.arcgis.com`; do not confuse it with `hiema.maps.arcgis.com` in the later report. |
 | Pacific Disaster Ctr | `www.pdc.org` | Caption promises “DisasterAWARE Pacific hazard data”, but target is the corporate homepage, not the DisasterAWARE tool. |
 | GDACS | `gdacs.org` | Site root; arguably appropriate for global disaster alerts, but not Pacific-scoped. |
 | RSOE EDIS | `rsoe-edis.org/eventMap` | Correct, specific event map. |
@@ -72,10 +77,12 @@ reported findings, preserved from PR #8 rather than a new browser audit:
 
 **Method caveat:** `pdc.org` and `poweroutage.us` returned HTTP 403 to curl because of
 Cloudflare bot challenges. This is not evidence that either is broken for browser users.
-The ArcGIS destination and PDC caption/target mismatch are established findings; do not
-claim the full browser audit is complete.
+The PDC corporate-homepage/caption mismatch is established. Claude separately reports
+an agency-published ArcGIS item returning “Item Replacement”; preserve the exact item URL
+and browser evidence before treating that as proof that the item was removed. Do not infer
+that the original org homepage is broken from either an item stub or response size.
 
-**Next owner:** verify all eight destinations in a browser for relevant, current, authoritative,
+**Review follow-up for Claude:** verify all eight destinations in a browser for relevant, current, authoritative,
 publicly accessible information. Replace generic targets with stable direct tools/maps when
 available. If no stable deep link exists, label the destination honestly as an agency portal.
 Distinguish “Live Map” or “Direct tool” from “Agency Portal” according to what actually opens.
@@ -87,12 +94,18 @@ Do not treat a successful HTTP response alone as proof that a link fulfills its 
 | Agent | Branch | Work | Status |
 |---|---|---|---|
 | ChatGPT Codex | `codex/docs-pause-2026-09-06` | Pause-point documentation | Ready for review |
-| — | — | F005 remediation | Unclaimed |
+| Claude Code | `claude/f005-portal-links` | F005 remediation | PR #12 open, review pending |
 
 ## Review Queue
 
-F003 PR #8 and documentation PR #9 are merged. This documentation branch is ready for
-review. Preserve the recorded F003 visual-verification gap until evidence closes it.
+PRs #8, #9 and #10 are merged. #11 is ready for review with F003 appearance closed.
+PR #12 needs the PDC access wording corrected: only **DisasterAWARE Pro** requires
+approved access. PDC's public browser app at https://disasteralert.pdc.org/disasteralert/
+loaded a map and hazard list without authentication during Codex's 2026-09-07 review.
+Source: https://www.pdc.org/help/user-access/ . The tsunami replacement pages both opened
+with relevant content in a browser; HI-EMA exposes statewide and county map links.
+The declared `noreferrer` expansion matches existing security rule 5; Codex counted 35/35
+new-tab anchor templates carrying both required rel values. No production code changed here.
 
 ---
 
