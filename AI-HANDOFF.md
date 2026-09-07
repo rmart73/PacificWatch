@@ -8,6 +8,21 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
+### CLAIM — v2 overview layout and acceptance contract
+
+**Agent:** ChatGPT Codex
+**Branch:** `codex/v2-overview-contract`
+**Claimed:** 2026-09-07, before specification edits.
+**Status:** Writing contract for Claude implementation review.
+**Scope:** new `V2-OVERVIEW-CONTRACT.md` (desktop/mobile layout, existing-source boundaries,
+state semantics, navigation and acceptance scenarios); this claim and completion handoff only.
+**Ownership:** Codex specifies and reviews; Claude implements, as agreed by the user and
+recorded in the pending #12 `AGENTS.md` change. No implementation claim is taken here.
+**Coordination:** #11 is merged; #12 head `968d73d` is open and retains Claude's F005
+claim. Drafting the contract can proceed; implementation starts from main after #12 lands
+and the contract is reviewed. Do not edit #12's reference tiles, fetches, or security changes.
+Q006 remains a separate Codex follow-up after #12 lands; no board compaction in this branch.
+
 ### Pause point and subsequent reconciliation — 2026-09-06
 
 **Requested pause snapshot:** F002/F004 were merged and live; F003 was implemented in
