@@ -121,6 +121,35 @@ sections above supersede them. No broad archival deletion is performed in this u
 
 ## Current Work
 
+### CLAIM — island request-generation guard (v2 contract O09)
+
+**Agent:** Claude Code
+**Branch:** `claude/island-race-guard`
+**Claimed:** 2026-09-07, before editing.
+**Sequence:** first of the three agreed PRs — race guard → shared snapshot → Overview layout.
+
+**This is a live production bug, not a v2 requirement.** Reproduced against `main` in jsdom:
+
+```
+1. Maui selected; its PHOG request is in flight (unresolved)
+2. Switched to Kauai, its PHLI response landed -> "40 mph"
+3. Late Maui response resolved:
+     wind now shows:       "10 mph"     <- reverted to Maui's reading
+     station note:         "Kahului"
+     cache stamped island: "kauai"      <- poisoned
+     cache holds station:  "Kahului"
+```
+
+`sta` is captured when the request starts; `sourceOk()` stamps `island: S.island` at **completion**. A slow response is cached under whatever island has since been selected, and `usableCache()` will then serve the wrong island's reading on any later stale render. During a hurricane, switching islands on a slow connection can show one island's calmer wind under another island's name.
+
+**Scope:** a request-generation guard for the three island-scoped fetches — `fetchWeather()`, `fetchTides()`, `fetchEarthquakes()` — plus the minimal change `sourceOk()` needs to record the scope a request *started* under rather than the scope current at completion. A regression test reproducing the sequence above.
+
+**Not touching:** layout, navigation, Overview, the shared strip, `renderAlerts()`, the severity model, or `api/news.js`. Those belong to PRs 2 and 3.
+
+**Note for Q006:** merging #10 and #11 left the board with duplicated structure — two `## Current Work`, two `## Active Branches`, two `## Review Queue` sections. That is worse than length; it means a reader can consult the wrong one. Worth folding into the compaction rather than treating it as separate.
+
+---
+
 ### CLAIM — F005 Reference Maps & Portals links
 
 **Agent:** Claude Code
