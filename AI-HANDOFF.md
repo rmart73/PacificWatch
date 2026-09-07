@@ -20,20 +20,38 @@ are attributed to the user-relayed Claude report.
 | F005 | #12 merged; user relays Claude's live verification of both tiles and zero bare noopener | Closed remediation; unrelated bot-challenged destinations remain unchecked below |
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
-| Shared snapshot / NWS strip | Planned, not yet claimed | Claude to claim after #15 lands |
+| Shared snapshot / NWS strip | Claimed 2026-09-07 on claude/shared-snapshot-nws-strip | Claude implements; Codex reviews against the merged contract |
 | Overview layout / navigation | Planned, not yet claimed | Claude implements; Codex reviews against contract |
-| Q006 board compaction | #15 reconciled onto 36a5a20; ready for review | Codex owns board until #15 lands |
+| Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
 
-**Q006 — ChatGPT Codex, codex/q006-handoff-compaction.**
-Claim published 2026-09-07 before editing (commit 0a3d47a).
-Scope: this board and the dated archive only. Consolidate duplicate sections, retain
-history and unresolved work. No production code, AGENTS, or product-plan changes.
-The owner assigned this after #12; Claude explicitly left it for Codex.
+**PR 2 — shared snapshot selector and NWS strip. Claude Code, claude/shared-snapshot-nws-strip.**
+Claim published 2026-09-07 before editing any implementation file.
 
-The specification and race-guard claims are complete with #13/#14 merged.
-Claude has explicitly left the board to Codex until #15 lands; PR 2 is not yet claimed.
+In scope:
+
+- One shared selector producing the eligible NWS feature set — render-time expiry handling,
+  selected-area matching, then `compareAlerts()` — consumed by the strip, the counts and the
+  existing Alerts surfaces, without mutating the shared array while sorting.
+- The strip itself: highest-tier state, separate warning/watch/advisory/statement counts,
+  selected area, and freshness, across all nine source states in the contract table.
+- Island-switch behaviour for the surfaces this PR touches: withdraw old island-scoped
+  content and show Checking until a matching response lands, on top of the merged O09 guard.
+- A UI-only age tick, at most once per minute, so freshness and expiry re-evaluate with no
+  network calls. **Flagged for objection:** the contract lists this under Freshness rather
+  than assigning it to a PR. It is here because a strip that shows freshness cannot report it
+  honestly without one. Say so before I build it if it belongs in PR 3.
+
+Out of scope, deferred to PR 3: Overview view, navigation, sidebar replacement, mobile
+card ordering.
+
+Two contract details I expect to be the awkward ones, recorded now rather than discovered late:
+`usableCache()` returns stale entries only, so the shared selector must handle a current
+matching cache entry explicitly instead of reading its absence as unavailable; and counts are
+per product, not per incident, so overlapping watch/warning areas must not be deduplicated.
+
+Q006 is complete and merged in b71fb74, so the board is no longer exclusively Codex-owned.
 
 ### Agreed next sequence
 
@@ -54,7 +72,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/q006-handoff-compaction | Q006: current board and historical archive |
+| Claude | claude/shared-snapshot-nws-strip | PR 2: shared snapshot selector and NWS strip |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -62,11 +80,11 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| #15 | Reconciled onto main 36a5a20; docs checks passed | Review and merge; Claude then claims PR 2 |
+| PR 2 | Claimed, not yet opened | Claude implements; PR follows on claude/shared-snapshot-nws-strip |
 
-#13 and #14 are merged. Their original claims and handoffs are preserved in the
-archive, and the completed #14 test correction is recorded below.
-No implementation review is pending. If main advances again, recheck #15 before merging.
+#13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
+in the archive, and the completed #14 test correction is recorded below.
+No implementation review is pending.
 
 ## Outstanding Verification and Decisions
 
@@ -93,6 +111,25 @@ No implementation review is pending. If main advances again, recheck #15 before 
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-07 — #15 merged; PR 2 claimed
+
+Claude reviewed #15 against its own claims rather than accepting them. The archive is
+byte-identical to `AI-HANDOFF.md` at 36a5a20 (1,152 lines both sides, compared after CRLF
+normalisation); the compacted board is 144 lines with exactly one Current Work, Active
+Branches and Review Queue heading; the diff touches only the board and the archive; and all
+four internal links resolve to files that exist in the branch. Merged as b71fb74.
+
+Codex’s correction of the bot-challenged destination count is confirmed against the archive:
+it is six URLs — poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages and
+fema.gov/disaster/declarations. Claude’s earlier shorthand of “five” was wrong.
+
+PR 2 is claimed above on claude/shared-snapshot-nws-strip, board-only in this commit.
+One scope question is raised in the claim rather than resolved unilaterally: whether the
+once-per-minute UI age tick belongs to this PR or to PR 3.
+
+**Next action:** Codex confirms or moves the age tick; Claude implements the selector and
+strip, then opens PR 2 for review against the merged contract.
 
 ### 2026-09-07 — #13/#14 merged; #14 review closed
 
