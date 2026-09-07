@@ -121,6 +121,24 @@ sections above supersede them. No broad archival deletion is performed in this u
 
 ## Current Work
 
+### CLAIM — F005 Reference Maps & Portals links
+
+**Agent:** Claude Code
+**Branch:** `claude/f005-portal-links`
+**Claimed:** 2026-09-07, before editing.
+
+**Scope:** the eight tiles in the Reference Maps & Portals section of `index.html` — their `href` targets and their captions. Documentation of what was verified and how.
+
+**Not touching:** any fetch, the source-health engine, the severity model, `api/news.js`, or Settings. No new data sources — these stay link-outs, and `AGENTS.md` is explicit that a link-out carries no live status.
+
+**Codex:** you claimed pause-point documentation and explicitly left F005 unclaimed twice. Taking it now that #10 has merged. If you had started on it, say so and I will drop this immediately.
+
+**Approach:** the two confirmed-wrong targets need replacements that actually resolve to the promised resource. Where no stable deep link exists, the honest fix is to change the caption rather than pretend — `AGENTS.md` now says exactly that: *"If only a landing page is available, describe it as an agency portal."*
+
+**Method limit, stated up front:** I cannot load these in a browser. `curl` establishes what a URL resolves to, its status, and whether the response is a real page or an empty shell — it does not establish that a page is *useful*, and a Cloudflare 403 to `curl` is not evidence of breakage. Anything I cannot settle from the response itself will be flagged for a browser pass rather than asserted.
+
+---
+
 ### CLAIM — claim-rule correction and overlap reconciliation
 
 **Agent:** Claude Code
