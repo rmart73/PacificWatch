@@ -10,7 +10,21 @@ Durable technical decisions belong in `AGENTS.md`.
 
 ## Current Work
 
-### CLAIM — F003 News Sources toggles
+### CLAIM — claim-rule correction and overlap reconciliation
+
+**Agent:** Claude Code
+**Branch:** `claude/claim-rule-docs`
+**Claimed:** 2026-09-06, before editing.
+
+**Why:** Codex claimed *pause-point documentation* on `codex/docs-pause-2026-09-06`, branched from `155ffbf`. That is work I had already done and merged as PR #9 — **because I did it without claiming it.** I applied the claim rule to feature work and silently exempted documentation. Codex read the rule correctly and I did not. Near-collision, second one, same root cause.
+
+**Scope:** amend the claim rule in `AGENTS.md` so it unambiguously covers documentation; clear my stale F003 claim block; record what #9 already covered and what remains of Codex's claimed scope; record the user's decision to defer the Vercel billing/page-weight question.
+
+**Not touching:** `index.html`, any test, F005, or Q006 compaction — the last two remain Codex's to take.
+
+---
+
+### Done — F003 News Sources toggles
 
 **Agent:** Claude Code
 **Branch:** `claude/f003-news-sources`
@@ -305,6 +319,79 @@ Pacific Watch already receives PTWC tsunami products through the NWS alerts feed
 ## Handoff Log
 
 Newest entries first.
+
+### 2026-09-07 — F003 appearance verified on production; Phase 1 card confirmed
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### Closing the gap you flagged
+Your caveat on #11 was right — "a merge is not itself evidence of a completed visual pass" — and I had acted on "verified ready for merge" without ever seeing the card. The user has now checked it on production. **F003 appearance is verified; the outstanding gap can be closed.**
+
+| Checked | Result |
+|---|---|
+| News Sources card | Exactly **five** outlets — Hawaii News Now, Civil Beat, Star-Advertiser, KHON2, KITV 4. No NWS/NOAA, HIEMA or GDACS rows. |
+| Toggles | Operate; state renders correctly when off |
+| All five disabled | `FILTERED` badge, **"30 headlines hidden by your source filter"**, and an *Enable all sources* link |
+| Stamp | "0 headlines · updated Sep 7, 09:38 AM HST · 30 hidden by filter" |
+
+**The critical distinction held:** it reports *30 headlines hidden*, not "No headlines available". A filter cannot masquerade as an absence of news — the same failure mode as the fabricated all-clear, in a different surface.
+
+#### Phase 1 Data Sources card also confirmed
+Six feeds, all `CURRENT` with live ages, "Last refresh Sep 7, 09:37 AM HST", and the corrected source-agnostic footer copy from your earlier review round.
+
+#### An unplanned verification
+Conditions escalated overnight — 18 warnings including **Hurricane Warnings**, and wind at HNL reached **54 mph**, crossing the >35 threshold into `alert`. That is the first time an `alert`-state dot has existed on screen since F004 shipped, so the larger alert triangle got its first real look rather than remaining theoretical.
+
+The tier model is also holding at roughly four times the alert volume it was designed against: "18 warnings · 2 watches · 2 advisories", warnings sorted first, tiers counted separately.
+
+#### Remaining unverified appearance
+Only the `prefers-reduced-motion` static-ring substitute. It needs an OS setting change while an `alert` dot is on screen — both conditions are true right now, so this is briefly checkable if anyone wants it.
+
+#### Files affected
+- `AI-HANDOFF.md` — this entry
+
+#### Commit / PR
+- PR #10, follow-up commit
+
+---
+
+### 2026-09-06 — Overlap on pause-point docs; claim rule corrected
+
+**From:** Claude Code
+**To:** ChatGPT Codex
+
+#### What happened
+You claimed *pause-point documentation* on `codex/docs-pause-2026-09-06`, branched from `155ffbf`, with a careful scope note that inspected PR #8 and preserved my F003 ownership. By the time it landed I had already done and merged that work as **PR #9** — because **I did it without claiming it.**
+
+Your process was correct and mine was not. I applied the claim rule to feature work and silently exempted documentation. The rule already said "before editing anything"; I read past it.
+
+#### Fix
+`AGENTS.md` now says *"before editing anything — including documentation"*, with the reasoning: `AGENTS.md` and `AI-HANDOFF.md` are the two files both agents edit most, so they collide more readily than code, not less. Both near-collisions are named there so the rule keeps its evidence.
+
+#### What #9 already covered, so you can drop it from your branch
+- Four stale figures in `AGENTS.md`, all measured: page weight ~103 → **108 KB**, front-end size ~1,450 → **1,930 lines**, inline `onclick` handlers ~30 → **22** in both places it appears. The `onclick` count moved because F003 replaced eight with delegated listeners, so the CSP gap is smaller than documented.
+- A **Testing** section: what each of the three suites covers, that `npm test` must work with nothing installed and how to verify that, and what the tests cannot do — the DOM suite asserts a class is applied, which a malformed SVG path would pass while rendering nothing.
+- A **status preamble on the v2 plan**, which read as though nothing had been built. It maps each item to its state and flags the two places shipped code deliberately contradicts the plan: CAP severity as discriminator, and green.
+
+#### What remains of your claimed scope — still yours
+- **"Durable truthfulness and documentation rules in `AGENTS.md`."** I did not touch this. #9 corrected specific facts; it did not add a general rule about keeping documentation true. Given six instances of prose going stale, that rule is worth writing and you claimed it first.
+- **Q006 board compaction.** Still open, still unclaimed by me.
+- **F005.** Still unclaimed.
+
+Your branch is two merges behind `main` (#8 and #9). Rebasing will show most of the pause-point scope already applied.
+
+#### Decision recorded
+The project owner has **deferred the Vercel billing / page-weight question**: the priority is a working product before a scalable one. Recorded in `AGENTS.md` with instruction not to re-raise it in reviews, and the two conditions that should reopen it — public promotion of the site, or a single change adding weight out of proportion to what it delivers. I had raised it twice; it should not come up a third time from either of us.
+
+#### Files affected
+- `AGENTS.md` — claim rule now explicitly covers documentation; billing deferral recorded
+- `AI-HANDOFF.md` — stale F003 claim cleared, this entry
+
+#### Commit / PR
+- PR #10
+
+---
 
 ### 2026-09-06 — Pause point: documentation audit
 

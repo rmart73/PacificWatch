@@ -17,7 +17,11 @@ if you learn something durable about the project, record it **here** so both age
 `main` auto-deploys to Vercel. **A merge to `main` is a production deploy**, so `main` is protected
 and nothing lands without a pull request.
 
-- **Claim the work in `AI-HANDOFF.md` before editing anything.** The claim names the agent,
+- **Claim the work in `AI-HANDOFF.md` before editing anything — including documentation.**
+  Docs are not exempt. `AGENTS.md` and `AI-HANDOFF.md` are the two files both agents edit most,
+  so they collide more readily than code, not less. This has now caused two near-collisions:
+  Phase 1, where both agents began the same feature; and the pause-point documentation pass,
+  where Codex claimed correctly and Claude edited without claiming. The claim names the agent,
   the branch, and the scope. **The claim is the concurrency lock; the PR is the review
   artifact.** Checking open PRs is not sufficient — in Phase 1 both agents began work on the
   same item at the same time and neither had opened a PR yet, so there was nothing to see.
@@ -394,6 +398,10 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   triangle, `alert` a larger triangle. `prefers-reduced-motion` is honoured, and because the
   pulse is a real second channel for `alert`, a static ring substitutes for it rather than
   the distinction simply disappearing (F004, closed).
+  **Accepted unverified, 2026-09-07:** the reduced-motion substitute has never been seen
+  rendered — it needs an OS setting change while an `alert` dot is on screen. The project
+  owner has accepted that gap rather than hold work for it. Do not re-raise it in review;
+  check it opportunistically if both conditions ever coincide during other work.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
@@ -495,6 +503,10 @@ required to be public. GitHub is source control only.
   put the site in violation. Pro is $20/seat/mo.
 - **~100 GB data transfer, 1M edge requests, 1M function invocations per month**, and there is **no
   overage billing** — deployments pause when you hit the cap.
+- **Deferred by the project owner, 2026-09-06:** page weight and the Hobby-tier ceiling are a
+  known, accepted risk for now — the priority is a product that works before one that scales.
+  Do not re-raise this in reviews. Revisit before any public promotion of the site, or if a
+  single change adds page weight out of proportion to what it delivers.
 - That last point matters more here than for a normal side project: **an emergency app's traffic
   spikes precisely during an emergency**. A hurricane that puts the site in front of a lot of people
   is exactly when hitting the cap would take it offline. At ~108 KB per page load the ceiling is
