@@ -13,7 +13,13 @@ Durable technical decisions belong in `AGENTS.md`.
 **Agent:** ChatGPT Codex
 **Branch:** `codex/v2-overview-contract`
 **Claimed:** 2026-09-07, before specification edits.
-**Status:** Writing contract for Claude implementation review.
+**Status:** Contract drafted; ready for Claude implementation review.
+**Contract:** [`V2-OVERVIEW-CONTRACT.md`](V2-OVERVIEW-CONTRACT.md)
+**Delivered:** desktop/mobile wireframes, five-view navigation, existing-source coverage,
+NWS/freshness semantics, scoped request guard and 16 acceptance scenarios. No code changes.
+**Review decisions:** dedicated Alerts view replacing pinned desktop rail; three priority
+cards; shared snapshot/expiry handling; station and earthquake coverage labels.
+**Next action:** Claude reviews the contract and records deviations before claiming implementation.
 **Scope:** new `V2-OVERVIEW-CONTRACT.md` (desktop/mobile layout, existing-source boundaries,
 state semantics, navigation and acceptance scenarios); this claim and completion handoff only.
 **Ownership:** Codex specifies and reviews; Claude implements, as agreed by the user and
