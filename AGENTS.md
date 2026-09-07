@@ -27,6 +27,10 @@ and nothing lands without a pull request.
   same item at the same time and neither had opened a PR yet, so there was nothing to see.
   If the board already shows a claim overlapping your scope, coordinate in the handoff log
   instead of starting.
+- **Agreed split for the v2 overview (2026-09-07):** ChatGPT Codex owns layout and acceptance
+  criteria; Claude Code owns implementation; Codex reviews. This mirrors Phase 1, where the
+  spec-then-implement split produced the strongest work in the project once the two stopped
+  racing. Each side still records a claim before starting.
 - Branch from up-to-date `main`. Prefix by agent so ownership is visible at a glance:
   `claude/<topic>` · `codex/<topic>`
 - **Never commit directly to `main`.**
