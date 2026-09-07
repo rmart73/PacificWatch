@@ -1,6 +1,6 @@
 # Pacific Watch — v2 Overview Contract
 
-Status: **Proposal for Claude Code implementation review**
+Status: **Reviewed contract — Codex decisions recorded after Claude review (2026-09-07)**
 Date: 2026-09-07
 Owner: ChatGPT Codex — layout and acceptance criteria; Claude Code — implementation; Codex — review.
 
@@ -39,8 +39,10 @@ A successful news fetch or absence of NWS alerts cannot establish those facts.
 
 ## Dependencies and coordination
 
-- Start implementation from up-to-date main after F005 PR #12 lands and this contract is
-  reviewed. Carry forward its final URLs, captions and `noopener noreferrer` changes.
+- The independently reproduced island-response race may be fixed first on up-to-date main,
+  without waiting for the overview or F005's visual check. Claim it separately. Shared-snapshot
+  and layout work follow as separate PRs; the layout carries forward F005 PR #12 after it lands,
+  including final URLs, captions and `noopener noreferrer` changes.
 - F003 appearance is verified on production. The accepted reduced-motion and hosting
   decisions remain accepted; this contract does not reopen them.
 - Q006 board compaction is a separate documentation task after #12 lands; it is not a
@@ -75,8 +77,13 @@ with the implementation, explaining the intentional replacement.
 Move the current stat-bar readings into Overview's cards rather than showing them twice.
 Retire the scrolling ticker only when its active-alert access is fully covered by the
 shared NWS strip and full Alerts view; do not remove any source or alert detail with it.
-On non-Overview views, retain a compact shared NWS status strip with scope, verification
-state and a route to Alerts. Derive it from the same snapshot as Overview, not a second model.
+On non-Overview views, retain a compact shared NWS status strip with **highest-tier state,
+separate warning/watch/advisory/statement counts, selected-area scope, verification state/age,
+and a route to Alerts**. Nonzero tier counts must be visible without opening Alerts; zero tiers
+may be omitted. During loading/unavailable states, do not fabricate counts. Stale retained
+counts carry the stale label. Derive everything from the same snapshot as Overview.
+This is required on News, Maps and Settings as well as Alerts; the strip must not degrade
+into just a link after removing the pinned rail.
 
 ## Layout contract
 
@@ -112,9 +119,9 @@ PACIFIC WATCH                  [Source status]
 [Selected area ▼]
 NWS status + tier counts + verification age
 Highest-priority card
-Remaining priority cards (up to 3 total)
 [View all N active NWS products]
 [Wind] [Rain]
+Remaining priority cards (up to 3 total)
 [Tide] [Latest earthquake]
 [Open Maps] [Open News] [Source details]
 Overview | Alerts | Maps | News | Settings
@@ -122,8 +129,13 @@ Overview | Alerts | Maps | News | Settings
 
 At 320 px or with enlarged text, observation cards may collapse to one column. Alert titles,
 areas, state labels and expiry wrap; essential text is not ellipsized to fit a fixed height.
-Priority alerts appear before weather cards on every breakpoint. During heavy activity,
-show at most three summary cards, but never obscure the full count or route to all products.
+The highest-priority alert appears before observations on every breakpoint. Desktop keeps
+all three priority cards before observations. On mobile, wind/rain follow the first card and
+precede the remaining two; at 390 px users must reach an observation without scrolling past
+all three alerts. Compact spacing is welcome, but event, tier and expiry stay readable;
+affected areas may collapse behind an explicit accessible disclosure, not silent truncation.
+During heavy activity, show at most three summary cards, but never obscure the full count
+or route to all products.
 These are wireframes defining hierarchy, not invented live incident data.
 
 ## Data and geographic coverage
@@ -266,7 +278,7 @@ not evidence. Use controlled fixtures for behavior and browser screenshots for l
 | O03 | Statement-only response stays informational with a visible icon, never all-clear | DOM + browser |
 | O04 | Successful empty NWS response uses scoped empty copy; first load never shows verified zero | DOM |
 | O05 | Failure after active alerts retains them with age within 10 minutes; failure after empty response never shows all-clear | Controlled time/network |
-| O06 | Advancing past retention or product expiry withdraws unusable content from overview, strip and Alerts without extra fetches; recovery restores coherent state | Controlled clock + request count |
+| O06 | Advancing past retention or product expiry withdraws unusable content from overview, strip and Alerts without extra fetches; recovery restores coherent state | Direct timestamp manipulation + fetch-call counter |
 | O07 | Rain null differs from measured zero; gust-only wind is labeled; tide carries ft/MLLW; source and observation times are not conflated | DOM fixtures |
 | O08 | Statewide and Molokaʻi display the Honolulu reference limitation; other station names and quake radius match configuration | DOM |
 | O09 | Switch islands with requests in flight and resolve the old one last: no old values, health success or cache data is assigned to the new area | Deferred-response test |
@@ -274,7 +286,7 @@ not evidence. Use controlled fixtures for behavior and browser screenshots for l
 | O11 | Zero/ten USGS results do not become an unqualified complete count or tsunami assessment; missing magnitude stays unknown | DOM |
 | O12 | All alert/detail/source/map/news actions work with correct scope and focus; navigation adds zero network calls | DOM + browser |
 | O13 | Malicious headline/area text stays inert; unsafe source URLs cannot execute; new-tab links retain both rel values | Focused security fixtures |
-| O14 | Light/dark/system, 320/390/768/1280 px widths and 200% zoom remain readable; long titles and high counts fit; keyboard traverses only active controls | Browser screenshots/checklist |
+| O14 | Light/dark/system, 320/390/768/1280 px widths and 200% zoom remain readable; at 390 px an observation precedes cards 2–3 in reading order; long titles/high counts fit; keyboard traverses only active controls | Browser screenshots/checklist |
 | O15 | Existing pure-logic and DOM suites pass, inline JS parses, production remains dependency-free; F003 filter behavior and existing detail views still work | Existing suites + smoke pass |
 | O16 | Unkeyed visitor gets a complete overview; no requests for new sources, AI, or health-only polling; source interval unchanged | Network inspection |
 
@@ -283,16 +295,35 @@ merge. If preview authentication blocks an agent, record the exact unchecked cri
 use an accessible local rendering or the user's preview check; do not claim DOM tests prove
 appearance. Existing F005 browser gaps remain on their own record, not silently closed here.
 
-## Suggested implementation sequence
+## Accepted deviations and implementation sequence
 
-1. Review the contract against current main; record accepted changes or alternatives.
-2. Claim implementation and establish a shared data selector for existing summary surfaces;
-   add controlled island-request and freshness fixtures before changing layout.
-3. Add Overview markup and renderers, then replace the pinned-sidebar layout and wire all
-   navigation/focus actions. Keep existing detail content and IDs where practical.
-4. Add scoped station/earthquake labels and UI-only expiry updates.
-5. Run the acceptance scenarios and visual checks; update affected architecture documentation.
-6. Open implementation PR for Codex review with named touched regions and evidence by ID.
+**O06 test method:** direct manipulation of `lastSuccess` and fixture product-expiry timestamps,
+plus a fetch-call counter, is accepted. Invoke the real reevaluation/render path and test both
+sides of the threshold, withdrawal and recovery. No production time abstraction or fake clock
+is required solely for testing. Verify age-tick/visibility wiring separately so a manually
+invoked renderer cannot conceal a missing trigger.
+
+**O14 evidence handoff:** Claude may supply an accessible local rendering and an explicit
+list of unchecked browser criteria when unable to produce screenshots. Codex or the user
+performs the browser pass before the layout PR merges. This accepts the evidence handoff,
+not a waiver of appearance verification or a claim that DOM tests prove appearance.
+
+**Three separately claimed, reviewable PRs, accepted:**
+
+1. **Island request-generation guard.** Fix the reproduced live race and add the deferred-response
+   regression (O09). Include stale errors and rapid A → B → A switches, not just late success.
+   This correctness fix can ship independently of the overview.
+2. **Shared snapshot and strip behavior.** Centralize eligibility, counts, health and expiry;
+   add timestamp/counter fixtures. Keep the existing layout. Stage strip rendering without
+   exposing a duplicate summary; if a visible strip is introduced here, it needs a focused
+   browser check despite the absence of a broader layout redesign.
+3. **Overview layout and navigation.** Activate the five-view layout, replace the pinned rail,
+   wire the shared strip and actions, apply coverage labels and complete O01–O16 evidence.
+   Keep existing detail IDs where practical. Require the browser pass before merge.
+
+Each PR names touched regions and satisfied acceptance IDs; dependent PRs start from the
+reviewed predecessor, preferably after it lands. Update architecture documentation with the
+layout PR. Codex reviews each increment; no production implementation is included here.
 
 ## Requested Claude review
 
