@@ -104,6 +104,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `alertTier()` ignores CAP `severity` except for `Extreme` | Severity is `Severe` for both a Tropical Storm Warning and a Flood Watch, so a severity-first test renders a watch as a warning. That was a real defect, not a hypothetical | Alert severity model |
 | `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
 | `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
+| Island-scoped fetches call `beginRequest()` and check `requestIsCurrent()` before using their own response | A response can arrive after the user switches islands. Without the guard, `sourceOk()` stamped the cache with `S.island` at completion, filing one island's reading under another — a slow Maui observation rendered and cached as Kauaʻi's. Removing the check restores that bug silently | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -258,6 +259,14 @@ Views: `alerts`, `news`, `maps`, `settings`. On mobile the bottom nav switches a
 News / Maps / Settings in the main column — `switchView()` syncs both bars. Note the desktop rule is
 scoped to `.desktop-sidebar .view`; a bare `.view{display:block!important}` would make all three main
 views render stacked at once with no way to switch, which is what it used to do.
+
+**Island-scoped requests carry a scope token.** `fetchWeather()`, `fetchTides()` and
+`fetchEarthquakes()` call `beginRequest(key)` before fetching and `requestIsCurrent(token)`
+before using the result, on both the success and failure paths. A completion is used only if
+it is the newest request for that source *and* was started under the island still selected.
+`sourceOk()` stamps the cache with the island the request **started** under. Sources not in
+`ISLAND_SCOPED` are never rejected for an island change — dropping news on an island switch
+would be the obvious over-reach, and is covered by a test.
 
 Data refreshes every 5 minutes via `setInterval(refreshAll, 5 * 60 * 1000)`; volcano webcams refresh
 on their own 2-minute timer.

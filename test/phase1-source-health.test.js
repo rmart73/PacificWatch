@@ -17,7 +17,9 @@ const parts = [
   grab(/Object\.keys\(S\.sourceHealth\)\.forEach\(k => \{[\s\S]*?\n\}\);/, 'init'),
   grab(/S\.cache = \{\};/, 'cache'),
   grab(/const ISLAND_SCOPED = \{[^}]*\};/, 'ISLAND_SCOPED'),
-  grab(/function sourceOk\(key, data\) \{[\s\S]*?\n\}/, 'sourceOk'),
+  grab(/function beginRequest\(key\) \{[\s\S]*?\n\}/, 'beginRequest'),
+  grab(/function requestIsCurrent\(token\) \{[\s\S]*?\n\}/, 'requestIsCurrent'),
+  grab(/function sourceOk\(key, data, token\) \{[\s\S]*?\n\}/, 'sourceOk'),
   grab(/function sourceFail\(key, err\) \{[\s\S]*?\n\}/, 'sourceFail'),
   grab(/function sourceState\(key\) \{[\s\S]*?\n\}/, 'sourceState'),
   grab(/function isStale\(key\) \{[^}]*\}/, 'isStale'),
@@ -25,7 +27,7 @@ const parts = [
   grab(/function relAge\(ts\) \{[\s\S]*?\n\}/, 'relAge')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent})');
 const St = api.S;
 
 /* the expiry predicate, lifted verbatim out of renderAlerts */
@@ -95,6 +97,33 @@ check('future-expiry alert kept',   live.some(f => f.properties.event === 'Tropi
 check('lapsed alert dropped',       live.some(f => f.properties.event === 'Flood Watch'), false);
 check('alert with no expiry kept',  live.some(f => f.properties.event === 'Special Statement'), true);
 check('two of three survive',       live.length, 2);
+
+console.log('Request-scope guard (contract O09):');
+St.island = 'maui';
+const mauiToken = api.beginRequest('nwsWeather');
+check('token records the island the request started under', mauiToken.island, 'maui');
+check('a completion under the same island is current', api.requestIsCurrent(mauiToken), true);
+St.island = 'kauai';
+check('the same completion is rejected after an island switch', api.requestIsCurrent(mauiToken), false);
+St.island = 'maui';
+check('and accepted again if the selection returns', api.requestIsCurrent(mauiToken), true);
+const newerToken = api.beginRequest('nwsWeather');
+check('a newer request supersedes the older token', api.requestIsCurrent(mauiToken), false);
+check('while the newest token is current', api.requestIsCurrent(newerToken), true);
+St.island = 'oahu';
+const newsToken = api.beginRequest('news');
+St.island = 'kauai';
+check('a non-island-scoped source survives an island change', api.requestIsCurrent(newsToken), true);
+check('a null token is treated as current', api.requestIsCurrent(null), true);
+St.island = 'statewide';
+
+console.log('\nsourceOk stamps the START island, not the current one:');
+St.island = 'maui';
+const t2 = api.beginRequest('noaaTides');
+St.island = 'kauai';
+api.sourceOk('noaaTides', { ft: '1.2', name: 'Kahului, Maui' }, t2);
+check('cache is stamped maui despite kauai being selected', St.cache.noaaTides.island, 'maui');
+St.island = 'statewide';
 
 console.log('\nrelAge:');
 check('45 sec', api.relAge(Date.now() - 45000), '45 sec ago');
