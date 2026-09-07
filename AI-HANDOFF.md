@@ -6,6 +6,117 @@ This file tracks active collaboration between **Claude Code** and **ChatGPT Code
 It is intentionally lightweight and is **not** authoritative architecture documentation.
 Durable technical decisions belong in `AGENTS.md`.
 
+## Current Work
+
+### Pause point and subsequent reconciliation — 2026-09-06
+
+**Requested pause snapshot:** F002/F004 were merged and live; F003 was implemented in
+open PR #8 but not yet merged; F005 was confirmed and unclaimed. The planned sequence
+was **F003 → F005 → v2 overview**.
+
+**Latest repository check, 2026-09-07:** #8 (`64879b8`), #9 (`e4a98f8`) and #10
+(`b7e6fbf`) are merged. F003 appearance is verified on production in Claude's #10
+handoff. F005 is implemented by Claude in open PR #12 (`b59aad7`), not yet merged.
+The earlier unmerged F003 state above is history, not current status.
+
+| Item | Current status | Next action |
+|---|---|---|
+| F002 + F004 | Merged in #7 (`155ffbf`), live per Claude's report relayed by the user | Closed; preserve documented semantics |
+| F003 | Implemented and merged in #8 (`64879b8`) | Production appearance verified by the user, recorded by Claude in #10; closed |
+| F005 | Implemented by Claude in open PR #12 | Resolve review findings and complete remaining browser checks |
+| v2 overview | Planned | After F005 |
+
+**Remaining planned sequence:** finish review/verification of F005 (#12) → v2 overview.
+F003's appearance gap is closed by explicit production evidence. The owner-accepted
+reduced-motion and billing decisions in main's `AGENTS.md` remain closed; do not re-raise.
+
+### CLAIM — pause-point documentation
+
+**Agent:** ChatGPT Codex
+**Branch:** `codex/docs-pause-2026-09-06`
+**Claimed:** 2026-09-06 before edits; original claim published as `a9fb18e`.
+**Status:** Documentation complete, ready for review.
+**Scope:** current coordination here, durable UI truthfulness/documentation rules in
+`AGENTS.md`, and a small roadmap prerequisite clarification. No production code changes.
+**Coordination:** initially inspected main `155ffbf` and PR #8 head `aeb0263`.
+Refreshed main before publication, discovered #8/#9 merged, and rebased onto `e4a98f8`.
+Claude's F003 implementation documentation and #9 audit are preserved. Follow-up on
+2026-09-07 remains within this documentation claim: reconcile #10's production verification
+and #12's ownership/research corrections. Claude owns F005; no code edits on that branch.
+Q006 compaction remains a separate, unclaimed follow-up; older content is retained below.
+
+### F003 — implementation record
+
+The five real RSS outlets are Hawaii News Now, Civil Beat, Star-Advertiser, KHON2 and
+KITV 4. The previous NWS/NOAA, HIEMA and GDACS/RSOE/PDC toggles had no headline feeds;
+KITV / KHON2 incorrectly combined two outlets.
+
+PR #8 implements persisted display preferences, cache-only rerendering on toggle, explicit
+hidden-headline counts and an enable-all link when the filter hides every matching headline.
+Claude reported zero inert toggles, 49 pure-logic assertions and 57 DOM assertions (up from
+45). On 2026-09-07 the user verified the five rows, working toggles, and the all-disabled
+state showing “30 headlines hidden by your source filter” with an enable-all link.
+Claude recorded this in #10: the former appearance gap is now closed.
+
+### F005 — Reference Maps & Portals link audit
+
+**Status:** Implemented in open PR #12, owned by Claude Code on `claude/f005-portal-links`.
+The table preserves the original audit with its ArcGIS conclusion corrected. #12 changes
+the HI-EMA and PDC tiles and PDC reference-row caption; final review is pending.
+
+| Tile | Existing target | Reported finding |
+|---|---|---|
+| Hawaii EMA — ArcGIS Hub | `hawaiiema.maps.arcgis.com` | Original “empty shell” conclusion withdrawn: a small JavaScript-app response cannot establish that the rendered page is empty. The shipped hostname is `hawaiiema.maps.arcgis.com`; do not confuse it with `hiema.maps.arcgis.com` in the later report. |
+| Pacific Disaster Ctr | `www.pdc.org` | Caption promises “DisasterAWARE Pacific hazard data”, but target is the corporate homepage, not the DisasterAWARE tool. |
+| GDACS | `gdacs.org` | Site root; arguably appropriate for global disaster alerts, but not Pacific-scoped. |
+| RSOE EDIS | `rsoe-edis.org/eventMap` | Correct, specific event map. |
+| FHAT Hawaii | `fhat.hawaii.gov` | Correct Flood Hazard Assessment Tool. |
+| NWS Honolulu | `weather.gov/hfo` | Correct Honolulu office page. |
+| NOAA Tides | `stationhome.html?id=1612340` | Correct station-specific page. |
+| Power Outages | `poweroutage.us/area/state/hawaii` | Correct Hawaii path; browser verification outstanding. |
+
+**Method caveat:** `pdc.org` and `poweroutage.us` returned HTTP 403 to curl because of
+Cloudflare bot challenges. This is not evidence that either is broken for browser users.
+The PDC corporate-homepage/caption mismatch is established. Claude separately reports
+an agency-published ArcGIS item returning “Item Replacement”; preserve the exact item URL
+and browser evidence before treating that as proof that the item was removed. Do not infer
+that the original org homepage is broken from either an item stub or response size.
+
+**Review follow-up for Claude:** verify all eight destinations in a browser for relevant, current, authoritative,
+publicly accessible information. Replace generic targets with stable direct tools/maps when
+available. If no stable deep link exists, label the destination honestly as an agency portal.
+Distinguish “Live Map” or “Direct tool” from “Agency Portal” according to what actually opens.
+Do not treat a successful HTTP response alone as proof that a link fulfills its label.
+
+
+## Active Branches
+
+| Agent | Branch | Work | Status |
+|---|---|---|---|
+| ChatGPT Codex | `codex/docs-pause-2026-09-06` | Pause-point documentation | Ready for review |
+| Claude Code | `claude/f005-portal-links` | F005 remediation | PR #12 open, review pending |
+
+## Review Queue
+
+PRs #8, #9 and #10 are merged. #11 is ready for review with F003 appearance closed.
+PR #12 needs the PDC access wording corrected: only **DisasterAWARE Pro** requires
+approved access. PDC's public browser app at https://disasteralert.pdc.org/disasteralert/
+loaded a map and hazard list without authentication during Codex's 2026-09-07 review.
+Source: https://www.pdc.org/help/user-access/ . The tsunami replacement pages both opened
+with relevant content in a browser; HI-EMA exposes statewide and county map links.
+The declared `noreferrer` expansion matches existing security rule 5; Codex counted 35/35
+new-tab anchor templates carrying both required rel values. No production code changed here.
+
+---
+
+# Historical handoff snapshot
+
+The sections below preserve Claude's board and logs, including the pending Q006 compaction
+discussion. Their status fields, claims and next actions describe earlier points in time, even
+where headings say “Current Work”, “Active Branches” or “Review Queue”. The current
+sections above supersede them. No broad archival deletion is performed in this update.
+
+
 ---
 
 ## Current Work

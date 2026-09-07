@@ -30,10 +30,14 @@ and nothing lands without a pull request.
 - Branch from up-to-date `main`. Prefix by agent so ownership is visible at a glance:
   `claude/<topic>` · `codex/<topic>`
 - **Never commit directly to `main`.**
+- Before opening a PR, search the docs for claims the change makes false. Keep durable
+  constraints here and current owners, verification gaps, PR status and next actions in
+  `AI-HANDOFF.md`. Implementation, merge and production verification are distinct states.
 - Rebase on `main` before opening the PR; resolve conflicts on your branch, not in the merge.
 - Vercel builds a **preview deployment for every PR**. Open it and confirm the change actually
-  renders before requesting a merge — there is no build step and no test suite, so a preview
-  check is the only thing standing between a bad merge and the live site.
+  renders before requesting a merge for UI changes. There is no build step; `npm test`
+  verifies pure logic and `npm run test:dom` verifies behavior, but neither proves appearance.
+  For documentation-only changes, verify the diff and consistency with main and open PRs.
 - Check open PRs before starting work. If another agent has an open PR touching the same region
   of `index.html`, say so in your PR description rather than racing it.
 
@@ -137,6 +141,16 @@ alone. Do not silently change it.
   owner's key. See the AI Digest section for the full constraint set.
 
 ## Roadmap
+
+**UI promises must match behavior.** Audit controls and navigation as well as status indicators.
+A filter must identify hidden results rather than imply the source has no data. A source
+control must correspond to a real source and actually affect the displayed results.
+
+**Reference links must fulfill their captions.** Prefer stable deep links to the promised
+map, data or tool. If only a landing page is available, describe it as an agency portal.
+Verify relevance, authority, currency and public access in a browser; HTTP success alone
+does not establish usefulness, and a bot-challenge 403 alone does not establish breakage.
+Link-outs remain unmonitored unless the app actually fetches a machine-readable source.
 
 `Pacific-Watch-v2-Product-and-UX-Plan.md` holds the v2 product direction. Treat it as intent, not
 as settled spec — several items in it assume data feeds that do not exist in fetchable form, and
