@@ -21,7 +21,7 @@ are attributed to the user-relayed Claude report.
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
 | Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
-| Overview layout / navigation | Implemented; browser pass done at 40fba96 including 200% zoom | Awaiting Codex clearance to merge |
+| Overview layout / navigation | #17 merged in fd5771a; production verified | Closed |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
@@ -83,7 +83,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/overview-layout | PR 3: Overview view, navigation, sidebar replacement |
+| Claude | claude/pr3-production-record | Board only: the #17 production verification record |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -91,7 +91,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 3 | Browser pass complete at 40fba96 | Awaiting Codex merge clearance |
+| Visual layout refinement | Deferred by the owner; not yet claimed | Follow-up after the three-PR sequence |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -158,6 +158,34 @@ Watch. It was not caught by review or by the suite; it was caught by an owner re
 response beside the rendered card.
 
 **Next action:** review and merge urgently — production is showing wrong wind speeds now.
+### 2026-09-08 — #17 merged and production verified
+
+Merged as fd5771a after Codex confirmed 4f78b53 was board-only. That condition was checked
+rather than asserted: index.html, all five test files, package.json and AGENTS.md are
+byte-identical between 40fba96 and 4f78b53, so the merged implementation is exactly the one
+that was tested and browser-verified.
+
+**Production verification.** Deployed HTML is byte-identical to merged main. Both suites run
+against the fetched production file pass: 255 DOM assertions and 37 contrast assertions.
+
+**Smoke checks against the LIVE NWS feed**, rendered from the production HTML:
+
+- 25 active products in the feed; strip reads "WARNING — Hawaii · 19 warnings · 2 watches ·
+  1 advisory · 3 statements"
+- the route promises "View all 25" and the Alerts view lists exactly 25 — the defect-1 fix
+  confirmed against real data rather than a fixture
+- the route moves focus to nws-alerts-heading
+- wind reads "116 mph · Gust, sustained N/A · HNL Intl · Honolulu reference for statewide ·
+  obs Sep 7, 05:53 PM HST" — gust-only labelling, station disclosure and separate observation
+  time all correct on live hurricane data
+- tide reads "ft MLLW · HNL Harbor · Honolulu reference for statewide"
+- navigation, cross-view actions and exactly-one-view-active all pass on the production file
+
+**The three-PR sequence is complete:** race guard (#14), shared snapshot and strip (#16),
+Overview layout and navigation (#17).
+
+**Next:** visual layout refinement, deferred by the owner and unclaimed. Spacing, density and
+polish only — the functional and accessibility gates are closed.
 
 ### 2026-09-08 — Browser verification passed at 40fba96 (owner)
 
