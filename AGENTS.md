@@ -108,7 +108,9 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
 | The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
 | `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
-| The Overview reading order comes from CSS `order`, not from duplicated markup | The contract requires a different order on desktop and at 390px. Duplicating the cards to achieve it would give two copies of every reading to drift apart, and screen readers would announce both. There is exactly one `#stat-wind` in the document, and a test asserts it | Architecture |
+| The Overview markup is in **mobile** order, and wider screens rearrange it | CSS `order` and grid placement move boxes on screen but leave the sequence a screen reader announces untouched, so the reading order the contract specifies for 390px has to be the DOM order. Reordering the markup to suit desktop would silently break it. Duplicating the cards instead would give two copies of every reading to drift apart, and both would be announced — there is exactly one `#stat-wind` in the document, and a test asserts it | Architecture |
+| The Alerts list renders every eligible product with no display cap | It capped at 12 while Overview offered "View all 20", so the route landed the reader on a truncated list with nothing saying so. The only cap is the eligibility filter | Architecture |
+| The earthquake card is withdrawn on an island switch alongside wind, rain and tide | Its USGS query is a radius centred on the selected island, so it is island-scoped like the rest. It was missed once and showed one island's event under another's heading | Architecture |
 | The strip has its own `--strip-*` colour tokens instead of reusing `--alert`/`--warn`/`--unknown` | Those are display colours for dots and badges, where the 4.5:1 text rule does not apply. As 12px text they failed WCAG AA — light watch 2.57:1, light unknown 2.54:1, dark unknown 3.90:1. The strip tokens are the same hues darkened only as far as compliance needs, so severity stays distinguishable. Repointing a strip rule at a display token fails `test/contrast.test.js` | Theming |
 | Verified-empty surfaces format `snap.checkedAt`, never `new Date()` | Rendering is triggered by age ticks and navigation, not only by fetches. Formatting the current time let a page left open keep advancing the check time it claimed — reporting a fresh verification it had never made | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
@@ -276,12 +278,22 @@ five views at once with no way to switch, which is what this codebase did before
 asserts that no live rule of that shape exists and that exactly one view is active after every switch.
 
 Overview holds up to three priority NWS products, the four observation readings that used to sit in
-the always-visible stat bar, and routes to Maps, News and Source details. **Reading order differs by
-breakpoint and comes from CSS `order` on one copy of the markup, never from duplicated elements**:
-desktop keeps all three priority cards ahead of the observations, while below 768px the first card is
-followed by wind/rain so an observation is reachable at 390px without scrolling past every alert.
-`#obs-row` is `display:contents` below 1024px so its two halves can be ordered independently, and a
-flex row at 1024px and up so the four cards sit on one line.
+the always-visible stat bar, and routes to Maps, News, Source details and Recent earthquakes.
+
+**The markup is written in the 390px reading order** — first priority card, route to all products,
+wind/rain, remaining cards, tide/earthquake, references — because CSS `order` and grid placement
+rearrange boxes visually without changing the sequence a screen reader announces. Below 768px nothing
+is reordered at all, so what is seen and what is read match. 768–1023px uses `order` to regroup the
+priority cards ahead of the observations, and 1024px and up uses explicit grid placement to put the
+four observation cards on one line. An earlier attempt wrapped the observations in a flex container
+for that last case; the wrapper defaulted to `order:0` and jumped ahead of the first priority card,
+which is why placement is now per-item and the wrapper is gone.
+
+Coverage is stated on the cards rather than implied: Statewide and Molokaʻi borrow Honolulu's weather
+and tide stations and say so, tide carries `ft MLLW`, the observation's own timestamp is shown
+separately from the fetch time, and the earthquake card names its query radius. The USGS query has a
+ten-result limit, so a full page of results says the limit was reached instead of reading as a
+complete count, and a missing magnitude stays `unknown`.
 
 The strip is one element in shared chrome rather than a copy per view, so no two surfaces can
 disagree; its route to Alerts is hidden only on Alerts itself. The scrolling ticker is **retained for

@@ -86,10 +86,48 @@ const mutations = [
     to:   "  if (routeEl) routeEl.hidden = false;",
     expect: ['on Alerts the route is not offered'] },
 
-  { name: 'mobile order puts both remaining cards before the observations',
-    from: '  #obs-primary{order:3}\n  #priority-rest{order:4}',
-    to:   '  #obs-primary{order:5}\n  #priority-rest{order:3}',
-    expect: ['wind/rain precede the remaining priority cards'] },
+  /* Reading order is the DOM order, so the mutation is a markup move rather than a CSS
+     value. Screen readers follow the document, which is what the 390px rule is about. */
+  { name: 'the remaining priority cards moved ahead of the observations in the DOM',
+    from: '    <div class="stat-bar" id="obs-primary">',
+    to:   '    <div id="priority-rest"></div>\n    <div class="stat-bar" id="obs-primary">',
+    expect: ['an observation precedes the remaining cards'] },
+
+  /* PR 3 review defects. Each mutation restores the defect that was reported. */
+  { name: 'the Alerts list caps at twelve products again',
+    from: '  container.innerHTML = note + filtered.map(f => {',
+    to:   '  container.innerHTML = note + filtered.slice(0,12).map(f => {',
+    expect: ['the Alerts view lists all twenty'] },
+
+  { name: 'the earthquake card survives an island switch',
+    from: "   ['stat-tide', 'stat-tide-note', 'dot-tide'],\n   ['stat-quake', 'stat-quake-note', 'dot-quake']].forEach(ids => {",
+    to:   "   ['stat-tide', 'stat-tide-note', 'dot-tide']].forEach(ids => {",
+    expect: ['the earthquake card is withdrawn too'] },
+
+  { name: 'desktop reorders the DOM instead of placing by grid',
+    from: '  #priority-first{grid-column:1/-1;grid-row:1}',
+    to:   '  #priority-first{order:1}',
+    expect: ['desktop places by grid rather than reordering the DOM'], suite: 'dom' },
+
+  { name: 'the Honolulu reference substitution is hidden again',
+    from: '    renderWeather(data.properties, stationLabel(sta), false);',
+    to:   '    renderWeather(data.properties, sta.label, false);',
+    expect: ['statewide discloses it too'] },
+
+  { name: 'the tide reading drops its datum',
+    from: "  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name",
+    to:   "  if (tideNote) tideNote.textContent = '' + name",
+    expect: ['the tide reading carries its datum'] },
+
+  { name: 'a truncated earthquake list reads as a complete count',
+    from: '  const limitNote = quakes.length >= USGS_LIMIT',
+    to:   '  const limitNote = false',
+    expect: ['at the query limit the list says so'] },
+
+  { name: 'a missing magnitude is rendered as a number',
+    from: "    const mag = p.mag != null ? p.mag.toFixed(1) : 'unknown';",
+    to:   "    const mag = (p.mag || 0).toFixed(1);",
+    expect: ['a missing magnitude stays unknown, never a number'] },
 
   /* Breaks the page at section 1 rather than at the snapshot sections: with a current
      source reporting no data, every surface empties immediately. */

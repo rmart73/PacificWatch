@@ -162,22 +162,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
    Desktop keeps all three priority cards ahead of the observations. Below 768px the first
    card is followed by wind/rain, so at 390px an observation is reachable without scrolling
    past every alert. Both orders come from `order` on the same markup. */
+/* Below 768px nothing is reordered at all: the markup is already in the required reading
+   order, so visual and screen-reader sequence agree. Wider breakpoints rearrange visually. */
 #view-overview.view.active{display:flex;flex-direction:column}
-#priority-first{order:1}
-#priority-rest{order:2}
-#priority-viewall{order:3}
-#obs-row{display:contents}
-#obs-primary{order:4}
-#obs-secondary{order:5}
-#overview-refs{order:6}
-#view-overview .content-spacer{order:7}
-@media(max-width:767px){
-  #priority-first{order:1}
-  #priority-viewall{order:2}
-  #obs-primary{order:3}
-  #priority-rest{order:4}
-  #obs-secondary{order:5}
-}
 /* Two observation cards per row; one column when there is not room for two. */
 .stat-bar{grid-template-columns:repeat(2,1fr)}
 @media(max-width:359px){.stat-bar{grid-template-columns:1fr}}
@@ -412,6 +399,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   .bottom-nav{display:none}
   .content-spacer{display:none}
   .clock-display{display:block}
+  /* Tablet: priority cards regroup ahead of the observations. This is a visual reordering
+     only — the announced sequence stays the markup order. */
+  #priority-first{order:1}
+  #priority-rest{order:2}
+  #priority-viewall{order:3}
+  #obs-primary{order:4}
+  #obs-secondary{order:5}
+  #overview-refs{order:6}
+  #view-overview .content-spacer{order:7}
   /* The pinned Alerts sidebar was replaced by a full Alerts view in PR 3, so desktop is a
      single column and `.view`/.view.active alone decide visibility. There is deliberately
      no rule forcing a view visible here: the old `.desktop-sidebar .view{display:block
@@ -424,11 +420,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 }
 @media(min-width:1024px){
   .map-grid{grid-template-columns:repeat(4,1fr)}
-  /* Four observation cards across, per the layout contract. Below this width #obs-row is
-     display:contents so its two halves order independently around the priority cards. */
-  #obs-row{display:flex}
-  #obs-row > .stat-bar{flex:1;min-width:0}
-  #obs-primary{border-right:1px solid var(--rule)}
+  /* Four observation cards on one line, per the layout contract, via explicit grid placement
+     rather than a wrapper. A wrapper defaulted to order:0 and jumped ahead of the first
+     priority card; grid placement also leaves the DOM order — the reading order — untouched. */
+  #view-overview.view.active{display:grid;grid-template-columns:repeat(4,1fr);align-content:start}
+  #priority-first{grid-column:1/-1;grid-row:1}
+  #priority-rest{grid-column:1/-1;grid-row:2}
+  #priority-viewall{grid-column:1/-1;grid-row:3}
+  #obs-primary{grid-column:1/3;grid-row:4;border-right:1px solid var(--rule)}
+  #obs-secondary{grid-column:3/5;grid-row:4}
+  #overview-refs{grid-column:1/-1;grid-row:5}
+  #view-overview .content-spacer{grid-column:1/-1;grid-row:6}
 }
 
 /* TOAST */
@@ -500,16 +502,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
   <div id="view-overview" class="view active">
 
-    <!-- Order differs by breakpoint and is set with CSS `order`, not by duplicating markup.
-         Desktop keeps all three priority cards ahead of the observations; at 390px the first
-         card is followed by wind/rain so an observation is reachable without scrolling past
-         every alert. -->
+    <!-- DOM order IS the mobile reading order: first priority card, the route to all
+         products, wind/rain, the remaining cards, then tide/earthquake. CSS `order` and grid
+         placement rearrange this visually on wider screens, but neither changes the sequence
+         a screen reader announces — so the order the contract specifies for 390px is the one
+         written here rather than one produced by CSS. Nothing is duplicated to achieve it. -->
     <div id="priority-first"></div>
-    <div id="priority-rest"></div>
     <div id="priority-viewall"></div>
 
-    <div id="obs-row">
-      <div class="stat-bar" id="obs-primary">
+    <div class="stat-bar" id="obs-primary">
         <div class="stat-cell">
           <div class="stat-lbl"><span class="s-dot unknown" id="dot-wind"></span>Wind</div>
           <div class="stat-val" id="stat-wind">—<span class="stat-unit"> mph</span></div>
@@ -520,8 +521,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
           <div class="stat-val" id="stat-rain">—<span class="stat-unit">"</span></div>
           <div class="stat-note" id="stat-rain-note">1-hr · loading…</div>
         </div>
-      </div>
-      <div class="stat-bar" id="obs-secondary">
+    </div>
+
+    <div id="priority-rest"></div>
+
+    <div class="stat-bar" id="obs-secondary">
         <div class="stat-cell">
           <div class="stat-lbl"><span class="s-dot unknown" id="dot-tide"></span>Tide level</div>
           <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
@@ -531,8 +535,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
           <div class="stat-lbl"><span class="s-dot unknown" id="dot-quake"></span>Latest earthquake</div>
           <div class="stat-val" id="stat-quake">—</div>
           <div class="stat-note" id="stat-quake-note">USGS · loading…</div>
+          <button class="ref-btn" style="margin-top:7px" onclick="goToEarthquakes()">Recent earthquakes</button>
         </div>
-      </div>
     </div>
 
     <div id="overview-refs">
@@ -620,7 +624,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
     <div class="card">
       <div class="sec-head">
-        <div class="sec-title">
+        <div class="sec-title" id="earthquakes-heading">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 22h20L12 2z"/><line x1="12" y1="10" x2="12" y2="15"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
           Recent Earthquakes
         </div>
@@ -1437,6 +1441,15 @@ function renderPriorityAlerts(snap) {
 }
 
 /* The Overview earthquake card reads the same USGS data as the Alerts list. */
+/* The USGS query is a radius around the selected island with a result limit, so the card
+   states the scope it actually covers. A full result set may be truncated by that limit and
+   must not read as a complete count. */
+const USGS_LIMIT = 10;
+function quakeScope() {
+  const sta = EARTHQUAKE_STATIONS[S.island] || EARTHQUAKE_STATIONS.statewide;
+  return 'M2.0+ within ' + sta.radiusKm + ' km of ' + islandLabel(S.island);
+}
+
 function renderQuakeCard(quakes, stale) {
   const val = document.getElementById('stat-quake');
   const note = document.getElementById('stat-quake-note');
@@ -1445,7 +1458,8 @@ function renderQuakeCard(quakes, stale) {
   const suffix = stale ? ' \u00b7 verified ' + verifiedAge('usgsEarthquakes') : '';
   if (!quakes || !quakes.length) {
     val.innerHTML = '<span style="font-size:13px;opacity:.4">None</span>';
-    note.textContent = 'No M2.0+ near ' + islandLabel(S.island) + ' in 30 days' + suffix;
+    /* Scoped to the query, not to the islands: this is not a statement about anywhere else. */
+    note.textContent = 'No ' + quakeScope() + ' in 30 days' + suffix;
     if (dot) dot.className = 's-dot ' + (stale ? 'unknown' : 'ok');
     return;
   }
@@ -1454,7 +1468,8 @@ function renderQuakeCard(quakes, stale) {
   val.innerHTML = p.mag != null
     ? 'M ' + esc(p.mag.toFixed(1))
     : '<span style="font-size:13px;opacity:.4">M unknown</span>';
-  note.textContent = truncate(p.place || 'Unknown location', 42) + ' \u00b7 ' + timeAgo(p.time) + suffix;
+  const capped = quakes.length >= USGS_LIMIT ? ' \u00b7 ' + USGS_LIMIT + '+ in range' : '';
+  note.textContent = truncate(p.place || 'Unknown location', 42) + ' \u00b7 ' + timeAgo(p.time) + capped + suffix;
   if (dot) dot.className = 's-dot ' + (stale ? 'unknown' : 'ok');
 }
 
@@ -1473,6 +1488,10 @@ function renderQuakeCardUnavailable() {
 function goToAlerts() {
   switchView('alerts');
   focusTarget('nws-alerts-heading');
+}
+function goToEarthquakes() {
+  switchView('alerts');
+  focusTarget('earthquakes-heading');
 }
 function goToSourceDetails() {
   switchView('settings');
@@ -1575,9 +1594,13 @@ function renderNwsStrip(snap) {
 function renderIslandScopedChecking() {
   const area = islandLabel(S.island);
   const dash = '<span style="font-size:13px;opacity:.4">\u2014</span>';
+  /* The earthquake card is island-scoped like the rest: its query radius is centred on the
+     selected island. Leaving it up during a switch showed one island's quake under another's
+     heading while wind correctly read "Checking". */
   [['stat-wind', 'stat-wind-note', 'dot-wind'],
    ['stat-rain', 'stat-rain-note', 'dot-rain'],
-   ['stat-tide', 'stat-tide-note', 'dot-tide']].forEach(ids => {
+   ['stat-tide', 'stat-tide-note', 'dot-tide'],
+   ['stat-quake', 'stat-quake-note', 'dot-quake']].forEach(ids => {
     const ve = document.getElementById(ids[0]);
     const ne = document.getElementById(ids[1]);
     const de = document.getElementById(ids[2]);
@@ -1691,7 +1714,10 @@ function renderAlerts(snap) {
     container.innerHTML = note + body + ptwcNote;
     return;
   }
-  container.innerHTML = note + filtered.slice(0,12).map(f => {
+  /* Every eligible product is listed. This used to cap at 12, so Overview could offer
+     "View all 20" and land the reader on a list of 12 with no sign the rest existed. The
+     cap is the eligibility filter, never a display truncation. */
+  container.innerHTML = note + filtered.map(f => {
     const p = f.properties;
     const tier = ALERT_TIERS[alertTier(p)];
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
@@ -1726,14 +1752,26 @@ function updateTicker(snap) {
   track.textContent = prefix + items.join(' \u00b7 ') + ' \u00b7 ' + prefix + items.join(' \u00b7 ');
 }
 
+/* Statewide and Molokaʻi have no station of their own and borrow Honolulu's. Presenting a
+   Honolulu reading as "Molokaʻi" would be the same false attribution the island request
+   guard fixed in the cache, so the substitution is stated on the card rather than hidden. */
 const WEATHER_STATIONS = {
-  statewide:{id:'PHNL',label:'HNL Intl'},oahu:{id:'PHNL',label:'HNL Intl'},
+  statewide:{id:'PHNL',label:'HNL Intl',ref:'Honolulu reference for statewide'},
+  oahu:{id:'PHNL',label:'HNL Intl'},
   maui:{id:'PHOG',label:'Kahului'},hawaii:{id:'PHTO',label:'Hilo Intl'},
-  kauai:{id:'PHLI',label:'Lihue'},molokai:{id:'PHNL',label:'HNL Intl'}
+  kauai:{id:'PHLI',label:'Lihue'},
+  molokai:{id:'PHNL',label:'HNL Intl',ref:'Honolulu reference — no Molokaʻi station'}
 };
+function stationLabel(sta) {
+  return sta.ref ? sta.label + ' · ' + sta.ref : sta.label;
+}
 
 function renderWeather(p, label, stale) {
-  const suffix = stale ? ' · verified ' + verifiedAge('nwsWeather') : '';
+  /* The moment the station observed, which is not the moment we fetched it. Labelling the
+     fetch as the observation would overstate how current the reading is. */
+  const obsMs = p && p.timestamp ? new Date(p.timestamp).getTime() : NaN;
+  const obsAt = isNaN(obsMs) ? '' : ' · obs ' + fmtTime(new Date(obsMs));
+  const suffix = obsAt + (stale ? ' · verified ' + verifiedAge('nwsWeather') : '');
   const windEl = document.getElementById('stat-wind');
   const windNote = document.getElementById('stat-wind-note');
   const dotWind = document.getElementById('dot-wind');
@@ -1802,8 +1840,8 @@ async function fetchWeather() {
     const data = await res.json();
     if (!data || !data.properties) throw new Error('malformed observation');
     if (!requestIsCurrent(token)) return;   // superseded: the selection moved on
-    sourceOk('nwsWeather', { p: data.properties, label: sta.label }, token);
-    renderWeather(data.properties, sta.label, false);
+    sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token);
+    renderWeather(data.properties, stationLabel(sta), false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;   // do not fail the current island for an old request
     sourceFail('nwsWeather', e.message);
@@ -1815,17 +1853,24 @@ async function fetchWeather() {
 }
 
 const TIDE_STATIONS = {
-  statewide:{id:'1612340',name:'HNL Harbor'},oahu:{id:'1612340',name:'HNL Harbor'},
+  statewide:{id:'1612340',name:'HNL Harbor',ref:'Honolulu reference for statewide'},
+  oahu:{id:'1612340',name:'HNL Harbor'},
   maui:{id:'1615680',name:'Kahului, Maui'},hawaii:{id:'1617760',name:'Hilo, Hawaii'},
-  kauai:{id:'1611400',name:'Nawiliwili, Kauai'},molokai:{id:'1612340',name:'HNL Harbor'}
+  kauai:{id:'1611400',name:'Nawiliwili, Kauai'},
+  molokai:{id:'1612340',name:'HNL Harbor',ref:'Honolulu reference — no Molokaʻi station'}
 };
+
+function tideLabel(sta) {
+  return sta.ref ? sta.name + " · " + sta.ref : sta.name;
+}
 
 function renderTide(ft, name, stale) {
   const tideEl = document.getElementById('stat-tide');
   const tideNote = document.getElementById('stat-tide-note');
   const dotTide = document.getElementById('dot-tide');
   if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
-  if (tideNote) tideNote.textContent = name + (stale ? ' · verified ' + verifiedAge('noaaTides') : '');
+  /* A tide height is meaningless without its datum: NOAA returns feet relative to MLLW. */
+  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name + (stale ? ' · verified ' + verifiedAge('noaaTides') : '');
   if (dotTide) dotTide.className = 's-dot ' + (stale ? 'unknown' : 'ok');
 }
 
@@ -1852,7 +1897,7 @@ async function fetchTides() {
     if (!isFinite(parseFloat(ft))) throw new Error('unusable tide value');
     if (!requestIsCurrent(token)) return;
     sourceOk('noaaTides', { ft: ft, name: sta.name }, token);
-    renderTide(ft, sta.name, false);
+    renderTide(ft, tideLabel(sta), false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;
     sourceFail('noaaTides', e.message);
@@ -1895,13 +1940,18 @@ function renderQuakes(quakes, stale) {
   if (!container) return;
   const note = stale ? staleNote('usgsEarthquakes') : '';
   if (!quakes.length) {
-    const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-    container.innerHTML = note + `<div class="alert-item"><span class="badge badge-unknown">NO EVENTS</span><div class="alert-title">No M2.0+ earthquakes near ${esc(name)} in the last month</div><div class="alert-meta">USGS · ${stale ? 'Last verified ' + esc(verifiedAge('usgsEarthquakes')) : 'Checked ' + esc(fmtTime(new Date()))}</div></div>`;
+    container.innerHTML = note + `<div class="alert-item"><span class="badge badge-unknown">NO EVENTS</span><div class="alert-title">No ${esc(quakeScope())} in the last month</div><div class="alert-meta">USGS · ${stale ? 'Last verified ' + esc(verifiedAge('usgsEarthquakes')) : 'Checked ' + esc(verifiedAge('usgsEarthquakes'))}</div></div>`;
     return;
   }
-  container.innerHTML = note + quakes.slice(0,8).map(f => {
+  /* Ten results is the query limit, not necessarily the total. Saying "10 earthquakes"
+     without that qualifier would present a truncated list as a complete count. */
+  const limitNote = quakes.length >= USGS_LIMIT
+    ? `<div class="alert-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule)">Showing the ${USGS_LIMIT} most recent ${esc(quakeScope())} · the query limit was reached, so more may exist</div>`
+    : `<div class="alert-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule)">${quakes.length} ${quakes.length === 1 ? 'event' : 'events'} · ${esc(quakeScope())}</div>`;
+  container.innerHTML = note + limitNote + quakes.map(f => {
     const p = f.properties;
-    const mag = p.mag != null ? p.mag.toFixed(1) : '?';
+    /* A missing magnitude stays unknown rather than being rendered as a number. */
+    const mag = p.mag != null ? p.mag.toFixed(1) : 'unknown';
     return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${esc(mag)}</span><div class="alert-title">${esc(truncate(p.place||'Unknown location',90))}</div><div class="alert-meta">${esc(timeAgo(p.time))} · USGS</div></div>`;
   }).join('');
 }

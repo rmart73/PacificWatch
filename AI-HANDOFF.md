@@ -127,6 +127,47 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — PR 3 review defects fixed
+
+All three confirmed and fixed; two of them were things the DOM tests could not see.
+
+**1. View all N reached only 12.** renderAlerts capped its output, so Overview could offer
+"View all 20" and land the reader on a truncated list with nothing saying so. The cap is now
+the eligibility filter only. Section 23 asserts the destination contents, not the label.
+
+**2. The earthquake card survived an island switch.** Its USGS query is a radius centred on
+the selected island, so it is island-scoped like wind, rain and tide and is now withdrawn
+with them. Section 14 holds a Kauai M4.2 first, matching the reviewer fixture.
+
+**3. Ordering was wrong at both ends.** At 1280px the observation wrapper defaulted to
+order:0 and jumped ahead of the first priority card; the wrapper is gone and 1024px+ places
+items on an explicit grid. More importantly, CSS order never changed the sequence a screen
+reader announces, so the 390px reading order the contract specifies was not being met at all.
+**The markup is now written in that reading order** and wider breakpoints rearrange it
+visually. Below 768px nothing is reordered, so seen and read agree.
+
+**Contract details (O07/O08/O11/O12):** Statewide and Molokaʻi disclose the Honolulu station
+substitution on both weather and tide; tide carries ft MLLW; the observation timestamp is
+shown separately from the fetch time; the earthquake card names its query radius; a full page
+of USGS results says the ten-result limit was reached rather than reading as a complete count;
+a missing magnitude stays unknown; and Recent earthquakes is a real action that focuses the
+earthquake heading without fetching.
+
+Two further defects surfaced while writing the tests. fetchWeather cached the qualified
+station label but rendered the bare one, so the Honolulu disclosure appeared only once the
+reading went stale. And the mutation check reported the new earthquake-withdrawal assertion
+MISSED: the card read "None" at that point, so checking that it no longer contained a
+magnitude passed either way. The fixture now puts a real magnitude on screen first.
+
+**Evidence:** npm test 106, test:dom 222, test:mutation 30/30. Nine new mutation cases, one
+per fixed defect.
+
+**Still open:** 200% zoom, unverified by anyone and still the agreed merge gate. The ticker is
+retained; full-product access through the strip and Alerts view is now correct, so the
+coverage judgement can be made against this head.
+
+**Next action:** Codex re-reviews and runs the browser list, including the zoom gate.
+
 ### 2026-09-08 — PR 3 implemented: Overview, five views, sidebar replaced
 
 Five real views with Overview initial; the pinned desktop Alerts sidebar is gone and Alerts

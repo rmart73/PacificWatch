@@ -14,6 +14,7 @@ const future = new Date(Date.now() + 45 * MIN).toISOString();
 let mode = 'ok';
 let alertFeatures = null;   // when set, overrides the default alert payload
 let newsItems = null;       // when set, overrides the default news payload
+let quakeFeatures = null;   // when set, overrides the default USGS payload
 let windOverrideMph = null; // when set, every observation answers with this reading
 function body(url) {
   const u = String(url);
@@ -29,10 +30,11 @@ function body(url) {
     if (windOverrideMph !== null) return { properties: { windSpeed: { value: windOverrideMph * 0.44704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHOG')) return { properties: { windSpeed: { value: 4.4704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHLI')) return { properties: { windSpeed: { value: 17.8816 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
-    return { properties: { windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 } } };
+    return { properties: { windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 },
+                           timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
   }
   if (u.includes('tidesandcurrents')) return { data: [{ v: '1.7' }] };
-  if (u.includes('earthquake.usgs.gov')) return { features: [] };
+  if (u.includes('earthquake.usgs.gov')) return { features: quakeFeatures || [] };
   if (u.includes('fema.gov')) return { DisasterDeclarationsSummaries: [] };
   if (u.includes('/api/news')) return { items: newsItems || [], errors: [] };
   return {};
@@ -449,13 +451,25 @@ function has(label, sel, needle, expected) {
   console.log('\n14. Island switch withdraws the previous area before the new one lands:');
   w.fetch = makeFetch(null);
   w.eval("S.island='kauai'");
+  quakeFeatures = [{ properties: { mag: 4.2, place: 'Kauai fixture', time: Date.now() - 120000 } }];
   await w.fetchWeather();
+  await w.fetchEarthquakes();
   await settle();
   check('Kauai reading on screen', txt('#stat-wind'), '40 mph');
+  /* Without a magnitude on screen first, the withdrawal assertion below cannot fail. */
+  check('and a Kauai earthquake on screen', txt('#stat-quake'), 'M 4.2');
   const mauiTab = d.querySelector('.island-tab[data-island="maui"]');
   check('the Maui tab exists to click', !!mauiTab, true);
   holdPattern = '/observations/';
   mauiTab.click();
+  /* Review of PR 3: the earthquake card kept the previous island's event on screen while wind
+     correctly read "Checking". Its query radius is centred on the selected island, so it is
+     island-scoped like the rest. Withdrawal is synchronous with the switch and is asserted
+     before any response resolves — the earthquake request is not held, so a moment later its
+     own answer legitimately arrives. */
+  check('the earthquake card is withdrawn too', txt('#stat-quake').indexOf('M '), -1);
+  has('and says it is checking the new area', '#stat-quake-note', 'Checking Maui', true);
+  check('its dot drops the verified state', $('#dot-quake').className, 's-dot unknown');
   await settle();
   check('the old reading is withdrawn immediately', txt('#stat-wind').indexOf('40'), -1);
   has('and the card says it is checking the new area', '#stat-wind-note', 'Checking Maui', true);
@@ -464,6 +478,7 @@ function has(label, sel, needle, expected) {
   releaseHeld();
   await settle();
   check('then the Maui reading fills in', txt('#stat-wind'), '10 mph');
+  quakeFeatures = null;
   w.eval("S.island='statewide'");
 
   console.log('\n15. The strip is now placed, not staged (PR 3):');
@@ -594,26 +609,93 @@ function has(label, sel, needle, expected) {
   check('there is exactly one wind reading in the document',
     d.querySelectorAll('#stat-wind').length, 1);
   check('and exactly one rain reading', d.querySelectorAll('#stat-rain').length, 1);
-  const orderOf = (block, id) => {
-    const m = block.match(new RegExp('#' + id + '\\{order:(\\d+)\\}'));
-    return m ? Number(m[1]) : null;
-  };
-  const desktopCss = HTML.slice(HTML.indexOf('#view-overview.view.active'), HTML.indexOf('@media(max-width:767px)'));
-  const mobileCss = HTML.slice(HTML.indexOf('@media(max-width:767px)'), HTML.indexOf('/* Two observation cards per row'));
-  check('desktop: all three priority cards precede the observations',
-    orderOf(desktopCss, 'priority-rest') < orderOf(desktopCss, 'obs-primary'), true);
-  check('mobile: the first card precedes the observations',
-    orderOf(mobileCss, 'priority-first') < orderOf(mobileCss, 'obs-primary'), true);
-  check('mobile: wind/rain precede the remaining priority cards',
-    orderOf(mobileCss, 'obs-primary') < orderOf(mobileCss, 'priority-rest'), true);
-  check('mobile: tide/quake follow the remaining cards',
-    orderOf(mobileCss, 'priority-rest') < orderOf(mobileCss, 'obs-secondary'), true);
-
+  /* PR 3 review: CSS `order` moves boxes on screen but leaves the sequence a screen reader
+     announces untouched, so the contract's 390px READING order has to be the DOM order. It
+     is asserted here directly; wider breakpoints re-lay-out the same markup and are a visual
+     concern only. */
+  const seq = [...$('#view-overview').children].map(e => e.id).filter(Boolean);
+  const at = id => seq.indexOf(id);
+  check('the first priority card is announced first', at('priority-first'), 0);
+  check('then the route to all products', at('priority-viewall'), 1);
+  check('an observation precedes the remaining cards, as the 390px contract requires',
+    at('obs-primary') < at('priority-rest'), true);
+  check('and the remaining cards precede tide/earthquake',
+    at('priority-rest') < at('obs-secondary'), true);
+  check('references come last', at('overview-refs'), seq.length - 1);
+  /* The wrapper that broke desktop order is gone: it defaulted to order:0 and jumped ahead
+     of the first priority card at 1280px. */
+  check('no obs-row wrapper remains', !!$('#obs-row'), false);
+  check('desktop places by grid rather than reordering the DOM',
+    /#priority-first\{grid-column:1\/-1;grid-row:1\}/.test(HTML), true);
   console.log('\n22. Observations moved to Overview rather than being shown twice:');
   check('the earthquake card exists', !!$('#stat-quake'), true);
   check('shelter and outage references survived the move',
     HTML.indexOf('poweroutage.us') !== -1 && HTML.indexOf('dod.hawaii.gov/hiema') !== -1, true);
   check('the ticker is retained for now', !!$('#ticker-track'), true);
+  console.log('\n23. "View all N" reaches all N (PR 3 review defect 1):');
+  /* The button said 20 and the destination listed 12: renderAlerts capped its output. The
+     assertion is on the destination's contents, not on the label that promised them. */
+  w.fetch = makeFetch(null);
+  const twenty = [];
+  for (let i = 0; i < 20; i++) twenty.push(mk('Flood Warning', 'Severe', 'Immediate', 'Zone ' + i));
+  await feed(twenty);
+  w.switchView('overview');
+  has('Overview offers all twenty', '#priority-viewall', 'View all 20', true);
+  w.goToAlerts();
+  await settle();
+  const listed = [...d.querySelectorAll('#nws-alerts-container .alert-item')]
+    .filter(e => e.textContent.indexOf('Flood Warning') !== -1);
+  check('and the Alerts view lists all twenty', listed.length, 20);
+  check('every zone is reachable, not just the first twelve',
+    listed.some(e => e.textContent.indexOf('Zone 19') !== -1), true);
+  /* Guards the specific number the cap used to be, so a reintroduced slice(0,12) fails here. */
+  check('the list is not truncated at twelve', listed.length > 12, true);
+  w.switchView('overview');
+
+  console.log('\n24. Coverage and units are stated, not implied (O07/O08/O11):');
+  w.eval("S.island='molokai'");
+  await w.fetchWeather();
+  await w.fetchTides();
+  await settle();
+  /* Molokaʻi has no station of its own and borrows Honolulu's. Presenting that as a Molokaʻi
+     reading would be the false attribution the island guard exists to prevent. */
+  has('Molokai discloses the Honolulu reference', '#stat-wind-note', 'no Molokaʻi station', true);
+  has('and the tide card does too', '#stat-tide-note', 'no Molokaʻi station', true);
+  has('the tide reading carries its datum', '#stat-tide-note', 'ft MLLW', true);
+  w.eval("S.island='statewide'");
+  await w.fetchWeather();
+  await settle();
+  has('statewide discloses it too', '#stat-wind-note', 'Honolulu reference', true);
+  has('the observation time is separate from the fetch time', '#stat-wind-note', 'obs ', true);
+
+  quakeFeatures = [{ properties: { mag: 3.4, place: '14 km SW of Volcano', time: Date.now() - 3600000 } }];
+  await w.fetchEarthquakes();
+  await settle();
+  has('the earthquake card states its query radius', '#stat-quake-note', 'within 500 km', false);
+  has('the earthquake scope names the radius somewhere', '#earthquakes-container', 'within 500 km', true);
+  /* Ten results is the query limit. Reporting it as a plain count would present a truncated
+     list as a complete one. */
+  quakeFeatures = [];
+  for (let i = 0; i < 10; i++) quakeFeatures.push({ properties: { mag: 2.5, place: 'Place ' + i, time: Date.now() - i * 60000 } });
+  await w.fetchEarthquakes();
+  await settle();
+  has('at the query limit the list says so', '#earthquakes-container', 'query limit was reached', true);
+  has('and the card flags there may be more', '#stat-quake-note', '10+ in range', true);
+  quakeFeatures = [{ properties: { mag: null, place: 'Unmeasured event', time: Date.now() - 60000 } }];
+  await w.fetchEarthquakes();
+  await settle();
+  has('a missing magnitude stays unknown, never a number', '#earthquakes-container', 'unknown', true);
+  check('and is not rendered as zero', txt('#earthquakes-container').indexOf('M 0.0'), -1);
+  quakeFeatures = null;
+
+  console.log('\n25. Recent earthquakes is a real action (O12):');
+  w.switchView('overview');
+  const fetchesBeforeQuakeNav = fetchCount;
+  w.goToEarthquakes();
+  check('it opens the Alerts view', $('.view.active').id, 'view-alerts');
+  check('and focuses the earthquake heading', d.activeElement.id, 'earthquakes-heading');
+  check('without fetching', fetchCount, fetchesBeforeQuakeNav);
+  w.switchView('overview');
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
