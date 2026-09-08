@@ -20,43 +20,54 @@ are attributed to the user-relayed Claude report.
 | F005 | #12 merged; user relays Claude's live verification of both tiles and zero bare noopener | Closed remediation; unrelated bot-challenged destinations remain unchecked below |
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
-| Shared snapshot / NWS strip | Implemented; PR open for review | Codex reviews against the merged contract and runs the browser pass |
-| Overview layout / navigation | Planned, not yet claimed | Claude implements; Codex reviews against contract |
+| Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
+| Overview layout / navigation | Claimed 2026-09-08 on claude/overview-layout | Claude implements; Codex reviews and runs the browser pass |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
 
-**PR 2 — shared snapshot selector and NWS strip. Claude Code, claude/shared-snapshot-nws-strip.**
-Claim published 2026-09-07 before editing any implementation file.
+**PR 3 — Overview layout, navigation and sidebar replacement. Claude Code, claude/overview-layout.**
+Claim published 2026-09-08 before editing any implementation file. This is the last of the
+three agreed PRs and the largest; it is landing alone, not in parallel with other work.
 
 In scope:
 
-- One shared selector producing the eligible NWS feature set — render-time expiry handling,
-  selected-area matching, then `compareAlerts()` — consumed by the strip, the counts and the
-  existing Alerts surfaces, without mutating the shared array while sorting.
-- The strip itself: highest-tier state, separate warning/watch/advisory/statement counts,
-  selected area, and freshness, across all nine source states in the contract table.
-- Island-switch behaviour for the surfaces this PR touches: withdraw old island-scoped
-  content and show Checking until a matching response lands, on top of the merged O09 guard.
-- A UI-only age tick, at most once per minute, so freshness and expiry re-evaluate with no
-  network calls. **Flagged for objection:** the contract lists this under Freshness rather
-  than assigning it to a PR. It is here because a strip that shows freshness cannot report it
-  honestly without one. Say so before I build it if it belongs in PR 3.
+- Five real views on both breakpoints — Overview, Alerts, Maps, News, Settings — with
+  Overview initial, island selection kept in shared chrome, and native buttons carrying an
+  accessible current-view state.
+- **Replacing the pinned desktop Alerts sidebar with a full Alerts view.** Exactly one main
+  view visible and keyboard-reachable at each breakpoint, and explicitly *not* by way of a
+  bare `.view{display:block!important}` — that rule is a load-bearing entry in AGENTS.md
+  because it stacks every view at once.
+- Unhiding the staged strip and dropping the `?strip=1` flag. The strip is required on News,
+  Maps and Settings as well as Alerts, carrying highest-tier state, separate tier counts,
+  selected area, verification state and a route to Alerts — it must not degrade into a bare
+  link once the pinned rail is gone.
+- Up to three priority alert cards with the full count and a route to all products; stat-bar
+  readings moved into Overview cards rather than shown twice.
+- Cross-view actions: All NWS alerts opens Alerts and focuses its NWS heading; Recent
+  earthquakes opens the existing earthquake section; Source details opens Settings at Data
+  Sources. Navigation issues no network requests, which is asserted with the fetch counter.
+- Architecture prose updated to explain the intentional sidebar replacement, per the contract.
 
-Out of scope, deferred to PR 3: Overview view, navigation, sidebar replacement, mobile
-card ordering.
+Out of scope: retiring the scrolling ticker. The contract permits it only once the strip and
+Alerts view fully cover its active-alert access. That is a judgement best made against the
+built layout, so it is deferred rather than bundled — say if it should be in this PR.
 
-Two contract details I expect to be the awkward ones, recorded now rather than discovered late:
-`usableCache()` returns stale entries only, so the shared selector must handle a current
-matching cache entry explicitly instead of reading its absence as unavailable; and counts are
-per product, not per incident, so overlapping watch/warning areas must not be deduplicated.
+Two things I expect to be awkward, recorded now rather than discovered late: the mobile order
+at 390px puts wind/rain between priority card 1 and cards 2–3, which cuts against the natural
+grouping of the three alert cards; and `switchView()` currently calls `renderAlertSurfaces()`,
+so per-view strip rendering must not turn navigation into a render storm or duplicate listeners.
 
-Q006 is complete and merged in b71fb74, so the board is no longer exclusively Codex-owned.
+**Blocking on this PR, not on the last one:** 200% browser zoom is still unverified. It was
+merged as an accepted exception in #16 while the strip was hidden. PR 3 makes it visible to
+everyone, so that exception does not carry over — the zoom pass needs a human before this
+merges.
 
 ### Agreed next sequence
 
-Completed: race guard (#14). Next: finish #15 → shared snapshot selector and NWS strip
-→ Overview layout/navigation.
+Completed: race guard (#14), board compaction (#15), shared snapshot and strip (#16).
+Remaining: Overview layout/navigation, claimed above. This completes the three-PR sequence.
 Each implementation is a separate claimed, reviewable PR. The strip carries all nonzero
 tier counts and the highest-tier state, plus scope/freshness as defined by the contract.
 Codex retains design/acceptance ownership; Claude retains implementation ownership.
@@ -72,7 +83,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/shared-snapshot-nws-strip | PR 2: shared snapshot selector and NWS strip |
+| Claude | claude/overview-layout | PR 3: Overview view, navigation, sidebar replacement |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -80,7 +91,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 2 | Reviewed and cleared at 84aca80 | Merge, verify production, then claim PR 3 |
+| PR 3 | Claimed, not yet opened | Claude implements; PR follows on claude/overview-layout |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -115,6 +126,19 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — #16 merged and production verified; PR 3 claimed
+
+Merged as d9188e6. Production verified: deployed HTML is byte-identical to main, and both
+suites run against the fetched production file pass — 138 DOM assertions and 37 contrast
+assertions, including all nine strip states and the check-time regression. The strip is live
+in production and correctly still hidden.
+
+200% zoom stays open below. It was an accepted exception for #16 because the strip was
+hidden; PR 3 makes it visible, so it becomes a real gate on that PR.
+
+**Next action:** Claude implements PR 3 on claude/overview-layout. Codex reviews against the
+merged contract and performs the browser pass, which this time must include 200% zoom.
 
 ### 2026-09-07 — PR 2 review cleared at 84aca80
 
