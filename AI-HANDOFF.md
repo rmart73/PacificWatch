@@ -106,7 +106,88 @@ No implementation review is pending.
 
 ## Handoff Log
 
-### 2026-09-08 — PAUSE POINT: read this first when resuming
+### 2026-09-08 — END OF NIGHT HANDOFF: read this first when resuming
+
+Both the owner and Codex paused under an active tropical storm warning with unstable power.
+Recorded here rather than in conversation so either agent can resume without chat history.
+**No implementation or remediation was done tonight.**
+
+#### Current state
+
+- The Overview sequence, the wind-unit correction and the durable testing principles are
+  **merged through #20**. `main` is `3f5a885`, deployed and serving.
+- The app is **publicly reachable, but broader public-launch clearance has not been given.**
+- **#21 is open: launch-readiness report only.** Codex reviewed it and **requested corrections;
+  it is not cleared to merge.** Until those land, treat the report as a draft with known errors,
+  listed below.
+- **No G1 remediation has been claimed.** Nothing is in flight.
+
+#### Corrections owed on #21, from Codex's review
+
+These are defects in the report itself, not in the product. They are written out so the work
+does not depend on remembering the review.
+
+1. **Qualify the security conclusions to the checks actually performed.** The report states "no
+   XSS" and "no SSRF" as properties of the system. They are findings from a specific manual
+   review of specific surfaces, and must be scoped that way.
+2. **CORS is not an abuse control, and the report treats it as one.** Restricting
+   `Access-Control-Allow-Origin` constrains browser callers only; a script, curl or server
+   ignores it entirely. It does not bound G1 and must not be listed as a fix for it.
+3. **The claim that the single-file architecture requires `script-src 'unsafe-inline'` is
+   wrong.** CSP hashes or a nonce for the inline script would keep the single file and drop
+   `unsafe-inline`. G6 should say the current build has not done that work, not that the design
+   forbids it.
+4. **G2 conflates two different failures.** Losing connectivity in an already-open page does not
+   blank it — the app keeps last-known-good and marks sources stale or unavailable, which is
+   tested. The real gap is a **reload while offline**, which has nothing to serve. The severity
+   claim must be rewritten around that distinction.
+
+#### Source evidence still to complete
+
+The source-to-display record in the report covers four cards but three entries are incomplete:
+
+- **Rainfall was null** at capture time, so only the withhold path was exercised. A **non-null**
+  reading is still needed to verify the mm-to-inches conversion against live data.
+- **The tide timestamp has no timezone.** It was recorded as `2026-09-07 20:06`; NOAA was queried
+  with `time_zone=lst_ldt`, so the record must state which zone that is.
+- **The earthquake entry lacks event identity.** Magnitude alone is not traceable; record the
+  USGS event id, place and network so the reading can be re-checked later.
+
+#### Resume in this order
+
+1. **Correct #21** using the four items above, then complete the source evidence.
+2. **Codex reviews the corrected report**, and only then is it merged.
+3. **Claim G1 separately** and bound news-endpoint abuse and upstream fetching, with controlled
+   verification. Note that the fix must actually bound invocations — cache-key normalisation,
+   a restricted parameter set, and rate limiting — not CORS.
+4. **Monitoring follows G1.** Hosting capacity, optional AI key handling and failure behaviour,
+   critical links, accessibility and mobile checks, and tsunami-path verification remain
+   public-launch decisions or checks, not tonight's work.
+
+#### Deferred, unclaimed
+
+Offline support, layout refinement and page-weight work. **Layout requires an agreed design
+before any implementation**, and must preserve the verified navigation, full-alert access,
+source disclosures and 200% zoom usability.
+
+#### Unverified stays unverified
+
+No penetration test, no third-party review, no load testing, no end-to-end screen reader pass,
+one browser on one machine, the six F005 reference URLs, Anthropic failure and cost behaviour,
+and the tsunami path end to end. None of these has been checked; none should be described as
+passing.
+
+#### Branch and PR status
+
+| | |
+|---|---|
+| `main` | `3f5a885` — merged through #20, deployed, serving |
+| `claude/launch-readiness-review` | PR **#21**, open, report only, **corrections owed** |
+| Other branches | none |
+| Claimed work | this branch only, report scope; nothing else |
+| In flight | nothing |
+
+### 2026-09-08 — Earlier pause note (SUPERSEDED by the entry above)
 
 Paused during an active tropical storm warning with uncertain power. Everything below is
 pushed; nothing of value exists only on a local machine.
