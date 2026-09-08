@@ -103,6 +103,47 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — Security and launch-readiness review (report only)
+
+Bounded review at 3f5a885 across the seven areas Codex set. Written up in
+[LAUNCH-READINESS.md](LAUNCH-READINESS.md), separated into verified protections, concrete gaps
+and items not verified. **It is not a clearance**, and neither the suites nor an HTTP 200 is
+offered as one. No remediation is in this branch.
+
+**Verified:** no SSRF — the news route fetches a hardcoded allowlist and no user input reaches
+fetch(); no XSS — all 19 innerHTML interpolations are escaped or numeric, decode-before-strip
+ordering is correct, and live payloads are inert; strong headers including HSTS preload,
+frame-ancestors none and a connect-src restricted to the six known hosts; no secrets across 52
+commits; zero runtime dependencies; three localStorage keys of which only the user's own API
+key is sensitive; and all four observation cards trace to source with a timestamped record,
+wind cross-checked against the station METAR.
+
+**Gaps, worst first:**
+
+- **G1, high, launch blocker.** /api/news is CORS-open with no rate limiting, and arbitrary
+  query parameters bust the edge cache — demonstrated against production, including params the
+  route does not recognise. Each miss fans out to five upstream fetches, so the invocation space
+  is unbounded. Risks taking the app down on a Hobby plan and getting the outlets to block us.
+- **G2, high for this product.** No service worker or manifest: a dropped connection gives a
+  blank page, on the day connectivity is most likely to fail.
+- **G3, medium.** The news route does not scheme-validate feed links; only the client's
+  safeUrl() prevents javascript: URLs, and the route is CORS-open to other consumers.
+- **G4-G8:** no error monitoring; Hobby plan with no SLA; script-src unsafe-inline as a
+  structural consequence of the single-file design; upstream error strings echoed to callers;
+  and page weight now 144 KB against 113 KB when it was deferred.
+
+**Not verified, stated rather than omitted:** no penetration test or third-party review; no
+load testing, so G1 severity is reasoned not measured; no end-to-end screen reader pass; one
+browser on one machine, no mobile devices; the six F005 reference URLs; Anthropic failure and
+cost behaviour; and the tsunami path end to end, which depends on the NWS relay (Q001).
+
+**Assessment:** security is not the blocker. Resilience and operability are — G1, G2 and G4.
+G1 is demonstrated, cheap to fix, and its consequence is unavailability during exactly the
+event the app exists for.
+
+**Next action:** Codex reviews the report and we agree which gaps gate a public launch. Any
+remediation is claimed separately.
+
 ### 2026-09-08 — Testing principles recorded; no work claimed
 
 Two rules now live in the AGENTS Testing section, ahead of the mutation and contrast notes:
