@@ -26,6 +26,21 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
+**Testing principles into AGENTS.md — Claude Code, claude/testing-principles.**
+Claim published 2026-09-08 before editing, in its own commit ahead of the change.
+
+Scope: the Testing section of `AGENTS.md` only. Two principles, agreed with Codex after the
+wind unit defect:
+
+1. Expected results for source-derived values must be independently established, never computed
+   using the app's own transformation. Fixed expectations must have a traceable basis.
+2. Source-handling changes require a timestamped raw-response versus rendered-output check,
+   recording the source, relevant fields and units, observation time, expected result and actual
+   display. If that check cannot be completed, it is recorded as unverified.
+
+Out of scope: implementation of any kind, the retrospective log entry — which Codex confirmed
+already distinguishes evidence of the fix correctly — and every deferred item, layout included.
+
 **PR 3 — Overview layout, navigation and sidebar replacement. Claude Code, claude/overview-layout.**
 Claim published 2026-09-08 before editing any implementation file. This is the last of the
 three agreed PRs and the largest; it is landing alone, not in parallel with other work.
@@ -83,7 +98,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pr3-production-record | Board only: the #17 production verification record |
+| Claude | claude/testing-principles | Docs only: two review principles into the AGENTS Testing section |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -91,6 +106,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
+| Testing principles into AGENTS | Claimed 2026-09-08 on claude/testing-principles | Claude writes; Codex reviews |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Follow-up after the three-PR sequence |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
