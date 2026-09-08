@@ -608,6 +608,62 @@ so Claude cannot reach it; Codex has done these passes by **rendering the exact 
 which is the route to use. Browser zoom at 200% has repeatedly resisted automation and has
 been left unverified more than once — say so explicitly rather than implying it was checked.
 
+### Two rules for anything derived from a source field
+
+Both come out of the wind unit defect, which every other safeguard in this file missed. NWS
+reports wind as `wmoUnit:km_h-1`; the code applied `2.237`, the metres-per-second factor. Every
+reading was 3.6x too high on production during an active hurricane — a 51.84 km/h gust shown as
+"116 mph" when the station's own METAR said 28 knots, 32 mph. At that head the suite was **255
+DOM assertions, 37 contrast assertions and 38 mutation cases**, plus a browser pass. None of it
+saw the defect, because the fixtures and the code shared the same wrong premise: the fixtures
+carried no `unitCode` and were written in m/s to match the code. One assertion had hardcoded
+`2.237` itself, so the bug had a copy living inside the test meant to catch it.
+
+Coverage cannot catch a wrong premise. These two rules can.
+
+**1. Expected results for source-derived values must be independently established, never
+computed using the app's own transformation.** Calling the page's own converter to produce the
+number a test then checks proves only that the function equals itself. Fixed expectations must
+have a traceable basis — a published constant, a value from a second source, or a figure in the
+raw response like a METAR's knots. Write that basis in a comment beside the expectation so the
+next reader can retrace it.
+
+The narrow exception is an assertion about *storage or identity* rather than conversion: the
+cache/race section calls `toMph()` to ask whether the retained reading is the newer one, and the
+conversion itself is not what is under test there. Anything asserting that a conversion is
+correct uses a literal.
+
+**2. A change to source handling requires a timestamped raw-response versus rendered-output
+check.** Fetch the real endpoint, render the real page against that exact response, and record:
+
+- the source and endpoint
+- the relevant fields, each with its declared unit
+- the observation time
+- the expected result and how it was established
+- what the page actually displayed
+
+Put the record in `AI-HANDOFF.md` with the change. **If the check cannot be completed, record it
+as unverified rather than omitting it** — an absent check reads as a passed one, and that is how
+a defect gets treated as reviewed.
+
+The shape, from the wind fix:
+
+```
+source      api.weather.gov/stations/PHNL/observations/latest
+windGust    66.6   wmoUnit:km_h-1        windSpeed  null  wmoUnit:km_h-1
+obs time    2026-09-08T04:53:00Z
+expected    41 mph — km/h x 0.621371, cross-checked against METAR 11023G36KT (36 kt)
+displayed   41 mph
+```
+
+That change's entry records the raw value, its unit, the METAR and the result, but not the
+observation time; PR #19 carries the full record. Include all five fields going forward — the
+observation time is what ties a displayed number to one specific response rather than to
+whatever the endpoint happened to be serving.
+
+This is not a substitute for the suites. It is the check that notices when the suites are asking
+the wrong question.
+
 ### Mutation check (`npm run test:mutation`)
 
 Review of PR #14 found a regression test that could not fail: both fixtures in the section
