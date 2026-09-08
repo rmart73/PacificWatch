@@ -103,6 +103,37 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — PAUSE POINT: read this first when resuming
+
+Paused during an active tropical storm warning with uncertain power. Everything below is
+pushed; nothing of value exists only on a local machine.
+
+**State:** main is 3f5a885, deployed and serving. Working tree clean. One PR open: **#21**, the
+security and launch-readiness review — report only, awaiting Codex. Nothing else is in flight.
+
+**Where the product stands.** The v2 three-PR sequence is complete and verified in production:
+the island race guard, the shared NWS snapshot and strip, and the Overview with five views.
+Today also fixed a live data defect: wind was being displayed 3.6x too high because the code
+assumed metres per second while api.weather.gov reports km/h. The owner found it by reading the
+raw API beside the rendered card. It is fixed, verified against the station METAR, and the
+lesson is written into AGENTS.md as two testing rules.
+
+**To resume, in order:**
+
+1. Read [LAUNCH-READINESS.md](LAUNCH-READINESS.md). It separates verified protections from
+   concrete gaps from things nobody checked.
+2. Agree with Codex which gaps gate a public launch. Claude's view: **G1 alone is a blocker**,
+   with G2 and G4 close behind. That is a product call, not only a technical one.
+3. Claim any remediation separately. #21 deliberately contains no fixes.
+
+**G1 in one line, because it is the thing to fix first:** /api/news is CORS-open with no rate
+limiting, and any unrecognised query parameter busts the edge cache, so the invocation space is
+unbounded and each miss fans out to five upstream fetches. Demonstrated against production. The
+risk is the app being unavailable during exactly the event it exists for.
+
+**Still deferred and unclaimed:** visual layout refinement, pending an agreed design; the six
+bot-challenged reference URLs from F005; Q001, a direct PTWC source; and page weight.
+
 ### 2026-09-08 — Security and launch-readiness review (report only)
 
 Bounded review at 3f5a885 across the seven areas Codex set. Written up in
