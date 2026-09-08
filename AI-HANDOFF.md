@@ -127,6 +127,41 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — Functional acceptance: zoom obstruction, O10, O12, O13, O16
+
+Owner direction: finish functionality, defer layout refinement. Codex agreed and asked that
+functional obstruction at zoom be treated as a blocker while spacing and polish follow later.
+
+**The zoom blocker was real and was not about spacing.** `.desktop-tabs` stuck at a hardcoded
+`top:160px`, matching the header only at default zoom. At 200% the header is roughly twice
+that, so the view tabs slid underneath it and could not be clicked while scrolled — the
+navigation became unreachable. `.content-spacer` had the same defect against the fixed bottom
+nav, hiding the last control behind it. Both now position against measured
+`--hdr-h`/`--nav-h`, refreshed on resize and via ResizeObserver.
+
+**O10** — the source aggregate showed the newest success across six sources, which reads as a
+completed refresh while five are still checking. It now states the count outstanding.
+
+**O13** — hostile feed content is now covered by fixtures rather than assumed: an
+`onerror` payload in an event name and a `<script>` in an area name produce no elements and
+run nothing, a `javascript:` news link is neutralised, and every new-tab link carries both
+rel values. The rel fixture initially could not fail because no priority card had a product
+URL, so no outbound link existed to check; it now carries one.
+
+**O16** — an unkeyed visitor gets the strip, priority cards and observations, the digest panel
+stays hidden, and the fetch log shows nothing requested from the model API or any host outside
+the declared sources.
+
+**O12** — Open Maps and Open News are asserted to switch views without fetching.
+
+**O07** — gust-only wind is asserted to be labelled rather than presented as sustained wind.
+
+**Evidence:** npm test 106, test:dom 255, test:mutation 38/38. Six new mutation cases,
+including restoring the hardcoded sticky offset and dropping noreferrer.
+
+**Still open:** the layout recheck and a usability pass at 200% zoom. The owner has confirmed
+the zoom setting itself; what remains is whether content and controls stay usable there.
+
 ### 2026-09-08 — Two observation fixes on PR 3
 
 **Tide fallback lost the Honolulu disclosure.** fetchTides cached sta.name while rendering

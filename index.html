@@ -39,6 +39,9 @@
   --r:8px; --r2:14px; --r3:20px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
+  /* Measured from the live chrome at runtime. The fallbacks are the sizes at default zoom;
+     they are only ever used before the first measurement or if JS is unavailable. */
+  --hdr-h:160px; --nav-h:72px;
 }
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -276,7 +279,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .nav-item:active{opacity:.7}
 .nav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
-.content-spacer{height:72px}
+/* Clears the fixed bottom nav, which grows with zoom and text size just as the spacer must.
+   A fixed 72px left the last control hidden behind the nav at 200%. */
+.content-spacer{height:calc(var(--nav-h) + 12px)}
 
 .section-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);padding:14px 16px 8px;background:var(--surf);border-bottom:1px solid var(--rule)}
 
@@ -358,7 +363,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .news-tile-desc{font-size:10.5px;color:var(--ink3);line-height:1.45}
 
 /* DESKTOP TAB BAR */
-.desktop-tabs{display:none;gap:4px;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--rule);position:sticky;top:160px;z-index:50}
+/* top follows the measured header. A hardcoded 160px matched the header only at default
+   zoom: at 200% the header is roughly twice that, so the view tabs stuck 160px down slid
+   underneath it (z-index 50 against the header's 100) and could not be clicked while
+   scrolled — the navigation became unreachable rather than merely cramped. */
+.desktop-tabs{display:none;gap:4px;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--rule);position:sticky;top:var(--hdr-h);z-index:50;flex-wrap:wrap}
 .dtab{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 16px;border-radius:20px;color:var(--ink3);border:1px solid var(--rule);transition:all .18s}
 .dtab:hover{color:var(--ink2);border-color:var(--ice2)}
 .dtab.active{background:var(--sky2);border-color:var(--sky2);color:#fff}
@@ -2319,9 +2328,19 @@ function renderSourceHealth() {
   }
   const stamp = document.getElementById('src-last-refresh');
   if (stamp) {
-    const times = Object.keys(S.sourceHealth).map(k => S.sourceHealth[k].lastSuccess).filter(Boolean);
-    stamp.textContent = times.length ? 'Last refresh ' + fmtTime(new Date(Math.max.apply(null, times)))
-                                     : 'No successful refresh yet';
+    const keys = Object.keys(S.sourceHealth);
+    const times = keys.map(k => S.sourceHealth[k].lastSuccess).filter(Boolean);
+    /* A newest-success time alone reads as a complete refresh even when most feeds have not
+       answered yet. While any source is still checking, the count is stated instead. */
+    const checking = keys.filter(k => sourceState(k) === 'loading').length;
+    if (checking) {
+      stamp.textContent = checking === keys.length
+        ? 'Checking all ' + keys.length + ' sources\u2026'
+        : 'Checking ' + checking + ' of ' + keys.length + ' sources\u2026';
+    } else {
+      stamp.textContent = times.length ? 'Last refresh ' + fmtTime(new Date(Math.max.apply(null, times)))
+                                       : 'No successful refresh yet';
+    }
   }
   const lu = document.getElementById('alerts-last-updated');
   if (lu) {
@@ -2363,6 +2382,35 @@ setInterval(refreshAll, 5 * 60 * 1000);
 /* Ages are relative, so they must re-render between fetches or "2 min ago" freezes. */
 setInterval(renderSourceHealth, 30000);
 
+/* CHROME MEASUREMENT
+   Sticky and fixed offsets are expressed in real pixels, which do not track zoom, text
+   scaling, or the header growing a line when the island tabs or ticker wrap. Measuring the
+   chrome and publishing it as custom properties keeps the view tabs below the header and
+   the last row of content above the bottom nav at any zoom level. */
+function syncChromeOffsets() {
+  const root = document.documentElement;
+  const hdr = document.querySelector('.app-header');
+  const nav = document.querySelector('.bottom-nav');
+  /* offsetHeight is 0 in a non-rendering DOM; keep the CSS fallback rather than collapse. */
+  if (hdr && hdr.offsetHeight) root.style.setProperty('--hdr-h', hdr.offsetHeight + 'px');
+  if (nav && nav.offsetHeight) root.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+}
+
+let chromeObserver = null;
+function watchChrome() {
+  syncChromeOffsets();
+  window.addEventListener('resize', syncChromeOffsets);
+  /* Zooming does not always fire resize, and the header can change height on its own when
+     the ticker or island tabs rewrap, so the element itself is observed where possible. */
+  if (typeof ResizeObserver === 'function' && !chromeObserver) {
+    chromeObserver = new ResizeObserver(syncChromeOffsets);
+    const hdr = document.querySelector('.app-header');
+    const nav = document.querySelector('.bottom-nav');
+    if (hdr) chromeObserver.observe(hdr);
+    if (nav) chromeObserver.observe(nav);
+  }
+}
+
 /* UI-ONLY AGE TICK
    Freshness and expiry are time-relative, so a page left open goes quietly wrong between
    fetches: a product passes its `expires`, a source crosses its stale threshold, and every
@@ -2380,6 +2428,7 @@ function startAgeTick() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) ageTick(); });
 }
 startAgeTick();
+watchChrome();
 
 switchView('overview');
 

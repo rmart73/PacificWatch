@@ -109,6 +109,8 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
 | `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
 | The Overview markup is in **mobile** order, and wider screens rearrange it | CSS `order` and grid placement move boxes on screen but leave the sequence a screen reader announces untouched, so the reading order the contract specifies for 390px has to be the DOM order. Reordering the markup to suit desktop would silently break it. Duplicating the cards instead would give two copies of every reading to drift apart, and both would be announced — there is exactly one `#stat-wind` in the document, and a test asserts it | Architecture |
+| Sticky and fixed offsets use `var(--hdr-h)`/`var(--nav-h)`, never pixel literals | `.desktop-tabs` stuck at a hardcoded `top:160px`, which matched the header only at default zoom. At 200% the header is roughly twice that, so the view tabs slid underneath it (z-index 50 against the header's 100) and could not be clicked while scrolled — navigation became unreachable, not merely cramped. The same applied to `.content-spacer` against the fixed bottom nav. `syncChromeOffsets()` measures the real chrome; the CSS literals are fallbacks for before the first measurement | Architecture |
+| `src-last-refresh` states a checking count instead of a time while any source is loading | The newest success across six sources reads as a completed refresh even when five have not answered. During initial load it says how many are still checking | Status semantics |
 | The Alerts list renders every eligible product with no display cap | It capped at 12 while Overview offered "View all 20", so the route landed the reader on a truncated list with nothing saying so. The only cap is the eligibility filter | Architecture |
 | The earthquake card is withdrawn on an island switch alongside wind, rain and tide | Its USGS query is a radius centred on the selected island, so it is island-scoped like the rest. It was missed once and showed one island's event under another's heading | Architecture |
 | The strip has its own `--strip-*` colour tokens instead of reusing `--alert`/`--warn`/`--unknown` | Those are display colours for dots and badges, where the 4.5:1 text rule does not apply. As 12px text they failed WCAG AA — light watch 2.57:1, light unknown 2.54:1, dark unknown 3.90:1. The strip tokens are the same hues darkened only as far as compliance needs, so severity stays distinguishable. Repointing a strip rule at a display token fails `test/contrast.test.js` | Theming |
@@ -354,6 +356,12 @@ The strip (`#nws-strip`) is **staged, not launched**. It renders on every update
 are testable, but ships `hidden`: showing it now would place a second summary beside the hazard
 banner, which the contract rules out until the Overview lands. Append `?strip=1` to reveal it
 for a browser pass. PR 3 places it and drops the flag.
+
+**Chrome offsets are measured, not assumed.** `syncChromeOffsets()` publishes the real header
+and bottom-nav heights as `--hdr-h` and `--nav-h`, refreshed on resize and through a
+`ResizeObserver` on both elements, because zoom does not reliably fire resize and the header
+grows a line when the ticker or island tabs rewrap. Anything sticky or fixed must position
+against those tokens; a pixel literal is a zoom bug waiting to happen.
 
 `ageTick()` re-evaluates freshness and expiry from memory once a minute, and on
 `visibilitychange` and navigation. It issues no network request and must never touch

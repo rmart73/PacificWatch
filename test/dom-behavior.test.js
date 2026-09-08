@@ -16,6 +16,7 @@ let alertFeatures = null;   // when set, overrides the default alert payload
 let newsItems = null;       // when set, overrides the default news payload
 let quakeFeatures = null;   // when set, overrides the default USGS payload
 let windOverrideMph = null; // when set, every observation answers with this reading
+let gustOnly = false;       // when true, the observation reports a gust but no sustained wind
 function body(url) {
   const u = String(url);
   if (u.includes('/alerts/active')) return { features: alertFeatures || [
@@ -27,6 +28,7 @@ function body(url) {
   if (u.includes('/observations/latest')) {
     /* mph values chosen to be unmistakable per station: PHOG 10, PHLI 40, default 18.
        windOverrideMph wins when set, so two responses for the SAME station can differ. */
+    if (gustOnly) return { properties: { windSpeed: { value: null }, windGust: { value: 20 }, precipitationLastHour: { value: null } } };
     if (windOverrideMph !== null) return { properties: { windSpeed: { value: windOverrideMph * 0.44704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHOG')) return { properties: { windSpeed: { value: 4.4704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
     if (u.includes('PHLI')) return { properties: { windSpeed: { value: 17.8816 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
@@ -41,10 +43,12 @@ function body(url) {
 }
 let holdPattern = null, releaseHeld = null;   // lets one response be resolved out of order
 let fetchCount = 0;                           // proves the age tick issues no requests
+const fetchLog = [];                          // every URL requested, for O16
 function makeFetch(failPattern) {
   return (url) => {
     const u = String(url);
     fetchCount++;
+    fetchLog.push(u);
     if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
     if (holdPattern && u.includes(holdPattern)) {
       const payload = body(u);
@@ -331,6 +335,8 @@ function has(label, sel, needle, expected) {
   /* Pass NO_EXPIRY to mean "this product has none". A plain null used to fall through to
      the default, which quietly made the missing-expiry case untestable. */
   const NO_EXPIRY = '__none__';
+  /* NWS returns the canonical product URL as the feature id; alertUrl() reads it from there. */
+  const mkUrl = (event, id) => { const f = mk(event, 'Severe', 'Immediate', 'Oahu'); f.id = id; return f; };
   const mk = (event, severity, urgency, area, expires) => ({ properties: { event, severity, urgency,
                     areaDesc: area || 'Hawaii', sent: new Date().toISOString(),
                     expires: expires === NO_EXPIRY ? null : (expires || future) } });
@@ -716,6 +722,108 @@ function has(label, sel, needle, expected) {
   check('and focuses the earthquake heading', d.activeElement.id, 'earthquakes-heading');
   check('without fetching', fetchCount, fetchesBeforeQuakeNav);
   w.switchView('overview');
+  console.log('\n26. Hostile feed content stays inert (O13):');
+  /* Alert text is third-party. These are the shapes that have actually been used against
+     feed readers: a tag that fires on load, and a scheme that executes on click. */
+  w.fetch = makeFetch(null);
+  await feed([mk('<img src=x onerror="window.__pwned=1">Flood Warning', 'Severe', 'Immediate',
+                 '<script>window.__pwned2=1<\/script>Kauai')]);
+  w.switchView('overview');
+  check('no injected element was created in the priority card',
+    $('#priority-first').querySelectorAll('img, script').length, 0);
+  w.goToAlerts();
+  check('nor in the Alerts list', $('#nws-alerts-container').querySelectorAll('img, script').length, 0);
+  check('and no injected script ran', w.eval('typeof window.__pwned + "/" + typeof window.__pwned2'),
+    'undefined/undefined');
+  has('the hostile text is shown as text', '#nws-alerts-container', '<img src=x', true);
+
+  /* A feed link with an executable scheme must not become a live href. */
+  newsItems = [{ source: 'KHON2', title: 'Malicious link', link: 'javascript:window.__pwned3=1',
+                 published: new Date().toISOString(), hazard: true }];
+  await w.fetchNews();
+  await settle();
+  const newsLinks = [...d.querySelectorAll('#news-headlines a')];
+  check('an unsafe scheme is neutralised, not rendered',
+    newsLinks.every(a => a.getAttribute('href').indexOf('javascript:') === -1), true);
+  newsItems = null;
+
+  /* Both rel values are required: noopener alone still leaks the referrer, and noreferrer
+     alone does not stop window.opener in older engines. The fixture carries a real product
+     URL so the priority card's own outbound link is among the links checked — without one
+     this section passed no matter what the card rendered. */
+  w.switchView('overview');
+  await feed([mkUrl('Tropical Storm Warning', 'https://api.weather.gov/alerts/urn:oid:2.49.0.1')]);
+  check('the priority card rendered its outbound link',
+    $('#priority-first').querySelectorAll('a.pri-link[target="_blank"]').length, 1);
+  const blanks = [...d.querySelectorAll('a[target="_blank"]')];
+  check('there are new-tab links to check', blanks.length > 0, true);
+  check('every one carries noopener AND noreferrer',
+    blanks.every(a => (a.rel || '').indexOf('noopener') !== -1 && (a.rel || '').indexOf('noreferrer') !== -1), true);
+
+  console.log('\n27. A visitor with no API key gets the whole product (O16):');
+  check('no key is set in this run', w.eval('!!S.apiKey'), false);
+  await feed([mk('Tropical Storm Warning', 'Severe', 'Immediate')]);
+  w.switchView('overview');
+  check('the strip still reports the state', txt('#strip-state'), 'WARNING \u2014 Hawaii');
+  check('priority cards still render', d.querySelectorAll('.pri-card').length, 1);
+  has('observations still render', '#stat-wind-note', 'HNL', true);
+  /* The AI digest is the only keyed feature and must not be offered as if it worked. */
+  const digest = $('#digest-panel-alerts');
+  check('the digest panel is hidden without a key', digest ? digest.hasAttribute('hidden') : true, true);
+  check('and nothing was ever requested from the model API',
+    fetchLog.some(u => u.indexOf('anthropic') !== -1), false);
+  check('nor from any host outside the declared sources',
+    fetchLog.every(u => /weather\.gov|tidesandcurrents|earthquake\.usgs\.gov|fema\.gov|\/api\/news/.test(u)), true);
+
+  console.log('\n28. The remaining Overview routes work (O12):');
+  w.switchView('overview');
+  const fetchesBeforeRefs = fetchCount;
+  const refButtons = [...d.querySelectorAll('#overview-refs .ref-btn')];
+  check('three reference routes are offered', refButtons.length, 3);
+  refButtons[0].click();
+  check('Open Maps opens the Maps view', $('.view.active').id, 'view-maps');
+  w.switchView('overview');
+  refButtons[1].click();
+  check('Open News opens the News view', $('.view.active').id, 'view-news');
+  w.switchView('overview');
+  check('none of the routes fetched anything', fetchCount, fetchesBeforeRefs);
+
+  console.log('\n29. Truthful loading and gust-only readings (O07/O10):');
+  /* A newest-success timestamp alone reads as a completed refresh. While anything is still
+     checking, the count is stated instead. */
+  w.eval('Object.keys(S.sourceHealth).forEach(k => { S.sourceHealth[k].lastAttempt = null; S.sourceHealth[k].lastSuccess = null; });');
+  w.renderSourceHealth();
+  has('a first load says how many sources are still checking', '#src-last-refresh', 'Checking all 6 sources', true);
+  has('and does not claim a refresh happened', '#src-last-refresh', 'Last refresh', false);
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = Date.now();');
+  w.renderSourceHealth();
+  has('a partial load counts the ones still outstanding', '#src-last-refresh', 'Checking 5 of 6 sources', true);
+  has('still without claiming completion', '#src-last-refresh', 'Last refresh', false);
+
+  /* Gust-only wind must say so rather than presenting a gust as sustained wind. */
+  windOverrideMph = null;
+  gustOnly = true;
+  w.fetch = makeFetch(null);
+  await w.fetchWeather();
+  await settle();
+  has('a gust-only observation is labelled as such', '#stat-wind-note', 'Gust, sustained N/A', true);
+  gustOnly = false;
+
+  console.log('\n30. Sticky chrome offsets are measured, not hardcoded (zoom):');
+  /* A fixed 160px matched the header only at default zoom; at 200% the view tabs slid under
+     it and could not be clicked. The offset now follows the measured chrome. */
+  check('the view tabs stick to the measured header height',
+    /\.desktop-tabs\{[^}]*top:var\(--hdr-h\)/.test(HTML), true);
+  check('and no hardcoded 160px offset remains', /top:160px/.test(HTML), false);
+  check('the bottom-nav spacer follows the measured nav',
+    /\.content-spacer\{height:calc\(var\(--nav-h\)/.test(HTML), true);
+  check('both have a fallback for before the first measurement',
+    /--hdr-h:160px; --nav-h:72px;/.test(HTML), true);
+  /* offsetHeight is 0 in jsdom, so this also proves the measurement cannot collapse the
+     offsets to zero when it cannot measure. */
+  w.syncChromeOffsets();
+  check('measuring in a non-rendering DOM leaves the fallback intact',
+    w.eval("document.documentElement.style.getPropertyValue('--hdr-h')"), '');
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);

@@ -126,6 +126,37 @@ const mutations = [
     to:   "    + capped + suffix;",
     expect: ['the populated earthquake card states its query radius'] },
 
+  /* Functional acceptance: hostile content, unkeyed visitors, truthful loading, zoom. */
+  { name: 'the priority card stops escaping the event name',
+    from: "    + '<span class=\"pri-event\">' + esc(p.event || 'Alert') + '</span></div>'",
+    to:   "    + '<span class=\"pri-event\">' + (p.event || 'Alert') + '</span></div>'",
+    expect: ['no injected element was created in the priority card'] },
+
+  { name: 'a new-tab link drops noreferrer',
+    from: '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener noreferrer">',
+    to:   '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener">',
+    expect: ['every one carries noopener AND noreferrer'] },
+
+  { name: 'the loading aggregate claims a refresh while sources are still checking',
+    from: "    const checking = keys.filter(k => sourceState(k) === 'loading').length;",
+    to:   "    const checking = 0;",
+    expect: ['a first load says how many sources are still checking'] },
+
+  { name: 'gust-only wind is presented as sustained wind',
+    from: "      if (windNote) windNote.textContent = `Gust, sustained N/A \u00b7 ${label}${suffix}`;",
+    to:   "      if (windNote) windNote.textContent = `${label}${suffix}`;",
+    expect: ['a gust-only observation is labelled as such'] },
+
+  { name: 'the view tabs go back to a hardcoded sticky offset',
+    from: 'position:sticky;top:var(--hdr-h);z-index:50;flex-wrap:wrap}',
+    to:   'position:sticky;top:160px;z-index:50;flex-wrap:wrap}',
+    expect: ['the view tabs stick to the measured header height'] },
+
+  { name: 'the bottom-nav spacer goes back to a fixed height',
+    from: '.content-spacer{height:calc(var(--nav-h) + 12px)}',
+    to:   '.content-spacer{height:72px}',
+    expect: ['the bottom-nav spacer follows the measured nav'] },
+
   { name: 'the tide reading drops its datum',
     from: "  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name",
     to:   "  if (tideNote) tideNote.textContent = '' + name",
