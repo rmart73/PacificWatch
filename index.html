@@ -157,6 +157,45 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
 /* LAYOUT */
 .desktop-layout{display:flex;flex-direction:column}
+
+/* OVERVIEW
+   Desktop keeps all three priority cards ahead of the observations. Below 768px the first
+   card is followed by wind/rain, so at 390px an observation is reachable without scrolling
+   past every alert. Both orders come from `order` on the same markup. */
+#view-overview.view.active{display:flex;flex-direction:column}
+#priority-first{order:1}
+#priority-rest{order:2}
+#priority-viewall{order:3}
+#obs-row{display:contents}
+#obs-primary{order:4}
+#obs-secondary{order:5}
+#overview-refs{order:6}
+#view-overview .content-spacer{order:7}
+@media(max-width:767px){
+  #priority-first{order:1}
+  #priority-viewall{order:2}
+  #obs-primary{order:3}
+  #priority-rest{order:4}
+  #obs-secondary{order:5}
+}
+/* Two observation cards per row; one column when there is not room for two. */
+.stat-bar{grid-template-columns:repeat(2,1fr)}
+@media(max-width:359px){.stat-bar{grid-template-columns:1fr}}
+
+.pri-card{display:block;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--card)}
+.pri-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+.pri-event{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3}
+.pri-area{font-size:11.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
+.pri-meta{font-size:10.5px;color:var(--ink3);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pri-link{color:var(--sky);font-weight:600;text-decoration:none}
+.pri-none{padding:12px 16px;font-size:12px;color:var(--ink3);border-bottom:1px solid var(--rule);background:var(--card)}
+#priority-viewall{padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card)}
+.viewall-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--sky);border:1px solid var(--rule);background:transparent;border-radius:20px;padding:6px 13px;cursor:pointer}
+.viewall-btn:hover{border-color:var(--sky)}
+.viewall-note{font-size:10.5px;color:var(--ink3);margin-bottom:6px}
+.ref-row{display:flex;gap:8px;flex-wrap:wrap;padding:11px 16px;background:var(--card);border-bottom:1px solid var(--rule)}
+.ref-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;color:var(--ink2);border:1px solid var(--rule);background:transparent;border-radius:20px;padding:6px 13px;cursor:pointer}
+.ref-btn:hover{border-color:var(--sky);color:var(--sky)}
 .sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 10px;border-bottom:1px solid var(--rule);background:var(--card)}
 .sec-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:7px}
 .sec-title svg{width:13px;height:13px;flex-shrink:0}
@@ -260,6 +299,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
 /* HAZARD STATUS BANNER */
 .nws-strip{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card)}
+.nws-strip .strip-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;min-width:0}
+.nws-strip .strip-scope{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);flex-basis:100%}
+.strip-route{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:20px;color:var(--sky);border:1px solid var(--rule);background:transparent;cursor:pointer;flex-shrink:0;white-space:nowrap}
+.strip-route:hover{border-color:var(--sky);color:var(--sky2)}
 .nws-strip .strip-state{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
 .nws-strip .strip-counts{font-size:12px;color:var(--ink2)}
 .nws-strip .strip-meta{font-size:11px;color:var(--ink3);margin-left:auto}
@@ -369,17 +412,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   .bottom-nav{display:none}
   .content-spacer{display:none}
   .clock-display{display:block}
-  .desktop-layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 160px)}
-  .desktop-sidebar{border-right:1px solid var(--rule);background:var(--card);overflow-y:auto;max-height:calc(100vh - 160px);position:sticky;top:160px}
-  /* Alerts rail is always visible on desktop; the main column stays tabbed. */
-  .desktop-sidebar .view{display:block!important;animation:none}
+  /* The pinned Alerts sidebar was replaced by a full Alerts view in PR 3, so desktop is a
+     single column and `.view`/.view.active alone decide visibility. There is deliberately
+     no rule forcing a view visible here: the old `.desktop-sidebar .view{display:block
+     !important}` existed only because the rail sat outside the tab set, and a bare
+     `.view{display:block!important}` would stack all five views at once. */
+  .desktop-layout{min-height:calc(100vh - 130px)}
   .desktop-tabs{display:flex}
   .map-grid{grid-template-columns:repeat(3,1fr)}
   .news-grid{grid-template-columns:repeat(3,1fr)}
 }
 @media(min-width:1024px){
   .map-grid{grid-template-columns:repeat(4,1fr)}
-  .desktop-layout{grid-template-columns:360px 1fr}
+  /* Four observation cards across, per the layout contract. Below this width #obs-row is
+     display:contents so its two halves order independently around the priority cards. */
+  #obs-row{display:flex}
+  #obs-row > .stat-bar{flex:1;min-width:0}
+  #obs-primary{border-right:1px solid var(--rule)}
 }
 
 /* TOAST */
@@ -425,48 +474,92 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   </div>
 </header>
 
-<div class="stat-bar">
-  <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot unknown" id="dot-rain"></span>Rain</div>
-    <div class="stat-val" id="stat-rain">—<span class="stat-unit">"</span></div>
-    <div class="stat-note" id="stat-rain-note">1-hr · loading…</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot unknown" id="dot-wind"></span>Wind</div>
-    <div class="stat-val" id="stat-wind">—<span class="stat-unit"> mph</span></div>
-    <div class="stat-note" id="stat-wind-note">Sustained · loading…</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-lbl"><span class="s-dot unknown" id="dot-tide"></span>Tide</div>
-    <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
-    <div class="stat-note" id="stat-tide-note">loading…</div>
-  </div>
-  <a class="stat-cell stat-cell-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer">
-    <div class="stat-lbl"><span class="s-dot unknown"></span>Shelter</div>
-    <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
-    <div class="stat-note">HIEMA shelter status</div>
-  </a>
-  <a class="stat-cell stat-cell-link" href="https://poweroutage.us/area/state/hawaii" target="_blank" rel="noopener noreferrer">
-    <div class="stat-lbl"><span class="s-dot unknown" id="dot-outage"></span>Outages</div>
-    <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
-    <div class="stat-note">poweroutage.us live map</div>
-  </a>
-</div>
-
 <main>
 
-<!-- Staged NWS strip. Rendered on every update so its states are testable and reviewable,
-     but hidden until the Overview places it in PR 3; showing it now would duplicate the
-     hazard banner below. Append ?strip=1 to reveal it for a browser pass. -->
-<div class="nws-strip is-unknown" id="nws-strip" hidden>
-  <div class="strip-state" id="strip-state">Checking NWS alerts</div>
-  <div class="strip-counts" id="strip-counts" hidden></div>
+<!-- Shared NWS strip. One element in shared chrome rather than a copy per view, so no two
+     surfaces can disagree; it is the Overview's NWS summary and the compact status line on
+     Alerts, Maps, News and Settings. It renders from the same snapshot as everything else. -->
+<div class="nws-strip is-unknown" id="nws-strip" aria-live="polite">
+  <div class="strip-head">
+    <div class="strip-scope" id="strip-scope">NWS ALERTS — HAWAII</div>
+    <div class="strip-state" id="strip-state">Checking NWS alerts</div>
+    <div class="strip-counts" id="strip-counts" hidden></div>
+  </div>
   <div class="strip-meta" id="strip-meta"></div>
+  <button class="strip-route" id="strip-route" onclick="goToAlerts()">All NWS alerts</button>
 </div>
 <div class="desktop-layout">
 
-  <div class="desktop-sidebar">
-  <div id="view-alerts" class="view active">
+  <div class="desktop-tabs" role="tablist" aria-label="Views">
+    <button class="dtab active" data-view="overview" onclick="switchView('overview',this)">Overview</button>
+    <button class="dtab" data-view="alerts" onclick="switchView('alerts',this)">Alerts</button>
+    <button class="dtab" data-view="maps" onclick="switchView('maps',this)">Maps &amp; Live</button>
+    <button class="dtab" data-view="news" onclick="switchView('news',this)">News</button>
+    <button class="dtab" data-view="settings" onclick="switchView('settings',this)">Settings</button>
+  </div>
+
+  <div id="view-overview" class="view active">
+
+    <!-- Order differs by breakpoint and is set with CSS `order`, not by duplicating markup.
+         Desktop keeps all three priority cards ahead of the observations; at 390px the first
+         card is followed by wind/rain so an observation is reachable without scrolling past
+         every alert. -->
+    <div id="priority-first"></div>
+    <div id="priority-rest"></div>
+    <div id="priority-viewall"></div>
+
+    <div id="obs-row">
+      <div class="stat-bar" id="obs-primary">
+        <div class="stat-cell">
+          <div class="stat-lbl"><span class="s-dot unknown" id="dot-wind"></span>Wind</div>
+          <div class="stat-val" id="stat-wind">—<span class="stat-unit"> mph</span></div>
+          <div class="stat-note" id="stat-wind-note">Sustained · loading…</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-lbl"><span class="s-dot unknown" id="dot-rain"></span>Rain, past hour</div>
+          <div class="stat-val" id="stat-rain">—<span class="stat-unit">"</span></div>
+          <div class="stat-note" id="stat-rain-note">1-hr · loading…</div>
+        </div>
+      </div>
+      <div class="stat-bar" id="obs-secondary">
+        <div class="stat-cell">
+          <div class="stat-lbl"><span class="s-dot unknown" id="dot-tide"></span>Tide level</div>
+          <div class="stat-val" id="stat-tide">—<span class="stat-unit"> ft</span></div>
+          <div class="stat-note" id="stat-tide-note">loading…</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-lbl"><span class="s-dot unknown" id="dot-quake"></span>Latest earthquake</div>
+          <div class="stat-val" id="stat-quake">—</div>
+          <div class="stat-note" id="stat-quake-note">USGS · loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="overview-refs">
+      <div class="sec-head"><div class="sec-title">Maps &amp; references</div></div>
+      <div class="ref-row">
+        <button class="ref-btn" onclick="switchView('maps')">Open Maps</button>
+        <button class="ref-btn" onclick="switchView('news')">Open News</button>
+        <button class="ref-btn" onclick="goToSourceDetails()">Source details</button>
+      </div>
+      <div class="stat-bar" id="overview-external">
+        <a class="stat-cell stat-cell-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer">
+          <div class="stat-lbl"><span class="s-dot unknown"></span>Shelter</div>
+          <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
+          <div class="stat-note">HIEMA shelter status · not a live feed</div>
+        </a>
+        <a class="stat-cell stat-cell-link" href="https://poweroutage.us/area/state/hawaii" target="_blank" rel="noopener noreferrer">
+          <div class="stat-lbl"><span class="s-dot unknown" id="dot-outage"></span>Outages</div>
+          <div class="stat-val-link">Check<svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
+          <div class="stat-note">poweroutage.us live map · not a live feed</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="content-spacer"></div>
+  </div>
+
+  <div id="view-alerts" class="view">
 
     <div class="hazard-banner is-ok" id="hazard-banner">
       <div class="hazard-icon">
@@ -510,7 +603,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
     <div class="card">
       <div class="sec-head">
-        <div class="sec-title">
+        <div class="sec-title" id="nws-alerts-heading">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           NWS Live Alerts
         </div>
@@ -607,16 +700,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     </div>
 
     <div style="padding:10px 16px;font-size:9px;color:var(--ink4);text-align:right;letter-spacing:.04em" id="alerts-last-updated"></div>
+    <div class="content-spacer"></div>
   </div>
-  </div>
-
-  <div class="desktop-main">
-
-    <div class="desktop-tabs">
-      <button class="dtab active" data-view="news" onclick="switchView('news',this)">News</button>
-      <button class="dtab" data-view="maps" onclick="switchView('maps',this)">Maps &amp; Live</button>
-      <button class="dtab" data-view="settings" onclick="switchView('settings',this)">Settings</button>
-    </div>
 
     <div id="view-news" class="view">
       <div class="digest-panel" id="digest-panel-news" style="border-bottom:1px solid rgba(255,255,255,.08)" hidden>
@@ -800,7 +885,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
       <div class="settings-section">
         <div class="settings-card">
           <div style="padding:14px 16px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:baseline;justify-content:space-between;gap:10px">
-            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Data Sources</div>
+            <div id="source-health-heading" style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Data Sources</div>
             <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
           </div>
           <div id="source-health-list"></div>
@@ -870,16 +955,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
       <div class="content-spacer"></div>
     </div>
 
-  </div>
 </div>
 </main>
 
 <nav class="bottom-nav">
+  <button class="nav-item active" data-view="overview" onclick="switchView('overview',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+    Overview
+  </button>
   <button class="nav-item" data-view="alerts" onclick="switchView('alerts',this)">
     <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
     Alerts
   </button>
-  <button class="nav-item active" data-view="news" onclick="switchView('news',this)">
+  <button class="nav-item" data-view="news" onclick="switchView('news',this)">
     <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg></div>
     News
   </button>
@@ -900,6 +988,7 @@ const S = {
   apiKey: localStorage.getItem('pw_api_key') || '',
   theme: localStorage.getItem('pw_theme') || 'system',
   island: 'statewide',
+  view: 'overview',   // current view; the strip reads it to decide whether to offer its route
   newsFilter: 'hazard',
   newsSources: null,   // Set of enabled outlet names; populated below
 
@@ -1115,6 +1204,7 @@ function saveKey(context) {
 }
 
 function switchView(v) {
+  S.view = v;
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   const t = document.getElementById('view-' + v);
   if (t) { t.classList.add('active'); window.scrollTo(0,0); }
@@ -1286,10 +1376,123 @@ function nwsSnapshot() {
   return snap;
 }
 
+/* Up to three products on Overview, in the snapshot's existing order, with the full count
+   and a route to the rest. Never a summary that hides how many are active. */
+const PRIORITY_MAX = 3;
+
+function alertUrl(f) {
+  /* NWS returns the canonical product URL as the feature id. Anything else is not linked
+     rather than rendered as a live-looking dead link. */
+  const raw = (f && (f.id || (f.properties && f.properties['@id']))) || '';
+  const u = safeUrl(raw);
+  return u === '#' ? null : u;
+}
+
+function priorityCard(f) {
+  const p = f.properties;
+  const tier = ALERT_TIERS[alertTier(p)];
+  const area = p.areaDesc || '';
+  /* Expiry is stated or explicitly absent; it is never invented. */
+  const expMs = p.expires ? new Date(p.expires).getTime() : NaN;
+  const expiry = isNaN(expMs) ? 'Expiry not provided' : 'Expires ' + fmtTime(new Date(expMs));
+  const url = alertUrl(f);
+  return '<div class="pri-card">'
+    + '<div class="pri-top"><span class="badge ' + (tier ? tier.badge : 'badge-unknown') + '">'
+    + esc(tier ? tier.label : 'ACTIVE') + '</span>'
+    + '<span class="pri-event">' + esc(p.event || 'Alert') + '</span></div>'
+    + (area ? '<div class="pri-area">' + esc(area) + '</div>' : '')
+    + '<div class="pri-meta"><span>' + esc(expiry) + '</span><span>NWS Honolulu</span>'
+    + (url ? '<a class="pri-link" href="' + url + '" target="_blank" rel="noopener noreferrer">Official NWS alert \u2197</a>' : '')
+    + '</div></div>';
+}
+
+function renderPriorityAlerts(snap) {
+  const first = document.getElementById('priority-first');
+  const rest = document.getElementById('priority-rest');
+  const viewall = document.getElementById('priority-viewall');
+  if (!first || !rest || !viewall) return;
+  if (!snap) snap = nwsSnapshot();
+  const items = snap.features.slice(0, PRIORITY_MAX);
+
+  if (!items.length) {
+    /* Mirrors the strip rather than inventing a second vocabulary for the same state. */
+    let msg;
+    if (snap.presentation === 'checking') msg = 'Checking NWS alerts for ' + snap.areaLabel + '\u2026';
+    else if (snap.presentation === 'unavailable') msg = 'Alert status unavailable \u00b7 last verified ' + snap.verifiedAge;
+    else if (snap.presentation === 'stale-empty') msg = 'Alert data stale \u00b7 last verified ' + snap.verifiedAge;
+    else msg = 'No active NWS alerts for ' + snap.areaLabel;
+    first.innerHTML = '<div class="pri-none">' + esc(msg) + '</div>';
+    rest.innerHTML = '';
+    viewall.innerHTML = '';
+    return;
+  }
+  first.innerHTML = priorityCard(items[0]);
+  rest.innerHTML = items.slice(1).map(priorityCard).join('');
+  /* The count is the full eligible total, not the number of cards shown. */
+  const note = snap.total > items.length
+    ? 'Showing ' + items.length + ' of ' + snap.total + ' active NWS products'
+    : 'Showing all ' + snap.total + ' active NWS ' + (snap.total === 1 ? 'product' : 'products');
+  viewall.innerHTML = '<div class="viewall-note">' + esc(note) + (snap.stale ? ' \u00b7 last verified ' + esc(snap.verifiedAge) : '') + '</div>'
+    + '<button class="viewall-btn" onclick="goToAlerts()">View all ' + snap.total + ' active NWS products</button>';
+}
+
+/* The Overview earthquake card reads the same USGS data as the Alerts list. */
+function renderQuakeCard(quakes, stale) {
+  const val = document.getElementById('stat-quake');
+  const note = document.getElementById('stat-quake-note');
+  const dot = document.getElementById('dot-quake');
+  if (!val || !note) return;
+  const suffix = stale ? ' \u00b7 verified ' + verifiedAge('usgsEarthquakes') : '';
+  if (!quakes || !quakes.length) {
+    val.innerHTML = '<span style="font-size:13px;opacity:.4">None</span>';
+    note.textContent = 'No M2.0+ near ' + islandLabel(S.island) + ' in 30 days' + suffix;
+    if (dot) dot.className = 's-dot ' + (stale ? 'unknown' : 'ok');
+    return;
+  }
+  const p = quakes[0].properties;
+  /* A missing magnitude stays unknown rather than becoming a number. */
+  val.innerHTML = p.mag != null
+    ? 'M ' + esc(p.mag.toFixed(1))
+    : '<span style="font-size:13px;opacity:.4">M unknown</span>';
+  note.textContent = truncate(p.place || 'Unknown location', 42) + ' \u00b7 ' + timeAgo(p.time) + suffix;
+  if (dot) dot.className = 's-dot ' + (stale ? 'unknown' : 'ok');
+}
+
+function renderQuakeCardUnavailable() {
+  const val = document.getElementById('stat-quake');
+  const note = document.getElementById('stat-quake-note');
+  const dot = document.getElementById('dot-quake');
+  if (val) val.innerHTML = '<span style="font-size:13px;opacity:.4">\u2014</span>';
+  if (note) note.textContent = 'USGS unavailable';
+  if (dot) dot.className = 's-dot unknown';
+}
+
+/* CROSS-VIEW ACTIONS
+   Each opens a real view and moves focus to what the reader asked for. None of them fetch:
+   every view renders from data already in memory. */
+function goToAlerts() {
+  switchView('alerts');
+  focusTarget('nws-alerts-heading');
+}
+function goToSourceDetails() {
+  switchView('settings');
+  focusTarget('source-health-heading');
+}
+function focusTarget(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  /* Headings are not focusable by default; -1 makes them programmatically focusable without
+     inserting them into the tab order. */
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  el.focus();
+  if (el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+}
+
 /* One entry point so no caller can refresh three surfaces and forget the fourth. */
 function renderAlertSurfaces() {
   const snap = nwsSnapshot();
   renderNwsStrip(snap);
+  renderPriorityAlerts(snap);
   /* Nothing has been verified yet: leave the loading skeleton rather than replacing it
      with a confident-looking empty state. */
   if (snap.presentation === 'checking') return snap;
@@ -1304,11 +1507,12 @@ function renderAlertSurfaces() {
   return snap;
 }
 
-/* THE STRIP IS STAGED, NOT LAUNCHED.
-   PR 2 centralizes the data and renders the strip; PR 3 places it in the Overview. Showing
-   it now would put a second summary directly beside the hazard banner, which the contract
-   rules out for this step. It renders on every update so its states are testable, and
-   ?strip=1 reveals it for the focused browser pass without shipping a duplicate. */
+/* THE SHARED NWS STRIP.
+   One element in shared chrome, not a copy per view, so no two surfaces can disagree about
+   the state. It is the Overview's NWS summary and the compact status line on Alerts, Maps,
+   News and Settings; the route to the full product list is hidden only on Alerts itself,
+   where it would point at the page already open. Staged and hidden through PR 2, placed and
+   visible in PR 3 — the ?strip=1 staging flag was removed with the staging. */
 function renderNwsStrip(snap) {
   const el = document.getElementById('nws-strip');
   if (!el) return;
@@ -1353,6 +1557,12 @@ function renderNwsStrip(snap) {
   if (snap.other) parts.push(snap.other + (snap.other === 1 ? ' other product' : ' other products'));
 
   el.className = 'nws-strip is-' + tone;
+  const scopeEl = document.getElementById('strip-scope');
+  if (scopeEl) scopeEl.textContent = 'NWS alerts \u2014 ' + area;
+  /* The route is the way to the full product list from every other view. On Alerts itself
+     it would point at the page you are already reading. */
+  const routeEl = document.getElementById('strip-route');
+  if (routeEl) routeEl.hidden = (S.view === 'alerts');
   stateEl.textContent = headline;
   countsEl.textContent = parts.join(' \u00b7 ');
   countsEl.hidden = !parts.length;
@@ -1678,6 +1888,9 @@ function timeAgo(ms) {
 }
 
 function renderQuakes(quakes, stale) {
+  /* The Overview card and the Alerts list are the same data; updating them together stops
+     one going stale while the other refreshes. */
+  renderQuakeCard(quakes, stale);
   const container = document.getElementById('earthquakes-container');
   if (!container) return;
   const note = stale ? staleNote('usgsEarthquakes') : '';
@@ -1713,7 +1926,7 @@ async function fetchEarthquakes() {
     sourceFail('usgsEarthquakes', e.message);
     const cached = usableCache('usgsEarthquakes');
     if (cached) renderQuakes(cached, true);
-    else container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
+    else { renderQuakeCardUnavailable(); container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`; }
     console.warn('Earthquake fetch failed:', e.message);
   }
 }
@@ -2085,15 +2298,6 @@ renderSourceHealth();
 async function refreshAll() {
   await Promise.allSettled([fetchAlerts(), fetchWeather(), fetchTides(), fetchEarthquakes(), fetchFema(), fetchNews()]);
 }
-/* The strip ships staged. This reveals it for a focused browser pass without exposing a
-   duplicate summary to users; PR 3 places it properly and drops the flag. */
-try {
-  if (new URLSearchParams(location.search).has('strip')) {
-    const stripEl = document.getElementById('nws-strip');
-    if (stripEl) stripEl.hidden = false;
-  }
-} catch(e) {}
-
 refreshAll();
 setInterval(refreshAll, 5 * 60 * 1000);
 /* Ages are relative, so they must re-render between fetches or "2 min ago" freezes. */
@@ -2117,7 +2321,7 @@ function startAgeTick() {
 }
 startAgeTick();
 
-switchView('news');
+switchView('overview');
 
 async function callClaude(sys, user, outEl, tsEl, btnEl, label) {
   if (!S.apiKey) {

@@ -21,7 +21,7 @@ are attributed to the user-relayed Claude report.
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
 | Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
-| Overview layout / navigation | Claimed 2026-09-08 on claude/overview-layout | Claude implements; Codex reviews and runs the browser pass |
+| Overview layout / navigation | Implemented; PR open | Codex reviews; browser pass including 200% zoom gates the merge |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
@@ -91,7 +91,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 3 | Claimed, not yet opened | Claude implements; PR follows on claude/overview-layout |
+| PR 3 | Open for review | Codex reviews and runs the browser check list below |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -126,6 +126,41 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — PR 3 implemented: Overview, five views, sidebar replaced
+
+Five real views with Overview initial; the pinned desktop Alerts sidebar is gone and Alerts
+is a full view. Both breakpoints are a single column where .view/.view.active alone decide
+visibility — there is no rule forcing a view visible, and a test asserts both that no live
+rule of that shape exists and that exactly one view is active after every switch.
+
+Overview carries up to three priority products with the full count and a route to the rest,
+the four observation readings moved out of the always-visible stat bar, and routes to Maps,
+News and Source details. Reading order comes from CSS order on one copy of the markup: there
+is exactly one #stat-wind in the document, asserted. The strip is one element in shared
+chrome; its route is hidden only on Alerts. The ticker is retained pending the coverage
+judgement Codex asked for.
+
+**Evidence:** npm test 106, test:dom 197, test:mutation 23/23. New DOM sections 17-22 cover
+the five views, priority cards and counts, cross-view focus with a fetch counter, the strip
+across every view, breakpoint ordering, and the moved observations. Seven new mutation cases
+cover the PR 3 behaviours; all 23 are caught.
+
+**Browser check list — none of this is verified by Claude:**
+
+1. **200% zoom** — the agreed gate. Essential text, controls and access to alerts preserved.
+2. `#obs-row{display:contents}` below 1024px and flex above it. This is the least certain
+   piece: if display:contents misbehaves, the observation cards stop reordering on mobile.
+3. Strip at 320/390px — scope, state, counts, freshness and route all present, none clipped.
+4. Priority cards with long event names and long area lists; areas must wrap, not truncate.
+5. Exactly one view visible at each breakpoint — tests assert the DOM, not what is painted.
+6. Five bottom-nav buttons at 320px: labels legible, safe-area inset respected.
+7. Focus visibility after All NWS alerts and Source details; the headings take tabindex=-1.
+8. Light, dark and system across the new Overview surfaces.
+
+index.html grew 123,743 to 135,287 bytes.
+
+**Next action:** Codex reviews against the merged contract and runs the list above.
 
 ### 2026-09-08 — #16 merged and production verified; PR 3 claimed
 

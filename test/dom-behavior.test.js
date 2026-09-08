@@ -326,8 +326,12 @@ function has(label, sel, needle, expected) {
                          tone: $('#nws-strip').className });
   const feed = async (features) => { alertFeatures = features; w.fetch = makeFetch(null);
                                      await w.fetchAlerts(); await settle(); };
+  /* Pass NO_EXPIRY to mean "this product has none". A plain null used to fall through to
+     the default, which quietly made the missing-expiry case untestable. */
+  const NO_EXPIRY = '__none__';
   const mk = (event, severity, urgency, area, expires) => ({ properties: { event, severity, urgency,
-                    areaDesc: area || 'Hawaii', sent: new Date().toISOString(), expires: expires || future } });
+                    areaDesc: area || 'Hawaii', sent: new Date().toISOString(),
+                    expires: expires === NO_EXPIRY ? null : (expires || future) } });
 
   /* (1) first load, nothing verified */
   w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null;');
@@ -462,11 +466,11 @@ function has(label, sel, needle, expected) {
   check('then the Maui reading fills in', txt('#stat-wind'), '10 mph');
   w.eval("S.island='statewide'");
 
-  console.log('\n15. The strip ships staged, not exposed:');
-  check('it is hidden by default so it cannot duplicate the banner',
-    $('#nws-strip').hasAttribute('hidden'), true);
-  check('but it is present and rendered, so PR 3 only has to place it',
-    strip().state.length > 0, true);
+  console.log('\n15. The strip is now placed, not staged (PR 3):');
+  w.renderAlertSurfaces();   /* section 14 changed the island by eval, which renders nothing */
+  check('it is visible', $('#nws-strip').hasAttribute('hidden'), false);
+  check('the ?strip=1 staging flag is gone', /URLSearchParams[\s\S]{0,120}strip/.test(HTML), false);
+  check('it names the area it is scoped to', txt('#strip-scope').indexOf('Hawaii') !== -1, true);
   console.log('\n16. A claimed check time comes from the fetch, never from the render:');
   /* Review of PR #16: the verified-empty surfaces formatted new Date(), so every age tick and
      every navigation advanced the time the page claimed to have checked NWS — a page left
@@ -507,6 +511,109 @@ function has(label, sel, needle, expected) {
   w.eval('S.sourceHealth.nwsAlerts.lastSuccess = null; S.sourceHealth.nwsAlerts.lastAttempt = null;');
   check('with nothing verified, no time is invented',
     w.eval("checkedTime(nwsSnapshot())"), 'not yet verified');
+  console.log('\n17. Five real views, exactly one visible (PR 3):');
+  const VIEWS = ['overview', 'alerts', 'maps', 'news', 'settings'];
+  check('all five exist', VIEWS.every(v => !!$('#view-' + v)), true);
+  check('Overview is a real view, not a relabelled Alerts', !!$('#view-overview') && !!$('#view-alerts'), true);
+  /* The pinned desktop sidebar is gone. The rule that forced it visible would now stack
+     every view at once, so its absence is asserted rather than assumed. */
+  check('the desktop sidebar element is gone', !!$('.desktop-sidebar'), false);
+  /* Comments in the stylesheet quote the old rule to explain why it went, so the check is
+     made against the stylesheet with comments stripped rather than the raw source. */
+  const cssNoComments = HTML.replace(/\/\*[\s\S]*?\*\//g, '');
+  check('and no live rule forces a view visible',
+    /\.view\s*\{[^}]*display\s*:\s*block\s*!important/.test(cssNoComments), false);
+  VIEWS.forEach(v => {
+    w.switchView(v);
+    const active = d.querySelectorAll('.view.active');
+    check('  ' + v + ': exactly one view active', active.length, 1);
+    check('  ' + v + ': and it is the one asked for', active[0].id, 'view-' + v);
+  });
+  check('every nav destination has a view behind it',
+    [...d.querySelectorAll('.nav-item')].every(b => !!$('#view-' + b.dataset.view)), true);
+  check('desktop tabs cover the same five', d.querySelectorAll('.dtab').length, 5);
+  check('mobile nav covers the same five', d.querySelectorAll('.nav-item').length, 5);
+
+  console.log('\n18. Priority alerts — at most three, never hiding the count:');
+  w.switchView('overview');
+  const many18 = [];
+  for (let i = 0; i < 18; i++) many18.push(mk('Flood Warning', 'Severe', 'Immediate', 'Zone ' + i));
+  many18.push(mk('Flood Watch', 'Severe', 'Future'), mk('High Surf Advisory', 'Minor', 'Expected'));
+  await feed(many18);
+  check('one card leads', $('#priority-first').querySelectorAll('.pri-card').length, 1);
+  check('two more follow', $('#priority-rest').querySelectorAll('.pri-card').length, 2);
+  check('three shown in total', d.querySelectorAll('.pri-card').length, 3);
+  has('the full count is stated, not the shown count', '#priority-viewall', 'Showing 3 of 20', true);
+  has('and there is a route to all of them', '#priority-viewall', 'View all 20', true);
+  has('the leading card is the warning, not an advisory', '#priority-first', 'Flood Warning', true);
+  has('cards carry their expiry', '#priority-first', 'Expires', true);
+  /* A product with no valid expiry says so rather than being given one. */
+  await feed([mk('Flood Warning', 'Severe', 'Immediate', 'Oahu', NO_EXPIRY)]);
+  has('missing expiry is stated, not invented', '#priority-first', 'Expiry not provided', true);
+  check('and no dead link is rendered', $('#priority-first').querySelectorAll('a.pri-link').length, 0);
+  await feed([]);
+  has('an empty verified feed says so on Overview', '#priority-first', 'No active NWS alerts', true);
+  check('with no cards and no route', d.querySelectorAll('.pri-card').length, 0);
+
+  console.log('\n19. Cross-view actions move focus and fetch nothing:');
+  await feed([mk('Tropical Storm Warning', 'Severe', 'Immediate')]);
+  w.switchView('overview');
+  const fetchesBeforeNav = fetchCount;
+  w.goToAlerts();
+  check('All NWS alerts opens the Alerts view', $('.view.active').id, 'view-alerts');
+  check('and focuses its NWS heading', d.activeElement.id, 'nws-alerts-heading');
+  w.goToSourceDetails();
+  check('Source details opens Settings', $('.view.active').id, 'view-settings');
+  check('and focuses Data Sources', d.activeElement.id, 'source-health-heading');
+  w.switchView('maps'); w.switchView('news'); w.switchView('overview');
+  await settle();
+  check('navigation issued no network requests', fetchCount, fetchesBeforeNav);
+
+  console.log('\n20. The strip follows the reader across every view:');
+  await feed([mk('Tropical Storm Warning', 'Severe', 'Immediate'), mk('Flood Watch', 'Severe', 'Future')]);
+  ['overview', 'maps', 'news', 'settings'].forEach(v => {
+    w.switchView(v);
+    check('  ' + v + ': strip still shows the state', txt('#strip-state'), 'WARNING \u2014 Hawaii');
+    check('  ' + v + ': with both tier counts', txt('#strip-counts'), '1 warning \u00b7 1 watch');
+    check('  ' + v + ': and a route to Alerts', $('#strip-route').hidden, false);
+  });
+  w.switchView('alerts');
+  check('on Alerts the route is not offered', $('#strip-route').hidden, true);
+  check('but the state still is', txt('#strip-state'), 'WARNING \u2014 Hawaii');
+  /* The strip must not degrade into a bare link now that the pinned rail is gone. */
+  check('the strip is never reduced to just a link',
+    txt('#strip-counts').length > 0 && txt('#strip-state').length > 0, true);
+  w.switchView('overview');
+
+  console.log('\n21. Reading order is set by CSS, not duplicated markup:');
+  /* jsdom does not resolve media queries, so the rules are read from the stylesheet. The
+     document order below is what both breakpoints reorder, and it is asserted directly. */
+  const kids = [...$('#view-overview').children].map(e => e.id || e.className).filter(Boolean);
+  check('markup order is source-of-truth and appears once',
+    kids.indexOf('priority-first') < kids.indexOf('priority-rest'), true);
+  check('there is exactly one wind reading in the document',
+    d.querySelectorAll('#stat-wind').length, 1);
+  check('and exactly one rain reading', d.querySelectorAll('#stat-rain').length, 1);
+  const orderOf = (block, id) => {
+    const m = block.match(new RegExp('#' + id + '\\{order:(\\d+)\\}'));
+    return m ? Number(m[1]) : null;
+  };
+  const desktopCss = HTML.slice(HTML.indexOf('#view-overview.view.active'), HTML.indexOf('@media(max-width:767px)'));
+  const mobileCss = HTML.slice(HTML.indexOf('@media(max-width:767px)'), HTML.indexOf('/* Two observation cards per row'));
+  check('desktop: all three priority cards precede the observations',
+    orderOf(desktopCss, 'priority-rest') < orderOf(desktopCss, 'obs-primary'), true);
+  check('mobile: the first card precedes the observations',
+    orderOf(mobileCss, 'priority-first') < orderOf(mobileCss, 'obs-primary'), true);
+  check('mobile: wind/rain precede the remaining priority cards',
+    orderOf(mobileCss, 'obs-primary') < orderOf(mobileCss, 'priority-rest'), true);
+  check('mobile: tide/quake follow the remaining cards',
+    orderOf(mobileCss, 'priority-rest') < orderOf(mobileCss, 'obs-secondary'), true);
+
+  console.log('\n22. Observations moved to Overview rather than being shown twice:');
+  check('the earthquake card exists', !!$('#stat-quake'), true);
+  check('shelter and outage references survived the move',
+    HTML.indexOf('poweroutage.us') !== -1 && HTML.indexOf('dod.hawaii.gov/hiema') !== -1, true);
+  check('the ticker is retained for now', !!$('#ticker-track'), true);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);

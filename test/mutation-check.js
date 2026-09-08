@@ -55,10 +55,41 @@ const mutations = [
     to:   "  ['warning', 'watch', 'advisory'].forEach(t => {\n    if (snap.counts[t]) parts.push(tierCountLabel(t, snap.counts[t]));\n  });",
     expect: ['exact counts, every tier reported'] },
 
-  { name: 'strip becomes visible instead of staged',
-    from: '<div class="nws-strip is-unknown" id="nws-strip" hidden>',
-    to:   '<div class="nws-strip is-unknown" id="nws-strip">',
-    expect: ['hidden by default so it cannot duplicate the banner'] },
+  /* PR 3: the Overview, its priority cards and the cross-view actions. */
+  { name: 'more than three priority cards rendered',
+    from: '  const items = snap.features.slice(0, PRIORITY_MAX);',
+    to:   '  const items = snap.features.slice(0, 5);',
+    expect: ['three shown in total'] },
+
+  { name: 'the route reports the shown count instead of the real total',
+    from: "    ? 'Showing ' + items.length + ' of ' + snap.total + ' active NWS products'",
+    to:   "    ? 'Showing ' + items.length + ' of ' + items.length + ' active NWS products'",
+    expect: ['the full count is stated, not the shown count'] },
+
+  { name: 'a missing expiry is invented rather than stated',
+    from: "  const expiry = isNaN(expMs) ? 'Expiry not provided' : 'Expires ' + fmtTime(new Date(expMs));",
+    to:   "  const expiry = 'Expires ' + fmtTime(new Date(isNaN(expMs) ? Date.now() : expMs));",
+    expect: ['missing expiry is stated, not invented'] },
+
+  { name: 'switching views leaves the previous one active too',
+    from: "  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));",
+    to:   "  /* mutation: previous view left active */",
+    expect: ['exactly one view active'] },
+
+  { name: 'a cross-view action navigates without moving focus',
+    from: "function goToAlerts() {\n  switchView('alerts');\n  focusTarget('nws-alerts-heading');",
+    to:   "function goToAlerts() {\n  switchView('alerts');",
+    expect: ['and focuses its NWS heading'] },
+
+  { name: 'the strip offers a route to the view already open',
+    from: "  if (routeEl) routeEl.hidden = (S.view === 'alerts');",
+    to:   "  if (routeEl) routeEl.hidden = false;",
+    expect: ['on Alerts the route is not offered'] },
+
+  { name: 'mobile order puts both remaining cards before the observations',
+    from: '  #obs-primary{order:3}\n  #priority-rest{order:4}',
+    to:   '  #obs-primary{order:5}\n  #priority-rest{order:3}',
+    expect: ['wind/rain precede the remaining priority cards'] },
 
   /* Breaks the page at section 1 rather than at the snapshot sections: with a current
      source reporting no data, every surface empties immediately. */

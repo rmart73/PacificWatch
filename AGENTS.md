@@ -96,7 +96,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `esc(text)` then the `**bold**` transform | Reversing the order lets model output emit live HTML | Security rule 3 |
 | "All clear" is steel blue, not green | The palette has no green; red/blue keeps the triad readable with red-green color blindness | Theming |
 | Amber hazard banner uses ink text, not white | White on `--warn` is 2.6:1 and fails WCAG AA | Theming |
-| Desktop view rule is scoped to `.desktop-sidebar .view` | A bare `.view{display:block!important}` stacks all three views at once | Architecture |
+| There is no rule forcing any `.view` visible, and no `.desktop-sidebar` | The pinned Alerts rail was replaced by a full Alerts view in PR 3. Re-adding `.view{display:block!important}` in any form stacks all five views at once with no way to switch — the bug this codebase already shipped once. Exactly one view is visible at every breakpoint, and a test asserts it | Architecture |
 | Star-Advertiser gets a long browser UA string | It 403s a bare `Mozilla/5.0` | News headlines |
 | `.hazard-banner.is-unknown` looks like a duplicate of `.is-ok` | Merging them makes a failed NWS fetch render as an all-clear | Status semantics |
 | `.hazard-banner.is-info` looks like a third duplicate of `.is-ok` | It means "active but nothing at hazard tier". Collapsing it into `is-ok` makes a live Tropical Cyclone Local Statement read as an all-clear | Architecture |
@@ -108,6 +108,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
 | The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
 | `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
+| The Overview reading order comes from CSS `order`, not from duplicated markup | The contract requires a different order on desktop and at 390px. Duplicating the cards to achieve it would give two copies of every reading to drift apart, and screen readers would announce both. There is exactly one `#stat-wind` in the document, and a test asserts it | Architecture |
 | The strip has its own `--strip-*` colour tokens instead of reusing `--alert`/`--warn`/`--unknown` | Those are display colours for dots and badges, where the 4.5:1 text rule does not apply. As 12px text they failed WCAG AA — light watch 2.57:1, light unknown 2.54:1, dark unknown 3.90:1. The strip tokens are the same hues darkened only as far as compliance needs, so severity stays distinguishable. Repointing a strip rule at a display token fails `test/contrast.test.js` | Theming |
 | Verified-empty surfaces format `snap.checkedAt`, never `new Date()` | Rendering is triggered by age ticks and navigation, not only by fetches. Formatting the current time let a page left open keep advancing the check time it claimed — reporting a fresh verification it had never made | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
@@ -259,11 +260,33 @@ const S = {
 };
 ```
 
-Views: `alerts`, `news`, `maps`, `settings`. On mobile the bottom nav switches all four. On desktop
-(≥768px) the Alerts rail is pinned as a sidebar and always visible, while `.desktop-tabs` switches
-News / Maps / Settings in the main column — `switchView()` syncs both bars. Note the desktop rule is
-scoped to `.desktop-sidebar .view`; a bare `.view{display:block!important}` would make all three main
-views render stacked at once with no way to switch, which is what it used to do.
+Views: `overview`, `alerts`, `maps`, `news`, `settings`, with **Overview initial**. Both the mobile
+bottom nav and `.desktop-tabs` switch all five, and `switchView()` syncs both bars and records the
+current view in `S.view`.
+
+**The pinned desktop Alerts sidebar was deliberately removed in PR 3** and Alerts became a full view.
+It was previously always visible beside the tabbed column; keeping it would have left a second,
+competing summary next to Overview. Both breakpoints are now a single column where `.view` and
+`.view.active` alone decide visibility, and **exactly one view is visible and keyboard-reachable**.
+
+There is deliberately no rule forcing a view visible any more. The old
+`.desktop-sidebar .view{display:block!important}` existed only because the rail sat outside the tab
+set — it is not a pattern to reintroduce, and a bare `.view{display:block!important}` would stack all
+five views at once with no way to switch, which is what this codebase did before it was scoped. A test
+asserts that no live rule of that shape exists and that exactly one view is active after every switch.
+
+Overview holds up to three priority NWS products, the four observation readings that used to sit in
+the always-visible stat bar, and routes to Maps, News and Source details. **Reading order differs by
+breakpoint and comes from CSS `order` on one copy of the markup, never from duplicated elements**:
+desktop keeps all three priority cards ahead of the observations, while below 768px the first card is
+followed by wind/rain so an observation is reachable at 390px without scrolling past every alert.
+`#obs-row` is `display:contents` below 1024px so its two halves can be ordered independently, and a
+flex row at 1024px and up so the four cards sit on one line.
+
+The strip is one element in shared chrome rather than a copy per view, so no two surfaces can
+disagree; its route to Alerts is hidden only on Alerts itself. The scrolling ticker is **retained for
+now** — the contract permits retiring it only once the strip and the full Alerts view demonstrably
+cover its active-alert access, which is a judgement to make against the built layout.
 
 **Island-scoped requests carry a scope token.** `fetchWeather()`, `fetchTides()` and
 `fetchEarthquakes()` call `beginRequest(key)` before fetching and `requestIsCurrent(token)`
