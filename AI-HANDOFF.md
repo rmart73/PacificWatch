@@ -33,6 +33,9 @@ Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-c
 handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
 accuracy across the four observation cards.
 
+Extended 2026-09-08 to cover the end-of-night handoff record on this same branch, at Codex's
+request and under the documentation claim rule.
+
 Output is a report only. **No remediation in this branch** — findings are written up and
 prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
 bundled into an assessment. Layout stays deferred and unclaimed.
