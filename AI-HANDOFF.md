@@ -26,58 +26,8 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
-**Testing principles into AGENTS.md — Claude Code, claude/testing-principles.**
-Claim published 2026-09-08 before editing, in its own commit ahead of the change.
-
-Scope: the Testing section of `AGENTS.md` only. Two principles, agreed with Codex after the
-wind unit defect:
-
-1. Expected results for source-derived values must be independently established, never computed
-   using the app's own transformation. Fixed expectations must have a traceable basis.
-2. Source-handling changes require a timestamped raw-response versus rendered-output check,
-   recording the source, relevant fields and units, observation time, expected result and actual
-   display. If that check cannot be completed, it is recorded as unverified.
-
-Out of scope: implementation of any kind, the retrospective log entry — which Codex confirmed
-already distinguishes evidence of the fix correctly — and every deferred item, layout included.
-
-**PR 3 — Overview layout, navigation and sidebar replacement. Claude Code, claude/overview-layout.**
-Claim published 2026-09-08 before editing any implementation file. This is the last of the
-three agreed PRs and the largest; it is landing alone, not in parallel with other work.
-
-In scope:
-
-- Five real views on both breakpoints — Overview, Alerts, Maps, News, Settings — with
-  Overview initial, island selection kept in shared chrome, and native buttons carrying an
-  accessible current-view state.
-- **Replacing the pinned desktop Alerts sidebar with a full Alerts view.** Exactly one main
-  view visible and keyboard-reachable at each breakpoint, and explicitly *not* by way of a
-  bare `.view{display:block!important}` — that rule is a load-bearing entry in AGENTS.md
-  because it stacks every view at once.
-- Unhiding the staged strip and dropping the `?strip=1` flag. The strip is required on News,
-  Maps and Settings as well as Alerts, carrying highest-tier state, separate tier counts,
-  selected area, verification state and a route to Alerts — it must not degrade into a bare
-  link once the pinned rail is gone.
-- Up to three priority alert cards with the full count and a route to all products; stat-bar
-  readings moved into Overview cards rather than shown twice.
-- Cross-view actions: All NWS alerts opens Alerts and focuses its NWS heading; Recent
-  earthquakes opens the existing earthquake section; Source details opens Settings at Data
-  Sources. Navigation issues no network requests, which is asserted with the fetch counter.
-- Architecture prose updated to explain the intentional sidebar replacement, per the contract.
-
-Out of scope: retiring the scrolling ticker. The contract permits it only once the strip and
-Alerts view fully cover its active-alert access. That is a judgement best made against the
-built layout, so it is deferred rather than bundled — say if it should be in this PR.
-
-Two things I expect to be awkward, recorded now rather than discovered late: the mobile order
-at 390px puts wind/rain between priority card 1 and cards 2–3, which cuts against the natural
-grouping of the three alert cards; and `switchView()` currently calls `renderAlertSurfaces()`,
-so per-view strip rendering must not turn navigation into a render storm or duplicate listeners.
-
-**Blocking on this PR, not on the last one:** 200% browser zoom is still unverified. It was
-merged as an accepted exception in #16 while the strip was hidden. PR 3 makes it visible to
-everyone, so that exception does not carry over — the zoom pass needs a human before this
-merges.
+No work is currently claimed. The three-PR sequence is complete and every
+remaining item below is deferred and unclaimed.
 
 ### Agreed next sequence
 
@@ -98,7 +48,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/testing-principles | Docs only: two review principles into the AGENTS Testing section |
+| _none_ | — | No work is claimed. Layout and the remaining items are deferred and unclaimed. |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -106,7 +56,6 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Testing principles into AGENTS | Claimed 2026-09-08 on claude/testing-principles | Claude writes; Codex reviews |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Follow-up after the three-PR sequence |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
@@ -142,6 +91,29 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — Testing principles recorded; no work claimed
+
+Two rules now live in the AGENTS Testing section, ahead of the mutation and contrast notes:
+expected results for source-derived values must be independently established rather than
+computed with the app's own transformation, and a change to source handling requires a
+timestamped raw-response versus rendered-output check that is recorded as unverified if it
+cannot be completed. The narrow storage/identity exception is documented so the cache/race
+assertion's use of `toMph()` cannot be misread as a violation.
+
+The section leads with the pre-fix counts — 255 DOM assertions, 37 contrast assertions, 38
+mutation cases and a browser pass — because quoting the post-fix figures would use the fix as
+evidence against itself. That was Codex's correction to the retrospective and it is the same
+error the rules exist to prevent.
+
+The claim was published in its own commit ahead of the change, and the change touched
+`AGENTS.md` alone. The retrospective entry is unchanged.
+
+**Nothing is claimed as of this entry.** Open and deferred: visual layout refinement, which
+needs an agreed design before implementation and must preserve the verified navigation,
+full-alert access, disclosures and 200% usability; six bot-challenged reference URLs unverified
+since F005; Q001, a direct PTWC source, low priority; and page weight, now roughly 144 KB
+against 113 KB when it was deferred.
 
 ### 2026-09-08 — Wind was overstated 3.6x on production (owner found)
 
