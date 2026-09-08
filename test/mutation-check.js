@@ -114,6 +114,18 @@ const mutations = [
     to:   '    renderWeather(data.properties, sta.label, false);',
     expect: ['statewide discloses it too'] },
 
+  /* Both sides of a cached label have to carry the qualifier. Fixing the weather path and
+     leaving the tide path was the actual defect, so each is mutated separately. */
+  { name: 'the tide cache stores the unqualified station name',
+    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);",
+    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);",
+    expect: ['and still does after a failed refresh'] },
+
+  { name: 'the populated earthquake card drops its query scope',
+    from: "    + ' \\u00b7 ' + quakeRadiusLabel() + capped + suffix;",
+    to:   "    + capped + suffix;",
+    expect: ['the populated earthquake card states its query radius'] },
+
   { name: 'the tide reading drops its datum',
     from: "  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name",
     to:   "  if (tideNote) tideNote.textContent = '' + name",

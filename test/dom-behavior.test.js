@@ -666,13 +666,33 @@ function has(label, sel, needle, expected) {
   await w.fetchWeather();
   await settle();
   has('statewide discloses it too', '#stat-wind-note', 'Honolulu reference', true);
+  /* The disclosure must survive a failed refresh: it went missing exactly when the reading
+     became stale, because the cache held the unqualified station name. */
+  await w.fetchTides();
+  await settle();
+  has('statewide tide discloses the reference', '#stat-tide-note', 'Honolulu reference', true);
+  w.fetch = makeFetch('tidesandcurrents');
+  await w.fetchTides();
+  await settle();
+  has('and still does after a failed refresh', '#stat-tide-note', 'Honolulu reference', true);
+  has('while showing it is no longer verified', '#stat-tide-note', 'verified', true);
+  w.eval("S.island='molokai'");
+  w.fetch = makeFetch(null);
+  await w.fetchTides();
+  await settle();
+  w.fetch = makeFetch('tidesandcurrents');
+  await w.fetchTides();
+  await settle();
+  has('Molokai keeps its disclosure on the failure path too', '#stat-tide-note', 'no Molokaʻi station', true);
+  w.eval("S.island='statewide'");
+  w.fetch = makeFetch(null);
   has('the observation time is separate from the fetch time', '#stat-wind-note', 'obs ', true);
 
   quakeFeatures = [{ properties: { mag: 3.4, place: '14 km SW of Volcano', time: Date.now() - 3600000 } }];
   await w.fetchEarthquakes();
   await settle();
-  has('the earthquake card states its query radius', '#stat-quake-note', 'within 500 km', false);
-  has('the earthquake scope names the radius somewhere', '#earthquakes-container', 'within 500 km', true);
+  has('the populated earthquake card states its query radius', '#stat-quake-note', 'within 500 km of Hawaii', true);
+  has('and the Alerts list states it as well', '#earthquakes-container', 'within 500 km', true);
   /* Ten results is the query limit. Reporting it as a plain count would present a truncated
      list as a complete one. */
   quakeFeatures = [];

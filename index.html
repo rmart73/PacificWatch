@@ -1445,9 +1445,12 @@ function renderPriorityAlerts(snap) {
    states the scope it actually covers. A full result set may be truncated by that limit and
    must not read as a complete count. */
 const USGS_LIMIT = 10;
-function quakeScope() {
+function quakeRadiusLabel() {
   const sta = EARTHQUAKE_STATIONS[S.island] || EARTHQUAKE_STATIONS.statewide;
-  return 'M2.0+ within ' + sta.radiusKm + ' km of ' + islandLabel(S.island);
+  return 'within ' + sta.radiusKm + ' km of ' + islandLabel(S.island);
+}
+function quakeScope() {
+  return 'M2.0+ ' + quakeRadiusLabel();
 }
 
 function renderQuakeCard(quakes, stale) {
@@ -1469,7 +1472,11 @@ function renderQuakeCard(quakes, stale) {
     ? 'M ' + esc(p.mag.toFixed(1))
     : '<span style="font-size:13px;opacity:.4">M unknown</span>';
   const capped = quakes.length >= USGS_LIMIT ? ' \u00b7 ' + USGS_LIMIT + '+ in range' : '';
-  note.textContent = truncate(p.place || 'Unknown location', 42) + ' \u00b7 ' + timeAgo(p.time) + capped + suffix;
+  /* The scope belongs on the populated card too, not only on the empty one and the list. A
+     magnitude with no radius reads as "the latest earthquake" rather than "the latest inside
+     this query", which is a claim about everywhere else that the data does not support. */
+  note.textContent = truncate(p.place || 'Unknown location', 34) + ' \u00b7 ' + timeAgo(p.time)
+    + ' \u00b7 ' + quakeRadiusLabel() + capped + suffix;
   if (dot) dot.className = 's-dot ' + (stale ? 'unknown' : 'ok');
 }
 
@@ -1896,7 +1903,10 @@ async function fetchTides() {
     const ft = parseFloat(latest.v).toFixed(1);
     if (!isFinite(parseFloat(ft))) throw new Error('unusable tide value');
     if (!requestIsCurrent(token)) return;
-    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);
+    /* Cache the QUALIFIED label. Caching sta.name meant a failed refresh dropped the
+       Honolulu-reference disclosure — losing it precisely when the reading is stale and
+       most needs its caveat. */
+    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);
     renderTide(ft, tideLabel(sta), false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;

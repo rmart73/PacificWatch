@@ -127,6 +127,28 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — Two observation fixes on PR 3
+
+**Tide fallback lost the Honolulu disclosure.** fetchTides cached sta.name while rendering
+tideLabel(sta), so a failed refresh dropped the caveat precisely when the reading was stale
+and most needed it. This is the same defect as the weather path, on the other side; fixing
+one and not the other is what let it through. The cache now holds the qualified label, and
+the failure path is tested for statewide and Molokaʻi.
+
+**Populated earthquake cards omitted the query radius.** Only the empty card and the Alerts
+list carried it, so a magnitude read as "the latest earthquake" rather than "the latest
+inside this query" — a claim about everywhere else that the data does not support. The
+populated card now reads "Kauai fixture · 1m ago · within 200 km of Kauai".
+
+Worth recording: the test covering that second case asserted **false** — it pinned the missing
+scope in place as expected behaviour instead of reporting it. A test that documents a defect
+as correct is worse than no test, and it is why the mutation harness now has a case for it.
+
+**Evidence:** npm test 106, test:dom 226, test:mutation 32/32.
+
+**Still open:** the full layout recheck and 200% browser zoom, the agreed merge gate,
+unverified by anyone. #17 stays open.
+
 ### 2026-09-08 — PR 3 review defects fixed
 
 All three confirmed and fixed; two of them were things the DOM tests could not see.
