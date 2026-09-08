@@ -157,6 +157,28 @@ const mutations = [
     to:   '.content-spacer{height:72px}',
     expect: ['the bottom-nav spacer follows the measured nav'] },
 
+  /* The unit defect that shipped to production: km/h data converted with the m/s factor,
+     overstating every wind reading by 3.6x during a hurricane. */
+  { name: 'wind converted with the metres-per-second factor again',
+    from: "  'wmounit:km_h-1': 0.621371,",
+    to:   "  'wmounit:km_h-1': 2.236936,",
+    expect: ['the production case: 51.84 km/h reads as 32 mph'] },
+
+  { name: 'an unrecognised unit is converted with a guessed factor',
+    from: "  if (factor === undefined) {",
+    to:   "  if (false) {",
+    expect: ['an unknown unit is withheld, not guessed'] },
+
+  { name: 'the declared unitCode is ignored and one factor is assumed',
+    from: "  const factor = table[code];",
+    to:   "  const factor = table['wmounit:m_s-1'];",
+    expect: ['the production case: 51.84 km/h reads as 32 mph'] },
+
+  { name: 'precipitation loses its unit handling',
+    from: "  'wmounit:mm': 0.0393701,",
+    to:   "  'wmounit:mm': 1,",
+    expect: ['25.4 mm is one inch'] },
+
   { name: 'the tide reading drops its datum',
     from: "  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name",
     to:   "  if (tideNote) tideNote.textContent = '' + name",

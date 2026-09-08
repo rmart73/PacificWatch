@@ -17,6 +17,14 @@ let newsItems = null;       // when set, overrides the default news payload
 let quakeFeatures = null;   // when set, overrides the default USGS payload
 let windOverrideMph = null; // when set, every observation answers with this reading
 let gustOnly = false;       // when true, the observation reports a gust but no sustained wind
+let rawObs = null;          // when set, used verbatim as the observation properties
+
+/* NWS reports wind in km/h and precipitation in mm, each with its unitCode. Fixtures are
+   written in the units a reader thinks in and converted here, so an expected "40 mph" in a
+   test is visibly the same 40 the assertion checks. */
+const KMH_PER_MPH = 1.609344;
+const wind = mph => ({ unitCode: 'wmoUnit:km_h-1', value: mph == null ? null : mph * KMH_PER_MPH });
+const rain = mm => ({ unitCode: 'wmoUnit:mm', value: mm });
 function body(url) {
   const u = String(url);
   if (u.includes('/alerts/active')) return { features: alertFeatures || [
@@ -26,13 +34,22 @@ function body(url) {
                     sent: new Date().toISOString(), expires: future } }
   ] };
   if (u.includes('/observations/latest')) {
+    if (rawObs) return { properties: rawObs };
     /* mph values chosen to be unmistakable per station: PHOG 10, PHLI 40, default 18.
-       windOverrideMph wins when set, so two responses for the SAME station can differ. */
-    if (gustOnly) return { properties: { windSpeed: { value: null }, windGust: { value: 20 }, precipitationLastHour: { value: null } } };
-    if (windOverrideMph !== null) return { properties: { windSpeed: { value: windOverrideMph * 0.44704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
-    if (u.includes('PHOG')) return { properties: { windSpeed: { value: 4.4704 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
-    if (u.includes('PHLI')) return { properties: { windSpeed: { value: 17.8816 }, windGust: { value: null }, precipitationLastHour: { value: null } } };
-    return { properties: { windSpeed: { value: 8 }, windGust: { value: null }, precipitationLastHour: { value: 2.5 },
+       windOverrideMph wins when set, so two responses for the SAME station can differ.
+
+       Fixtures carry the unitCode api.weather.gov actually sends. They used to omit it and
+       hold raw m/s numbers, which is how a conversion using the m/s factor against km/h data
+       passed every test while overstating wind by 3.6x on production. */
+    if (gustOnly) return { properties: { windSpeed: wind(null), windGust: wind(20), precipitationLastHour: rain(null),
+                           timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
+    if (windOverrideMph !== null) return { properties: { windSpeed: wind(windOverrideMph), windGust: wind(null), precipitationLastHour: rain(null),
+                           timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
+    if (u.includes('PHOG')) return { properties: { windSpeed: wind(10), windGust: wind(null), precipitationLastHour: rain(null),
+                           timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
+    if (u.includes('PHLI')) return { properties: { windSpeed: wind(40), windGust: wind(null), precipitationLastHour: rain(null),
+                           timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
+    return { properties: { windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
                            timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
   }
   if (u.includes('tidesandcurrents')) return { data: [{ v: '1.7' }] };
@@ -278,8 +295,10 @@ function has(label, sel, needle, expected) {
   await firstKauai.catch(() => {});
   await settle();
   check('the older 40 mph response does not overwrite the display', txt('#stat-wind'), '55 mph');
+  /* Converted through the page's own toMph rather than a factor written here. A literal
+     2.237 in this assertion was a second copy of the very bug being fixed. */
   check('and the cache retains the newer reading',
-    Math.round(w.eval('S.cache.nwsWeather.data.p.windSpeed.value') * 2.237), 55);
+    w.eval('toMph(S.cache.nwsWeather.data.p.windSpeed)'), 55);
   check('generation did not regress', w.eval('S.sourceHealth.nwsWeather.generation'), genAfter);
   windOverrideMph = null;
 
@@ -807,6 +826,7 @@ function has(label, sel, needle, expected) {
   await w.fetchWeather();
   await settle();
   has('a gust-only observation is labelled as such', '#stat-wind-note', 'Gust, sustained N/A', true);
+  check('and the gust value itself is converted correctly', txt('#stat-wind'), '20 mph');
   gustOnly = false;
 
   console.log('\n30. Sticky chrome offsets are measured, not hardcoded (zoom):');
@@ -824,6 +844,44 @@ function has(label, sel, needle, expected) {
   w.syncChromeOffsets();
   check('measuring in a non-rendering DOM leaves the fallback intact',
     w.eval("document.documentElement.style.getPropertyValue('--hdr-h')"), '');
+  console.log('\n31. Units come from the API, never from an assumption:');
+  /* This is the defect that shipped: api.weather.gov reports wind as wmoUnit:km_h-1 and the
+     code applied the metres-per-second factor, so every reading was 3.6x too high. On
+     production, during an active hurricane, a 51.84 km/h gust rendered as 116 mph. The
+     station's own METAR read 11017G28KT — 28 knots, 32 mph. */
+  w.fetch = makeFetch(null);
+  const obsWith = (m) => { rawObs = m; return w.fetchWeather().then(settle); };
+
+  await obsWith({ windSpeed: { unitCode: 'wmoUnit:km_h-1', value: 51.84 } });
+  check('the production case: 51.84 km/h reads as 32 mph', txt('#stat-wind'), '32 mph');
+  check('and specifically NOT the 116 mph it used to show', txt('#stat-wind') === '116 mph', false);
+
+  /* The same number in m/s IS 116 mph. Both conversions are exercised so the fix cannot be
+     a second hardcoded factor that happens to suit one case. */
+  await obsWith({ windSpeed: { unitCode: 'wmoUnit:m_s-1', value: 51.84 } });
+  check('the same value in m/s is a different speed', txt('#stat-wind'), '116 mph');
+
+  await obsWith({ windSpeed: { unitCode: 'wmoUnit:kt', value: 28 } });
+  check('knots convert too, matching the METAR', txt('#stat-wind'), '32 mph');
+  await obsWith({ windSpeed: { unitCode: 'wmoUnit:mi_h-1', value: 32 } });
+  check('mph passes through unchanged', txt('#stat-wind'), '32 mph');
+
+  /* A unit nobody has taught it must not be guessed at. A missing reading is recoverable; a
+     hurricane wind speed wrong by a factor of three is not. */
+  await obsWith({ windSpeed: { unitCode: 'wmoUnit:furlong_fortnight-1', value: 51.84 } });
+  has('an unknown unit is withheld, not guessed', '#stat-wind-note', 'Not reported', true);
+  check('and no number is shown for it', txt('#stat-wind').indexOf('mph'), -1);
+  await obsWith({ windSpeed: { value: 51.84 } });
+  has('a missing unitCode is withheld too', '#stat-wind-note', 'Not reported', true);
+
+  /* Precipitation was already correct, but it is now unit-driven and must stay right. */
+  await obsWith({ windSpeed: wind(null), precipitationLastHour: { unitCode: 'wmoUnit:mm', value: 25.4 } });
+  check('25.4 mm is one inch', txt('#stat-rain'), '1.00"');
+  await obsWith({ windSpeed: wind(null), precipitationLastHour: { unitCode: 'wmoUnit:m', value: 0.0254 } });
+  check('the same depth in metres is also one inch', txt('#stat-rain'), '1.00"');
+  await obsWith({ windSpeed: wind(null), precipitationLastHour: { unitCode: 'wmoUnit:parsec', value: 1 } });
+  has('an unknown precipitation unit is withheld', '#stat-rain-note', 'Not reported', true);
+  rawObs = null;
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
