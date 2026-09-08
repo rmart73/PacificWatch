@@ -26,8 +26,19 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
-No work is currently claimed. The three-PR sequence is complete and every
-remaining item below is deferred and unclaimed.
+**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.**
+Claim published 2026-09-08 before editing, in its own commit ahead of the work.
+
+Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
+handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
+accuracy across the four observation cards.
+
+Output is a report only. **No remediation in this branch** — findings are written up and
+prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
+bundled into an assessment. Layout stays deferred and unclaimed.
+
+Reporting rule agreed with Codex: verified protections, concrete gaps and unverified items are
+reported separately, and neither a green suite nor an HTTP 200 is offered as security clearance.
 
 ### Agreed next sequence
 
@@ -48,7 +59,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| _none_ | — | No work is claimed. Layout and the remaining items are deferred and unclaimed. |
+| Claude | claude/launch-readiness-review | Security and launch-readiness review; report only, no remediation |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
