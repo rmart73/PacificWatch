@@ -105,6 +105,11 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
 | `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
 | Island-scoped fetches call `beginRequest()` and check `requestIsCurrent()` before using their own response | A response can arrive after the user switches islands. Without the guard, `sourceOk()` stamped the cache with `S.island` at completion, filing one island's reading under another — a slow Maui observation rendered and cached as Kauaʻi's. Removing the check restores that bug silently | Architecture |
+| Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
+| The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
+| `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
+| The strip has its own `--strip-*` colour tokens instead of reusing `--alert`/`--warn`/`--unknown` | Those are display colours for dots and badges, where the 4.5:1 text rule does not apply. As 12px text they failed WCAG AA — light watch 2.57:1, light unknown 2.54:1, dark unknown 3.90:1. The strip tokens are the same hues darkened only as far as compliance needs, so severity stays distinguishable. Repointing a strip rule at a display token fails `test/contrast.test.js` | Theming |
+| Verified-empty surfaces format `snap.checkedAt`, never `new Date()` | Rendering is triggered by age ticks and navigation, not only by fetches. Formatting the current time let a page left open keep advancing the check time it claimed — reporting a fresh verification it had never made | Architecture |
 | The theme script sits inline in `<head>` | Moving it lower flashes the wrong theme before first paint | Theming |
 
 If you believe one of these is genuinely wrong, raise it in the PR description and leave the code
@@ -287,6 +292,42 @@ thing again: *active but not hazardous*, *verified empty*, and *not checked*. Do
  HIEMA, FEMA and
 Global Hazards sit in a collapsed "Reference & Resources" section so reference material doesn't
 compete with live feeds.
+
+### Shared NWS snapshot, staged strip and the age tick
+
+`nwsSnapshot()` is the single read of alert state. It returns the eligible product set —
+render-time expiry, then selected-area match, then `compareAlerts()` on a copy — along with
+per-tier counts, the highest tier, the selected area, the verification age and a
+`presentation` value. Every alert surface renders from it through `renderAlertSurfaces()`,
+so no caller can refresh three surfaces and forget the fourth.
+
+Two details are easy to get wrong:
+
+- **`usableCache()` returns retained data for STALE sources only.** Asking it about a current
+  source answers `null`. Treating that as "no data" withdraws alerts at the moment they are
+  successfully verified, so `nwsSnapshot()` reads `S.cache.nwsAlerts` directly in the current
+  case and uses `usableCache()` only when stale.
+- **Counts are per product, not per incident.** A watch and a warning covering the same area
+  are two products and are counted twice on purpose. Nothing is deduplicated by area.
+
+`presentation` is one of `checking`, `warning`, `watch`, `statement`, `empty`, `stale-empty`
+or `unavailable`, with `.stale` separating retained active products from current ones. That
+covers the source states in the v2 overview contract; recovery is not a state but the result
+of recomputing after a successful fetch.
+
+The strip (`#nws-strip`) is **staged, not launched**. It renders on every update so its states
+are testable, but ships `hidden`: showing it now would place a second summary beside the hazard
+banner, which the contract rules out until the Overview lands. Append `?strip=1` to reveal it
+for a browser pass. PR 3 places it and drops the flag.
+
+`ageTick()` re-evaluates freshness and expiry from memory once a minute, and on
+`visibilitychange` and navigation. It issues no network request and must never touch
+verification timestamps. `startAgeTick()` is idempotent — one timer and one listener however
+often it is called — because a duplicated tick would multiply renders on every navigation.
+
+On island switch, `renderIslandScopedChecking()` withdraws the previous area's wind, rain,
+tide and earthquake cards immediately. Leaving Maui's wind under a Kauaʻi heading is the same
+false attribution the request-generation guard fixed inside the cache.
 
 ## Color tokens
 
@@ -491,15 +532,18 @@ only the news headlines need `dev:api`.
 ## Testing
 
 ```bash
-npm test        # pure logic, no dependencies, no runner
-npm run test:dom  # behaviour in a headless DOM — needs `npm i` for jsdom
+npm test             # pure logic, no dependencies, no runner
+npm run test:dom      # behaviour in a headless DOM — needs `npm i` for jsdom
+npm run test:mutation # checks that the DOM and contrast assertions can actually fail
 ```
 
 | Suite | Covers |
 |---|---|
 | `test/phase1-source-health.test.js` | health state machine, per-source thresholds, retention, stale-window withdrawal, island-scoped cache invalidation |
 | `test/severity-model.test.js` | alert tiering, the Extreme override, urgency fallback, word-boundary matching, ordering |
-| `test/dom-behavior.test.js` | the degraded states, the critical-source rule, statement-only banner, news source filtering |
+| `test/dom-behavior.test.js` | the degraded states, the critical-source rule, statement-only banner, news source filtering, the shared snapshot, the nine strip states, the age tick and its wiring, island-switch withdrawal, and check times derived from `lastSuccess` |
+| `test/contrast.test.js` | strip text at 4.5:1 in both themes, drift between the two dark blocks, severity still distinguishable, and the preconditions that make token arithmetic valid |
+| `test/mutation-check.js` | whether the assertions in the other two suites can fail at all |
 
 The first two **extract the functions straight out of `index.html`** with regexes rather than
 importing them — there is no module system to import from. That means a rename can break
@@ -511,9 +555,64 @@ and running it there.
 
 **What the tests cannot do is look at the page.** Every visual property — whether the hollow
 ring reads at 6px, whether the triangles are distinguishable, whether an icon draws at all —
-has needed a human on the Vercel preview. The DOM suite asserts that a class is applied, which
-a malformed SVG path would pass while rendering nothing. Plan for a visual pass on anything
-that changes appearance; the preview is behind Vercel SSO, so neither agent can do it.
+needs eyes. The DOM suite asserts that a class is applied, which a malformed SVG path would
+pass while rendering nothing. `test/contrast.test.js` narrows this for colour by pinning the
+values that reach the renderer, but it still says nothing about layout, wrapping or zoom.
+
+Plan for a visual pass on anything that changes appearance. The Vercel preview is behind SSO,
+so Claude cannot reach it; Codex has done these passes by **rendering the exact head locally**,
+which is the route to use. Browser zoom at 200% has repeatedly resisted automation and has
+been left unverified more than once — say so explicitly rather than implying it was checked.
+
+### Mutation check (`npm run test:mutation`)
+
+Review of PR #14 found a regression test that could not fail: both fixtures in the section
+carried the same reading, so the bug it was written to catch would have passed. A green run
+does not distinguish an assertion that works from one that is decorative.
+
+`test/mutation-check.js` breaks one behaviour at a time in a copy of `index.html`, runs a
+suite against the mutant and requires the intended assertion to fail. Each case names the
+suite that should catch it — `dom` by default, or `contrast` for a CSS or token change — so
+both suites take an HTML path as `argv[2]`. Production files are never modified; mutants are
+written to a temp directory and deleted.
+
+Add a case when you add a behaviour worth trusting. Three results mean something is wrong
+with the case rather than the code:
+
+- **`MISSED`** — the assertion covering that behaviour is decorative and should be tightened.
+- **`ANCHOR LOST`** — the code the case mutates has moved; update the case.
+- **`AMBIGUOUS`** — the anchor appears more than once. `String.replace` rewrites only the
+  first match, so a case like this silently mutates unrelated code and its result means
+  nothing either way. This is not hypothetical: a CSS anchor shared with `.sec-head` made a
+  translucency case mutate the wrong rule, and the guard added afterwards immediately caught
+  a second case that had been reporting `CAUGHT` while mutating the wrong theme block.
+
+The harness checks whether assertions can fail, so it has to hold itself to the same standard.
+
+### Contrast check (`test/contrast.test.js`, part of `npm test`)
+
+Pure arithmetic over the tokens and CSS rules in `index.html` — no DOM, no dependencies. It
+asserts every strip text colour against `--card` in both themes at 4.5:1, checks the two dark
+blocks (`prefers-color-scheme` and `[data-theme="dark"]`) have not drifted apart, and checks
+the five severities are still five distinct colours, so meeting AA by flattening everything
+to near-black is not a way through.
+
+It reads the real rules, so renaming a token or repointing a rule at a display colour fails
+here rather than in someone's eyes.
+
+Ratios are computed from tokens rather than sampled from pixels. That is the method WCAG
+defines, but it is only sound if the foreground and background are really what the tokens
+say, so the file also asserts its own preconditions: the strip paints its own opaque
+`--card` background with no `opacity`/`mix-blend`/`backdrop-filter`, `--card` is an opaque
+hex in both themes, no `!important` colour rule exists anywhere, and each severity rule
+follows the base rule with higher specificity. The base rule that shows through if a tone is
+ever missing is checked too. **Do not delete those assertions to quiet a failure** — they are
+what makes the arithmetic mean anything.
+
+What it cannot do is verify rendering. Layout, wrapping and browser zoom still need eyes.
+
+It only covers the strip; the rest of the palette is unaudited, and light `--ok` is 4.33:1
+as body text if anyone reuses it that way.
 
 ## Deploy / hosting
 
@@ -547,7 +646,12 @@ required to be public. GitHub is source control only.
 pacific-watch/
 ├── AGENTS.md       ← you are here (shared contract)
 ├── CLAUDE.md       ← pointer to AGENTS.md
+├── AI-HANDOFF.md   ← transient coordination board; claims go here before editing
 ├── Pacific-Watch-v2-Product-and-UX-Plan.md   ← v2 roadmap (intent, not settled spec)
+├── V2-OVERVIEW-CONTRACT.md   ← merged layout and acceptance contract for the Overview
+├── PHASE1-SOURCE-HEALTH.md   ← the Phase 1 source-health contract
+├── docs/
+│   └── archive/    ← dated snapshots of the handoff board (history, not active claims)
 ├── index.html      ← the entire front end
 ├── api/
 │   └── news.js     ← serverless RSS merge (only because feeds lack CORS)
@@ -557,6 +661,8 @@ pacific-watch/
 ├── test/
 │   ├── phase1-source-health.test.js  ← pure logic, no dependencies (`npm test`)
 │   ├── severity-model.test.js        ← alert tiering and ordering (`npm test`)
-│   └── dom-behavior.test.js          ← degraded-state behaviour in jsdom (`npm run test:dom`)
+│   ├── contrast.test.js              ← strip text contrast, pure arithmetic (`npm test`)
+│   ├── dom-behavior.test.js          ← degraded-state behaviour in jsdom (`npm run test:dom`)
+│   └── mutation-check.js             ← proves those assertions can fail (`npm run test:mutation`)
 └── .gitignore
 ```

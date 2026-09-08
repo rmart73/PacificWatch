@@ -30,9 +30,10 @@ const parts = [
 const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent})');
 const St = api.S;
 
-/* the expiry predicate, lifted verbatim out of renderAlerts */
-const filterSrc = grab(/const live = \(features \|\| \[\]\)\.filter\(f => \{[\s\S]*?\n  \}\);/, 'expiry filter');
-const pickLive = new Function('features', 'now', filterSrc + ' return live;');
+/* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
+   It used to live in renderAlerts; every alert surface now shares this one copy. */
+const filterSrc = grab(/\.filter\(f => \{\n\s*const exp = f && f\.properties && f\.properties\.expires;\n\s*return !exp \|\| new Date\(exp\)\.getTime\(\) > now;\n\s*\}\)/, 'expiry filter');
+const pickLive = new Function('features', 'now', 'return (features || [])' + filterSrc + ';');
 
 let pass = 0, fail = 0;
 function check(label, actual, expected) {

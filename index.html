@@ -27,6 +27,9 @@
   --alert:#cc3110; --warn:#ea8a2e; --ok:#3d8299; --info:#1b7bb5; --unknown:#94a5b0;
   --ink:#0a0507; --ink2:#2a3b4a; --ink3:#5d7484; --ink4:#63798a;
   --rule:#dce7ec; --surf:#f1f5f7; --card:#ffffff;
+  /* Strip text at 12px must clear 4.5:1 on --card; the display tokens above do not.
+     Same hues, darkened only as far as compliance requires. */
+  --strip-alert:#cc3110; --strip-warn:#b05f12; --strip-ok:#3b7d94; --strip-info:#1b7bb5; --strip-unknown:#637886;
   --b-alert-bg:#fbe3dd; --b-alert-fg:#571a0e;
   --b-warn-bg:#fdeedc; --b-warn-fg:#8a4a08;
   --b-ok-bg:#ddebf1;    --b-ok-fg:#1f5a70;
@@ -45,6 +48,7 @@
     --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc; --unknown:#5f7788;
     --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
     --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
+    --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#6a8497;
     --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
     --b-warn-bg:#3a2408;  --b-warn-fg:#efae68;
     --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
@@ -60,6 +64,7 @@
   --alert:#e04a28; --warn:#ea8a2e; --ok:#4e9bb5; --info:#2e92cc; --unknown:#5f7788;
   --ink:#dce9ee; --ink2:#aec7d2; --ink3:#7593a3; --ink4:#6a8b9c;
   --rule:#152c3d; --surf:#070a0d; --card:#0c161f;
+  --strip-alert:#e14e2c; --strip-warn:#ea8a2e; --strip-ok:#4e9bb5; --strip-info:#2e92cc; --strip-unknown:#6a8497;
   --b-alert-bg:#3a120a; --b-alert-fg:#f0a48c;
   --b-warn-bg:#3a2408;  --b-warn-fg:#efae68;
   --b-ok-bg:#0f2e3c;    --b-ok-fg:#7bb0c6;
@@ -254,6 +259,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .view.active{display:block;animation:fadeUp .3s ease both}
 
 /* HAZARD STATUS BANNER */
+.nws-strip{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card)}
+.nws-strip .strip-state{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+.nws-strip .strip-counts{font-size:12px;color:var(--ink2)}
+.nws-strip .strip-meta{font-size:11px;color:var(--ink3);margin-left:auto}
+.nws-strip.is-alert .strip-state{color:var(--strip-alert)}
+.nws-strip.is-warn .strip-state{color:var(--strip-warn)}
+.nws-strip.is-info .strip-state{color:var(--strip-info)}
+.nws-strip.is-ok .strip-state{color:var(--strip-ok)}
+.nws-strip.is-unknown .strip-state{color:var(--strip-unknown)}
+@media (max-width:520px){.nws-strip .strip-meta{margin-left:0;flex-basis:100%}}
 .hazard-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--card);transition:background .2s}
 .hazard-banner.is-alert{background:var(--alert);border-bottom-color:var(--alert)}
 .hazard-banner.is-warn{background:var(--warn);border-bottom-color:var(--warn)}
@@ -439,6 +454,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 </div>
 
 <main>
+
+<!-- Staged NWS strip. Rendered on every update so its states are testable and reviewable,
+     but hidden until the Overview places it in PR 3; showing it now would duplicate the
+     hazard banner below. Append ?strip=1 to reveal it for a browser pass. -->
+<div class="nws-strip is-unknown" id="nws-strip" hidden>
+  <div class="strip-state" id="strip-state">Checking NWS alerts</div>
+  <div class="strip-counts" id="strip-counts" hidden></div>
+  <div class="strip-meta" id="strip-meta"></div>
+</div>
 <div class="desktop-layout">
 
   <div class="desktop-sidebar">
@@ -1098,6 +1122,9 @@ function switchView(v) {
   document.querySelectorAll('.nav-item, .dtab').forEach(el => {
     el.classList.toggle('active', el.dataset.view === v);
   });
+  /* Navigation re-evaluates freshness and expiry from memory. A view opened after sitting
+     on another one must not present state that has since lapsed. No fetch is issued. */
+  if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
 }
 
 function toggleCollapse(id, btn) {
@@ -1116,7 +1143,8 @@ document.querySelectorAll('.island-tab').forEach(tab => {
     document.querySelectorAll('.island-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     S.island = tab.dataset.island;
-    renderAlerts(S.alertsCache);
+    renderIslandScopedChecking();
+    renderAlertSurfaces();
     fetchWeather();
     fetchTides();
     fetchEarthquakes();
@@ -1145,22 +1173,14 @@ async function fetchAlerts() {
     const features = data.features;
     sourceOk('nwsAlerts', features);
     S.alertsCache = features;
-    renderAlerts(features, false);
-    updateTicker(features, false);
   } catch(e) {
     sourceFail('nwsAlerts', e.message);
-    const cached = usableCache('nwsAlerts');
-    if (cached) {
-      S.alertsCache = cached;
-      renderAlerts(cached, true);
-      updateTicker(cached, true);
-    } else {
-      S.alertsCache = [];
-      renderAlertsUnavailable();
-      updateTicker([], true);
-    }
+    S.alertsCache = usableCache('nwsAlerts') || [];
     console.warn('Alerts fetch failed:', e.message);
   }
+  /* Both paths render from the same snapshot, so success and failure cannot disagree
+     about which products are eligible or what the source state is. */
+  renderAlertSurfaces();
 }
 
 const HAZARD_ICONS = {
@@ -1171,37 +1191,228 @@ const HAZARD_ICONS = {
   alert: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
 
-function updateHazardBanner(filtered, stale) {
+/* SHARED NWS SNAPSHOT
+   Every alert surface used to run its own eligibility pass, and they had already drifted:
+   the rail and banner filtered by selected island, the ticker never did, so an island view
+   could show a Kauai-only warning in a statewide ticker and vice versa. One selector now
+   produces the eligible set — render-time expiry, then selected-area match, then
+   compareAlerts() on a copy — and the banner, rail, ticker and strip all read from it. */
+function nwsEligible(features) {
+  const now = Date.now();
+  return (features || [])
+    .filter(f => {
+      const exp = f && f.properties && f.properties.expires;
+      return !exp || new Date(exp).getTime() > now;
+    })
+    .filter(f => alertMatchesIsland(f, S.island))
+    .slice()                                   /* never sort the shared array in place */
+    .sort(compareAlerts);
+}
+
+function islandLabel(island) {
+  const i = island || S.island;
+  return i === 'statewide' ? 'Hawaii' : i.charAt(0).toUpperCase() + i.slice(1);
+}
+
+/* Counts are per product, not per incident. A watch and a warning covering the same area
+   are two products and are deliberately counted twice; nothing is deduplicated by area. */
+const TIER_WORDS = {
+  warning:   ['warning', 'warnings'],
+  watch:     ['watch', 'watches'],
+  advisory:  ['advisory', 'advisories'],
+  statement: ['statement', 'statements']
+};
+function tierCountLabel(tier, n) {
+  const w = TIER_WORDS[tier];
+  return n + ' ' + (w ? w[n === 1 ? 0 : 1] : (n === 1 ? 'product' : 'products'));
+}
+
+/* The single read of alert state. Presentation is one of: checking, warning, watch,
+   statement, empty, stale-empty, unavailable — with .stale distinguishing retained
+   active products from current ones. That covers the nine contract rows; recovery is
+   not a state but the result of recomputing this after a successful fetch. */
+/* Never falls back to the current time: a surface with no verified fetch behind it must
+   say so rather than borrow the clock. */
+function checkedTime(snap) {
+  return snap && snap.checkedAt ? fmtTime(new Date(snap.checkedAt)) : 'not yet verified';
+}
+
+function nwsSnapshot() {
+  const state = sourceState('nwsAlerts');
+  const entry = S.cache.nwsAlerts;
+  const snap = {
+    sourceState: state,
+    stale: state === 'stale',
+    area: S.island,
+    areaLabel: islandLabel(S.island),
+    verifiedAge: verifiedAge('nwsAlerts'),
+    /* The moment NWS actually confirmed this, not the moment we drew it. Rendering is
+       triggered by ticks and navigation as well as by fetches, so `new Date()` here would
+       let a page left open keep advancing the time it claims to have checked. */
+    checkedAt: S.sourceHealth.nwsAlerts ? S.sourceHealth.nwsAlerts.lastSuccess : null,
+    features: [],
+    total: 0,
+    counts: { warning: 0, watch: 0, advisory: 0, statement: 0 },
+    other: 0,
+    highest: null,
+    presentation: 'checking'
+  };
+
+  /* usableCache() returns retained data for STALE sources only, so asking it about a
+     current source answers null. Reading that as "no data" would withdraw alerts at the
+     moment they were successfully verified, so the current case is handled explicitly. */
+  let raw = null;
+  if (state === 'current') raw = entry ? entry.data : null;
+  else if (state === 'stale') raw = usableCache('nwsAlerts');
+
+  if (state === 'loading') return snap;
+  if (state === 'unavailable') { snap.presentation = 'unavailable'; return snap; }
+  if (raw == null) { snap.presentation = snap.stale ? 'stale-empty' : 'checking'; return snap; }
+
+  snap.features = nwsEligible(raw);
+  snap.total = snap.features.length;
+  snap.features.forEach(x => {
+    const t = alertTier(x.properties);
+    if (snap.counts[t] === undefined) snap.other++;
+    else snap.counts[t]++;
+  });
+  /* Sorted most actionable first, so the leading product carries the highest tier. */
+  snap.highest = snap.total ? alertTier(snap.features[0].properties) : null;
+
+  if (!snap.total) snap.presentation = snap.stale ? 'stale-empty' : 'empty';
+  else if (snap.counts.warning) snap.presentation = 'warning';
+  else if (snap.counts.watch || snap.counts.advisory) snap.presentation = 'watch';
+  else snap.presentation = 'statement';
+  return snap;
+}
+
+/* One entry point so no caller can refresh three surfaces and forget the fourth. */
+function renderAlertSurfaces() {
+  const snap = nwsSnapshot();
+  renderNwsStrip(snap);
+  /* Nothing has been verified yet: leave the loading skeleton rather than replacing it
+     with a confident-looking empty state. */
+  if (snap.presentation === 'checking') return snap;
+  if (snap.presentation === 'unavailable') {
+    renderAlertsUnavailable();
+    updateTicker(snap);
+    return snap;
+  }
+  renderAlerts(snap);
+  updateHazardBanner(snap);
+  updateTicker(snap);
+  return snap;
+}
+
+/* THE STRIP IS STAGED, NOT LAUNCHED.
+   PR 2 centralizes the data and renders the strip; PR 3 places it in the Overview. Showing
+   it now would put a second summary directly beside the hazard banner, which the contract
+   rules out for this step. It renders on every update so its states are testable, and
+   ?strip=1 reveals it for the focused browser pass without shipping a duplicate. */
+function renderNwsStrip(snap) {
+  const el = document.getElementById('nws-strip');
+  if (!el) return;
+  if (!snap) snap = nwsSnapshot();
+  const stateEl = document.getElementById('strip-state');
+  const countsEl = document.getElementById('strip-counts');
+  const metaEl = document.getElementById('strip-meta');
+  if (!stateEl || !countsEl || !metaEl) return;
+
+  const area = snap.areaLabel;
+  let tone = 'unknown', headline = '', meta = '';
+  if (snap.presentation === 'checking') {
+    headline = 'Checking NWS alerts';
+    meta = 'NWS Honolulu \u00b7 ' + area;
+  } else if (snap.presentation === 'unavailable') {
+    headline = 'Alert status unavailable';
+    meta = 'Last verified ' + snap.verifiedAge + ' \u00b7 ' + area;
+  } else if (snap.presentation === 'stale-empty') {
+    headline = 'Alert data stale';
+    meta = 'Last verified ' + snap.verifiedAge + ' \u00b7 ' + area;
+  } else if (snap.presentation === 'empty') {
+    tone = 'ok';
+    headline = 'No active NWS alerts for ' + area;
+    meta = 'NWS Honolulu \u00b7 Checked ' + checkedTime(snap);
+  } else {
+    tone = snap.presentation === 'warning' ? 'alert'
+         : snap.presentation === 'watch' ? 'warn' : 'info';
+    const tier = ALERT_TIERS[snap.highest];
+    headline = (tier ? tier.label : 'ACTIVE') + ' \u2014 ' + area;
+    meta = snap.stale
+      ? 'Last verified ' + snap.verifiedAge + ' \u00b7 NWS Honolulu'
+      : 'Checked ' + snap.verifiedAge + ' \u00b7 NWS Honolulu';
+  }
+
+  /* Unlike the banner, the strip reports every active tier. The banner suppresses
+     statements beside a warning to keep its headline short; the strip is where the full
+     set has to stay discoverable, so nothing is dropped for brevity. */
+  const parts = [];
+  ['warning', 'watch', 'advisory', 'statement'].forEach(t => {
+    if (snap.counts[t]) parts.push(tierCountLabel(t, snap.counts[t]));
+  });
+  if (snap.other) parts.push(snap.other + (snap.other === 1 ? ' other product' : ' other products'));
+
+  el.className = 'nws-strip is-' + tone;
+  stateEl.textContent = headline;
+  countsEl.textContent = parts.join(' \u00b7 ');
+  countsEl.hidden = !parts.length;
+  metaEl.textContent = meta;
+}
+
+/* On island switch the previous area's readings must leave the screen immediately. Until a
+   response for the new area lands we know nothing about it, and leaving Maui's wind under a
+   Kauai heading is the same false attribution the O09 guard fixed inside the cache. */
+function renderIslandScopedChecking() {
+  const area = islandLabel(S.island);
+  const dash = '<span style="font-size:13px;opacity:.4">\u2014</span>';
+  [['stat-wind', 'stat-wind-note', 'dot-wind'],
+   ['stat-rain', 'stat-rain-note', 'dot-rain'],
+   ['stat-tide', 'stat-tide-note', 'dot-tide']].forEach(ids => {
+    const ve = document.getElementById(ids[0]);
+    const ne = document.getElementById(ids[1]);
+    const de = document.getElementById(ids[2]);
+    if (ve) ve.innerHTML = dash;
+    if (ne) ne.textContent = 'Checking ' + area + '\u2026';
+    if (de) de.className = 's-dot unknown';
+  });
+  const eq = document.getElementById('earthquakes-container');
+  if (eq) eq.innerHTML = '<div class="alert-item"><span class="badge badge-unknown">CHECKING</span>'
+    + '<div class="alert-title">Checking earthquakes near ' + esc(area) + '</div>'
+    + '<div class="alert-meta">USGS</div></div>';
+}
+
+function updateHazardBanner(snap) {
   const banner = document.getElementById('hazard-banner');
   const head = document.getElementById('hazard-headline');
   const sub = document.getElementById('hazard-sub');
   if (!banner || !head || !sub) return;
-  if (stale === undefined) stale = isStale('nwsAlerts');
-  const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
-  const counts = { warning: 0, watch: 0, advisory: 0, statement: 0 };
-  filtered.forEach(f => { counts[alertTier(f.properties)]++; });
+  if (!snap) snap = nwsSnapshot();
+  const name = snap.areaLabel;
+  const counts = snap.counts;
+  const stale = snap.stale;
   /* Read out every active tier rather than collapsing them. Calling two Flood Watches
      "warnings" overstates them; omitting them understates the picture. */
   const parts = [];
-  if (counts.warning)  parts.push(counts.warning + ' warning' + (counts.warning === 1 ? '' : 's'));
-  if (counts.watch)    parts.push(counts.watch + ' watch' + (counts.watch === 1 ? '' : 'es'));
-  if (counts.advisory) parts.push(counts.advisory + (counts.advisory === 1 ? ' advisory' : ' advisories'));
+  if (counts.warning)  parts.push(tierCountLabel('warning', counts.warning));
+  if (counts.watch)    parts.push(tierCountLabel('watch', counts.watch));
+  if (counts.advisory) parts.push(tierCountLabel('advisory', counts.advisory));
   /* Statements are informational context rather than a hazard tier, so they are surfaced only
      when nothing more actionable is active — beside a warning they would be noise. But a feed
-     carrying only statements must never read as an all-clear, because it is not one. */
-  if (!parts.length && counts.statement) parts.push(counts.statement + (counts.statement === 1 ? ' statement' : ' statements'));
+     carrying only statements must never read as an all-clear, because it is not one. The
+     staged strip reports them unconditionally; this headline stays short on purpose. */
+  if (!parts.length && counts.statement) parts.push(tierCountLabel('statement', counts.statement));
   /* Exhaustiveness guard. This function used to have a single `filtered.length` catch-all;
      enumerating tiers reads better but reintroduces the risk that a tier is counted and never
      reported, which is exactly how the statement-only all-clear regression happened. If
      anything at all is active and nothing above described it, say so plainly rather than
      falling through to a state that asserts safety. */
-  if (!parts.length && filtered.length) parts.push(filtered.length + (filtered.length === 1 ? ' active alert' : ' active alerts'));
+  if (!parts.length && snap.total) parts.push(snap.total + (snap.total === 1 ? ' active alert' : ' active alerts'));
   let level, headline, subtext;
   if (counts.warning) {
     level = 'alert';
   } else if (counts.watch || counts.advisory) {
     level = 'warn';
-  } else if (filtered.length) {
+  } else if (snap.total) {
     level = 'info';
   } else if (stale) {
     level = 'unknown';
@@ -1209,18 +1420,18 @@ function updateHazardBanner(filtered, stale) {
     level = 'ok';
   }
   if (parts.length) {
-    headline = parts.join(' · ') + ' — ' + name;
+    headline = parts.join(' \u00b7 ') + ' \u2014 ' + name;
     subtext = stale
-      ? 'Last verified ' + verifiedAge('nwsAlerts')
-      : truncate(filtered.slice().sort(compareAlerts).map(f => f.properties.event).join(' · '), 68);
+      ? 'Last verified ' + snap.verifiedAge
+      : truncate(snap.features.map(x => x.properties.event).join(' \u00b7 '), 68);
   } else if (stale) {
     /* Critical-source rule: a previously verified all-clear must never be presented as a
        current one. With no fresh confirmation we say what we actually know. */
-    headline = 'Alert data stale — ' + name;
-    subtext = 'Last verified ' + verifiedAge('nwsAlerts') + ' · check NWS HFO directly';
+    headline = 'Alert data stale \u2014 ' + name;
+    subtext = 'Last verified ' + snap.verifiedAge + ' \u00b7 check NWS HFO directly';
   } else {
-    headline = 'All clear — ' + name;
-    subtext = 'No active NWS alerts · updated ' + fmtTime(new Date());
+    headline = 'All clear \u2014 ' + name;
+    subtext = 'No active NWS alerts \u00b7 updated ' + checkedTime(snap);
   }
   banner.className = 'hazard-banner is-' + level;
   banner.querySelector('.hazard-icon svg').innerHTML = HAZARD_ICONS[level];
@@ -1250,20 +1461,12 @@ function renderAlertsUnavailable() {
   }
 }
 
-function renderAlerts(features, stale) {
+function renderAlerts(snap) {
   const container = document.getElementById('nws-alerts-container');
   if (!container) return;
-  if (stale === undefined) stale = isStale('nwsAlerts');
-  /* Expired alerts are filtered at render time, not fetch time. Retained data can outlive
-     an alert's own `expires`, and showing a lapsed warning as active would invent a hazard
-     — the Phase 0 failure mode in reverse. */
-  const now = Date.now();
-  const live = (features || []).filter(f => {
-    const exp = f.properties && f.properties.expires;
-    return !exp || new Date(exp).getTime() > now;
-  });
-  const filtered = live.filter(f => alertMatchesIsland(f, S.island));
-  updateHazardBanner(filtered, stale);
+  if (!snap) snap = nwsSnapshot();
+  const filtered = snap.features;
+  const stale = snap.stale;
   const note = stale ? staleNote('nwsAlerts') : '';
   // This row must never assert a tsunami all-clear: Pacific Watch does not poll PTWC.
   // It must equally not imply tsunamis are unmonitored — NWS distributes PTWC products
@@ -1271,14 +1474,14 @@ function renderAlerts(features, stale) {
   // same list as a normal alert. The row states both facts and asserts no status.
   const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   if (filtered.length === 0) {
-    const name = S.island === 'statewide' ? 'Hawaii' : S.island.charAt(0).toUpperCase() + S.island.slice(1);
+    const name = snap.areaLabel;
     const body = stale
-      ? `<div class="alert-item"><span class="badge badge-unknown">STALE</span><div class="alert-title">Alert data could not be refreshed for ${esc(name)}</div><div class="alert-meta">Last verified ${esc(verifiedAge('nwsAlerts'))} · NWS Honolulu</div></div>`
-      : `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${esc(name)}</div><div class="alert-meta">NWS Honolulu · Checked ${esc(fmtTime(new Date()))}</div></div>`;
+      ? `<div class="alert-item"><span class="badge badge-unknown">STALE</span><div class="alert-title">Alert data could not be refreshed for ${esc(name)}</div><div class="alert-meta">Last verified ${esc(snap.verifiedAge)} · NWS Honolulu</div></div>`
+      : `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${esc(name)}</div><div class="alert-meta">NWS Honolulu · Checked ${esc(checkedTime(snap))}</div></div>`;
     container.innerHTML = note + body + ptwcNote;
     return;
   }
-  container.innerHTML = note + filtered.slice().sort(compareAlerts).slice(0,12).map(f => {
+  container.innerHTML = note + filtered.slice(0,12).map(f => {
     const p = f.properties;
     const tier = ALERT_TIERS[alertTier(p)];
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
@@ -1286,34 +1489,31 @@ function renderAlerts(features, stale) {
     const area = truncate(p.areaDesc || '', 90);
     /* The badge shows the product type, not CAP severity. "SEVERE" on a Flood Watch told the
        reader nothing useful and read identically to a Tropical Storm Warning. */
-    return `<div class="alert-item"><span class="badge ${tier.badge}">${esc(tier.label)}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
+    return `<div class="alert-item"><span class="badge ${tier ? tier.badge : 'badge-unknown'}">${esc(tier ? tier.label : 'ACTIVE')}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
   }).join('') + ptwcNote;
 }
 
-function updateTicker(features, stale) {
+function updateTicker(snap) {
   const track = document.getElementById('ticker-track');
   if (!track) return;
-  if (stale === undefined) stale = isStale('nwsAlerts');
-  const now = Date.now();
-  const live = (features || []).filter(f => {
-    const exp = f.properties && f.properties.expires;
-    return !exp || new Date(exp).getTime() > now;
-  });
+  if (!snap) snap = nwsSnapshot();
+  const live = snap.features;
+  const stale = snap.stale;
   if (!live.length) {
     /* With no fresh confirmation this must not claim an all-clear. */
-    const msg = sourceState('nwsAlerts') === 'current'
-      ? '\u2713 No active NWS alerts for Hawaii · Tsunami alerts appear here when NWS issues them — verify at tsunami.gov · Visit NWS HFO for latest forecasts'
-      : 'Alert data not current — last verified ' + verifiedAge('nwsAlerts') + ' · Check NWS HFO and HIEMA directly';
-    track.textContent = msg + ' · ' + msg;
+    const msg = snap.sourceState === 'current'
+      ? '\u2713 No active NWS alerts for ' + snap.areaLabel + ' \u00b7 Tsunami alerts appear here when NWS issues them — verify at tsunami.gov \u00b7 Visit NWS HFO for latest forecasts'
+      : 'Alert data not current — last verified ' + snap.verifiedAge + ' \u00b7 Check NWS HFO and HIEMA directly';
+    track.textContent = msg + ' \u00b7 ' + msg;
     return;
   }
-  const items = live.slice().sort(compareAlerts).map(f => {
+  const items = live.map(f => {
     const p = f.properties;
-    const exp = p.expires ? ' · Expires ' + fmtTime(new Date(p.expires)) : '';
+    const exp = p.expires ? ' \u00b7 Expires ' + fmtTime(new Date(p.expires)) : '';
     return '\u26A0 ' + (p.event || 'Alert') + ' — ' + truncate(p.areaDesc || '', 60) + exp + ' - NWS';
   });
-  const prefix = stale ? 'STALE (last verified ' + verifiedAge('nwsAlerts') + ') · ' : '';
-  track.textContent = prefix + items.join(' · ') + ' · ' + prefix + items.join(' · ');
+  const prefix = stale ? 'STALE (last verified ' + snap.verifiedAge + ') \u00b7 ' : '';
+  track.textContent = prefix + items.join(' \u00b7 ') + ' \u00b7 ' + prefix + items.join(' \u00b7 ');
 }
 
 const WEATHER_STATIONS = {
@@ -1885,10 +2085,37 @@ renderSourceHealth();
 async function refreshAll() {
   await Promise.allSettled([fetchAlerts(), fetchWeather(), fetchTides(), fetchEarthquakes(), fetchFema(), fetchNews()]);
 }
+/* The strip ships staged. This reveals it for a focused browser pass without exposing a
+   duplicate summary to users; PR 3 places it properly and drops the flag. */
+try {
+  if (new URLSearchParams(location.search).has('strip')) {
+    const stripEl = document.getElementById('nws-strip');
+    if (stripEl) stripEl.hidden = false;
+  }
+} catch(e) {}
+
 refreshAll();
 setInterval(refreshAll, 5 * 60 * 1000);
 /* Ages are relative, so they must re-render between fetches or "2 min ago" freezes. */
 setInterval(renderSourceHealth, 30000);
+
+/* UI-ONLY AGE TICK
+   Freshness and expiry are time-relative, so a page left open goes quietly wrong between
+   fetches: a product passes its `expires`, a source crosses its stale threshold, and every
+   surface keeps asserting the state it last rendered. This re-evaluates from memory alone.
+   It issues no network request, and it must never touch verification timestamps — a tick
+   that refreshed lastSuccess would make a dead source look permanently current. */
+let ageTickTimer = null;
+function ageTick() {
+  renderAlertSurfaces();
+  renderSourceHealth();
+}
+function startAgeTick() {
+  if (ageTickTimer !== null) return;   /* one timer and one listener, however often called */
+  ageTickTimer = setInterval(ageTick, 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ageTick(); });
+}
+startAgeTick();
 
 switchView('news');
 

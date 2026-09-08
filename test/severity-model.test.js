@@ -16,10 +16,12 @@ const code = [
   grab(/function alertTier\(p\) \{[\s\S]*?\n\}/, 'alertTier'),
   grab(/function tierRank\(p\) \{[^}]*\}/, 'tierRank'),
   grab(/const URGENCY_RANK = \{[^}]*\};/, 'URGENCY_RANK'),
-  grab(/function compareAlerts\(a, b\) \{[\s\S]*?\n\}/, 'compareAlerts')
+  grab(/function compareAlerts\(a, b\) \{[\s\S]*?\n\}/, 'compareAlerts'),
+  grab(/const TIER_WORDS = \{[\s\S]*?\n\};/, 'TIER_WORDS'),
+  grab(/function tierCountLabel\(tier, n\) \{[\s\S]*?\n\}/, 'tierCountLabel')
 ].join('\n');
 
-const api = eval(code + '; ({ALERT_TIERS, alertTier, tierRank, compareAlerts})');
+const api = eval(code + '; ({ALERT_TIERS, alertTier, tierRank, compareAlerts, tierCountLabel})');
 
 let pass = 0, fail = 0;
 function check(label, actual, expected) {
@@ -93,6 +95,28 @@ const sameUrgency = [
 ];
 check('within a tier and urgency, newest first',
   sameUrgency.slice().sort(api.compareAlerts)[0].properties.event, 'Wind Warning');
+
+console.log('\nTier count labels — the strip reports every tier, so each plural must be right:');
+/* A previous version of this copy concatenated singular and plural and produced
+   "2 advisoryadvisories" in the banner. Every tier is pinned at 1 and at 2. */
+check('1 warning',    api.tierCountLabel('warning', 1),   '1 warning');
+check('2 warnings',   api.tierCountLabel('warning', 2),   '2 warnings');
+check('1 watch',      api.tierCountLabel('watch', 1),     '1 watch');
+check('2 watches',    api.tierCountLabel('watch', 2),     '2 watches');
+check('1 advisory',   api.tierCountLabel('advisory', 1),  '1 advisory');
+check('2 advisories', api.tierCountLabel('advisory', 2),  '2 advisories');
+check('1 statement',  api.tierCountLabel('statement', 1), '1 statement');
+check('2 statements', api.tierCountLabel('statement', 2), '2 statements');
+check('an unknown tier degrades to a neutral noun, not a broken word',
+  api.tierCountLabel('experimental', 3), '3 products');
+check('and reads correctly at one', api.tierCountLabel('experimental', 1), '1 product');
+/* Guards the concatenation bug directly rather than only its symptom. */
+check('no label repeats its own stem',
+  ['warning','watch','advisory','statement'].every(t => {
+    const two = api.tierCountLabel(t, 2).replace(/^2 /, '');
+    const one = api.tierCountLabel(t, 1).replace(/^1 /, '');
+    return two !== one + one && !two.startsWith(one + one);
+  }), true);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 if (fail) process.exit(1);

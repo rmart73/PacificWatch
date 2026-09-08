@@ -20,20 +20,38 @@ are attributed to the user-relayed Claude report.
 | F005 | #12 merged; user relays Claude's live verification of both tiles and zero bare noopener | Closed remediation; unrelated bot-challenged destinations remain unchecked below |
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
-| Shared snapshot / NWS strip | Planned, not yet claimed | Claude to claim after #15 lands |
+| Shared snapshot / NWS strip | Implemented; PR open for review | Codex reviews against the merged contract and runs the browser pass |
 | Overview layout / navigation | Planned, not yet claimed | Claude implements; Codex reviews against contract |
-| Q006 board compaction | #15 reconciled onto 36a5a20; ready for review | Codex owns board until #15 lands |
+| Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
 
-**Q006 — ChatGPT Codex, codex/q006-handoff-compaction.**
-Claim published 2026-09-07 before editing (commit 0a3d47a).
-Scope: this board and the dated archive only. Consolidate duplicate sections, retain
-history and unresolved work. No production code, AGENTS, or product-plan changes.
-The owner assigned this after #12; Claude explicitly left it for Codex.
+**PR 2 — shared snapshot selector and NWS strip. Claude Code, claude/shared-snapshot-nws-strip.**
+Claim published 2026-09-07 before editing any implementation file.
 
-The specification and race-guard claims are complete with #13/#14 merged.
-Claude has explicitly left the board to Codex until #15 lands; PR 2 is not yet claimed.
+In scope:
+
+- One shared selector producing the eligible NWS feature set — render-time expiry handling,
+  selected-area matching, then `compareAlerts()` — consumed by the strip, the counts and the
+  existing Alerts surfaces, without mutating the shared array while sorting.
+- The strip itself: highest-tier state, separate warning/watch/advisory/statement counts,
+  selected area, and freshness, across all nine source states in the contract table.
+- Island-switch behaviour for the surfaces this PR touches: withdraw old island-scoped
+  content and show Checking until a matching response lands, on top of the merged O09 guard.
+- A UI-only age tick, at most once per minute, so freshness and expiry re-evaluate with no
+  network calls. **Flagged for objection:** the contract lists this under Freshness rather
+  than assigning it to a PR. It is here because a strip that shows freshness cannot report it
+  honestly without one. Say so before I build it if it belongs in PR 3.
+
+Out of scope, deferred to PR 3: Overview view, navigation, sidebar replacement, mobile
+card ordering.
+
+Two contract details I expect to be the awkward ones, recorded now rather than discovered late:
+`usableCache()` returns stale entries only, so the shared selector must handle a current
+matching cache entry explicitly instead of reading its absence as unavailable; and counts are
+per product, not per incident, so overlapping watch/warning areas must not be deduplicated.
+
+Q006 is complete and merged in b71fb74, so the board is no longer exclusively Codex-owned.
 
 ### Agreed next sequence
 
@@ -54,7 +72,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/q006-handoff-compaction | Q006: current board and historical archive |
+| Claude | claude/shared-snapshot-nws-strip | PR 2: shared snapshot selector and NWS strip |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -62,11 +80,11 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| #15 | Reconciled onto main 36a5a20; docs checks passed | Review and merge; Claude then claims PR 2 |
+| PR 2 | Reviewed and cleared at 84aca80 | Merge, verify production, then claim PR 3 |
 
-#13 and #14 are merged. Their original claims and handoffs are preserved in the
-archive, and the completed #14 test correction is recorded below.
-No implementation review is pending. If main advances again, recheck #15 before merging.
+#13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
+in the archive, and the completed #14 test correction is recorded below.
+No implementation review is pending.
 
 ## Outstanding Verification and Decisions
 
@@ -83,6 +101,10 @@ No implementation review is pending. If main advances again, recheck #15 before 
 - **PDC correction:** DisasterAWARE Pro requires access; public Disaster Alert has a browser
   app. The final tile links to that public app, not the corporate homepage or static tsunami
   maps. HI-EMA links to tsunami evacuation zones. These are the final #12 choices.
+- **200% browser zoom on the staged strip:** unverified. Two Codex attempts found the
+  browser control had no effect on the zoom shortcut. Merged under the O14 exception, not
+  waived — a human zoom pass on `?strip=1` still settles it, and PR 3 makes the strip visible
+  to everyone, so it should be checked before that lands.
 - **Reduced-motion static ring and Vercel billing/page weight:** owner-accepted decisions,
   not pending blockers or questions. Preserve AGENTS guidance; do not re-raise.
 - **Q001, direct PTWC source:** low-priority redundancy/latency improvement; NWS already
@@ -93,6 +115,125 @@ No implementation review is pending. If main advances again, recheck #15 before 
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-07 — PR 2 review cleared at 84aca80
+
+Codex completed the review with no remaining blockers. Independently: 106 pure assertions
+pass; local browser fixtures at this exact head confirm all five strip colours match the
+tested tokens in both themes over opaque backgrounds; wrapping passes at 320/390/768/1280 px
+with no clipped counts or freshness text.
+
+Codex did not rerun the DOM or mutation suites; the 138 and 17/17 figures remain
+Claude-reported evidence and are labelled as such.
+
+**200% browser zoom is unverified and is being merged that way, deliberately.** The browser
+control had no effect on the zoom shortcut across two separate attempts by Codex. This is
+recorded under the O14 evidence-handoff exception rather than being implied as checked or
+left to block the merge indefinitely. It stays open below until someone confirms it by hand.
+
+**Next action:** merge #16, verify production, then Claude claims PR 3 (Overview layout,
+navigation, sidebar replacement). Codex reviews against the merged contract.
+
+### 2026-09-07 — Contrast method hardened while Codex was rate-limited
+
+Codex re-reviewed c724b49 as far as its limit allowed: all 94 pure assertions passed
+independently and the lastSuccess timestamps were confirmed on all three surfaces. It was
+checking rendered colours against the tested tokens when it ran out of budget.
+
+Claude narrowed that gap without a browser. The ratios are computed from tokens, which is
+the method WCAG defines, but it is only sound if foreground and background are really what
+the tokens say. The three ways that could silently fail are now asserted rather than
+assumed: the strip paints its own opaque --card background and is not translucent, --card
+is an opaque hex in both themes, and nothing overrides the strip text colour (no !important
+colour rule exists anywhere, and each severity rule follows the base rule with higher
+specificity). The base rule that shows through if a tone is ever missing is checked too.
+
+**The mutation harness had a defect of its own.** String.replace rewrites the first match,
+so a case whose anchor was not unique silently mutated unrelated code — one CSS anchor was
+shared with .sec-head, and the case that appeared to pass was mutating the wrong rule. The
+harness now refuses an ambiguous anchor, which immediately exposed a second case that had
+been reporting CAUGHT by luck. Both are fixed and the guard stays.
+
+**Evidence:** npm test 106, npm run test:dom 138, npm run test:mutation 17/17.
+
+**Still unverified by anyone:** actual rendered pixels and 200% browser zoom. What remains
+for a browser is layout and reflow, not the contrast arithmetic.
+
+### 2026-09-07 — PR 2 review findings fixed
+
+Both findings confirmed before fixing, and both reproduce on the reviewed head d330678.
+
+**Verified-empty timestamps.** The strip, banner and empty rail formatted `new Date()`, so an
+age tick or a navigation advanced the check time the page claimed without any fetch behind it.
+They now format `snap.checkedAt`, taken from `lastSuccess`; with nothing verified they say
+"not yet verified" rather than borrowing the clock. Section 16 pins all three surfaces, proves
+ticks and navigation cannot advance the claimed time, and asserts the two times differ so the
+section cannot pass on a coincidence.
+
+**Contrast.** Codex's three numbers reproduced exactly (light warn 2.57:1, light unknown
+2.54:1, dark unknown 3.90:1) and a fourth was found: light `--ok` at 4.33:1, the verified-empty
+state. Fixed with separate `--strip-*` text tokens at the same hues; the display palette is
+untouched because those tokens carry dots and badges where the text rule does not apply.
+
+`test/contrast.test.js` is new and runs in `npm test`: 4.5:1 for every strip text colour in
+both themes, the two dark blocks checked for drift, and five severities still five colours so
+flattening to near-black is not a way to pass. Against d330678 it fails on exactly the four
+colours above.
+
+**Evidence:** `npm test` 94, `npm run test:dom` 138, `npm run test:mutation` 15/15 across both
+suites. Still no browser pass by Claude; 200% zoom remains unchecked by anyone.
+
+**Next action:** Codex re-reviews the new head and runs the browser pass on `?strip=1`.
+
+### 2026-09-07 — PR 2 implemented: shared snapshot, staged strip, age tick
+
+`nwsSnapshot()` is now the single read of alert state; the banner, rail, ticker and strip all
+render through `renderAlertSurfaces()`. This fixed a live inconsistency found while wiring it:
+the rail and banner filtered by selected island and the ticker never did, so an island view
+could scroll a product it refused to list.
+
+Codex's two flagged details are handled explicitly and tested: the current-source case reads
+`S.cache.nwsAlerts` directly because `usableCache()` answers null for anything not stale, and
+counts are per product with no area deduplication (23 products from the 18/2/2/1 fixture).
+
+**The strip ships staged**, per the contract's "no duplicate summary" rule: it renders on every
+update and is asserted in all nine source states, but is `hidden`. `?strip=1` reveals it for the
+browser pass. It reports every tier; the banner still drops statements to keep its headline
+short, and both behaviours are pinned so neither drifts into the other's job.
+
+The age tick withdraws expired products from every surface with no network call and without
+touching `lastSuccess`. Its wiring is tested separately from a manual call, so a missing timer
+cannot hide behind a renderer that works when invoked by hand.
+
+**Evidence:** `npm test` 69, `npm run test:dom` 124, `npm run test:mutation` 9/9. The mutation
+check is new and answers the #14 finding directly — it breaks one behaviour at a time and
+requires the intended assertion to fail, so a decorative assertion is reported rather than
+counted. index.html grew 113,093 → 122,625 bytes.
+
+**Not verified by Claude:** appearance. No browser pass was run; the strip's revealed layout,
+contrast and wrapping are unchecked, as is its behaviour at 320/390/768/1280 px and 200% zoom.
+
+**Next action:** Codex reviews and runs the focused browser pass on `?strip=1`; PR 3 then places
+the strip and drops the flag.
+
+### 2026-09-07 — #15 merged; PR 2 claimed
+
+Claude reviewed #15 against its own claims rather than accepting them. The archive is
+byte-identical to `AI-HANDOFF.md` at 36a5a20 (1,152 lines both sides, compared after CRLF
+normalisation); the compacted board is 144 lines with exactly one Current Work, Active
+Branches and Review Queue heading; the diff touches only the board and the archive; and all
+four internal links resolve to files that exist in the branch. Merged as b71fb74.
+
+Codex’s correction of the bot-challenged destination count is confirmed against the archive:
+it is six URLs — poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages and
+fema.gov/disaster/declarations. Claude’s earlier shorthand of “five” was wrong.
+
+PR 2 is claimed above on claude/shared-snapshot-nws-strip, board-only in this commit.
+One scope question is raised in the claim rather than resolved unilaterally: whether the
+once-per-minute UI age tick belongs to this PR or to PR 3.
+
+**Next action:** Codex confirms or moves the age tick; Claude implements the selector and
+strip, then opens PR 2 for review against the merged contract.
 
 ### 2026-09-07 — #13/#14 merged; #14 review closed
 
