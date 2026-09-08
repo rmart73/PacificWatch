@@ -1782,6 +1782,50 @@ function stationLabel(sta) {
   return sta.ref ? sta.label + ' · ' + sta.ref : sta.label;
 }
 
+/* UNIT CONVERSION — READ THE DECLARED UNIT, NEVER ASSUME ONE.
+   Every NWS measurement carries its own `unitCode`. This code hardcoded the metres-per-second
+   factor (2.237) for wind, but api.weather.gov reports `wmoUnit:km_h-1`, so every reading was
+   multiplied by 3.6 too much: a 51.84 km/h gust — 32 mph, and 28 knots in the station's own
+   METAR — rendered as "116 mph" on production during an active hurricane. A hardcoded factor
+   cannot notice when the source changes units; reading `unitCode` can.
+
+   An unrecognised unit yields null, which renders as "Not reported". That is deliberate: a
+   missing reading is recoverable, and a wind speed that is wrong by a factor of three during a
+   hurricane is not. The unit is logged so a new one is diagnosable rather than silent. */
+const MPH_PER_UNIT = {
+  'wmounit:km_h-1': 0.621371,
+  'wmounit:m_s-1':  2.236936,
+  'wmounit:kt':     1.150779,
+  'wmounit:mi_h-1': 1
+};
+const INCHES_PER_UNIT = {
+  'wmounit:mm': 0.0393701,
+  'wmounit:cm': 0.393701,
+  'wmounit:m':  39.3701,
+  'wmounit:in': 1
+};
+
+function convertMeasure(m, table, what) {
+  if (!m || m.value == null) return null;
+  const code = String(m.unitCode == null ? '' : m.unitCode).toLowerCase();
+  const factor = table[code];
+  if (factor === undefined) {
+    console.warn('Unrecognised ' + what + ' unit from NWS: ' + JSON.stringify(m.unitCode)
+      + ' — reading withheld rather than converted with a guessed factor.');
+    return null;
+  }
+  return m.value * factor;
+}
+
+function toMph(m) {
+  const v = convertMeasure(m, MPH_PER_UNIT, 'wind');
+  return v == null ? null : Math.round(v);
+}
+function toInches(m) {
+  const v = convertMeasure(m, INCHES_PER_UNIT, 'precipitation');
+  return v == null ? null : v;
+}
+
 function renderWeather(p, label, stale) {
   /* The moment the station observed, which is not the moment we fetched it. Labelling the
      fetch as the observation would overstate how current the reading is. */
@@ -1791,9 +1835,8 @@ function renderWeather(p, label, stale) {
   const windEl = document.getElementById('stat-wind');
   const windNote = document.getElementById('stat-wind-note');
   const dotWind = document.getElementById('dot-wind');
-  const windRaw = p.windSpeed?.value, gustRaw = p.windGust?.value;
-  const windMph = windRaw != null ? Math.round(windRaw * 2.237) : null;
-  const gustMph = gustRaw != null ? Math.round(gustRaw * 2.237) : null;
+  const windMph = toMph(p.windSpeed);
+  const gustMph = toMph(p.windGust);
   /* Stale data keeps its value but loses its verified dot: Phase 0 says the dot means a
      current verified reading exists, and an old observation is not one. */
   if (windEl) {
@@ -1811,13 +1854,13 @@ function renderWeather(p, label, stale) {
       if (dotWind) dotWind.className = 's-dot unknown';
     }
   }
-  const rainRaw = p.precipitationLastHour?.value;
+  const rainInches = toInches(p.precipitationLastHour);
   const rainEl = document.getElementById('stat-rain');
   const rainNote = document.getElementById('stat-rain-note');
   const dotRain = document.getElementById('dot-rain');
   if (rainEl) {
-    if (rainRaw != null) {
-      const rainIn = (rainRaw/25.4).toFixed(2);
+    if (rainInches != null) {
+      const rainIn = rainInches.toFixed(2);
       rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
       if (rainNote) rainNote.textContent = `1-hr · ${label}${suffix}`;
       if (dotRain) dotRain.className = 's-dot ' + (stale ? 'unknown' : (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok'));

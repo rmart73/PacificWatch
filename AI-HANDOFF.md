@@ -127,6 +127,38 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-08 — Wind was overstated 3.6x on production (owner found)
+
+**The owner spotted it from the raw API against the rendered card: 51.84 km/h is not
+116 mph.** api.weather.gov reports wind as wmoUnit:km_h-1 and renderWeather applied 2.237,
+the metres-per-second factor. Every wind and gust reading has been 3.6x too high, on
+production, during an active hurricane. Precipitation was correct by luck — its unit is mm
+and the code divided by 25.4.
+
+Conversions now read the declared unitCode: km/h, m/s, knots and mph for wind; mm, cm, m and
+inches for precipitation. **An unrecognised unit renders "Not reported" rather than a guess.**
+A missing reading is recoverable; a hurricane wind speed wrong by a factor of three is not.
+
+**Why every test passed.** The fixtures carried bare values with no unitCode and were written
+in m/s to match the code, so the suite verified the conversion against its own assumption
+rather than against the API. Fixtures now carry the unitCode the real API sends and are
+written in mph through a named helper. One assertion had hardcoded 2.237 itself — a second
+copy of the same defect — and now converts through the page's own toMph.
+
+**Verified against the live station and its own raw text:** windGust 66.6 km/h renders as
+41 mph, and the station METAR reads 11023G36KT — a 36 knot gust, 41 mph. Exact match. The
+old code would have shown 149 mph for that reading.
+
+**Evidence:** npm test 106, test:dom 267, test:mutation 42/42, including reverting to the m/s
+factor and ignoring unitCode entirely.
+
+This is the fourth time a displayed number turned out not to trace to the source data, after
+the fabricated tsunami all-clear, the invented 0.00" rainfall and the miscategorised Flood
+Watch. It was not caught by review or by the suite; it was caught by an owner reading the API
+response beside the rendered card.
+
+**Next action:** review and merge urgently — production is showing wrong wind speeds now.
+
 ### 2026-09-08 — Browser verification passed at 40fba96 (owner)
 
 The owner ran the pass on the preview at this exact head and reported all checks passing.
