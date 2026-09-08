@@ -55,10 +55,122 @@ const mutations = [
     to:   "  ['warning', 'watch', 'advisory'].forEach(t => {\n    if (snap.counts[t]) parts.push(tierCountLabel(t, snap.counts[t]));\n  });",
     expect: ['exact counts, every tier reported'] },
 
-  { name: 'strip becomes visible instead of staged',
-    from: '<div class="nws-strip is-unknown" id="nws-strip" hidden>',
-    to:   '<div class="nws-strip is-unknown" id="nws-strip">',
-    expect: ['hidden by default so it cannot duplicate the banner'] },
+  /* PR 3: the Overview, its priority cards and the cross-view actions. */
+  { name: 'more than three priority cards rendered',
+    from: '  const items = snap.features.slice(0, PRIORITY_MAX);',
+    to:   '  const items = snap.features.slice(0, 5);',
+    expect: ['three shown in total'] },
+
+  { name: 'the route reports the shown count instead of the real total',
+    from: "    ? 'Showing ' + items.length + ' of ' + snap.total + ' active NWS products'",
+    to:   "    ? 'Showing ' + items.length + ' of ' + items.length + ' active NWS products'",
+    expect: ['the full count is stated, not the shown count'] },
+
+  { name: 'a missing expiry is invented rather than stated',
+    from: "  const expiry = isNaN(expMs) ? 'Expiry not provided' : 'Expires ' + fmtTime(new Date(expMs));",
+    to:   "  const expiry = 'Expires ' + fmtTime(new Date(isNaN(expMs) ? Date.now() : expMs));",
+    expect: ['missing expiry is stated, not invented'] },
+
+  { name: 'switching views leaves the previous one active too',
+    from: "  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));",
+    to:   "  /* mutation: previous view left active */",
+    expect: ['exactly one view active'] },
+
+  { name: 'a cross-view action navigates without moving focus',
+    from: "function goToAlerts() {\n  switchView('alerts');\n  focusTarget('nws-alerts-heading');",
+    to:   "function goToAlerts() {\n  switchView('alerts');",
+    expect: ['and focuses its NWS heading'] },
+
+  { name: 'the strip offers a route to the view already open',
+    from: "  if (routeEl) routeEl.hidden = (S.view === 'alerts');",
+    to:   "  if (routeEl) routeEl.hidden = false;",
+    expect: ['on Alerts the route is not offered'] },
+
+  /* Reading order is the DOM order, so the mutation is a markup move rather than a CSS
+     value. Screen readers follow the document, which is what the 390px rule is about. */
+  { name: 'the remaining priority cards moved ahead of the observations in the DOM',
+    from: '    <div class="stat-bar" id="obs-primary">',
+    to:   '    <div id="priority-rest"></div>\n    <div class="stat-bar" id="obs-primary">',
+    expect: ['an observation precedes the remaining cards'] },
+
+  /* PR 3 review defects. Each mutation restores the defect that was reported. */
+  { name: 'the Alerts list caps at twelve products again',
+    from: '  container.innerHTML = note + filtered.map(f => {',
+    to:   '  container.innerHTML = note + filtered.slice(0,12).map(f => {',
+    expect: ['the Alerts view lists all twenty'] },
+
+  { name: 'the earthquake card survives an island switch',
+    from: "   ['stat-tide', 'stat-tide-note', 'dot-tide'],\n   ['stat-quake', 'stat-quake-note', 'dot-quake']].forEach(ids => {",
+    to:   "   ['stat-tide', 'stat-tide-note', 'dot-tide']].forEach(ids => {",
+    expect: ['the earthquake card is withdrawn too'] },
+
+  { name: 'desktop reorders the DOM instead of placing by grid',
+    from: '  #priority-first{grid-column:1/-1;grid-row:1}',
+    to:   '  #priority-first{order:1}',
+    expect: ['desktop places by grid rather than reordering the DOM'], suite: 'dom' },
+
+  { name: 'the Honolulu reference substitution is hidden again',
+    from: '    renderWeather(data.properties, stationLabel(sta), false);',
+    to:   '    renderWeather(data.properties, sta.label, false);',
+    expect: ['statewide discloses it too'] },
+
+  /* Both sides of a cached label have to carry the qualifier. Fixing the weather path and
+     leaving the tide path was the actual defect, so each is mutated separately. */
+  { name: 'the tide cache stores the unqualified station name',
+    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);",
+    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);",
+    expect: ['and still does after a failed refresh'] },
+
+  { name: 'the populated earthquake card drops its query scope',
+    from: "    + ' \\u00b7 ' + quakeRadiusLabel() + capped + suffix;",
+    to:   "    + capped + suffix;",
+    expect: ['the populated earthquake card states its query radius'] },
+
+  /* Functional acceptance: hostile content, unkeyed visitors, truthful loading, zoom. */
+  { name: 'the priority card stops escaping the event name',
+    from: "    + '<span class=\"pri-event\">' + esc(p.event || 'Alert') + '</span></div>'",
+    to:   "    + '<span class=\"pri-event\">' + (p.event || 'Alert') + '</span></div>'",
+    expect: ['no injected element was created in the priority card'] },
+
+  { name: 'a new-tab link drops noreferrer',
+    from: '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener noreferrer">',
+    to:   '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener">',
+    expect: ['every one carries noopener AND noreferrer'] },
+
+  { name: 'the loading aggregate claims a refresh while sources are still checking',
+    from: "    const checking = keys.filter(k => sourceState(k) === 'loading').length;",
+    to:   "    const checking = 0;",
+    expect: ['a first load says how many sources are still checking'] },
+
+  { name: 'gust-only wind is presented as sustained wind',
+    from: "      if (windNote) windNote.textContent = `Gust, sustained N/A \u00b7 ${label}${suffix}`;",
+    to:   "      if (windNote) windNote.textContent = `${label}${suffix}`;",
+    expect: ['a gust-only observation is labelled as such'] },
+
+  { name: 'the view tabs go back to a hardcoded sticky offset',
+    from: 'position:sticky;top:var(--hdr-h);z-index:50;flex-wrap:wrap}',
+    to:   'position:sticky;top:160px;z-index:50;flex-wrap:wrap}',
+    expect: ['the view tabs stick to the measured header height'] },
+
+  { name: 'the bottom-nav spacer goes back to a fixed height',
+    from: '.content-spacer{height:calc(var(--nav-h) + 12px)}',
+    to:   '.content-spacer{height:72px}',
+    expect: ['the bottom-nav spacer follows the measured nav'] },
+
+  { name: 'the tide reading drops its datum',
+    from: "  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name",
+    to:   "  if (tideNote) tideNote.textContent = '' + name",
+    expect: ['the tide reading carries its datum'] },
+
+  { name: 'a truncated earthquake list reads as a complete count',
+    from: '  const limitNote = quakes.length >= USGS_LIMIT',
+    to:   '  const limitNote = false',
+    expect: ['at the query limit the list says so'] },
+
+  { name: 'a missing magnitude is rendered as a number',
+    from: "    const mag = p.mag != null ? p.mag.toFixed(1) : 'unknown';",
+    to:   "    const mag = (p.mag || 0).toFixed(1);",
+    expect: ['a missing magnitude stays unknown, never a number'] },
 
   /* Breaks the page at section 1 rather than at the snapshot sections: with a current
      source reporting no data, every surface empties immediately. */

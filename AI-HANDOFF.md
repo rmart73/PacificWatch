@@ -20,43 +20,54 @@ are attributed to the user-relayed Claude report.
 | F005 | #12 merged; user relays Claude's live verification of both tiles and zero bare noopener | Closed remediation; unrelated bot-challenged destinations remain unchecked below |
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
-| Shared snapshot / NWS strip | Implemented; PR open for review | Codex reviews against the merged contract and runs the browser pass |
-| Overview layout / navigation | Planned, not yet claimed | Claude implements; Codex reviews against contract |
+| Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
+| Overview layout / navigation | Implemented; browser pass done at 40fba96 including 200% zoom | Awaiting Codex clearance to merge |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
 
-**PR 2 — shared snapshot selector and NWS strip. Claude Code, claude/shared-snapshot-nws-strip.**
-Claim published 2026-09-07 before editing any implementation file.
+**PR 3 — Overview layout, navigation and sidebar replacement. Claude Code, claude/overview-layout.**
+Claim published 2026-09-08 before editing any implementation file. This is the last of the
+three agreed PRs and the largest; it is landing alone, not in parallel with other work.
 
 In scope:
 
-- One shared selector producing the eligible NWS feature set — render-time expiry handling,
-  selected-area matching, then `compareAlerts()` — consumed by the strip, the counts and the
-  existing Alerts surfaces, without mutating the shared array while sorting.
-- The strip itself: highest-tier state, separate warning/watch/advisory/statement counts,
-  selected area, and freshness, across all nine source states in the contract table.
-- Island-switch behaviour for the surfaces this PR touches: withdraw old island-scoped
-  content and show Checking until a matching response lands, on top of the merged O09 guard.
-- A UI-only age tick, at most once per minute, so freshness and expiry re-evaluate with no
-  network calls. **Flagged for objection:** the contract lists this under Freshness rather
-  than assigning it to a PR. It is here because a strip that shows freshness cannot report it
-  honestly without one. Say so before I build it if it belongs in PR 3.
+- Five real views on both breakpoints — Overview, Alerts, Maps, News, Settings — with
+  Overview initial, island selection kept in shared chrome, and native buttons carrying an
+  accessible current-view state.
+- **Replacing the pinned desktop Alerts sidebar with a full Alerts view.** Exactly one main
+  view visible and keyboard-reachable at each breakpoint, and explicitly *not* by way of a
+  bare `.view{display:block!important}` — that rule is a load-bearing entry in AGENTS.md
+  because it stacks every view at once.
+- Unhiding the staged strip and dropping the `?strip=1` flag. The strip is required on News,
+  Maps and Settings as well as Alerts, carrying highest-tier state, separate tier counts,
+  selected area, verification state and a route to Alerts — it must not degrade into a bare
+  link once the pinned rail is gone.
+- Up to three priority alert cards with the full count and a route to all products; stat-bar
+  readings moved into Overview cards rather than shown twice.
+- Cross-view actions: All NWS alerts opens Alerts and focuses its NWS heading; Recent
+  earthquakes opens the existing earthquake section; Source details opens Settings at Data
+  Sources. Navigation issues no network requests, which is asserted with the fetch counter.
+- Architecture prose updated to explain the intentional sidebar replacement, per the contract.
 
-Out of scope, deferred to PR 3: Overview view, navigation, sidebar replacement, mobile
-card ordering.
+Out of scope: retiring the scrolling ticker. The contract permits it only once the strip and
+Alerts view fully cover its active-alert access. That is a judgement best made against the
+built layout, so it is deferred rather than bundled — say if it should be in this PR.
 
-Two contract details I expect to be the awkward ones, recorded now rather than discovered late:
-`usableCache()` returns stale entries only, so the shared selector must handle a current
-matching cache entry explicitly instead of reading its absence as unavailable; and counts are
-per product, not per incident, so overlapping watch/warning areas must not be deduplicated.
+Two things I expect to be awkward, recorded now rather than discovered late: the mobile order
+at 390px puts wind/rain between priority card 1 and cards 2–3, which cuts against the natural
+grouping of the three alert cards; and `switchView()` currently calls `renderAlertSurfaces()`,
+so per-view strip rendering must not turn navigation into a render storm or duplicate listeners.
 
-Q006 is complete and merged in b71fb74, so the board is no longer exclusively Codex-owned.
+**Blocking on this PR, not on the last one:** 200% browser zoom is still unverified. It was
+merged as an accepted exception in #16 while the strip was hidden. PR 3 makes it visible to
+everyone, so that exception does not carry over — the zoom pass needs a human before this
+merges.
 
 ### Agreed next sequence
 
-Completed: race guard (#14). Next: finish #15 → shared snapshot selector and NWS strip
-→ Overview layout/navigation.
+Completed: race guard (#14), board compaction (#15), shared snapshot and strip (#16).
+Remaining: Overview layout/navigation, claimed above. This completes the three-PR sequence.
 Each implementation is a separate claimed, reviewable PR. The strip carries all nonzero
 tier counts and the highest-tier state, plus scope/freshness as defined by the contract.
 Codex retains design/acceptance ownership; Claude retains implementation ownership.
@@ -72,7 +83,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/shared-snapshot-nws-strip | PR 2: shared snapshot selector and NWS strip |
+| Claude | claude/overview-layout | PR 3: Overview view, navigation, sidebar replacement |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -80,7 +91,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 2 | Reviewed and cleared at 84aca80 | Merge, verify production, then claim PR 3 |
+| PR 3 | Browser pass complete at 40fba96 | Awaiting Codex merge clearance |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -115,6 +126,172 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — Browser verification passed at 40fba96 (owner)
+
+The owner ran the pass on the preview at this exact head and reported all checks passing.
+Screenshot evidence at 200% zoom shows the page scrolled past the priority cards with all
+five view tabs still visible and clickable directly beneath the header — the specific
+failure mode the measured-offset fix addresses. The bottom of the page reaches Shelter and
+Outages with nothing covering them, and navigation survives resizing at zoom.
+
+Confirmed in the browser: full-alert access through View all N, Recent earthquakes, Source
+details, Open Maps and Open News.
+
+Incidental live confirmation of O07: during the active hurricane HNL reported a 116 mph gust
+with no sustained value, and the card reads "116 mph · Gust, sustained N/A" rather than
+presenting a gust as sustained wind. That path had only ever been exercised by fixtures.
+
+This closes the 200% zoom gate, which had been open since #16 and was carried forward
+deliberately rather than waived.
+
+**Next action:** Codex confirms merge clearance for #17.
+
+### 2026-09-08 — Functional acceptance: zoom obstruction, O10, O12, O13, O16
+
+Owner direction: finish functionality, defer layout refinement. Codex agreed and asked that
+functional obstruction at zoom be treated as a blocker while spacing and polish follow later.
+
+**The zoom blocker was real and was not about spacing.** `.desktop-tabs` stuck at a hardcoded
+`top:160px`, matching the header only at default zoom. At 200% the header is roughly twice
+that, so the view tabs slid underneath it and could not be clicked while scrolled — the
+navigation became unreachable. `.content-spacer` had the same defect against the fixed bottom
+nav, hiding the last control behind it. Both now position against measured
+`--hdr-h`/`--nav-h`, refreshed on resize and via ResizeObserver.
+
+**O10** — the source aggregate showed the newest success across six sources, which reads as a
+completed refresh while five are still checking. It now states the count outstanding.
+
+**O13** — hostile feed content is now covered by fixtures rather than assumed: an
+`onerror` payload in an event name and a `<script>` in an area name produce no elements and
+run nothing, a `javascript:` news link is neutralised, and every new-tab link carries both
+rel values. The rel fixture initially could not fail because no priority card had a product
+URL, so no outbound link existed to check; it now carries one.
+
+**O16** — an unkeyed visitor gets the strip, priority cards and observations, the digest panel
+stays hidden, and the fetch log shows nothing requested from the model API or any host outside
+the declared sources.
+
+**O12** — Open Maps and Open News are asserted to switch views without fetching.
+
+**O07** — gust-only wind is asserted to be labelled rather than presented as sustained wind.
+
+**Evidence:** npm test 106, test:dom 255, test:mutation 38/38. Six new mutation cases,
+including restoring the hardcoded sticky offset and dropping noreferrer.
+
+**Still open:** the layout recheck and a usability pass at 200% zoom. The owner has confirmed
+the zoom setting itself; what remains is whether content and controls stay usable there.
+
+### 2026-09-08 — Two observation fixes on PR 3
+
+**Tide fallback lost the Honolulu disclosure.** fetchTides cached sta.name while rendering
+tideLabel(sta), so a failed refresh dropped the caveat precisely when the reading was stale
+and most needed it. This is the same defect as the weather path, on the other side; fixing
+one and not the other is what let it through. The cache now holds the qualified label, and
+the failure path is tested for statewide and Molokaʻi.
+
+**Populated earthquake cards omitted the query radius.** Only the empty card and the Alerts
+list carried it, so a magnitude read as "the latest earthquake" rather than "the latest
+inside this query" — a claim about everywhere else that the data does not support. The
+populated card now reads "Kauai fixture · 1m ago · within 200 km of Kauai".
+
+Worth recording: the test covering that second case asserted **false** — it pinned the missing
+scope in place as expected behaviour instead of reporting it. A test that documents a defect
+as correct is worse than no test, and it is why the mutation harness now has a case for it.
+
+**Evidence:** npm test 106, test:dom 226, test:mutation 32/32.
+
+**Still open:** the full layout recheck and 200% browser zoom, the agreed merge gate,
+unverified by anyone. #17 stays open.
+
+### 2026-09-08 — PR 3 review defects fixed
+
+All three confirmed and fixed; two of them were things the DOM tests could not see.
+
+**1. View all N reached only 12.** renderAlerts capped its output, so Overview could offer
+"View all 20" and land the reader on a truncated list with nothing saying so. The cap is now
+the eligibility filter only. Section 23 asserts the destination contents, not the label.
+
+**2. The earthquake card survived an island switch.** Its USGS query is a radius centred on
+the selected island, so it is island-scoped like wind, rain and tide and is now withdrawn
+with them. Section 14 holds a Kauai M4.2 first, matching the reviewer fixture.
+
+**3. Ordering was wrong at both ends.** At 1280px the observation wrapper defaulted to
+order:0 and jumped ahead of the first priority card; the wrapper is gone and 1024px+ places
+items on an explicit grid. More importantly, CSS order never changed the sequence a screen
+reader announces, so the 390px reading order the contract specifies was not being met at all.
+**The markup is now written in that reading order** and wider breakpoints rearrange it
+visually. Below 768px nothing is reordered, so seen and read agree.
+
+**Contract details (O07/O08/O11/O12):** Statewide and Molokaʻi disclose the Honolulu station
+substitution on both weather and tide; tide carries ft MLLW; the observation timestamp is
+shown separately from the fetch time; the earthquake card names its query radius; a full page
+of USGS results says the ten-result limit was reached rather than reading as a complete count;
+a missing magnitude stays unknown; and Recent earthquakes is a real action that focuses the
+earthquake heading without fetching.
+
+Two further defects surfaced while writing the tests. fetchWeather cached the qualified
+station label but rendered the bare one, so the Honolulu disclosure appeared only once the
+reading went stale. And the mutation check reported the new earthquake-withdrawal assertion
+MISSED: the card read "None" at that point, so checking that it no longer contained a
+magnitude passed either way. The fixture now puts a real magnitude on screen first.
+
+**Evidence:** npm test 106, test:dom 222, test:mutation 30/30. Nine new mutation cases, one
+per fixed defect.
+
+**Still open:** 200% zoom, unverified by anyone and still the agreed merge gate. The ticker is
+retained; full-product access through the strip and Alerts view is now correct, so the
+coverage judgement can be made against this head.
+
+**Next action:** Codex re-reviews and runs the browser list, including the zoom gate.
+
+### 2026-09-08 — PR 3 implemented: Overview, five views, sidebar replaced
+
+Five real views with Overview initial; the pinned desktop Alerts sidebar is gone and Alerts
+is a full view. Both breakpoints are a single column where .view/.view.active alone decide
+visibility — there is no rule forcing a view visible, and a test asserts both that no live
+rule of that shape exists and that exactly one view is active after every switch.
+
+Overview carries up to three priority products with the full count and a route to the rest,
+the four observation readings moved out of the always-visible stat bar, and routes to Maps,
+News and Source details. Reading order comes from CSS order on one copy of the markup: there
+is exactly one #stat-wind in the document, asserted. The strip is one element in shared
+chrome; its route is hidden only on Alerts. The ticker is retained pending the coverage
+judgement Codex asked for.
+
+**Evidence:** npm test 106, test:dom 197, test:mutation 23/23. New DOM sections 17-22 cover
+the five views, priority cards and counts, cross-view focus with a fetch counter, the strip
+across every view, breakpoint ordering, and the moved observations. Seven new mutation cases
+cover the PR 3 behaviours; all 23 are caught.
+
+**Browser check list — none of this is verified by Claude:**
+
+1. **200% zoom** — the agreed gate. Essential text, controls and access to alerts preserved.
+2. `#obs-row{display:contents}` below 1024px and flex above it. This is the least certain
+   piece: if display:contents misbehaves, the observation cards stop reordering on mobile.
+3. Strip at 320/390px — scope, state, counts, freshness and route all present, none clipped.
+4. Priority cards with long event names and long area lists; areas must wrap, not truncate.
+5. Exactly one view visible at each breakpoint — tests assert the DOM, not what is painted.
+6. Five bottom-nav buttons at 320px: labels legible, safe-area inset respected.
+7. Focus visibility after All NWS alerts and Source details; the headings take tabindex=-1.
+8. Light, dark and system across the new Overview surfaces.
+
+index.html grew 123,743 to 135,287 bytes.
+
+**Next action:** Codex reviews against the merged contract and runs the list above.
+
+### 2026-09-08 — #16 merged and production verified; PR 3 claimed
+
+Merged as d9188e6. Production verified: deployed HTML is byte-identical to main, and both
+suites run against the fetched production file pass — 138 DOM assertions and 37 contrast
+assertions, including all nine strip states and the check-time regression. The strip is live
+in production and correctly still hidden.
+
+200% zoom stays open below. It was an accepted exception for #16 because the strip was
+hidden; PR 3 makes it visible, so it becomes a real gate on that PR.
+
+**Next action:** Claude implements PR 3 on claude/overview-layout. Codex reviews against the
+merged contract and performs the browser pass, which this time must include 200% zoom.
 
 ### 2026-09-07 — PR 2 review cleared at 84aca80
 
