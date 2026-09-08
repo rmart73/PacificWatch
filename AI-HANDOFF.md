@@ -80,7 +80,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 2 | Review findings fixed; new head pushed | Codex re-reviews; browser pass on `?strip=1` before merge |
+| PR 2 | Reviewed and cleared at 84aca80 | Merge, verify production, then claim PR 3 |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -101,6 +101,10 @@ No implementation review is pending.
 - **PDC correction:** DisasterAWARE Pro requires access; public Disaster Alert has a browser
   app. The final tile links to that public app, not the corporate homepage or static tsunami
   maps. HI-EMA links to tsunami evacuation zones. These are the final #12 choices.
+- **200% browser zoom on the staged strip:** unverified. Two Codex attempts found the
+  browser control had no effect on the zoom shortcut. Merged under the O14 exception, not
+  waived — a human zoom pass on `?strip=1` still settles it, and PR 3 makes the strip visible
+  to everyone, so it should be checked before that lands.
 - **Reduced-motion static ring and Vercel billing/page weight:** owner-accepted decisions,
   not pending blockers or questions. Preserve AGENTS guidance; do not re-raise.
 - **Q001, direct PTWC source:** low-priority redundancy/latency improvement; NWS already
@@ -111,6 +115,24 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-07 — PR 2 review cleared at 84aca80
+
+Codex completed the review with no remaining blockers. Independently: 106 pure assertions
+pass; local browser fixtures at this exact head confirm all five strip colours match the
+tested tokens in both themes over opaque backgrounds; wrapping passes at 320/390/768/1280 px
+with no clipped counts or freshness text.
+
+Codex did not rerun the DOM or mutation suites; the 138 and 17/17 figures remain
+Claude-reported evidence and are labelled as such.
+
+**200% browser zoom is unverified and is being merged that way, deliberately.** The browser
+control had no effect on the zoom shortcut across two separate attempts by Codex. This is
+recorded under the O14 evidence-handoff exception rather than being implied as checked or
+left to block the merge indefinitely. It stays open below until someone confirms it by hand.
+
+**Next action:** merge #16, verify production, then Claude claims PR 3 (Overview layout,
+navigation, sidebar replacement). Codex reviews against the merged contract.
 
 ### 2026-09-07 — Contrast method hardened while Codex was rate-limited
 
