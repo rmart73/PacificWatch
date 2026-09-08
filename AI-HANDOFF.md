@@ -21,7 +21,7 @@ are attributed to the user-relayed Claude report.
 | v2 contract | #13 merged | Contract settled; Codex owns layout and acceptance criteria |
 | Island request guard | #14 merged in 36a5a20; production verified per Claude's report | Review closed at 992e30c |
 | Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
-| Overview layout / navigation | Implemented; PR open | Codex reviews; browser pass including 200% zoom gates the merge |
+| Overview layout / navigation | Implemented; browser pass done at 40fba96 including 200% zoom | Awaiting Codex clearance to merge |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
 
 ### Active claims
@@ -91,7 +91,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| PR 3 | Open for review | Codex reviews and runs the browser check list below |
+| PR 3 | Browser pass complete at 40fba96 | Awaiting Codex merge clearance |
 
 #13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
 in the archive, and the completed #14 test correction is recorded below.
@@ -126,6 +126,26 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — Browser verification passed at 40fba96 (owner)
+
+The owner ran the pass on the preview at this exact head and reported all checks passing.
+Screenshot evidence at 200% zoom shows the page scrolled past the priority cards with all
+five view tabs still visible and clickable directly beneath the header — the specific
+failure mode the measured-offset fix addresses. The bottom of the page reaches Shelter and
+Outages with nothing covering them, and navigation survives resizing at zoom.
+
+Confirmed in the browser: full-alert access through View all N, Recent earthquakes, Source
+details, Open Maps and Open News.
+
+Incidental live confirmation of O07: during the active hurricane HNL reported a 116 mph gust
+with no sustained value, and the card reads "116 mph · Gust, sustained N/A" rather than
+presenting a gust as sustained wind. That path had only ever been exercised by fixtures.
+
+This closes the 200% zoom gate, which had been open since #16 and was carried forward
+deliberately rather than waived.
+
+**Next action:** Codex confirms merge clearance for #17.
 
 ### 2026-09-08 — Functional acceptance: zoom obstruction, O10, O12, O13, O16
 
