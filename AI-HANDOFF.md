@@ -26,8 +26,22 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
-No work is currently claimed. The three-PR sequence is complete and every
-remaining item below is deferred and unclaimed.
+**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.**
+Claim published 2026-09-08 before editing, in its own commit ahead of the work.
+
+Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
+handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
+accuracy across the four observation cards.
+
+Extended 2026-09-08 to cover the end-of-night handoff record on this same branch, at Codex's
+request and under the documentation claim rule.
+
+Output is a report only. **No remediation in this branch** — findings are written up and
+prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
+bundled into an assessment. Layout stays deferred and unclaimed.
+
+Reporting rule agreed with Codex: verified protections, concrete gaps and unverified items are
+reported separately, and neither a green suite nor an HTTP 200 is offered as security clearance.
 
 ### Agreed next sequence
 
@@ -48,7 +62,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| _none_ | — | No work is claimed. Layout and the remaining items are deferred and unclaimed. |
+| Claude | claude/launch-readiness-review | Security and launch-readiness review; report only, no remediation |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -91,6 +105,159 @@ No implementation review is pending.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
 ## Handoff Log
+
+### 2026-09-08 — END OF NIGHT HANDOFF: read this first when resuming
+
+Both the owner and Codex paused under an active tropical storm warning with unstable power.
+Recorded here rather than in conversation so either agent can resume without chat history.
+**No implementation or remediation was done tonight.**
+
+#### Current state
+
+- The Overview sequence, the wind-unit correction and the durable testing principles are
+  **merged through #20**. `main` is `3f5a885`, deployed and serving.
+- The app is **publicly reachable, but broader public-launch clearance has not been given.**
+- **#21 is open: launch-readiness report only.** Codex reviewed it and **requested corrections;
+  it is not cleared to merge.** Until those land, treat the report as a draft with known errors,
+  listed below.
+- **No G1 remediation has been claimed.** Nothing is in flight.
+
+#### Corrections owed on #21, from Codex's review
+
+These are defects in the report itself, not in the product. They are written out so the work
+does not depend on remembering the review.
+
+1. **Qualify the security conclusions to the checks actually performed.** The report states "no
+   XSS" and "no SSRF" as properties of the system. They are findings from a specific manual
+   review of specific surfaces, and must be scoped that way.
+2. **CORS is not an abuse control, and the report treats it as one.** Restricting
+   `Access-Control-Allow-Origin` constrains browser callers only; a script, curl or server
+   ignores it entirely. It does not bound G1 and must not be listed as a fix for it.
+3. **The claim that the single-file architecture requires `script-src 'unsafe-inline'` is
+   wrong.** CSP hashes or a nonce for the inline script would keep the single file and drop
+   `unsafe-inline`. G6 should say the current build has not done that work, not that the design
+   forbids it.
+4. **G2 conflates two different failures.** Losing connectivity in an already-open page does not
+   blank it — the app keeps last-known-good and marks sources stale or unavailable, which is
+   tested. The real gap is a **reload while offline**, which has nothing to serve. The severity
+   claim must be rewritten around that distinction.
+
+#### Source evidence still to complete
+
+The source-to-display record in the report covers four cards but three entries are incomplete:
+
+- **Rainfall was null** at capture time, so only the withhold path was exercised. A **non-null**
+  reading is still needed to verify the mm-to-inches conversion against live data.
+- **The tide timestamp has no timezone.** It was recorded as `2026-09-07 20:06`; NOAA was queried
+  with `time_zone=lst_ldt`, so the record must state which zone that is.
+- **The earthquake entry lacks event identity.** Magnitude alone is not traceable; record the
+  USGS event id, place and network so the reading can be re-checked later.
+
+#### Resume in this order
+
+1. **Correct #21** using the four items above, then complete the source evidence.
+2. **Codex reviews the corrected report**, and only then is it merged.
+3. **Claim G1 separately** and bound news-endpoint abuse and upstream fetching, with controlled
+   verification. Note that the fix must actually bound invocations — cache-key normalisation,
+   a restricted parameter set, and rate limiting — not CORS.
+4. **Monitoring follows G1.** Hosting capacity, optional AI key handling and failure behaviour,
+   critical links, accessibility and mobile checks, and tsunami-path verification remain
+   public-launch decisions or checks, not tonight's work.
+
+#### Deferred, unclaimed
+
+Offline support, layout refinement and page-weight work. **Layout requires an agreed design
+before any implementation**, and must preserve the verified navigation, full-alert access,
+source disclosures and 200% zoom usability.
+
+#### Unverified stays unverified
+
+No penetration test, no third-party review, no load testing, no end-to-end screen reader pass,
+one browser on one machine, the six F005 reference URLs, Anthropic failure and cost behaviour,
+and the tsunami path end to end. None of these has been checked; none should be described as
+passing.
+
+#### Branch and PR status
+
+| | |
+|---|---|
+| `main` | `3f5a885` — merged through #20, deployed, serving |
+| `claude/launch-readiness-review` | PR **#21**, open, report only, **corrections owed** |
+| Other branches | none |
+| Claimed work | this branch only, report scope; nothing else |
+| In flight | nothing |
+
+### 2026-09-08 — Earlier pause note (SUPERSEDED by the entry above)
+
+Paused during an active tropical storm warning with uncertain power. Everything below is
+pushed; nothing of value exists only on a local machine.
+
+**State:** main is 3f5a885, deployed and serving. Working tree clean. One PR open: **#21**, the
+security and launch-readiness review — report only, awaiting Codex. Nothing else is in flight.
+
+**Where the product stands.** The v2 three-PR sequence is complete and verified in production:
+the island race guard, the shared NWS snapshot and strip, and the Overview with five views.
+Today also fixed a live data defect: wind was being displayed 3.6x too high because the code
+assumed metres per second while api.weather.gov reports km/h. The owner found it by reading the
+raw API beside the rendered card. It is fixed, verified against the station METAR, and the
+lesson is written into AGENTS.md as two testing rules.
+
+**To resume, in order:**
+
+1. Read [LAUNCH-READINESS.md](LAUNCH-READINESS.md). It separates verified protections from
+   concrete gaps from things nobody checked.
+2. Agree with Codex which gaps gate a public launch. Claude's view: **G1 alone is a blocker**,
+   with G2 and G4 close behind. That is a product call, not only a technical one.
+3. Claim any remediation separately. #21 deliberately contains no fixes.
+
+**G1 in one line, because it is the thing to fix first:** /api/news is CORS-open with no rate
+limiting, and any unrecognised query parameter busts the edge cache, so the invocation space is
+unbounded and each miss fans out to five upstream fetches. Demonstrated against production. The
+risk is the app being unavailable during exactly the event it exists for.
+
+**Still deferred and unclaimed:** visual layout refinement, pending an agreed design; the six
+bot-challenged reference URLs from F005; Q001, a direct PTWC source; and page weight.
+
+### 2026-09-08 — Security and launch-readiness review (report only)
+
+Bounded review at 3f5a885 across the seven areas Codex set. Written up in
+[LAUNCH-READINESS.md](LAUNCH-READINESS.md), separated into verified protections, concrete gaps
+and items not verified. **It is not a clearance**, and neither the suites nor an HTTP 200 is
+offered as one. No remediation is in this branch.
+
+**Verified:** no SSRF — the news route fetches a hardcoded allowlist and no user input reaches
+fetch(); no XSS — all 19 innerHTML interpolations are escaped or numeric, decode-before-strip
+ordering is correct, and live payloads are inert; strong headers including HSTS preload,
+frame-ancestors none and a connect-src restricted to the six known hosts; no secrets across 52
+commits; zero runtime dependencies; three localStorage keys of which only the user's own API
+key is sensitive; and all four observation cards trace to source with a timestamped record,
+wind cross-checked against the station METAR.
+
+**Gaps, worst first:**
+
+- **G1, high, launch blocker.** /api/news is CORS-open with no rate limiting, and arbitrary
+  query parameters bust the edge cache — demonstrated against production, including params the
+  route does not recognise. Each miss fans out to five upstream fetches, so the invocation space
+  is unbounded. Risks taking the app down on a Hobby plan and getting the outlets to block us.
+- **G2, high for this product.** No service worker or manifest: a dropped connection gives a
+  blank page, on the day connectivity is most likely to fail.
+- **G3, medium.** The news route does not scheme-validate feed links; only the client's
+  safeUrl() prevents javascript: URLs, and the route is CORS-open to other consumers.
+- **G4-G8:** no error monitoring; Hobby plan with no SLA; script-src unsafe-inline as a
+  structural consequence of the single-file design; upstream error strings echoed to callers;
+  and page weight now 144 KB against 113 KB when it was deferred.
+
+**Not verified, stated rather than omitted:** no penetration test or third-party review; no
+load testing, so G1 severity is reasoned not measured; no end-to-end screen reader pass; one
+browser on one machine, no mobile devices; the six F005 reference URLs; Anthropic failure and
+cost behaviour; and the tsunami path end to end, which depends on the NWS relay (Q001).
+
+**Assessment:** security is not the blocker. Resilience and operability are — G1, G2 and G4.
+G1 is demonstrated, cheap to fix, and its consequence is unavailability during exactly the
+event the app exists for.
+
+**Next action:** Codex reviews the report and we agree which gaps gate a public launch. Any
+remediation is claimed separately.
 
 ### 2026-09-08 — Testing principles recorded; no work claimed
 
