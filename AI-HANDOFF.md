@@ -27,12 +27,41 @@ directly against production in this session.
 | #17 production record | #18 merged in 5249e53 | Closed |
 | Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
-| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
+| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains a launch blocker, its contract is now claimed, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; first-round findings corrected, second-round findings addressed, and explicit seconds validation added as hardening rather than as a reproduced defect | Codex review complete, no findings remaining; owner decides merge |
+| Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
+| G1 abuse/cost bounding contract | [PR #25](https://github.com/rmart73/PacificWatch/pull/25) open; documentation/design only | Claude reviews the contract read-only; no implementation until it is accepted and merged |
 
 ### Active claims
+
+**G1 abuse/cost bounding contract — ChatGPT Codex,
+`codex/g1-abuse-bounding-contract`.** Owner-authorized 2026-09-26 under the approved sequence
+**G1 → observation Stage 2 → Stage 3**. Documentation and design only. This claim absorbs the
+current-board closeout that #24 could not record about its own merge.
+
+Draft governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Claude holds with
+nothing claimed and reviews the contract read-only when the PR opens.
+
+Scope:
+
+1. Close #24 in Current Work, Active Branches and Review Queue; update `main` to `22686bb` and record
+   the independently verified production deployment.
+2. Write `G1-ABUSE-BOUNDING-CONTRACT.md`: settle canonical cache behaviour, the accepted request
+   variants and rejection behaviour, the managed rate-limit design, preserved partial-feed
+   behaviour, and testable local/preview/production evidence.
+3. Resolve the rate-limit state question explicitly: no in-process counter and no runtime
+   dependency exception. The proposed control is Vercel WAF's managed fixed-window rate limiting,
+   which official documentation says is available on Hobby. The contract must disclose that its
+   counters are per region, Hobby permits one rule, and publishing the rule requires a pricing
+   acknowledgement and separate owner authorization during implementation.
+4. State explicitly that CORS controls who can read a browser response, not who can invoke the
+   route, and earns no G1 acceptance credit.
+
+Out of scope: no edit to `api/news.js`, `index.html`, `vercel.json`, tests, `package.json` or
+`AGENTS.md`; no WAF/dashboard mutation; no implementation PR or production traffic test; no Stage 2,
+Stage 3 or other launch-readiness remediation. Claude reviews this contract read-only. Only after
+the contract is accepted and merged may Claude publish a separate implementation claim.
 
 **Closed: end-of-night pause checkpoint — ChatGPT Codex,
 `claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
@@ -41,10 +70,13 @@ No implementation, test, contract, or PR-status change was in scope. This used C
 because the mutation-anchor correction being recorded was present there; Claude was paused and this
 did not transfer ownership of Stage 1. Claim commit `d982878`; checkpoint commit follows it.
 
-**Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
+**Closed: Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
 `claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
 ahead of the work, on the owner's explicit authorization. Branched from `main` at `a3f9897`, with
 `git log main..HEAD` and content equality verified before starting.
+
+Merged as #24 in `22686bb`; production HTML was verified byte-identical to merged `main`
+independently by both agents. The scope and evidence below are retained as the completed record.
 
 Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), stage 1 of
 the three implementation boundaries it defines.
@@ -204,12 +236,12 @@ Overview as "remaining" after #17 had merged.
 Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
 implementation stays a separate claimed, reviewable PR.
 
-**What is next:** the [observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) is
-merged and authoritative, and **stage 1 is implemented and in review as PR #24**. After it merges,
-stage 2 wires the helpers into the cards and Source details, removes the magnitude-driven dot
-classes and satisfies T17; stage 3 aligns the earthquake card. Each needs its own claim. G1 remains
-a separate unclaimed launch blocker. Q010 is settled as an owner-accepted unverified gap and is not
-outstanding.
+**What is next:** observation stage 1 is merged and production verified in #24. The owner approved
+the sequence **G1 → Stage 2 → Stage 3**. Codex is drafting the G1 abuse-bounding contract now;
+Claude implements only after that contract is reviewed, accepted and merged. Stage 2 then wires the
+observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
+satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
+settled as an owner-accepted unverified gap and is not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -222,7 +254,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/stage1-observation-metadata | Q007/Q008 stage 1: observation metadata, timestamp parsing, combined-state helpers, controlled-time tests, and one narrow render-path change so a refused older observation cannot reach the card. Ordinary rendering and dot thresholds unchanged |
+| Codex | codex/g1-abuse-bounding-contract | G1 acceptance contract and #24 board closeout; documentation/design only |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -230,19 +262,16 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Q007/Q008 stage 1 — observation clock | PR #24 open; two review rounds plus a documentation confirmation, all code findings corrected and Codex reports none remaining; verification complete at 222 / 281 / 61-of-61. **No branch-head hash recorded here on purpose** — one written into a current-state row is stale the moment the commit writing it lands. Read the head from the PR | Codex review complete; owner decides merge. Do not merge without that decision |
-| Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
+| Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
+| G1 abuse/cost bounding contract | PR #25 open; owner-authorized; documentation/design only | Claude reviews read-only; implementation remains blocked |
+| Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
+| G1 abuse/cost bounding implementation | Blocked on the contract above | Claude claims separately only after the contract merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `a3f9897`**, merged through #23. Claims and handoffs for #13–#15 are preserved in
-the archive, and the completed #14 test correction is recorded below.
-
-**An implementation change IS pending review: PR #24 changes `index.html`.** An earlier version of
-this paragraph said none was, which was written when the queue held only documentation and design
-work and was not corrected when stage 1 began. The other queued items above remain documentation,
-design or separately unclaimed work.
+**`main` is at `22686bb`**, merged through #24 and serving production. Claims and handoffs for
+#13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
+No application implementation is currently in flight; the active G1 work is a contract only.
 
 ## Outstanding Verification and Decisions
 
@@ -364,6 +393,52 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — G1 contract review: three findings addressed
+
+Claude reviewed PR #25 read-only and judged the contract sound and acceptable. The review added
+three useful guards: the hazard representation must filter the complete merged feed pool before
+the 30-item cap rather than filter a capped mixed response in the browser; the new
+`/api/news/hazard` path must be proved to reach the Function instead of returning a `404` or the
+SPA; and repeated live filter toggles must emit only the two exact canonical URLs.
+
+The cache-normalization finding is resolved without weakening G03. Official Vercel documentation
+places routing rules before cache lookup and supports request-query deletion, which makes a
+pre-cache transform plausible, but does not explicitly guarantee the resulting cache identity.
+The contract therefore distinguishes a request-query transform from an ordinary rewrite and keeps
+fresh-preview convergence as the deciding evidence. If convergence fails, implementation returns
+for an explicit contract amendment and owner decision. Handler rejection plus a per-IP, per-region
+WAF rule would make arbitrary misses cheaper, but would not make the CDN/Function key space finite,
+so that fallback is not silently treated as satisfying the original cache-normalization finding.
+
+Acceptance now runs through G18. This remains documentation only; Claude has not claimed or begun
+implementation.
+
+### 2026-09-26 — G1 contract claimed; managed rate-limit constraint resolved
+
+The owner approved **G1 → observation Stage 2 → Stage 3**, with Codex writing the G1 acceptance
+contract and Claude implementing only after that contract is reviewed, accepted and merged. Codex
+claimed `codex/g1-abuse-bounding-contract` from `main` at `22686bb`; no implementation is in flight.
+
+Claude raised the stateful-rate-limit constraint before implementation: an in-process counter is
+per instance and cannot prove a bound, while adding KV/Redis/Upstash or an SDK would violate the
+dependency-free runtime rule without an explicit owner exception. Current official Vercel
+documentation resolves the choice without such an exception: managed WAF rate limiting is
+available on Hobby, uses fixed windows with IP or JA4 keys, and runs outside the Function. The
+contract selects a fixed 60-second, 100-request, IP-keyed `429` rule covering only the two canonical
+News representations.
+
+The limitation is part of the claim, not hidden: Vercel documents counters as per region, Hobby
+allows one rate-limit rule, and publishing the rule presents a pricing acknowledgement. The owner
+must separately authorize that external dashboard action during implementation. Until enforcement
+and canonical-cache convergence are observed on the actual project, G1 remains open.
+
+The contract also removes caller-selected `limit`, reduces the public API to exactly two canonical
+representations (all and hazard, both capped at 30), requires unknown/surplus input to converge
+before cache selection or perform zero upstream work, and preserves partial-feed results, the full
+Star-Advertiser user agent and the five-minute cache window. CORS explicitly earns no G1 acceptance
+credit. Claude reviews this document read-only; no code, routing, test or WAF change is authorized
+by this contract branch.
 
 ### 2026-09-26 — Stage 1, second review round: two findings, one of which does not reproduce
 
