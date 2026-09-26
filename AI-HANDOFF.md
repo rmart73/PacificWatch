@@ -216,9 +216,11 @@ cross-checked against the METAR `Pnnnn` hundredths-of-an-inch group.
 
 #### Evidence
 
-`npm test` 106 (34 + 35 + 37), `npm run test:dom` 267, both green. This branch changes two
-markdown files and no code, so the suites are unchanged-by-construction rather than evidence of a
-working change; they are recorded to show nothing was disturbed.
+`npm test` 106 (34 + 35 + 37), `npm run test:dom` 267, `npm run test:mutation` 42/42 — all green.
+This branch changes two markdown files and no code, so the suites are unchanged-by-construction
+rather than evidence of a working change; they are recorded to show nothing was disturbed. The
+mutation run is included because this project's convention is to cite all three, and because a
+docs-only branch is exactly where an unnoticed stray edit to `index.html` would hide.
 
 #### Next action
 
