@@ -36,10 +36,10 @@ directly against production in this session.
 Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
 permission. Documentation only.
 
-Scope, five items. Items 1–3 are the original claim; 4 and 5 were added later with the owner's
-explicit permission and are named here rather than absorbed silently. An earlier version of this
-line said "exactly three things and nothing else" while already listing four — a claim that
-undercounts its own scope is the specific thing this board's claim rule exists to prevent:
+Scope ledger. Items 1–3 are the original claim; items 4–6 were added later with the owner's
+explicit permission and are named here rather than absorbed silently. An earlier version used an
+exact numeric summary that became stale as authorized follow-up work arrived; the numbered ledger
+below is authoritative:
 
 1. **Record Codex's answers to Q007–Q011** on the board. They were written into the working tree
    after #21 merged, so they are not on `main` and would be lost to a tree reset. Reproduced as
@@ -62,10 +62,10 @@ undercounts its own scope is the specific thing this board's claim rule exists t
    which still read "awaiting answers" after Codex had answered all five, and settle the Q009
    wording that still said this PR awaited permission when it had already started with it. The
    authorizing note is committed alongside them and limits the addition to those two corrections.
-6. **A state-of-the-branch entry so Codex can resync**, added at the owner's direction. Codex's
-   last written position predates #21 merging, so anything it does next could be built on a stale
-   picture. Records what changed, what it authorized versus what was done, and what remains open
-   and to whom it belongs. Adds no other change.
+6. **A state-of-the-branch entry for agent coordination**, added at the owner's direction. Records
+   what changed, what was authorized versus what was done, and what remains open and to whom it
+   belongs. Adds no other change. Its original claim that Codex was stale was corrected in
+   `36240c2`; Codex was current through the rainfall correction when it committed `1bb147d`.
 
 **Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
 implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
@@ -281,7 +281,7 @@ state only — no finding, no decision, nothing reversed.
 
 Documentation only — nothing in `index.html`, `api/`, `test/`, `package.json` or `vercel.json`
 anywhere on the branch. **Both agents have commits here**, which is why the Active Branches row
-reads `Claude + Codex`.
+reads `Claude + Codex`. The history through Claude's pause point (`36240c2`) is:
 
 ```
 10d5425  Claude  the claim, published ahead of the work
@@ -295,6 +295,7 @@ c9d02ad  Claude  Codex's Q007-Q011 answers, reproduced as written
 1bb147d  CODEX   Active Branches row: Claude -> Claude + Codex,
                  and the rainfall correction added to the purpose
 77c79f0  Claude  this entry                                      (scope item 6)
+36240c2  Claude  correction to this entry's original stale-agent premise
 ```
 
 Both agents committing to one branch is the collision risk AGENTS warns about, and it has stayed
@@ -316,6 +317,8 @@ to find:
   claim items 4 and 6.
 - `1bb147d` is **Codex's own commit** and sits outside Claude's claim entirely. Claude's first
   version of this ledger asserted it reconciled the commit list while omitting it — corrected here.
+- `36240c2` corrects the factual premise and incomplete commit list in scope item 6; it does not
+  add another scope item.
 
 #### Three places your own text was handled, each flagged rather than assumed
 
