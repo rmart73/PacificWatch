@@ -50,6 +50,11 @@ Scope, exactly three things and nothing else:
    answer, taken early rather than buried in later work: the load-bearing table row and the prose
    that still describe the strip as `hidden` and flag-gated behind `?strip=1`, and the inline
    handler count of `22` where the file has `31`.
+4. **Correct the rainfall evidence in [LAUNCH-READINESS.md](LAUNCH-READINESS.md) and below.**
+   Added to this claim with the owner's permission after the poll completed a second observation
+   round, which both strengthens the record and falsifies one sentence already merged in #21. The
+   conclusion does not change — the divisor is still unverified at a nonzero value — so this
+   corrects evidence and a wrong statement, not a finding.
 
 **Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
 implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
@@ -311,12 +316,18 @@ The three incomplete entries are now addressed:
 nonzero `precipitationLastHour` in the capture window — PHNL and PHOG `null`, PHTO and PHLI `0` — so
 `25.4` is exercised only at zero, where every divisor agrees. PHLI reported
 `precipitationLast3Hours: 0.5 mm`, but the app reads only `precipitationLastHour`, so that value
-reaches no render path and is not evidence. A poll across all four stations ran through the
-`2026-09-26T02:53Z` observation round and caught no nonzero value; the poll window is stated here
-rather than generalised, because "we looked and found none" is only as strong as the window it
-covers. **This is the same shape as the wind defect and is the one source-to-display gap still
-open** — worth closing on the next rain event, with the expectation taken from `mm / 25.4` and
-cross-checked against the METAR `Pnnnn` hundredths-of-an-inch group.
+reaches no render path and is not evidence. All four stations were polled across **two full hourly
+rounds**, `02:53Z` and `03:53Z` — eight distinct observations — and none carried a nonzero value.
+The window is stated rather than generalised, because "we looked and found none" is only as strong
+as the window it covers.
+
+The second round is the informative one: PHNL logged `RAB35E47` (rain began :35, ended :47), PHLI
+reported `-RA` in progress and PHTO `RAE02`, yet all three reported `P0000` — the METAR group for a
+**trace**, under 0.01 of an inch. So rain fell at three of four stations during a tropical system
+and a measured `0` was the correct reading. **This is the same shape as the wind defect and is the
+one source-to-display gap still open** — closing it needs at least 0.01 of an inch accumulated in
+the hour, with the expectation taken from `mm / 25.4` and cross-checked against the METAR `Pnnnn`
+group.
 
 #### Deliberately not done in this branch
 
@@ -450,11 +461,21 @@ reproduce. Two earlier Codex attempts failed because the browser zoom control di
 
 #### Nonzero rainfall: still not closeable, and the reason is upstream
 
-Polling all four stations from `02:53Z` through `04:10Z` produced no nonzero
-`precipitationLastHour`, because **NWS published no new observation at all** in that window — not
-because the values were zero throughout. PHNL and PHOG were `null`, PHTO and PHLI a measured `0`,
-unchanged. The check needs an actual new observation carrying rain; it cannot be forced, and it is
-correctly recorded as unverified rather than as a passed check.
+**Correction to this entry, 2026-09-26.** As first written, this section said NWS "published no new
+observation at all" in the window. That was accurate when checked at `04:10Z` but is **wrong as a
+statement about the feed**: the `03:53Z` round did publish, roughly twenty minutes behind its
+observation time, and the poller captured it. Publication was delayed, not absent. Correcting it
+here rather than leaving it, because an overstated upstream fault is exactly the kind of claim this
+project requires be traceable.
+
+What the completed poll shows: eight distinct observations across two hourly rounds, `02:53Z` and
+`03:53Z`, and **no nonzero `precipitationLastHour` in any of them**. In the second round PHNL logged
+`RAB35E47`, PHLI `-RA` and PHTO `RAE02` — rain genuinely falling — while all three reported `P0000`,
+a trace under 0.01 of an inch. PHOG carried no precipitation field at all.
+
+So the check is unmet for a substantive reason rather than for want of trying: a measured `0` was the
+correct reading at every station. It needs an hour with at least 0.01 of an inch of accumulation,
+which cannot be forced, and it stays recorded as unverified rather than as a passed check.
 
 #### Now unblocked, not yet done
 

@@ -125,14 +125,33 @@ with an `unknown` ring. That is exactly the `ok` versus `unknown` semantics the 
 require, confirmed against live data rather than a fixture — and it is the pairing that the
 "invented 0.00 rainfall" defect in this project's history got wrong.
 
-**Still not verified: the mm-to-inches divisor against a nonzero live reading.** No station in the
-app's set reported a nonzero `precipitationLastHour` during the capture window — PHNL and PHOG
-reported `null`, PHTO and PHLI reported `0` — so the `25.4` divisor is exercised only at zero,
-where every divisor gives the same answer. PHLI reported `precipitationLast3Hours: 0.5 mm`, but the
-app reads only `precipitationLastHour`, so that value never reaches a render path and cannot serve
-as evidence. **Recorded as unverified rather than omitted**, per the AGENTS rule. What would close
-it: one capture where `precipitationLastHour` is nonzero, with the expectation taken from
-`mm / 25.4` and cross-checked against the METAR's own `Pnnnn` hundredths-of-an-inch group.
+**Still not verified: the mm-to-inches divisor against a nonzero live reading.** All four stations
+were polled across **two full hourly observation rounds** — `02:53Z` and `03:53Z`, eight distinct
+observations — and none reported a nonzero `precipitationLastHour`, so the `25.4` divisor is
+exercised only at zero, where every divisor gives the same answer.
+
+The second round is the more informative one, because **rain was actually falling and the reading
+was still a legitimate `0`:**
+
+```
+PHNL 260353Z … RAB35E47 … P0000   rain began :35, ended :47 — trace
+PHLI 260353Z … -RA …     P0000   light rain in progress   — trace
+PHTO 260353Z … RAE02 …   P0000   rain ended :02           — trace
+PHOG 260354Z …                    no precipitation field (null)
+```
+
+`P0000` is the METAR group for a **trace**: precipitation occurred but accumulated less than 0.01
+of an inch. So three of the four stations recorded rain during a tropical system and correctly
+reported a measured zero, which is worth knowing in its own right — a Hawaii airport station
+reporting `0` in a storm is not evidence of a broken feed.
+
+PHLI reported `precipitationLast3Hours: 0.5 mm`, but the app reads only `precipitationLastHour`, so
+that value never reaches a render path and cannot serve as evidence.
+
+**Recorded as unverified rather than omitted**, per the AGENTS rule. What would close it: one
+capture where `precipitationLastHour` is nonzero, with the expectation taken from `mm / 25.4` and
+cross-checked against the METAR's own `Pnnnn` group — which needs accumulation of at least 0.01
+of an inch in the hour, not merely rain in the hour.
 
 #### Tide — timezone now resolved, and resolved empirically
 
@@ -368,10 +387,12 @@ is a reason no finding in this report should be generalised into a property of t
 - **Dependency vulnerability scanning.** No `npm audit` in any workflow; low impact given zero
   runtime dependencies, but nothing is watching the dev tree either.
 - **The mm-to-inches rainfall divisor against a nonzero live reading.** Checked at `null` and at a
-  measured `0`, both correct, but no station in the app's set reported a nonzero
-  `precipitationLastHour` during the capture window, so `25.4` is exercised only where every
-  divisor agrees. This is the one source-to-display gap still open and it is the same shape as the
-  wind defect, so it is worth closing on the next rain event rather than assumed.
+  measured `0`, both correct, but across two hourly rounds no station reported a nonzero
+  `precipitationLastHour`, so `25.4` is exercised only where every divisor agrees. Rain fell at
+  three of the four stations in the second round and still measured `0`, because it was a trace
+  (`P0000`) — closing this needs at least 0.01 of an inch of accumulation in the hour, not just
+  rain in the hour. This is the one source-to-display gap still open and it is the same shape as
+  the wind defect, so it is worth closing on the next such event rather than assumed.
 
 ---
 
