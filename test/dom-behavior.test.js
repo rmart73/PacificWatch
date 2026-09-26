@@ -18,6 +18,7 @@ let quakeFeatures = null;   // when set, overrides the default USGS payload
 let windOverrideMph = null; // when set, every observation answers with this reading
 let gustOnly = false;       // when true, the observation reports a gust but no sustained wind
 let rawObs = null;          // when set, used verbatim as the observation properties
+let rawTide = null;         // when set, used verbatim as the CO-OPS data row (v and t)
 
 /* NWS reports wind in km/h and precipitation in mm, each with its unitCode. Fixtures are
    written in the units a reader thinks in and converted here, so an expected "40 mph" in a
@@ -52,7 +53,7 @@ function body(url) {
     return { properties: { windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
                            timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
   }
-  if (u.includes('tidesandcurrents')) return { data: [{ v: '1.7' }] };
+  if (u.includes('tidesandcurrents')) return { data: [rawTide || { v: '1.7' }] };
   if (u.includes('earthquake.usgs.gov')) return { features: quakeFeatures || [] };
   if (u.includes('fema.gov')) return { DisasterDeclarationsSummaries: [] };
   if (u.includes('/api/news')) return { items: newsItems || [], errors: [] };
@@ -882,7 +883,87 @@ function has(label, sel, needle, expected) {
   await obsWith({ windSpeed: wind(null), precipitationLastHour: { unitCode: 'wmoUnit:parsec', value: 1 } });
   has('an unknown precipitation unit is withheld', '#stat-rain-note', 'Not reported', true);
   rawObs = null;
-  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+    /* ======================================================================================
+     T11 at the RENDER boundary, not just in the cache.
+
+     sourceOk() refuses an older observation, but until the callers rendered what it returned
+     they rendered the response that had just arrived — so the refused, older reading went on
+     screen while the cache held the newer one, and the two disagreed until some later render
+     happened to correct it. The earlier T11 test called sourceOk() directly and so could only
+     certify cache ordering; these drive the real fetch path.
+     ====================================================================================== */
+  console.log('\n27. T11 at the render boundary — a refused older observation must not be shown:');
+  w.fetch = makeFetch(null);
+  w.eval("S.island='statewide'");
+  w.eval('S.cache = {}');
+
+  /* A 10-minute-old observation at 30 mph, sustained, with an explicitly zoned timestamp. */
+  const tenMinAgo = new Date(Date.now() - 10 * MIN).toISOString();
+  rawObs = { windSpeed: wind(30), windGust: wind(null), precipitationLastHour: rain(null),
+             timestamp: tenMinAgo };
+  await w.fetchWeather();
+  await settle();
+  check('the newer reading renders', txt('#stat-wind').indexOf('30') !== -1, true);
+  check('and is cached with its own observation time',
+    w.eval('S.cache.nwsWeather.observedAtRaw'), tenMinAgo);
+
+  /* Now the newest HTTP request returns a 40-minute-old observation at a different speed.
+     requestIsCurrent passes; only the measurement clock can separate them. */
+  const fortyMinAgo = new Date(Date.now() - 40 * MIN).toISOString();
+  rawObs = { windSpeed: wind(5), windGust: wind(null), precipitationLastHour: rain(null),
+             timestamp: fortyMinAgo };
+  await w.fetchWeather();
+  await settle();
+  check('the older observation does not reach the card',
+    txt('#stat-wind').indexOf('5 mph') !== -1, false);
+  check('the newer reading is still displayed', txt('#stat-wind').indexOf('30') !== -1, true);
+  check('the cache still holds the newer observation',
+    w.eval('S.cache.nwsWeather.observedAtRaw'), tenMinAgo);
+  check('so card and cache agree on which measurement won',
+    txt('#stat-wind').indexOf('30') !== -1
+      && w.eval('S.cache.nwsWeather.observedAtRaw') === tenMinAgo, true);
+
+  /* A genuinely newer observation must still get through. */
+  const oneMinAgo = new Date(Date.now() - 1 * MIN).toISOString();
+  rawObs = { windSpeed: wind(12), windGust: wind(null), precipitationLastHour: rain(null),
+             timestamp: oneMinAgo };
+  await w.fetchWeather();
+  await settle();
+  check('a newer observation still replaces the card',
+    txt('#stat-wind').indexOf('12') !== -1, true);
+  check('and the cache moves forward with it',
+    w.eval('S.cache.nwsWeather.observedAtRaw'), oneMinAgo);
+  rawObs = null;
+
+  console.log('\n28. The same guard on the tide card:');
+  w.eval('S.cache = {}');
+  /* NOAA sends local station time with no zone; the app reads it as HST. Two readings six
+     minutes apart in HST wall time, the later one fetched first. */
+  rawTide = { v: '1.800', t: '2026-09-25 20:54' };
+  await w.fetchTides();
+  await settle();
+  check('the first tide reading renders', txt('#stat-tide').indexOf('1.8') !== -1, true);
+  check('and its NOAA observation time is retained',
+    w.eval('S.cache.noaaTides.data.t'), '2026-09-25 20:54');
+
+  rawTide = { v: '0.300', t: '2026-09-25 20:24' };   /* thirty minutes EARLIER */
+  await w.fetchTides();
+  await settle();
+  check('the older tide observation does not reach the card',
+    txt('#stat-tide').indexOf('0.3') !== -1, false);
+  check('the newer tide height is still displayed',
+    txt('#stat-tide').indexOf('1.8') !== -1, true);
+  check('and the cache kept the newer observation time',
+    w.eval('S.cache.noaaTides.data.t'), '2026-09-25 20:54');
+
+  rawTide = { v: '2.100', t: '2026-09-25 21:00' };   /* genuinely later */
+  await w.fetchTides();
+  await settle();
+  check('a newer tide observation still replaces the card',
+    txt('#stat-tide').indexOf('2.1') !== -1, true);
+  rawTide = null;
+
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('harness error:', e); process.exit(2); });

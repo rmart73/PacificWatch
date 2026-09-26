@@ -20,7 +20,10 @@ const ROOT = path.join(__dirname, '..');
 /* Cases name the suite that is supposed to catch them. Both suites take an html path. */
 const SUITES = {
   dom: path.join(__dirname, 'dom-behavior.test.js'),
-  contrast: path.join(__dirname, 'contrast.test.js')
+  contrast: path.join(__dirname, 'contrast.test.js'),
+  /* The pure health suite owns the Q007/Q008 observation clock, which has no DOM surface in
+     stage 1 — its assertions would be unmutated otherwise. */
+  health: path.join(__dirname, 'phase1-source-health.test.js')
 };
 const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
@@ -110,15 +113,15 @@ const mutations = [
     expect: ['desktop places by grid rather than reordering the DOM'], suite: 'dom' },
 
   { name: 'the Honolulu reference substitution is hidden again',
-    from: '    renderWeather(data.properties, stationLabel(sta), false);',
-    to:   '    renderWeather(data.properties, sta.label, false);',
+    from: "    const kept = sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,",
+    to:   "    const kept = sourceOk('nwsWeather', { p: data.properties, label: sta.label }, token,",
     expect: ['statewide discloses it too'] },
 
   /* Both sides of a cached label have to carry the qualifier. Fixing the weather path and
      leaving the tide path was the actual defect, so each is mutated separately. */
   { name: 'the tide cache stores the unqualified station name',
-    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);",
-    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);",
+    from: "    const kept = sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,",
+    to:   "    const kept = sourceOk('noaaTides', { ft: ft, name: sta.name, t: typeof latest.t === 'string' ? latest.t : null }, token,",
     expect: ['and still does after a failed refresh'] },
 
   { name: 'the populated earthquake card drops its query scope',
@@ -252,7 +255,135 @@ const mutations = [
   { name: 'severity flattened to a single accessible colour',
     from: '  --strip-alert:#cc3110; --strip-warn:#b05f12; --strip-ok:#3b7d94; --strip-info:#1b7bb5; --strip-unknown:#637886;',
     to:   '  --strip-alert:#0a0507; --strip-warn:#0a0507; --strip-ok:#0a0507; --strip-info:#0a0507; --strip-unknown:#0a0507;',
-    expect: ['light: five states, five distinct colours'], suite: 'contrast' }
+    expect: ['light: five states, five distinct colours'], suite: 'contrast' },
+
+  /* ---- Q007/Q008 stage 1: the observation clock ---- */
+
+  /* The trap that actually bit during implementation. .map(sourceState) hands the array index
+     to the injected-clock parameter, so index 0 asks for staleness as of the Unix epoch and
+     every source reads current — the pill silently stops reporting DEGRADED. */
+  { name: 'sourceState passed bare to .map, so the index becomes its clock',
+    from: '  const states = Object.keys(S.sourceHealth).map(k => sourceState(k));',
+    to:   '  const states = Object.keys(S.sourceHealth).map(sourceState);',
+    expect: ['pill reads DEGRADED'], suite: 'dom' },
+
+  /* A successful fetch must not make an old observation look current. Widening the weather
+     window past the observed Nolo lag is exactly the "fix" the contract warns against. */
+  { name: 'weather observation window widened past the Nolo case',
+    from: '  nwsWeather: { currentMs: 75 * MIN, retainMs: 180 * MIN },',
+    to:   '  nwsWeather: { currentMs: 95 * MIN, retainMs: 180 * MIN },',
+    expect: ['76 minutes is stale', '77 minutes is stale'], suite: 'health' },
+
+  /* Retention past which a fresh response may not revive a reading. */
+  { name: 'weather retention removed, so nothing is ever withdrawn',
+    from: '  nwsWeather: { currentMs: 75 * MIN, retainMs: 180 * MIN },',
+    to:   '  nwsWeather: { currentMs: 75 * MIN, retainMs: 1800 * MIN },',
+    expect: ['181 minutes is expired'], suite: 'health' },
+
+  /* NOAA lst_ldt is HST. Treating it as UTC shifts every tide observation by ten hours. */
+  { name: 'NOAA lst_ldt treated as UTC instead of HST',
+    from: 'const HST_OFFSET_MS = 10 * HOUR;',
+    to:   'const HST_OFFSET_MS = 0 * HOUR;',
+    expect: ['normalizes lst_ldt as UTC-10'], suite: 'health' },
+
+  /* A malformed future timestamp must not read as permanently current. */
+  { name: 'future-skew guard dropped',
+    from: "  if (signed < -OBS_SKEW_MS) return 'unusable';",
+    to:   "  if (false) return 'unusable';",
+    expect: ['6 minutes into the future is unusable'], suite: 'health' },
+
+  /* Boundary direction: greater-than crosses, equality stays younger. */
+  { name: 'observation boundary uses >= so equality crosses early',
+    from: '  if (age > lim.currentMs) return \'stale\';',
+    to:   '  if (age >= lim.currentMs) return \'stale\';',
+    expect: ['75 minutes is current'], suite: 'health' },
+
+  /* The measurement clock must travel with the reading it describes. */
+  { name: 'sourceOk drops the observation clock',
+    from: "      observedAt: at,",
+    to:   "      observedAt: null,",
+    expect: ['observedAt stored on the cache entry'], suite: 'health' },
+
+  /* An expired measurement outranks a merely stale fetch, or a reconnect revives dead data. */
+  { name: 'network state allowed to outrank an expired measurement',
+    from: "  if (obs === 'expired') return 'observation-expired';",
+    to:   "  if (false) return 'observation-expired';",
+    expect: ['fetch current + past retention -> observation-expired'], suite: 'health' },
+
+  /* ---- Review findings on stage 1 ---- */
+
+  /* The island guard: without it the previous island's observation decides the newly selected
+     island's state, which is the false attribution the request-scope guard exists to prevent. */
+  { name: 'observation cache read without the island guard',
+    from: "  if (ISLAND_SCOPED[key] && e.island !== S.island) return null;\n  return e;\n}",
+    to:   "  return e;\n}",
+    expect: ["another island's entry is not read"], suite: 'health' },
+
+  /* An outstanding first request must not present an older reading as verified for a new
+     selection. */
+  { name: 'loading no longer outranks an existing reading',
+    from: "  if (fetchState === 'loading') return 'checking';\n  const obs = observationState(key, entry.observedAt, now);",
+    to:   "  const obs = observationState(key, entry.observedAt, now);",
+    expect: ['an outstanding first request reports checking, not the older reading'], suite: 'health' },
+
+  /* A missing or unconvertible value must not ride a good timestamp to 'current'. */
+  { name: 'value usability ignored by the combined state',
+    from: "  if (valueUsable === false) return 'value-unusable';",
+    to:   "  if (false) return 'value-unusable';",
+    expect: ['an unusable value outranks good clocks'], suite: 'health' },
+
+  /* Unzoned ISO is parsed as LOCAL time by Date.parse, so dropping the shape check silently
+     shifts every NWS observation by the reader's UTC offset. */
+  { name: 'ISO timestamps accepted without an explicit zone',
+    from: "(Z|[+-]\\d{2}:?\\d{2})$/;",
+    to:   "(Z|[+-]\\d{2}:?\\d{2})?$/;",
+    expect: ['rejects an unzoned ISO date-time'], suite: 'health' },
+
+  /* T11: the measurement clock must never move backwards. */
+  { name: 'older observation allowed to replace a newer cached one',
+    from: "    if (prev && prev.island === island && prev.observedAt != null && at != null && at < prev.observedAt) {",
+    to:   "    if (false) {",
+    expect: ['an older observation does not replace it'], suite: 'health' },
+
+  /* ---- Second review round ---- */
+
+  /* The cache guard is only half of T11. These two put the refused reading back on screen, which
+     is what the code did before: cache and card disagreed until some later render corrected it. */
+  { name: 'fetchWeather renders the response instead of the accepted reading',
+    from: "    if (kept) renderWeather(kept.data.p, kept.data.label, false);",
+    to:   "    renderWeather(data.properties, stationLabel(sta), false);",
+    expect: ['the older observation does not reach the card'], suite: 'dom' },
+
+  { name: 'fetchTides renders the response instead of the accepted reading',
+    from: "    if (kept) renderTide(kept.data.ft, kept.data.name, false);",
+    to:   "    renderTide(ft, tideLabel(sta), false);",
+    expect: ['the older tide observation does not reach the card'], suite: 'dom' },
+
+  /* If sourceOk stops reporting what it kept, the callers have nothing truthful to render. */
+  { name: 'sourceOk stops reporting the kept entry when it refuses one',
+    from: "      return prev;",
+    to:   "      return null;",
+    expect: ['returns the KEPT entry when it refuses an older observation'], suite: 'health' },
+
+  /* Date.parse rolls an impossible day forward rather than refusing it, so without this check
+     2026-02-30 silently becomes March 2 — an impossible timestamp made plausible. */
+  { name: 'impossible calendar dates accepted and rolled forward',
+    from: "  if (!isRealCalendarDate(y, mo, d)) return null;\n  const ms = Date.parse(raw.trim());",
+    to:   "  const ms = Date.parse(raw.trim());",
+    expect: ['ISO: Feb 30 is rejected, not rolled to Mar 2'], suite: 'health' },
+
+  /* The same rollover through the NOAA path. */
+  { name: 'NOAA component ranges no longer checked',
+    from: "  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return null;\n  if (!isRealCalendarDate(y, mo, d)) return null;\n  const wall = Date.UTC(y, mo - 1, d, h, mi, se);",
+    to:   "  const wall = Date.UTC(y, mo - 1, d, h, mi, se);",
+    expect: ['NOAA: second 60 is rejected'], suite: 'health' },
+
+  /* A validator that rejects the real leap day would be worse than none, so prove the assertion
+     protecting it can fail too. */
+  { name: 'calendar validation made too strict, rejecting real leap days',
+    from: "  const back = new Date(Date.UTC(y, mo - 1, d));\n  return back.getUTCFullYear() === y && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d;",
+    to:   "  return mo === 2 ? d <= 28 : true;",
+    expect: ['isRealCalendarDate: 2024-02-29 does'], suite: 'health' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));

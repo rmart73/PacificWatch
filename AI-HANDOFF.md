@@ -29,12 +29,136 @@ directly against production in this session.
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
-| Observation-truthfulness contract (Q007, Q008) | [PR #23](https://github.com/rmart73/PacificWatch/pull/23) open; review findings incorporated | Claude re-reviews; owner approval required before merge |
+| Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; first-round findings corrected, second-round findings addressed, and explicit seconds validation added as hardening rather than as a reproduced defect | Codex review complete, no findings remaining; owner decides merge |
 
 ### Active claims
 
-**Observation-truthfulness contract — ChatGPT Codex,
-`codex/observation-truthfulness-contract`.** Claimed 2026-09-25 after #22 merged, with the owner's
+**Closed: end-of-night pause checkpoint — ChatGPT Codex,
+`claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
+record the exact PR #24 pause state, the pending mutation rerun, and tomorrow's resume order.
+No implementation, test, contract, or PR-status change was in scope. This used Claude's branch only
+because the mutation-anchor correction being recorded was present there; Claude was paused and this
+did not transfer ownership of Stage 1. Claim commit `d982878`; checkpoint commit follows it.
+
+**Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
+`claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
+ahead of the work, on the owner's explicit authorization. Branched from `main` at `a3f9897`, with
+`git log main..HEAD` and content equality verified before starting.
+
+Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), stage 1 of
+the three implementation boundaries it defines.
+
+**FINAL SCOPE, as merged-ready.** Logic, tests, and **one narrow render-path change**: the weather
+and tide fetch paths now render the reading `sourceOk()` accepted rather than the response that
+happened to arrive, so a refused older observation cannot reach the card. Ordinary rendering is
+unaffected — live captures produce byte-identical output to `main` on both islands — and the
+magnitude-driven dot thresholds are untouched, so no dot behaviour changes in this stage.
+
+**Items 1-4 below are the ORIGINAL SCOPE as claimed before review**, retained so the expansion is
+visible rather than smoothed over. Items 5 and 6 were added by review corrections.
+
+
+1. **Observation metadata.** Store a normalized `observedAt` beside the island-scoped cached weather
+   and tide data, captured from the source response that produced that exact reading.
+2. **Timestamp parsing.** A parser that accepts the source's own timestamp and rejects missing,
+   malformed and future-skewed values, with the contract's five-minute positive clock-skew
+   tolerance. Never substitutes `Date.now()`, fetch time or render time for a source timestamp.
+3. **Combined-state helpers.** Pure functions returning the observation-age state and the combined
+   fetch-plus-measurement state, using the contract's boundaries — weather current through 75
+   minutes and retained through 180; tide current through 18 and retained through 60; `>` crosses,
+   equality stays younger.
+4. **Controlled-time tests** for the above, including both sides of every boundary and exact
+   equality.
+
+**Added by review corrections, first round (`89111c7`):** island scoping, loading precedence and
+value usability in `combinedObservationState()`; T11 cache ordering in `sourceOk()`, reassigned to
+this stage from unassigned; and an explicit-zone requirement on the ISO parser.
+
+**Added by review corrections, second round (`8d57e71`):** the T11 render-boundary fix described
+above; real-calendar-date validation in both parsers; and explicit component range checks.
+
+**Functions and regions touched — FINAL**, named per the coordination rule, since this is the first
+change to `index.html` in this sequence:
+
+- `index.html` JS: `sourceOk()` (now returns the entry it settled on) and the `S.cache` entry shape;
+  `usableCache()`; `sourceState()` (optional injected clock, existing callers unchanged);
+  `updateLivePill()` (one line, arity); **`fetchWeather()` and `fetchTides()` at their cache-write
+  points *and* at the render call that follows** — the original claim said cache-write points only,
+  which stopped being true at `8d57e71`; plus new pure helpers near the source-health registry.
+- `test/`: all three suites — `phase1-source-health.test.js` (pure and controlled-time),
+  `dom-behavior.test.js` (render-boundary), `mutation-check.js` (cases, plus the health suite
+  registered as a mutation target).
+- **No CSS and no markup.** `renderWeather()`, `renderTide()` and `renderQuakeCard()` themselves are
+  untouched — none of their bodies changed.
+
+**Scope expansion, disclosed: this claim no longer holds "no render-path changes."** The T11
+correction in `8d57e71` deliberately changes *what the weather and tide fetch paths pass to* those
+renderers. `sourceOk()` now returns the reading it settled on and both callers render from that
+return value instead of from the response that happened to arrive, so a refused older observation
+cannot reach the card. That is a render-path change and the original wording was false once it
+landed.
+
+What remains true, and is the part the "no visual change" promise was protecting: **ordinary
+rendering is unaffected and the magnitude-driven dot thresholds are untouched.** In the normal case
+the returned entry *is* the response that just arrived, so the same values reach the renderers as
+before — verified by rendering live captures against `main` and getting byte-identical output on both
+islands, re-checked after this change specifically because it altered what the render calls receive.
+The only behavioural difference is in the case the correction exists for: a refused older
+observation, which previously reached the card and now does not.
+
+**Three regions touched beyond the list above, disclosed rather than absorbed quietly:**
+
+- `sourceState()` gained an **optional** injected clock. Every existing caller passes nothing and
+  gets `Date.now()`, so no behaviour changes — but without it only half of each combined-state
+  assertion was controllable, and the observation clock was being compared against a fixed instant
+  while fetch health silently used the real wall time. A "controlled-time" test with one
+  uncontrolled clock passes for the wrong reason.
+- `updateLivePill()` — one line, forced by the above. See the defect note below.
+- `test/mutation-check.js` and the header of `test/phase1-source-health.test.js`: the pure health
+  suite now accepts an html path like the other two suites, so the mutation harness can aim at it.
+  Without that, the whole observation clock would have shipped with no mutation coverage, since it
+  has no DOM surface in stage 1.
+
+**Out of scope, explicitly:** wiring helpers into the cards or Source details, and removing the
+magnitude-driven dot thresholds — both are stage 2. Earthquake alignment is stage 3. No G1
+remediation, no layout work, no new dependency or serverless route, and nothing in `api/` or
+`vercel.json`. Per the contract, **no stage may temporarily label old or untimestamped data `ok`** —
+this stage ships no dot change at all, so the current dots keep their present behaviour until
+stage 2 replaces it.
+
+**Evidence — FINAL, all Claude-reported** (Codex's shell has no Node or npm, so no suite result here
+has been independently reproduced):
+
+- `npm test` **222** (150 + 35 + 37)
+- `npm run test:dom` **281**
+- `npm run test:mutation` **61 of 61 caught**, with no `MISSED`, `ANCHOR LOST` or `AMBIGUOUS`
+- the pure suites pass in an empty directory with nothing installed, so the dependency-free rule
+  still holds
+- rendering verified byte-identical to `main` on both islands from live captures, re-checked after
+  each review round
+
+The figures this claim carried before review — 164 / 267 / 50-of-50 — are superseded; the
+intermediate results are preserved in the handoff entries below rather than overwritten.
+The T16 record is below. Per Codex's ruling, T16 does not require a nonzero rainfall
+accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
+conversion is recorded as separately unverified** under the existing evidence item rather than
+omitted or implied verified.
+
+**Closeout absorbed into this claim**, per the owner's direction and Codex's handoff — five items,
+all consequences of #23 merging and of a board PR being unable to record its own merge:
+
+1. Codex's contract claim closed under Active claims (below).
+2. Its merged branch replaced under Active Branches.
+3. Its open Review Queue row updated.
+4. The `main` commit corrected from `410777d` to `a3f9897`.
+5. `OBSERVATION-TRUTHFULNESS-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
+   authoritative — a merged, governing contract that still called itself proposed.
+
+**Closed: observation-truthfulness contract — ChatGPT Codex,
+`codex/observation-truthfulness-contract`.** *(Merged as #23 in `a3f9897`; documentation-only deploy
+verified, application HTML byte-identical. The contract it produced is now authoritative and governs
+this stage.)* Claimed 2026-09-25 after #22 merged, with the owner's
 direction that this opening claim also close #22's now-stale current-board entries. Documentation
 and design only.
 
@@ -80,10 +204,12 @@ Overview as "remaining" after #17 had merged.
 Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
 implementation stays a separate claimed, reviewable PR.
 
-**What is next:** review and settle the claimed
-[observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) before any Q007/Q008
-implementation. G1 remains a separate unclaimed launch blocker and is not part of this documentation
-PR. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
+**What is next:** the [observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) is
+merged and authoritative, and **stage 1 is implemented and in review as PR #24**. After it merges,
+stage 2 wires the helpers into the cards and Source details, removes the magnitude-driven dot
+classes and satisfies T17; stage 3 aligns the earthquake card. Each needs its own claim. G1 remains
+a separate unclaimed launch blocker. Q010 is settled as an owner-accepted unverified gap and is not
+outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -96,7 +222,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/observation-truthfulness-contract | Q007/Q008 design contract and #22 board closeout; documentation only |
+| Claude | claude/stage1-observation-metadata | Q007/Q008 stage 1: observation metadata, timestamp parsing, combined-state helpers, controlled-time tests, and one narrow render-path change so a refused older observation cannot reach the card. Ordinary rendering and dot thresholds unchanged |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -104,13 +230,19 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Observation-truthfulness contract (Q007, Q008) | PR #23 open; three review findings incorporated | Claude re-reviews the corrections; owner decides merge |
-| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of this contract PR |
+| Q007/Q008 stage 1 — observation clock | PR #24 open; two review rounds plus a documentation confirmation, all code findings corrected and Codex reports none remaining; verification complete at 222 / 281 / 61-of-61. **No branch-head hash recorded here on purpose** — one written into a current-state row is stale the moment the commit writing it lands. Read the head from the PR | Codex review complete; owner decides merge. Do not merge without that decision |
+| Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
+| Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
+| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `410777d`**, merged through #22. Claims and handoffs for #13–#15 are preserved in
-the archive, and the completed #14 test correction is recorded below. No implementation change is
-pending in this PR; every queued item above is documentation, design or separately unclaimed work.
+**`main` is at `a3f9897`**, merged through #23. Claims and handoffs for #13–#15 are preserved in
+the archive, and the completed #14 test correction is recorded below.
+
+**An implementation change IS pending review: PR #24 changes `index.html`.** An earlier version of
+this paragraph said none was, which was written when the queue held only documentation and design
+work and was not corrected when stage 1 began. The other queued items above remain documentation,
+design or separately unclaimed work.
 
 ## Outstanding Verification and Decisions
 
@@ -232,6 +364,344 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — Stage 1, second review round: two findings, one of which does not reproduce
+
+Codex's second read of PR #24 returned two findings. **One is a real defect that my own tests were
+structurally unable to catch. The second is half right, and the half that is wrong is stated here
+with the evidence rather than quietly fixed as though it had been.**
+
+The first mutation rerun from last night completed at **55 of 55**, which cleared the pause note's
+one pending item; the suites have since changed again for the work below.
+
+#### Finding 1 — T11 protected the cache but not the card. Real, and mine to own.
+
+`sourceOk()` correctly refused an older observation, but both callers then rendered the response
+that had just arrived rather than the reading the cache accepted:
+
+```
+sourceOk('nwsWeather', …)            <- refuses the older observation, keeps the newer
+renderWeather(data.properties, …)    <- renders the refused one anyway
+```
+
+So the cache held the newer measurement while the card displayed the older one, and the two
+disagreed until some later render happened to correct it. On an emergency page that is a wrong
+reading presented as current.
+
+`sourceOk()` now returns the entry it settled on — the stored one when it accepts, the retained one
+when it refuses — and both callers render from that. In the ordinary case the returned entry holds
+the response that just arrived, so nothing changes; in the refused case the card keeps the
+measurement that actually won.
+
+**Why my tests missed it, which is the part worth remembering.** The T11 test called `sourceOk()`
+directly, so it could only ever certify cache ordering. The defect lived one line later, in the
+caller. A unit test aimed at the function cannot see a caller that ignores its result. There are now
+render-boundary tests driving the real `fetchWeather()` and `fetchTides()` paths, plus mutation cases
+that put the refused reading back on screen and require those tests to fail.
+
+#### Finding 2 — half real, and the real half is worse than reported
+
+**Confirmed, and worse than described: `observedAtFromIso()` accepted impossible calendar dates.**
+The regex checked shape and then delegated to `Date.parse`, which does not reject an impossible day
+— **it rolls it forward silently.** Measured:
+
+```
+2026-02-30T05:53:00Z  ->  2026-03-02   (two days later)
+2026-04-31T05:53:00Z  ->  2026-05-01
+2026-02-29T05:53:00Z  ->  2026-03-01   (non-leap year)
+```
+
+An impossible timestamp became a plausible one up to two days from what the source sent — strictly
+worse than a rejection, because nothing on screen would look wrong. Both parsers now range-check
+every component and verify the date through a shared `isRealCalendarDate()` round-trip. Real leap
+days round-trip and are kept, which is asserted, because a validator that rejects 2024-02-29 would
+be worse than none.
+
+**Does not reproduce: the claim that `observedAtFromNoaaLst()` accepts `17:24:60`.** It does not.
+An out-of-range second rolls the minute, and the existing round-trip compared minutes, so the value
+was already rejected. Tested exhaustively rather than argued: all one hundred two-digit second
+values were fed to the parser, and **exactly 00–59 were accepted, with every value 60–99 rejected.**
+
+The fix was still made, for a reason worth stating: seconds were being validated only as a *side
+effect* of the minute comparison. That is fragile — reorder or remove the minute check and the
+seconds guard vanishes with no test failing. Seconds are now range-checked explicitly, and both
+`60` and `99` are asserted directly.
+
+#### Evidence
+
+`npm test` **222** (150 + 35 + 37, up from 191 — 31 further assertions), `npm run test:dom` **281**
+(up from 267 — 14 render-boundary assertions across weather and tide), and **61 of 61 mutation cases caught**, up from 55.
+
+The first run of those 61 came back **58 of 61** with three `ANCHOR LOST` — the Honolulu-reference,
+tide station-name and ISO-zone cases, every one displaced by this round's own restructuring rather
+than by a behaviour change. Re-anchored, and the confirming run is the 61 of 61 above. Per Codex,
+`ANCHOR LOST` is a harness failure until re-anchored and rerun even when behaviour is unchanged, so
+the intermediate number is recorded rather than replaced.
+
+**Rendering re-verified unchanged after this round**, which mattered more than usual because this
+round changed what the render calls receive: the live captures produce output byte-identical to
+`main` on both islands.
+
+#### A note on the review asymmetry
+
+Codex's shell has no Node or npm, so it cannot run any suite. Every number in this branch is
+Claude's, reproduced in Claude's shell. Codex reviews by reading, which found the two defects above
+and four before them — but it means **no suite result here has been independently reproduced**, and
+that should be read as a limit on the evidence rather than a gap in Codex's review. Both defects it
+found this round were invisible to a green suite, which is the argument for reading the code.
+
+### 2026-09-26 — END OF NIGHT PAUSE (superseded by the entry above)
+
+> **Superseded.** The pending 55-of-55 mutation rerun this entry waits on completed, and a second
+> review round has happened since. Retained as the record of where work stopped, not as current
+> state.
+
+Work stopped mid-verification on PR #24. The implementation and its correction are committed, but
+**one check was still running when work stopped and must be re-run before anything else.** The
+end-of-night documentation commits do not clear that check or change the review verdict.
+
+#### Exact state
+
+| | |
+|---|---|
+| `main` | `a3f9897`, merged through #23 |
+| Branch | `claude/stage1-observation-metadata`; Stage 1 implementation tip `80c9897`, followed only by the owner-authorized pause documentation |
+| PR | **#24 open. Q007/Q008 stage 1. NOT merged, and not cleared to merge.** |
+| Claimed | This branch only, stage 1 scope. Nothing else in flight |
+
+```
+80c9897  re-anchor the sourceOk mutation case   <- confirming run still pending
+89111c7  the four review corrections
+1471bad  first mutation result (50 of 50, before the corrections)
+4f36e7a  stage 1 implementation
+aa6b7e5  the claim, published ahead of the work
+```
+
+#### The one thing to do first on resume
+
+**Re-run `npm run test:mutation` and confirm 55 of 55.** The last completed run was **54 of 55**
+with one `ANCHOR LOST` — the T11 restructure moved `observedAt` into a local `const`, displacing
+the anchor of an earlier case. `80c9897` re-anchors it, but **that run had not finished when work
+stopped, so 55 of 55 is expected and unconfirmed. Do not report it as passing until it has run.**
+
+Claude reports everything else verified: `npm test` **191** (119 + 35 + 37), `npm run test:dom`
+**267**, the pure suites green in an empty directory with nothing installed, and rendering
+re-checked byte-identical to `main` on both islands *after* the corrections, because `sourceOk()`
+sits on a render path. Codex has not independently rerun those suites in its current shell.
+
+#### Where the review stands
+
+Codex returned four findings on #24; all four were real and all are corrected in `89111c7`, each with
+a mutation case so the fix is load-bearing rather than asserted. Details are in the corrections entry
+below. **Codex has not re-reviewed since.** Next action is Claude re-runs mutation, then Codex
+re-reviews, then the owner decides the merge.
+
+#### The finding worth carrying into stage 2
+
+Of the four, the unzoned-ISO one matters most, and it is a lesson about Claude's testing rather than
+about the code. `observedAtFromIso()` used bare `Date.parse`, which treats an ISO date-time with no
+offset as **local** time — `2026-09-26T05:53:00` resolved to `15:53:00Z` on a Hawaii machine. A silent
+ten-hour error on the primary weather source, in the same class as the 3.6x wind defect that produced
+the two source-handling rules in the first place.
+
+**58 new assertions did not catch it, because every fixture fed the parser well-formed NWS output.**
+That is exactly the "fixtures and code sharing the same wrong premise" failure `AGENTS.md` warns
+about, reproduced by the agent who had just written the record about it. Codex found it by reading
+the parser instead of the tests.
+
+**For stage 2: fixture the malformed and hostile shapes of every source field, not just the shapes
+the source happens to send today.**
+
+#### Also worth a decision, not yet claimed
+
+**Six** mutation anchors were displaced on this branch by ordinary restructuring — the tide
+`sourceOk` call, `observedAt` twice, and in the second round the Honolulu-reference, tide
+station-name and ISO-zone cases. The harness behaved correctly every time; `ANCHOR LOST` is what it
+should report, and Codex's ruling is that it counts as a harness failure until re-anchored and rerun
+even when behaviour has not changed.
+
+At six occurrences it is a systematic cost rather than a run of bad luck, and worth a line in the
+`AGENTS.md` mutation section: **restructuring a line that a mutation case pins carries an anchor
+update with it.** Two mitigations learned here are worth carrying with it — anchor on the line that
+*sets* a value rather than the line that renders it, since the setter is more stable; and do not pin
+a constant's value in an extraction regex, or mutating that constant breaks extraction instead of
+failing an assertion.
+
+The `.map(sourceState)` arity trap is the other candidate, for the load-bearing table: adding even an
+optional parameter changes behaviour at every bare-reference callback site.
+
+**Disposition, decided by Codex 2026-09-26:** both are carried into **stage 2 / T17**, which already
+has Codex reconciling `AGENTS.md`. **Neither is to be added to PR #24.** Recorded here so the
+guidance is not lost between branches.
+
+#### Deliberately not done, and not to be started without a claim
+
+- **Stage 2** — wiring the helpers into the cards and Source details, removing the magnitude-driven
+  dot classes, and T17's orphaned-CSS plus `AGENTS.md` reconciliation. Claude's under the split, but
+  needs its own claim.
+- **Stage 3** — earthquake alignment.
+- **G1** — still the unclaimed launch blocker. Cache-key normalisation, a restricted parameter set,
+  rate limiting. **Not CORS.**
+- **The nonzero mm-to-inches conversion** — still blocked on weather, needs an hour with at least
+  0.01" accumulated. Not a gate on stage 1, per Codex's T16 ruling, and must not be described as
+  verified.
+- **Q010**, the strip at 200% zoom — closed as an owner-accepted unverified gap. Do not re-raise.
+
+#### Resume in this order
+
+1. Re-run `npm run test:mutation`; confirm 55 of 55 and record it.
+2. Ask Codex to re-review #24.
+3. Owner decides the merge. A merge to `main` is a production deploy, though stage 1 changes no
+   rendering.
+4. After #24 merges, claim stage 2 separately — and close out #24's own current-board entries in that
+   opening claim, since a board PR cannot record its own merge.
+
+### 2026-09-26 — Stage 1 review findings corrected
+
+Codex returned four findings on PR #24. All four were real, all are corrected, and each now has a
+mutation case so the correction is proven load-bearing rather than asserted. **No merge.**
+
+**1. Combined state ignored island scope, loading and value usability.**
+`combinedObservationState()` read `S.cache[key]` directly, so after an island switch the
+**previous island's observation would decide the newly selected island's state** — the same false
+attribution the request-scope guard exists to prevent, arriving by a different route.
+`usableCache()` could not be reused because it answers only for STALE sources by design, so a new
+`observationEntry()` applies the same island guard without the staleness condition. Two further
+gaps in the same function: an outstanding first request now reports `checking` instead of
+presenting an older reading as verified for a new selection, and `combinedObservationState()` takes
+the reading's own usability so a missing or unconvertible value cannot ride a good timestamp to
+`current` — it returns `value-unusable`. Omitting the argument still asks only about the clocks.
+
+**2. T11 was unassigned. Stage 1 now owns it.** I had deferred the older-observation ordering rule
+to stage 2 and said so, but the contract's stage list never assigned it, so it was floating between
+two stages — and stage 1 is where `observedAt` is written, which makes it the only place the guard
+can live honestly. `sourceOk()` now refuses to move the measurement clock backwards: an older source
+observation cannot replace a newer cached one even when it arrives from the newest HTTP request.
+Fetch health is still refreshed, because we did reach the source; equal timestamps refresh health and
+leave the measurement untouched; and the comparison is scoped to one island, since another island's
+reading is a different measurement rather than an earlier one.
+
+**3. The ISO parser accepted unzoned and loose timestamps — a ten-hour error.** `Date.parse` treats
+an ISO date-time with no offset as **local** time, so `2026-09-26T05:53:00` resolved to
+`15:53:00Z` on a Hawaii machine: exactly the browser-timezone trap the NOAA parser was written to
+avoid, left open on the NWS side. It also accepted loose forms like `Sep 26 2026`. An explicit zone
+is now required and anything else is `unusable` rather than guessed, which is what the contract means
+by a value without a usable authoritative timestamp.
+
+**4. Three stale current-board statements**, all consequences of #23 merging and #24 opening: the
+Current Work row still showed #23 open and awaiting review; the Review Queue said stage 1 was "in
+progress" with "Codex reviews when opened"; and "What is next" still gated everything on settling a
+contract that had already merged. Corrected, and a Current Work row added for #24.
+
+**Evidence after the corrections:** `npm test` **191** (119 + 35 + 37, up from 164 — 27 further
+assertions), `npm run test:dom` **267** unchanged, `npm run test:mutation` **55 cases** including 5
+new ones covering these fixes. The T16 record below is unchanged and still accurate: the corrections
+touch state selection, cache ordering and timestamp validation, none of which reaches a render path.
+
+**Next:** Codex re-reviews. Still no merge.
+
+### 2026-09-26 — Q007/Q008 stage 1 implemented: the observation clock
+
+Logic and tests only, per the contract's first implementation boundary. **Rendering is byte-for-byte
+unchanged** — demonstrated below by rendering the same live responses against `main` and against
+this branch and comparing the output.
+
+#### What landed
+
+`observedAt` and `observedAtRaw` now travel on the island-scoped cache entry beside the reading
+they describe, captured from the response that produced it. Two parsers, because the two sources
+disagree about format: `observedAtFromIso()` for NWS, and `observedAtFromNoaaLst()` for NOAA, which
+had been **discarding `latest.t` entirely**. `observationState()` and `combinedObservationState()`
+select state from both clocks, and `observationVerified()` is the single place that decides what
+earns a verified dot, so stage 2 cannot drift from stage 1.
+
+**Nothing is wired into rendering.** The cards and dots behave exactly as before, including the
+magnitude thresholds, until stage 2 replaces them. No stage labels old or untimestamped data `ok`,
+because no stage-1 change reaches a dot.
+
+#### A defect this work introduced, caught by the DOM suite
+
+`sourceState()` gained an optional injected clock, and `updateLivePill()` called it as
+`.map(sourceState)`. `Array.prototype.map` passes **(element, index, array)**, so the array index
+arrived as the injected clock: index 0 asked "how stale is this source as of the Unix epoch",
+every source read `current`, and **the LIVE pill stopped reporting DEGRADED**. On an emergency page
+that is a false all-clear about the app's own health.
+
+The DOM suite caught it (`pill reads DEGRADED`), which is the suite doing its job. Fixed by making
+the arity explicit, with a comment at the call site, and **a mutation case now reverts it to the
+bare reference and requires the DOM suite to fail** — so the trap cannot come back silently.
+
+Worth recording as a general lesson: adding even an optional parameter to a function used as a
+callback changes its behaviour at every bare-reference call site.
+
+#### T16 — raw response versus rendered output
+
+Captured live 2026-09-26T07:06:57Z during Hurricane Nolo, rendered through jsdom against those exact
+bytes. Expectations are established from published constants and each station's own METAR, never
+from the app's converters.
+
+```
+WEATHER  api.weather.gov/stations/PHNL/observations/latest          [statewide]
+  fields    windSpeed 31.68 wmoUnit:km_h-1   windGust null   precipitationLastHour null wmoUnit:mm
+  obs time  2026-09-26T05:53:00+00:00
+  expected  20 mph — 31.68 km/h x 0.621371 = 19.685; METAR 06017G28KT = 17 kt sustained,
+            17 x 1.150779 = 19.563. Both round to 20.
+  displayed "20 mph"  note "HNL Intl · Honolulu reference for statewide · obs Sep 25, 07:53 PM HST"
+  observedAtRaw "2026-09-26T05:53:00+00:00"  -> observedAt 2026-09-26T05:53:00.000Z   MATCH
+  age at render 76.36 min -> observationState stale -> combined observation-stale -> verified FALSE
+  fetch clock: current
+
+WEATHER  api.weather.gov/stations/PHLI/observations/latest          [kauai]
+  fields    windSpeed null   windGust 50.04 wmoUnit:km_h-1   precipitationLastHour 0 wmoUnit:mm
+  obs time  2026-09-26T06:37:00+00:00
+  expected  31 mph gust-only — 50.04 km/h x 0.621371 = 31.093; METAR 06018G27KT gust 27 kt,
+            27 x 1.150779 = 31.071. Both round to 31. Rain 0 mm is a measured zero -> 0.00"
+  displayed "31 mph"  note "Gust, sustained N/A · Lihue · obs Sep 25, 08:37 PM HST";  rain 0.00"
+  observedAt 2026-09-26T06:37:00.000Z, age 32.40 min -> current -> verified TRUE      MATCH
+
+TIDE     station 1612340, time_zone=lst_ldt, units=english, datum=MLLW
+  fields    v 0.486 ft MLLW      t "2026-09-25 20:54"  (no zone suffix in the response)
+  expected  0.5 ft (0.486 to one decimal; NOAA returns feet, no unit conversion) and an
+            observation instant of 2026-09-26T06:54:00Z — HST wall time + 10h
+  displayed "0.5 ft"  note "ft MLLW · HNL Harbor · Honolulu reference for statewide"
+  observedAtRaw "2026-09-25 20:54" -> observedAt 2026-09-26T06:54:00.000Z, exactly +10:00  MATCH
+  age at render 15.36 min -> current -> verified TRUE;  raw t retained in the cache
+```
+
+**Rendering unchanged, verified by comparison rather than assertion.** The same captures rendered
+against `main`'s `index.html` produce identical output for both islands — `20 mph`/`s-dot ok`,
+`—`/`s-dot unknown`, `0.5 ft`/`s-dot ok` statewide, and `31 mph`/`s-dot warn`, `0.00"`/`s-dot ok`
+on Kauaʻi. The harness reports "observation clock absent" against `main`, confirming it compared
+the right two builds.
+
+#### What the capture shows about the defect the contract exists to fix
+
+PHNL rendered a **verified `ok` dot on a 76-minute-old observation** while the new clock said
+`observation-stale`, not verified. That is the exact mismatch Q007/Q008 describe, on live data, from
+a healthy feed — and the reading crossed the 75-minute boundary between capture and render on its
+own, which is how routinely storm-time publication lag reaches it.
+
+Kauaʻi rendered `s-dot warn` on a 31 mph gust purely because 31 > 20 — magnitude presented as an
+advisory, with nothing authoritative behind it. Both are stage 2's to correct.
+
+#### Still unverified, recorded rather than omitted
+
+**The nonzero mm-to-inches conversion.** PHNL reported `null` and PHLI a measured `0` with `P0000`
+(trace, under 0.01"), so `25.4` is still exercised only where every divisor agrees. Per Codex's
+ruling this does not gate stage 1: the observation-time path is exercised and rendering is
+demonstrably unchanged. It remains open under the existing evidence item and **must not be
+described as verified.**
+
+Also noted, upstream rather than ours: PHNL's METAR reads `06017G28KT` while the JSON reports
+`windGust: null`. The rendered card follows the JSON and shows no gust, which is correct behaviour
+against the response we actually received.
+
+#### Next
+
+Codex reviews. Stage 2 wires these helpers into the cards and Source details, removes the
+magnitude-driven dot classes, and per T17 removes the orphaned `.s-dot.warn`/`.s-dot.alert` CSS and
+reconciles the affected `AGENTS.md` prose. Stage 3 aligns the earthquake card. Each needs its own
+claim.
 
 ### 2026-09-25 — Q007/Q008 observation-truthfulness contract drafted
 
