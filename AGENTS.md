@@ -106,7 +106,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
 | Island-scoped fetches call `beginRequest()` and check `requestIsCurrent()` before using their own response | A response can arrive after the user switches islands. Without the guard, `sourceOk()` stamped the cache with `S.island` at completion, filing one island's reading under another — a slow Maui observation rendered and cached as Kauaʻi's. Removing the check restores that bug silently | Architecture |
 | Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
-| The staged `#nws-strip` is `hidden` and reports tiers the hazard banner omits | It is not dead markup and not a duplicate banner. It ships hidden so PR 2 adds no second visible summary; it reports every tier because the banner deliberately drops statements to keep its headline short. Unhide it only when the Overview places it | Architecture |
+| `#nws-strip` reports tiers the hazard banner omits, and looks like a second summary | It is not a duplicate banner. It reports every tier because the banner deliberately drops statements to keep its headline short, so the two are meant to differ. **It is now launched** — the Overview placed it in PR 3, the `hidden` attribute and the `?strip=1` staging flag are both gone, and it is visible to every visitor. Do not re-hide it, and do not reintroduce the flag | Architecture |
 | `ageTick()` re-renders but never writes `lastSuccess` | Freshness is relative to that timestamp. A tick that refreshed it would make a dead source look permanently current — the page would age into confidence instead of out of it | Architecture |
 | The Overview markup is in **mobile** order, and wider screens rearrange it | CSS `order` and grid placement move boxes on screen but leave the sequence a screen reader announces untouched, so the reading order the contract specifies for 390px has to be the DOM order. Reordering the markup to suit desktop would silently break it. Duplicating the cards instead would give two copies of every reading to drift apart, and both would be announced — there is exactly one `#stat-wind` in the document, and a test asserts it | Architecture |
 | Unit conversion reads `unitCode` from each measurement instead of applying a fixed factor | api.weather.gov declares the unit per field and has changed it. Wind is `wmoUnit:km_h-1`; this code applied the metres-per-second factor 2.237, overstating every reading by 3.6x. On production during an active hurricane a 51.84 km/h gust rendered as **116 mph** when the station's own METAR said 28 knots — 32 mph. An unrecognised unit renders **Not reported** rather than a guess: a missing reading is recoverable, a hurricane wind speed wrong by a factor of three is not | Architecture |
@@ -353,10 +353,19 @@ or `unavailable`, with `.stale` separating retained active products from current
 covers the source states in the v2 overview contract; recovery is not a state but the result
 of recomputing after a successful fetch.
 
-The strip (`#nws-strip`) is **staged, not launched**. It renders on every update so its states
-are testable, but ships `hidden`: showing it now would place a second summary beside the hazard
-banner, which the contract rules out until the Overview lands. Append `?strip=1` to reveal it
-for a browser pass. PR 3 places it and drops the flag.
+The strip (`#nws-strip`) is **launched**. PR 3 placed it in the Overview, removed the `hidden`
+attribute and dropped the `?strip=1` staging flag, so it is visible to every visitor and needs no
+flag to inspect — just load the page. It renders on every update, so its states remain testable.
+
+It was deliberately staged hidden through PR 2, because showing it before the Overview placed it
+would have put a second summary beside the hazard banner. That constraint is satisfied and
+historical; the current rule is simply not to re-hide it.
+
+**Its 200% zoom behaviour has never been verified**, and since PR 3 that is an unverified property
+of a surface everyone sees rather than of a staged one. Three attempts have failed because the
+browser zoom control did not take — the third confirmed `devicePixelRatio`, `innerWidth` and
+`visualViewport.scale` unchanged. A narrow viewport is not a substitute and must not be recorded
+as one.
 
 **Chrome offsets are measured, not assumed.** `syncChromeOffsets()` publishes the real header
 and bottom-nav heights as `--hdr-h` and `--nav-h`, refreshed on resize and through a
@@ -413,13 +422,13 @@ cosmetic here.
 5. `target="_blank"` always carries `rel="noopener noreferrer"`.
 
 **CSP** is set in `vercel.json`. `script-src` still needs `'unsafe-inline'` because the app uses
-inline `<script>` blocks and 22 `onclick=` attributes, so CSP is not a complete XSS backstop — the
+inline `<script>` blocks and 31 `onclick=` attributes, so CSP is not a complete XSS backstop — the
 escaping above is the real defense. What CSP *does* buy: `connect-src` is limited to the known APIs,
 so injected script cannot exfiltrate the key to an arbitrary host, plus `object-src`/`base-uri`/
 `form-action`/`frame-ancestors` are locked to `none`. If you add a data source, add its origin to
 `connect-src` or the fetch will fail silently in the browser console.
 
-To close the `'unsafe-inline'` gap properly you'd move the remaining 22 `onclick=` handlers to
+To close the `'unsafe-inline'` gap properly you'd move the remaining 31 `onclick=` handlers to
 `addEventListener` and give the two inline scripts nonces/hashes. Worth doing before this gets
 significant public traffic.
 

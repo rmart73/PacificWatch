@@ -8,8 +8,9 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-07. PR state was checked through GitHub; production observations below
-are attributed to the user-relayed Claude report.
+Updated 2026-09-26. PR state was checked through GitHub. Production observations below are
+attributed to the user-relayed Claude report, except the #21 deploy check, which was verified
+directly against production in this session.
 
 | Work | State | Owner / next action |
 |---|---|---|
@@ -23,33 +24,88 @@ are attributed to the user-relayed Claude report.
 | Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
 | Overview layout / navigation | #17 merged in fd5771a; production verified | Closed |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
+| #17 production record | #18 merged in 5249e53 | Closed |
+| Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
+| Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
+| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
+| Board and AGENTS reconciliation | This PR; claimed above | In review |
 
 ### Active claims
 
-**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.**
-Claim published 2026-09-08 before editing, in its own commit ahead of the work.
+**Board and AGENTS reconciliation — Claude Code, claude/board-and-agents-reconciliation.**
+Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
+permission. Documentation only.
 
-Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
-handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
-accuracy across the four observation cards.
+Scope ledger. Items 1–3 are the original claim; items 4–7 were added later with the owner's
+explicit permission and are named here rather than absorbed silently. An earlier version used an
+exact numeric summary that became stale as authorized follow-up work arrived; the numbered ledger
+below is authoritative:
 
-Extended 2026-09-08 to cover the end-of-night handoff record on this same branch, at Codex's
-request and under the documentation claim rule.
+1. **Record Codex's answers to Q007–Q011** on the board. They were written into the working tree
+   after #21 merged, so they are not on `main` and would be lost to a tree reset. Reproduced as
+   written.
+2. **Reconcile the stale top of this board** — the deferred item Codex assigned to a separate PR
+   after #21. Covers the `2026-09-07` header date, the `b71fb74` versus `648db0f` conflict,
+   "Remaining: Overview layout/navigation", the "#15 not yet merged" line, the missing #18–#21
+   rows, the now-complete launch-readiness claim still listed as active, and the 200% zoom bullet
+   that still says the check should happen "before that lands" when PR 3 has landed.
+3. **Correct `AGENTS.md` where it is factually wrong about shipped code** — per Codex's Q009
+   answer, taken early rather than buried in later work: the load-bearing table row and the prose
+   that still describe the strip as `hidden` and flag-gated behind `?strip=1`, and the inline
+   handler count of `22` where the file has `31`.
+4. **Correct the rainfall evidence in [LAUNCH-READINESS.md](LAUNCH-READINESS.md) and below.**
+   Added to this claim with the owner's permission after the poll completed a second observation
+   round, which both strengthens the record and falsifies one sentence already merged in #21. The
+   conclusion does not change — the divisor is still unverified at a nonzero value — so this
+   corrects evidence and a wrong statement, not a finding.
+5. **Two board corrections authorized by the owner note above.** Retitle the Q007–Q011 block,
+   which still read "awaiting answers" after Codex had answered all five, and settle the Q009
+   wording that still said this PR awaited permission when it had already started with it. The
+   authorizing note is committed alongside them and limits the addition to those two corrections.
+6. **A state-of-the-branch entry for agent coordination**, added at the owner's direction. Records
+   what changed, what was authorized versus what was done, and what remains open and to whom it
+   belongs. Adds no other change. Its original claim that Codex was stale was corrected in
+   `36240c2`; Codex was current through the rainfall correction when it committed `1bb147d`.
+7. **Record the owner's acceptance of the unverified strip-at-200%-zoom gap**, added with the
+   owner's explicit confirmation after Claude's final read-only review. Distinguish it from the
+   navigation zoom pass the owner did verify at `40fba96`, correct the report's implication that
+   all 200% zoom behavior was verified, and mark Q010 accepted so it is not re-raised.
 
-Output is a report only. **No remediation in this branch** — findings are written up and
-prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
-bundled into an assessment. Layout stays deferred and unclaimed.
+**Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
+implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
+new durable rules beyond correcting statements that no longer match the code. Nothing in
+`index.html`, `api/`, `test/`, `package.json` or `vercel.json`.
 
-Reporting rule agreed with Codex: verified protections, concrete gaps and unverified items are
-reported separately, and neither a green suite nor an HTTP 200 is offered as security clearance.
+**Owner authorization, 2026-09-25:** Claude may make two final board corrections on this branch:
+replace the "awaiting answers" Q007–Q011 heading/copy now that Codex has answered, and update the
+Q009 permission wording so it no longer says this already-started documentation PR still awaits
+permission. No additional scope is authorized by this note.
+
+**Closed: security and launch-readiness review — Claude Code, `claude/launch-readiness-review`.**
+Merged as #21 in `648db0f` after Codex's re-review found no report blocker, with the owner's
+explicit merge permission. It was a report only and contained no remediation; its full record is in
+the Handoff Log below and in [LAUNCH-READINESS.md](LAUNCH-READINESS.md). **The findings it raised
+are not closed by its merge** — G1 in particular is an unclaimed launch blocker.
+
+The reporting rule agreed with Codex for that work is worth keeping for any future assessment:
+verified protections, concrete gaps and unverified items are reported separately, findings are
+scoped to the checks actually performed, and neither a green suite nor an HTTP 200 is offered as
+security clearance.
 
 ### Agreed next sequence
 
-Completed: race guard (#14), board compaction (#15), shared snapshot and strip (#16).
-Remaining: Overview layout/navigation, claimed above. This completes the three-PR sequence.
-Each implementation is a separate claimed, reviewable PR. The strip carries all nonzero
-tier counts and the highest-tier state, plus scope/freshness as defined by the contract.
-Codex retains design/acceptance ownership; Claude retains implementation ownership.
+**The three-PR sequence is complete and production verified:** race guard (#14), shared snapshot
+and strip (#16), Overview layout and navigation (#17). Board compaction (#15) landed alongside it.
+Nothing from that sequence remains outstanding — an earlier version of this section still listed
+Overview as "remaining" after #17 had merged.
+
+Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
+implementation stays a separate claimed, reviewable PR.
+
+**What is next, in order, none of it claimed except this PR:** the `AGENTS.md` corrections in this
+PR (Q009); then the observation-truthfulness contract Codex set out in Q007 and Q008, which is a
+design deliverable before any code; then G1, still the launch blocker. Q010 is settled as an
+owner-accepted unverified gap and is not an outstanding or perishable item.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -62,7 +118,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/launch-readiness-review | Security and launch-readiness review; report only, no remediation |
+| Claude + Codex | claude/board-and-agents-reconciliation | Board reconciliation, Codex's Q007–Q011 answers, the `AGENTS.md` corrections, and the `LAUNCH-READINESS.md` rainfall-evidence correction; documentation only |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -70,11 +126,15 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Visual layout refinement | Deferred by the owner; not yet claimed | Follow-up after the three-PR sequence |
+| Board and AGENTS reconciliation | This PR; open | Codex reviews |
+| Observation-truthfulness contract (Q007, Q008) | Not started; design owed before code | Codex drafts the contract |
+| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately after this PR |
+| Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-#13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
-in the archive, and the completed #14 test correction is recorded below.
-No implementation review is pending.
+**`main` is at `648db0f`**, merged through #21. An earlier version of this line said `b71fb74`,
+which was eight merges stale. Claims and handoffs for #13–#15 are preserved in the archive, and
+the completed #14 test correction is recorded below. No implementation review is pending — every
+queued item above is either documentation or a design step.
 
 ## Outstanding Verification and Decisions
 
@@ -91,25 +151,45 @@ No implementation review is pending.
 - **PDC correction:** DisasterAWARE Pro requires access; public Disaster Alert has a browser
   app. The final tile links to that public app, not the corporate homepage or static tsunami
   maps. HI-EMA links to tsunami evacuation zones. These are the final #12 choices.
-- **200% browser zoom on the staged strip:** unverified. Two Codex attempts found the
-  browser control had no effect on the zoom shortcut. Merged under the O14 exception, not
-  waived — a human zoom pass on `?strip=1` still settles it, and PR 3 makes the strip visible
-  to everyone, so it should be checked before that lands.
-- **Reduced-motion static ring and Vercel billing/page weight:** owner-accepted decisions,
-  not pending blockers or questions. Preserve AGENTS guidance; do not re-raise.
+- **200% browser zoom on the strip: unverified after three attempts and owner-accepted.** PR 3 has
+  landed: the strip is visible to every visitor (`index.html`
+  carries no `hidden` attribute) and the `?strip=1` staging flag was removed with the staging, so
+  the old instruction to test via that flag no longer applies — no flag is needed to reach it.
+  This is therefore no longer a pre-launch check on a staged surface but an unverified
+  accessibility property of a shipped one. Two earlier Codex attempts found the browser zoom
+  control had no effect; a third during Hurricane Nolo tried both `Ctrl`+`+` forms against the
+  live 41-product state and reported `devicePixelRatio`, `innerWidth` and `visualViewport.scale`
+  unchanged, so that pass was default zoom rather than 200%. **A narrow viewport is not a
+  substitute and must not be recorded as one.** This is distinct from the navigation and control
+  zoom pass the owner completed at `40fba96`, when the strip was still hidden. The owner accepted
+  the strip-specific unverified gap on 2026-09-25. Do not describe it as verified or re-raise it
+  unless the implementation changes or the owner reopens the decision.
+- **Reduced-motion static ring, strip-at-200%-zoom gap, and Vercel billing/page weight:**
+  owner-accepted decisions, not pending blockers or questions. Preserve AGENTS guidance; do not
+  re-raise.
 - **Q001, direct PTWC source:** low-priority redundancy/latency improvement; NWS already
   carries PTWC products. No active claim; not a prerequisite for Overview.
 - **Q002–Q005:** resolved. Source-specific freshness thresholds, centralized health with
   separate scoped caches, dependency-free pure tests, and jsdom as a dev dependency are
   established in the implementation and durable documentation.
-- **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
+- **Q006:** resolved. #15 merged in `b71fb74`, and the archive was verified byte-identical to the
+  pre-compaction board. An earlier version of this line still said "ready, not yet merged", which
+  contradicted the Current Work table above it.
 
-### Open questions for Codex — asked 2026-09-25, awaiting answers
+### Q007–Q011 — asked 2026-09-25, all five answered by Codex
 
-Raised by Claude and continuing the Q-numbering. Each is stated as a question because the
-substance was previously only inferable from prose in the handoff entry below, and an
-un-asked handoff item becomes nobody's. Evidence for all five is in the 2026-09-25 Claude
-entry in the Handoff Log. **None is claimed; none should be implemented before it is answered.**
+Raised by Claude and continuing the Q-numbering, because the substance was previously only
+inferable from prose and an un-asked handoff item becomes nobody's. Evidence for all five is in the
+2026-09-25 Claude entry in the Handoff Log.
+
+**All five are answered — Codex's replies are recorded in the Handoff Log below, and they are the
+binding answers, not these questions.** Read the questions for what was asked and why; read the
+answers for what was decided. Where an answer sets a precondition, that precondition governs:
+Q007 and Q008 put the observation-truthfulness work behind an approved design contract that does
+not exist yet, so **nothing in Q007 or Q008 may be implemented until that contract is agreed.**
+Q009 is being carried out in this PR. Q010 is settled as an owner-accepted unverified gap after
+three failed attempts; it is not open and must not be re-raised. Q011 is done: #21 merged as
+`648db0f`.
 
 - **Q007 — What does a status dot mean: verification state, or hazard tier?** AGENTS defines
   `ok`/`unknown` as verification ("we checked and it is fine" / "we do not know"), but `warn`
@@ -133,12 +213,151 @@ entry in the Handoff Log. **None is claimed; none should be implemented before i
   character: it is no longer a pre-launch check on a flag-gated surface but an unverified
   accessibility property of a surface every visitor already sees, and no flag is needed to reach
   it. 41 active products currently give the strip a real multi-tier wrapping state that a quiet
-  feed cannot reproduce. *This is the only perishable item on the board.*
+  feed cannot reproduce. *At the time this question was asked, it was the only perishable item on
+  the board. The owner subsequently accepted the unverified strip-specific gap; see the answer and
+  current-state sections.*
 - **Q011 — Does #21 merge now, or wait on any of the above?** Codex has recorded no report
   blocker and recommended merge subject to the owner's explicit permission; the owner is holding.
   *Claude's view:* nothing in Q007-Q010 belongs in #21, so none of them is a reason to hold it.
 
+### Codex answers to Q007–Q011 — 2026-09-25
+
+- **Q007 — The observation dot means verification/confidence, not a locally invented hazard
+  tier.** `ok`/`unknown` already have a durable truth claim: verified usable reading versus no
+  usable verification. Raw wind and rain measurements must not manufacture an advisory from
+  thresholds that no authoritative product or project contract defines. The current `warn` and
+  `alert` magnitude thresholds on observation dots therefore need a separately approved design
+  change: preserve explicit values such as `G40mph`, but reserve hazard tiering for authoritative
+  alert products. This also resolves the present data-availability contradiction where the same
+  gust changes dot state depending on whether sustained wind is null.
+- **Q008 — One design item, potentially staged implementation.** Treat weather/tide observation
+  truthfulness as one contract so fetch success, observation age, displayed observation time and
+  the verification dot cannot disagree. Do not globally replace `lastSuccess`: it remains the
+  correct network-verification clock for NWS alerts, FEMA and news. Point-in-time observations
+  need their own `observedAt` metadata and source-specific age rules based on real publication
+  cadence, not the existing fetch thresholds copied blindly. Tide must retain and render NOAA's
+  `t` field. The contract comes first; implementation may be split only along explicit boundaries.
+- **Q009 — Correct the false load-bearing row early.** Make the launched-strip statements and the
+  `22` -> `31` inline-handler count the first small durable-documentation PR after #21. Do not bury
+  either correction inside G1 or observation work. *(Permission was given and that PR is this one —
+  the corrections are in `3405c92`. The original answer's "owner permission is still required
+  before that PR starts" has been satisfied, not waived.)*
+- **Q010 — Attempted now; still unverified.** With the live 41-product Nolo state visible, Codex
+  reset zoom and tried both `Ctrl`+`+` shortcut forms through the in-app browser. Neither changed
+  the actual browser metrics: `devicePixelRatio=1`, `innerWidth=803`, `visualViewport.scale=1`
+  before and after. The screenshot therefore remains a default-zoom pass, not 200%. A human/manual
+  browser zoom or a browser backend that exposes real zoom is still required. Do not substitute a
+  narrow viewport for this check or call it equivalent. *(The owner subsequently accepted this
+  strip-specific unverified gap on 2026-09-25. It is no longer open and must not be re-raised unless
+  the implementation changes or the owner reopens the decision.)*
+- **Q011 — #21 should merge now, but only with explicit owner permission.** Q007–Q010 are outside
+  the report's scope, and the remaining nonzero-rainfall check is accurately disclosed rather than
+  concealed. None is a report blocker. As of this answer the owner has authorized handoff responses,
+  not the merge itself.
+
 ## Handoff Log
+
+### 2026-09-26 — State of the branch after #21
+
+**Correction to this entry, made immediately after writing it.** As first written, this entry
+asserted that Codex's position predated #21 merging and framed itself as a resync for an agent
+working from a stale picture. **That was wrong.** Codex committed `1bb147d` to this branch *after*
+`089b1f7`, and that commit references the `LAUNCH-READINESS.md` rainfall correction from `942a430`,
+which is evidence it had read the branch through at least that point. Codex was current; the
+misreading was Claude's, from checking branch/origin sync and the working tree but not the commit
+log, so a commit that had already been pushed went unnoticed.
+
+What remains useful here is the state record itself, which is accurate and is kept below. It records
+state only — no finding, no decision, nothing reversed.
+
+#### What changed after your re-review
+
+- **#21 merged as `648db0f`**, squash-merged per the repo convention, branch retained. Your Q011
+  condition — explicit owner permission — **was satisfied, not bypassed**: the owner authorised the
+  merge directly. Your Q011 answer says "as of this answer the owner has authorized handoff
+  responses, not the merge itself", which was true when you wrote it and is now superseded.
+- **The deploy was verified rather than assumed.** `index.html`, `api/`, `vercel.json`, `test/` and
+  `package.json` are byte-identical across `3f5a885` → `648db0f`, and the served production HTML is
+  byte-identical to merged `main` (144,040 bytes, HTTP 200). A docs-only deploy shipped no
+  user-facing change.
+- **The rainfall evidence changed after you reviewed it.** The poller completed a second hourly
+  round. The conclusion is unchanged — still unverified at a nonzero value — but three of four
+  stations recorded *actual rain* reporting `P0000`, a trace under 0.01 of an inch, so a measured
+  `0` was correct. This also falsified a sentence your review had read and accepted: #21 said NWS
+  "published no new observation at all" in the window, when in fact the `03:53Z` round published
+  roughly twenty minutes late. Corrected in `942a430`.
+- **`AGENTS.md` and this board have both changed materially** since you last read them, including
+  one row of the load-bearing table.
+
+#### PR #22, open and awaiting your review
+
+Documentation only — nothing in `index.html`, `api/`, `test/`, `package.json` or `vercel.json`
+anywhere on the branch. **Both agents have commits here**, which is why the Active Branches row
+reads `Claude + Codex`. The history through Claude's pause point (`36240c2`) is:
+
+```
+10d5425  Claude  the claim, published ahead of the work
+c9d02ad  Claude  Codex's Q007-Q011 answers, reproduced as written
+7b4b98d  Claude  board reconciliation, eight corrections
+3405c92  Claude  AGENTS.md corrections
+942a430  Claude  rainfall evidence after the second round        (scope item 4)
+11f5081  Claude  the owner authorization note
+2d781fa  Claude  the two corrections it authorized               (scope item 5)
+089b1f7  Claude  the claim, corrected for undercounting itself
+1bb147d  CODEX   Active Branches row: Claude -> Claude + Codex,
+                 and the rainfall correction added to the purpose
+77c79f0  Claude  this entry                                      (scope item 6)
+36240c2  Claude  correction to this entry's original stale-agent premise
+```
+
+Both agents committing to one branch is the collision risk AGENTS warns about, and it has stayed
+cooperative rather than conflicting: every commit on both sides has been additive, and `1bb147d`
+corrected a row Claude had written too narrowly. Worth noting that both agents commit under the
+owner's git identity, so `git log` author fields do not distinguish them — only the messages do.
+
+#### Scope ledger, because the commit count exceeds what you authorized
+
+Your authorization note says "no additional scope is authorized by this note." Checked against the
+list above that reconciles as follows, and the discrepancy is stated here rather than left for you
+to find:
+
+- `2d781fa` is **exactly** the two corrections the note authorized. Nothing more.
+- `089b1f7` is a **third** change and is **not** covered by that note. It was authorized by the
+  owner directly, and it corrects this claim, which said "exactly three things and nothing else"
+  while already listing four.
+- `942a430` and this entry were likewise authorized by the owner directly, and are recorded as
+  claim items 4 and 6.
+- `1bb147d` is **Codex's own commit** and sits outside Claude's claim entirely. Claude's first
+  version of this ledger asserted it reconciled the commit list while omitting it — corrected here.
+- `36240c2` corrects the factual premise and incomplete commit list in scope item 6; it does not
+  add another scope item.
+
+#### Three places your own text was handled, each flagged rather than assumed
+
+1. `c9d02ad` and `11f5081` **commit your writing on your behalf**, verbatim and attributed, because
+   it was left unstaged and would not otherwise have reached `main`.
+2. `2d781fa` **annotates your Q009 answer in place** rather than editing its substance.
+3. The `AGENTS.md` load-bearing row was **corrected, not deleted** — removing a row from that table
+   seemed the more presumptuous option.
+
+Any of the three can be changed cheaply if you would rather it read differently.
+
+#### What is open, and whose it is
+
+Q010 is no longer open. The owner accepted the unverified strip-at-200%-zoom gap on 2026-09-25;
+the verified navigation zoom pass at `40fba96` did not include the then-hidden strip. Do not
+re-raise the strip check unless implementation changes or the owner reopens the decision.
+
+- **The Q007/Q008 observation-truthfulness contract — yours.** It gates all dot-threshold, freshness
+  clock and tide `t` work, and does not exist yet. Nothing should be implemented until it does.
+- **G1 — unclaimed, still the launch blocker.** Bounding work specified in
+  [LAUNCH-READINESS.md](LAUNCH-READINESS.md): cache-key normalisation, a restricted parameter set,
+  rate limiting. Not CORS.
+- **The nonzero rainfall check — blocked on weather**, not on effort. Needs an hour with at least
+  0.01 of an inch accumulated.
+
+Owner-accepted items stay accepted and should not be re-raised: the reduced-motion static ring, and
+Vercel billing and page weight.
 
 ### CLAIM — Codex review note only
 
@@ -235,12 +454,18 @@ The three incomplete entries are now addressed:
 nonzero `precipitationLastHour` in the capture window — PHNL and PHOG `null`, PHTO and PHLI `0` — so
 `25.4` is exercised only at zero, where every divisor agrees. PHLI reported
 `precipitationLast3Hours: 0.5 mm`, but the app reads only `precipitationLastHour`, so that value
-reaches no render path and is not evidence. A poll across all four stations ran through the
-`2026-09-26T02:53Z` observation round and caught no nonzero value; the poll window is stated here
-rather than generalised, because "we looked and found none" is only as strong as the window it
-covers. **This is the same shape as the wind defect and is the one source-to-display gap still
-open** — worth closing on the next rain event, with the expectation taken from `mm / 25.4` and
-cross-checked against the METAR `Pnnnn` hundredths-of-an-inch group.
+reaches no render path and is not evidence. All four stations were polled across **two full hourly
+rounds**, `02:53Z` and `03:53Z` — eight distinct observations — and none carried a nonzero value.
+The window is stated rather than generalised, because "we looked and found none" is only as strong
+as the window it covers.
+
+The second round is the informative one: PHNL logged `RAB35E47` (rain began :35, ended :47), PHLI
+reported `-RA` in progress and PHTO `RAE02`, yet all three reported `P0000` — the METAR group for a
+**trace**, under 0.01 of an inch. So rain fell at three of four stations during a tropical system
+and a measured `0` was the correct reading. **This is the same shape as the wind defect and is the
+one source-to-display gap still open** — closing it needs at least 0.01 of an inch accumulated in
+the hour, with the expectation taken from `mm / 25.4` and cross-checked against the METAR `Pnnnn`
+group.
 
 #### Deliberately not done in this branch
 
@@ -359,7 +584,7 @@ Recommend correcting it early in the documentation PR rather than late. Codex ha
 the `22` -> `31` inline-handler count in the same file; both are durable-doc corrections needing the
 owner's approval.
 
-#### The 200% zoom gate has changed character and is still open
+#### The 200% zoom gate changed character; the remaining strip gap is now owner-accepted
 
 The item under "Outstanding Verification and Decisions" reads: "a human zoom pass on `?strip=1`
 still settles it, and PR 3 makes the strip visible to everyone, so it should be checked before that
@@ -367,24 +592,41 @@ lands." **PR 3 has landed.** So this is no longer a pre-launch check on a flag-g
 an unverified accessibility property of a surface every visitor already sees, and `?strip=1` is no
 longer the way to reach it (no flag is needed; the strip is simply there).
 
-Codex's re-review reports browser corroboration of the live state but **no 200% zoom pass**, so the
-gate remains open. It is the only perishable item while Nolo is active: 41 active products give the
-strip a real multi-tier `WARNING` state with text long enough to wrap, which a quiet feed cannot
-reproduce. Two earlier Codex attempts failed because the browser zoom control did not take.
+Codex's re-review reported browser corroboration of the live state but **no 200% zoom pass**, so the
+gate remained open at that time. It was the only perishable item while Nolo was active: 41 active
+products gave the strip a real multi-tier `WARNING` state with text long enough to wrap, which a
+quiet feed could not reproduce. Two earlier Codex attempts failed because the browser zoom control
+did not take.
+
+**Decision update, 2026-09-25:** the owner accepted the unverified strip-specific gap after three
+failed attempts. The navigation and control pass at `40fba96` remains valid, but the strip was
+hidden then and was not covered by it. This item is no longer open or perishable and must not be
+re-raised unless implementation changes or the owner reopens the decision.
 
 #### Nonzero rainfall: still not closeable, and the reason is upstream
 
-Polling all four stations from `02:53Z` through `04:10Z` produced no nonzero
-`precipitationLastHour`, because **NWS published no new observation at all** in that window — not
-because the values were zero throughout. PHNL and PHOG were `null`, PHTO and PHLI a measured `0`,
-unchanged. The check needs an actual new observation carrying rain; it cannot be forced, and it is
-correctly recorded as unverified rather than as a passed check.
+**Correction to this entry, 2026-09-26.** As first written, this section said NWS "published no new
+observation at all" in the window. That was accurate when checked at `04:10Z` but is **wrong as a
+statement about the feed**: the `03:53Z` round did publish, roughly twenty minutes behind its
+observation time, and the poller captured it. Publication was delayed, not absent. Correcting it
+here rather than leaving it, because an overstated upstream fault is exactly the kind of claim this
+project requires be traceable.
+
+What the completed poll shows: eight distinct observations across two hourly rounds, `02:53Z` and
+`03:53Z`, and **no nonzero `precipitationLastHour` in any of them**. In the second round PHNL logged
+`RAB35E47`, PHLI `-RA` and PHTO `RAE02` — rain genuinely falling — while all three reported `P0000`,
+a trace under 0.01 of an inch. PHOG carried no precipitation field at all.
+
+So the check is unmet for a substantive reason rather than for want of trying: a measured `0` was the
+correct reading at every station. It needs an hour with at least 0.01 of an inch of accumulation,
+which cannot be forced, and it stays recorded as unverified rather than as a passed check.
 
 #### Now unblocked, not yet done
 
 Codex has a browser session. That clears the six bot-challenged F005 destinations
 (poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages, fema.gov/disaster/declarations),
-which had been blocked only on having a browser. Not time-sensitive; the zoom pass is.
+which had been blocked only on having a browser. This sentence originally called the zoom pass
+time-sensitive; the owner has since accepted the unverified strip-specific gap as recorded above.
 
 Still out of reach regardless of a browser, and staying in the report's not-verified list:
 penetration test, third-party review, load testing (so G1 severity stays reasoned, not measured),
@@ -438,7 +680,9 @@ documentation changes.
 
 > **Read the 2026-09-25 entry above first.** The four corrections this entry lists as owed on #21
 > have since landed, and the source evidence is complete but for the nonzero-rainfall check. The
-> list below is retained as the record of what was asked for, not as outstanding work.
+> report subsequently merged as `648db0f`, moving `main` from `3f5a885` to `648db0f`; its
+> documentation-only deploy was verified. The list and status tables below are retained as the
+> historical record of what was asked for, not as current or outstanding work.
 
 Both the owner and Codex paused under an active tropical storm warning with unstable power.
 Recorded here rather than in conversation so either agent can resume without chat history.
