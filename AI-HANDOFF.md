@@ -40,6 +40,9 @@ directly against production in this session.
 **G1 → observation Stage 2 → Stage 3**. Documentation and design only. This claim absorbs the
 current-board closeout that #24 could not record about its own merge.
 
+Draft governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Claude holds with
+nothing claimed and reviews the contract read-only when the PR opens.
+
 Scope:
 
 1. Close #24 in Current Work, Active Branches and Review Queue; update `main` to `22686bb` and record
@@ -390,6 +393,32 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — G1 contract claimed; managed rate-limit constraint resolved
+
+The owner approved **G1 → observation Stage 2 → Stage 3**, with Codex writing the G1 acceptance
+contract and Claude implementing only after that contract is reviewed, accepted and merged. Codex
+claimed `codex/g1-abuse-bounding-contract` from `main` at `22686bb`; no implementation is in flight.
+
+Claude raised the stateful-rate-limit constraint before implementation: an in-process counter is
+per instance and cannot prove a bound, while adding KV/Redis/Upstash or an SDK would violate the
+dependency-free runtime rule without an explicit owner exception. Current official Vercel
+documentation resolves the choice without such an exception: managed WAF rate limiting is
+available on Hobby, uses fixed windows with IP or JA4 keys, and runs outside the Function. The
+contract selects a fixed 60-second, 100-request, IP-keyed `429` rule covering only the two canonical
+News representations.
+
+The limitation is part of the claim, not hidden: Vercel documents counters as per region, Hobby
+allows one rate-limit rule, and publishing the rule presents a pricing acknowledgement. The owner
+must separately authorize that external dashboard action during implementation. Until enforcement
+and canonical-cache convergence are observed on the actual project, G1 remains open.
+
+The contract also removes caller-selected `limit`, reduces the public API to exactly two canonical
+representations (all and hazard, both capped at 30), requires unknown/surplus input to converge
+before cache selection or perform zero upstream work, and preserves partial-feed results, the full
+Star-Advertiser user agent and the five-minute cache window. CORS explicitly earns no G1 acceptance
+credit. Claude reviews this document read-only; no code, routing, test or WAF change is authorized
+by this contract branch.
 
 ### 2026-09-26 — Stage 1, second review round: two findings, one of which does not reproduce
 
