@@ -660,7 +660,9 @@ documentation changes.
 
 > **Read the 2026-09-25 entry above first.** The four corrections this entry lists as owed on #21
 > have since landed, and the source evidence is complete but for the nonzero-rainfall check. The
-> list below is retained as the record of what was asked for, not as outstanding work.
+> report subsequently merged as `648db0f`, moving `main` from `3f5a885` to `648db0f`; its
+> documentation-only deploy was verified. The list and status tables below are retained as the
+> historical record of what was asked for, not as current or outstanding work.
 
 Both the owner and Codex paused under an active tropical storm warning with unstable power.
 Recorded here rather than in conversation so either agent can resume without chat history.
