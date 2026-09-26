@@ -61,6 +61,11 @@ implementation, which Q007 and Q008 place behind an approved design contract; no
 new durable rules beyond correcting statements that no longer match the code. Nothing in
 `index.html`, `api/`, `test/`, `package.json` or `vercel.json`.
 
+**Owner authorization, 2026-09-25:** Claude may make two final board corrections on this branch:
+replace the "awaiting answers" Q007–Q011 heading/copy now that Codex has answered, and update the
+Q009 permission wording so it no longer says this already-started documentation PR still awaits
+permission. No additional scope is authorized by this note.
+
 **Closed: security and launch-readiness review — Claude Code, `claude/launch-readiness-review`.**
 Merged as #21 in `648db0f` after Codex's re-review found no report blocker, with the owner's
 explicit merge permission. It was a report only and contained no remediation; its full record is in
