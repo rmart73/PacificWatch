@@ -64,6 +64,14 @@ The source bases are the official [NWS METAR explanation](https://www.weather.go
 [NWS retrieval guidance](https://www.weather.gov/tg/datahelp), and
 [NOAA CO-OPS Data API documentation](https://api.tidesandcurrents.noaa.gov/api/dev).
 
+**The 75-minute weather boundary is deliberate despite the Nolo capture.** During Hurricane Nolo,
+PHNL's `02:53Z` observation was still the latest served at `04:10Z`, making it 77 minutes old while
+the endpoint remained reachable. Under this contract that reading is stale, with an `unknown` dot,
+for the two minutes beyond the boundary and until a newer observation arrives. That transition is
+expected: the feed is healthy, but the source's hourly validity plus stated processing allowance has
+passed. Source details must say both facts rather than widening measurement truth to hide storm-time
+publication lag. This is not an invitation to “fix” the threshold after observing that exact case.
+
 These limits govern whether a measurement can carry an `ok` dot. They do not create a weather
 advisory, change NWS alert tiers or imply safety.
 
@@ -171,8 +179,14 @@ Implementation may be staged only along these reviewable boundaries:
 
 1. **Observation metadata and pure state selection:** add `observedAt`, parsing and combined-state
    helpers with controlled-time tests; no visual threshold behavior remains.
-2. **Weather and tide rendering:** wire the helpers into cards and Source details, retain NOAA `t`,
-   and remove magnitude-driven observation-dot classes.
+2. **Weather and tide rendering and dead severity-dot cleanup:** wire the helpers into cards and
+   Source details, retain NOAA `t`, and remove magnitude-driven observation-dot assignments. Once
+   those assignments are gone, `.s-dot.warn` and `.s-dot.alert` have no consumer and must be removed
+   rather than left as dead CSS. In the same implementation PR, reconcile the `AGENTS.md`
+   load-bearing triangle row and the theming/F004 prose: observation dots then have only `ok` and
+   `unknown`, while the reduced-motion static-ring decision remains relevant to `.hazard-pulse`.
+   Update mutation anchors so deleted CSS is not reported as an unexplained `MISSED` or
+   `ANCHOR LOST` case.
 3. **Earthquake alignment and full regression:** enforce the missing-magnitude/time rules and run
    the cross-source, island-race, age-tick and browser checks.
 
@@ -195,10 +209,11 @@ implementation PR requires its own claim and must name the functions and markup 
 | T10 | Island A resolves after island B: A cannot change B's cache, health, `observedAt` or cards | Deferred-response test |
 | T11 | An older source observation arriving from a newer request cannot replace a newer cached observation | Deferred-response test |
 | T12 | Empty USGS query is verified; a returned event with missing magnitude has `unknown`; event age is not confused with query freshness | DOM fixtures |
-| T13 | Source details separately state fetch and measurement age; combined dots never call an old/missing measurement current | DOM fixtures |
+| T13 | With a current timestamp, usable wind plus null rain yields an `ok` NWS Observations row and wind card while rain alone reads “Not reported” with `unknown`; the inverse usable-rain/missing-wind case behaves symmetrically | DOM fixtures |
 | T14 | NWS alerts, FEMA and News retain existing fetch-health behavior; no global `lastSuccess` semantic change | Existing suites + focused regression |
 | T15 | Every observation state has text, dot shapes remain distinguishable, and no raw value generates warning/advisory language | DOM + browser review |
 | T16 | A timestamped raw-response-versus-rendered-output record covers weather and tide, including source fields, units, observation time, independently established expectation and actual display | Handoff evidence required before merge |
+| T17 | No `.s-dot.warn`/`.s-dot.alert` consumer or dead CSS remains; the obsolete load-bearing row and dot-specific reduced-motion prose are removed or narrowed while `.hazard-pulse` keeps its static substitute | Source search + mutation run + `AGENTS.md` diff |
 
 Boundary tests must exercise both sides and exact equality. Test expectations for conversions and
 timestamps must be independently established under the two durable source-handling rules in
