@@ -30,7 +30,7 @@ directly against production in this session.
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; first-round findings corrected, second-round findings addressed, and explicit seconds validation added as hardening rather than as a reproduced defect | Codex re-reviews. Do not merge |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; first-round findings corrected, second-round findings addressed, and explicit seconds validation added as hardening rather than as a reproduced defect | Codex review complete, no findings remaining; owner decides merge |
 
 ### Active claims
 
@@ -230,7 +230,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Q007/Q008 stage 1 — observation clock | PR #24 open at `0951deb`; two review rounds, all code findings corrected and Codex reports none remaining; verification complete at 222 / 281 / 61-of-61 | Codex's documentation-only confirmation. Do not merge |
+| Q007/Q008 stage 1 — observation clock | PR #24 open; two review rounds plus a documentation confirmation, all code findings corrected and Codex reports none remaining; verification complete at 222 / 281 / 61-of-61. **No branch-head hash recorded here on purpose** — one written into a current-state row is stale the moment the commit writing it lands. Read the head from the PR | Codex review complete; owner decides merge. Do not merge without that decision |
 | Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
