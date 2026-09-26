@@ -408,7 +408,6 @@ reason and with the same caveat.
    opening claim, since a board PR cannot record its own merge.
 
 ### 2026-09-26 — Stage 1 review findings corrected
-### 2026-09-26 — Stage 1 review findings corrected
 
 Codex returned four findings on PR #24. All four were real, all are corrected, and each now has a
 mutation case so the correction is proven load-bearing rather than asserted. **No merge.**
