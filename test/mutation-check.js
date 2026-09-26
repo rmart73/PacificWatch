@@ -113,15 +113,15 @@ const mutations = [
     expect: ['desktop places by grid rather than reordering the DOM'], suite: 'dom' },
 
   { name: 'the Honolulu reference substitution is hidden again',
-    from: '    renderWeather(data.properties, stationLabel(sta), false);',
-    to:   '    renderWeather(data.properties, sta.label, false);',
+    from: "    const kept = sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,",
+    to:   "    const kept = sourceOk('nwsWeather', { p: data.properties, label: sta.label }, token,",
     expect: ['statewide discloses it too'] },
 
   /* Both sides of a cached label have to carry the qualifier. Fixing the weather path and
      leaving the tide path was the actual defect, so each is mutated separately. */
   { name: 'the tide cache stores the unqualified station name',
-    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,",
-    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name, t: typeof latest.t === 'string' ? latest.t : null }, token,",
+    from: "    const kept = sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,",
+    to:   "    const kept = sourceOk('noaaTides', { ft: ft, name: sta.name, t: typeof latest.t === 'string' ? latest.t : null }, token,",
     expect: ['and still does after a failed refresh'] },
 
   { name: 'the populated earthquake card drops its query scope',
@@ -335,8 +335,8 @@ const mutations = [
   /* Unzoned ISO is parsed as LOCAL time by Date.parse, so dropping the shape check silently
      shifts every NWS observation by the reader's UTC offset. */
   { name: 'ISO timestamps accepted without an explicit zone',
-    from: "  if (!ISO_INSTANT_RE.test(t)) return null;",
-    to:   "  if (false) return null;",
+    from: "(Z|[+-]\\d{2}:?\\d{2})$/;",
+    to:   "(Z|[+-]\\d{2}:?\\d{2})?$/;",
     expect: ['rejects an unzoned ISO date-time'], suite: 'health' },
 
   /* T11: the measurement clock must never move backwards. */

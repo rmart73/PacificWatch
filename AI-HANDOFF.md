@@ -30,7 +30,7 @@ directly against production in this session.
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; six Codex findings across two review rounds, all corrected | Codex re-reviews. Do not merge |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; first-round findings corrected, second-round findings addressed, and explicit seconds validation added as hardening rather than as a reproduced defect | Codex re-reviews. Do not merge |
 
 ### Active claims
 
@@ -71,8 +71,23 @@ to `index.html` in this sequence:
   near the source-health registry.
 - `test/`: new controlled-time assertions. `test/dom-behavior.test.js` and, if a pure home suits
   them better, `test/phase1-source-health.test.js`.
-- **No CSS, no markup, no render-path changes.** `renderWeather()`, `renderTide()` and
-  `renderQuakeCard()` are deliberately untouched in this stage.
+- **No CSS and no markup.** `renderWeather()`, `renderTide()` and `renderQuakeCard()` themselves are
+  untouched — none of their bodies changed.
+
+**Scope expansion, disclosed: this claim no longer holds "no render-path changes."** The T11
+correction in `8d57e71` deliberately changes *what the weather and tide fetch paths pass to* those
+renderers. `sourceOk()` now returns the reading it settled on and both callers render from that
+return value instead of from the response that happened to arrive, so a refused older observation
+cannot reach the card. That is a render-path change and the original wording was false once it
+landed.
+
+What remains true, and is the part the "no visual change" promise was protecting: **ordinary
+rendering is unaffected and the magnitude-driven dot thresholds are untouched.** In the normal case
+the returned entry *is* the response that just arrived, so the same values reach the renderers as
+before — verified by rendering live captures against `main` and getting byte-identical output on both
+islands, re-checked after this change specifically because it altered what the render calls receive.
+The only behavioural difference is in the case the correction exists for: a refused older
+observation, which previously reached the card and now does not.
 
 **Three regions touched beyond the list above, disclosed rather than absorbed quietly:**
 
@@ -383,8 +398,13 @@ seconds guard vanishes with no test failing. Seconds are now range-checked expli
 #### Evidence
 
 `npm test` **222** (150 + 35 + 37, up from 191 — 31 further assertions), `npm run test:dom` **281**
-(up from 267 — 14 render-boundary assertions across weather and tide), and **61 mutation cases**, up
-from 55. The caught count is recorded in the following commit rather than asserted here.
+(up from 267 — 14 render-boundary assertions across weather and tide), and **61 of 61 mutation cases caught**, up from 55.
+
+The first run of those 61 came back **58 of 61** with three `ANCHOR LOST` — the Honolulu-reference,
+tide station-name and ISO-zone cases, every one displaced by this round's own restructuring rather
+than by a behaviour change. Re-anchored, and the confirming run is the 61 of 61 above. Per Codex,
+`ANCHOR LOST` is a harness failure until re-anchored and rerun even when behaviour is unchanged, so
+the intermediate number is recorded rather than replaced.
 
 **Rendering re-verified unchanged after this round**, which mattered more than usual because this
 round changed what the render calls receive: the live captures produce output byte-identical to
@@ -398,7 +418,6 @@ and four before them — but it means **no suite result here has been independen
 that should be read as a limit on the evidence rather than a gap in Codex's review. Both defects it
 found this round were invisible to a green suite, which is the argument for reading the code.
 
-### 2026-09-26 — END OF NIGHT PAUSE: read this first when resuming
 ### 2026-09-26 — END OF NIGHT PAUSE (superseded by the entry above)
 
 > **Superseded.** The pending 55-of-55 mutation rerun this entry waits on completed, and a second
@@ -463,14 +482,25 @@ the source happens to send today.**
 
 #### Also worth a decision, not yet claimed
 
-Three mutation anchors were displaced on this branch by ordinary restructuring — the tide
-`sourceOk` call, and `observedAt` twice. The harness behaved correctly each time; `ANCHOR LOST` is
-what it should report. But it is a recurring cost worth a line in the `AGENTS.md` mutation section:
-**restructuring a line that a mutation case pins carries an anchor update with it.** Not written,
-because that is a durable doc and T17 already has Codex reconciling that file in stage 2.
+**Six** mutation anchors were displaced on this branch by ordinary restructuring — the tide
+`sourceOk` call, `observedAt` twice, and in the second round the Honolulu-reference, tide
+station-name and ISO-zone cases. The harness behaved correctly every time; `ANCHOR LOST` is what it
+should report, and Codex's ruling is that it counts as a harness failure until re-anchored and rerun
+even when behaviour has not changed.
 
-The `.map(sourceState)` arity trap is the other candidate for the load-bearing table, for the same
-reason and with the same caveat.
+At six occurrences it is a systematic cost rather than a run of bad luck, and worth a line in the
+`AGENTS.md` mutation section: **restructuring a line that a mutation case pins carries an anchor
+update with it.** Two mitigations learned here are worth carrying with it — anchor on the line that
+*sets* a value rather than the line that renders it, since the setter is more stable; and do not pin
+a constant's value in an extraction regex, or mutating that constant breaks extraction instead of
+failing an assertion.
+
+The `.map(sourceState)` arity trap is the other candidate, for the load-bearing table: adding even an
+optional parameter changes behaviour at every bare-reference callback site.
+
+**Disposition, decided by Codex 2026-09-26:** both are carried into **stage 2 / T17**, which already
+has Codex reconciling `AGENTS.md`. **Neither is to be added to PR #24.** Recorded here so the
+guidance is not lost between branches.
 
 #### Deliberately not done, and not to be started without a claim
 
