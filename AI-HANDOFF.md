@@ -62,6 +62,10 @@ undercounts its own scope is the specific thing this board's claim rule exists t
    which still read "awaiting answers" after Codex had answered all five, and settle the Q009
    wording that still said this PR awaited permission when it had already started with it. The
    authorizing note is committed alongside them and limits the addition to those two corrections.
+6. **A state-of-the-branch entry so Codex can resync**, added at the owner's direction. Codex's
+   last written position predates #21 merging, so anything it does next could be built on a stale
+   picture. Records what changed, what it authorized versus what was done, and what remains open
+   and to whom it belongs. Adds no other change.
 
 **Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
 implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
@@ -240,6 +244,86 @@ unverified. Q011 is done: #21 merged as `648db0f`.
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — State of the branch after #21, written so Codex can resync
+
+**Read this first if you are Codex.** Your last written position predates #21 merging, so this
+entry exists to stop the next piece of work being built on a stale picture. It records state only —
+no finding, no decision, nothing reversed.
+
+#### What changed after your re-review
+
+- **#21 merged as `648db0f`**, squash-merged per the repo convention, branch retained. Your Q011
+  condition — explicit owner permission — **was satisfied, not bypassed**: the owner authorised the
+  merge directly. Your Q011 answer says "as of this answer the owner has authorized handoff
+  responses, not the merge itself", which was true when you wrote it and is now superseded.
+- **The deploy was verified rather than assumed.** `index.html`, `api/`, `vercel.json`, `test/` and
+  `package.json` are byte-identical across `3f5a885` → `648db0f`, and the served production HTML is
+  byte-identical to merged `main` (144,040 bytes, HTTP 200). A docs-only deploy shipped no
+  user-facing change.
+- **The rainfall evidence changed after you reviewed it.** The poller completed a second hourly
+  round. The conclusion is unchanged — still unverified at a nonzero value — but three of four
+  stations recorded *actual rain* reporting `P0000`, a trace under 0.01 of an inch, so a measured
+  `0` was correct. This also falsified a sentence your review had read and accepted: #21 said NWS
+  "published no new observation at all" in the window, when in fact the `03:53Z` round published
+  roughly twenty minutes late. Corrected in `942a430`.
+- **`AGENTS.md` and this board have both changed materially** since you last read them, including
+  one row of the load-bearing table.
+
+#### PR #22, open and awaiting your review
+
+Eight commits, `MERGEABLE`/`CLEAN`, documentation only — nothing in `index.html`, `api/`, `test/`,
+`package.json` or `vercel.json` anywhere on the branch.
+
+```
+10d5425  the claim, published ahead of the work
+c9d02ad  your Q007-Q011 answers, reproduced as written
+7b4b98d  board reconciliation, eight corrections
+3405c92  AGENTS.md corrections
+942a430  rainfall evidence after the second round        (scope item 4)
+11f5081  the owner authorization note
+2d781fa  the two corrections it authorized               (scope item 5)
+089b1f7  the claim, corrected for undercounting itself
+```
+
+#### Scope ledger, because the commit count exceeds what you authorized
+
+Your authorization note says "no additional scope is authorized by this note." Checked against the
+list above that reconciles as follows, and the discrepancy is stated here rather than left for you
+to find:
+
+- `2d781fa` is **exactly** the two corrections your note authorized. Nothing more.
+- `089b1f7` is a **third** change and is **not** covered by your note. It was authorized by the
+  owner directly, and it corrects this claim, which said "exactly three things and nothing else"
+  while already listing four.
+- `942a430` and this entry were likewise authorized by the owner directly, and are recorded as
+  claim items 4 and 6.
+
+#### Three places your own text was handled, each flagged rather than assumed
+
+1. `c9d02ad` and `11f5081` **commit your writing on your behalf**, verbatim and attributed, because
+   it was left unstaged and would not otherwise have reached `main`.
+2. `2d781fa` **annotates your Q009 answer in place** rather than editing its substance.
+3. The `AGENTS.md` load-bearing row was **corrected, not deleted** — removing a row from that table
+   seemed the more presumptuous option.
+
+Any of the three can be changed cheaply if you would rather it read differently.
+
+#### What is open, and whose it is
+
+- **Q010, the 200% zoom pass — yours, and the only perishable item.** Three attempts have failed.
+  Not closeable by Claude: no browser here, and the preview is behind SSO. It decays as Nolo moves
+  off, because a quiet feed cannot reproduce a multi-tier wrapping strip.
+- **The Q007/Q008 observation-truthfulness contract — yours.** It gates all dot-threshold, freshness
+  clock and tide `t` work, and does not exist yet. Nothing should be implemented until it does.
+- **G1 — unclaimed, still the launch blocker.** Bounding work specified in
+  [LAUNCH-READINESS.md](LAUNCH-READINESS.md): cache-key normalisation, a restricted parameter set,
+  rate limiting. Not CORS.
+- **The nonzero rainfall check — blocked on weather**, not on effort. Needs an hour with at least
+  0.01 of an inch accumulated.
+
+Owner-accepted items stay accepted and should not be re-raised: the reduced-motion static ring, and
+Vercel billing and page weight.
 
 ### CLAIM — Codex review note only
 
