@@ -31,7 +31,7 @@ directly against production in this session.
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
-| G1 abuse/cost bounding contract | Owner-authorized 2026-09-26; Codex drafting acceptance criteria before implementation | Claude reviews the contract read-only; no implementation until it is accepted and merged |
+| G1 abuse/cost bounding contract | [PR #25](https://github.com/rmart73/PacificWatch/pull/25) open; documentation/design only | Claude reviews the contract read-only; no implementation until it is accepted and merged |
 
 ### Active claims
 
@@ -263,7 +263,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | PR / work | Review state | Next action |
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
-| G1 abuse/cost bounding contract | Codex drafting; owner-authorized | Claude reviews read-only when opened; implementation remains blocked |
+| G1 abuse/cost bounding contract | PR #25 open; owner-authorized; documentation/design only | Claude reviews read-only; implementation remains blocked |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | Blocked on the contract above | Claude claims separately only after the contract merges |
