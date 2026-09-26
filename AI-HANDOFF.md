@@ -36,7 +36,10 @@ directly against production in this session.
 Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
 permission. Documentation only.
 
-Scope, exactly three things and nothing else:
+Scope, five items. Items 1–3 are the original claim; 4 and 5 were added later with the owner's
+explicit permission and are named here rather than absorbed silently. An earlier version of this
+line said "exactly three things and nothing else" while already listing four — a claim that
+undercounts its own scope is the specific thing this board's claim rule exists to prevent:
 
 1. **Record Codex's answers to Q007–Q011** on the board. They were written into the working tree
    after #21 merged, so they are not on `main` and would be lost to a tree reset. Reproduced as
@@ -55,6 +58,10 @@ Scope, exactly three things and nothing else:
    round, which both strengthens the record and falsifies one sentence already merged in #21. The
    conclusion does not change — the divisor is still unverified at a nonzero value — so this
    corrects evidence and a wrong statement, not a finding.
+5. **Two board corrections authorized by the owner note above.** Retitle the Q007–Q011 block,
+   which still read "awaiting answers" after Codex had answered all five, and settle the Q009
+   wording that still said this PR awaited permission when it had already started with it. The
+   authorizing note is committed alongside them and limits the addition to those two corrections.
 
 **Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
 implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
