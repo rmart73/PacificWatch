@@ -106,6 +106,12 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### CLAIM — Codex review note only
+
+**ChatGPT Codex, `claude/launch-readiness-review`, 2026-09-25.** Owner-authorized edit limited
+to recording the read-only #21 re-review and next-step question in this shared handoff file. No
+edits to `LAUNCH-READINESS.md`, application code, tests, configuration, or Claude's evidence.
+
 ### 2026-09-25 — #21 corrections landed; source evidence completed except one item
 
 **Supersedes the "corrections owed on #21" list in the end-of-night entry below.** All four are
@@ -226,6 +232,43 @@ docs-only branch is exactly where an unnoticed stray edit to `index.html` would 
 
 **Codex re-reviews the corrected #21.** Only then does it merge. After that: the board
 reconciliation as its own small PR, then G1 claimed separately.
+
+### 2026-09-25 — Codex re-review of corrected #21
+
+Read-only review of `b6fb05d` and `78d9159`; no report or application code changed. The working
+tree was clean before this coordination note. `git diff --check 3f5a885...HEAD` passed, and the
+branch still changes only `LAUNCH-READINESS.md` and `AI-HANDOFF.md`.
+
+**The four requested corrections are satisfied.** Security findings are now bounded to the checks
+performed; CORS is explicitly excluded from G1's abuse controls; G6 correctly distinguishes the
+single-file design from the current inline-handler implementation; and G2 now separates an
+already-open page's tested degradation from an offline reload/cold start. The expanded evidence
+also resolves the tide timezone and earthquake identity gaps and honestly preserves the one thing
+the live capture could not establish: conversion of a nonzero one-hour rainfall value.
+
+The production browser independently showed the same live statewide shape during this review:
+41 active NWS products, 8 warnings / 28 watches / 3 advisories / 2 statements, PHNL 17 mph with a
+40 mph gust, null one-hour rainfall, and an M2.1 Pāhala-area earthquake. This is corroboration of
+the visible live state, not a replay of Claude's captured response and not a substitute for it.
+
+**No report blocker found.** Codex recommends #21 for merge, subject to the owner's explicit merge
+permission. The nonzero mm-to-inches live check remains an accurately disclosed follow-up, not a
+reason to keep a report-only PR open indefinitely.
+
+**One product question for Claude before the next implementation claim:** `renderWeather()` assigns
+the wind dot from sustained wind whenever sustained is present, so PHNL displayed an `ok` circle
+for 17 mph while also showing `G40mph`; gust affects the dot only when sustained is unavailable.
+Is that deliberate? This is outside #21 and does not block its merge. If unintended, it should be
+raised and scoped separately rather than folded into the report, board reconciliation, or G1.
+
+**Recommended sequence, with the owner's permission required before each change:** merge #21;
+reconcile the stale top of this board in a separate documentation PR (including the `22` -> `31`
+inline-handler count in `AGENTS.md` if the owner approves that durable-doc correction); decide the
+wind-gust question; then claim and design G1 as its own implementation PR.
+
+**Owner authorization, 2026-09-25:** Claude is authorized to respond to the wind-dot question in
+this handoff. This does not authorize merging #21 or making application, report, or other
+documentation changes.
 
 ### 2026-09-08 — END OF NIGHT HANDOFF: read this first when resuming
 
