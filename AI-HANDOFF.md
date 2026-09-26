@@ -35,10 +35,81 @@ directly against production in this session.
 
 ### Active claims
 
-**G1 abuse/cost bounding contract — ChatGPT Codex,
-`codex/g1-abuse-bounding-contract`.** Owner-authorized 2026-09-26 under the approved sequence
-**G1 → observation Stage 2 → Stage 3**. Documentation and design only. This claim absorbs the
-current-board closeout that #24 could not record about its own merge.
+**G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
+Claim published 2026-09-26 before editing, in its own commit ahead of the work, on the owner's
+explicit authorization of both implementation **and** the WAF publication step. Branched from `main`
+at `fcaf55a`, with `git log` and content equality verified first.
+
+Governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md), **G01–G18**.
+
+**Scope — what this changes**
+
+1. **`api/news.js`** — two canonical representations replacing the free-form `limit`/`hazard`
+   parameters: all headlines and hazard-only, each fixed at 30. Non-canonical input is rejected
+   **before** `FEEDS.map(fetchFeed)` so it performs zero upstream requests, with `no-store` on
+   rejections and no echo of raw input. Method handling gains `405` with `Allow`; `OPTIONS` keeps
+   doing no upstream work.
+2. **`vercel.json`** — the routing that makes `/api/news/hazard` resolve to the shared Function,
+   plus the request-query transform intended to normalise the cache identity. Neither exists today:
+   `api/` contains only `news.js`, so `/api/news/hazard` is currently a 404.
+3. **`index.html`** — the single client fetch site at `fetchNews()`, currently building
+   `'?limit=30&hazard=1'` / `'?limit=30'`. It moves to the two canonical URLs and sends no query
+   string. `setNewsFilter()` calls `fetchNews()`, so the toggle is the live path G02 exercises.
+4. **Tests** — `test/` gains fetch-counter and handler coverage for the canonical representations,
+   zero-fan-out rejection, method handling, partial-feed behaviour, the full Star-Advertiser user
+   agent and the eight-second abort, plus mutation cases for each. Affected files:
+   `test/mutation-check.js` and a home for API-level assertions; the existing three suites are
+   updated only where the client change touches them.
+
+**The WAF action — owner-executed, named here per G16**
+
+The rule Claude will specify and record, and which **only the owner publishes**: exact paths
+`/api/news` and `/api/news/hazard`, IP counting key, fixed 60-second window, final limit **100**,
+enforcing **429**. The controlled test publishes a temporary **5 per 60 seconds** scoped to the
+preview hostname only, then restores the final production rule.
+
+**Claude will not touch Vercel project settings, publish any rule, or accept the pricing
+acknowledgement.** The owner has authorised the action; executing it is still theirs. Code and
+preview evidence land before any production merge, and G1 stays open until the final WAF state is
+verified.
+
+**Out of scope, explicitly:** no CORS change — per Decision 4 it earns no G1 credit and any change
+belongs to G3. No observation Stage 2 or 3 work. No new runtime dependency, datastore or in-process
+limiter. No change to the feed list, parser, decoding, dedupe, sort or hazard keyword model beyond
+what the contract requires. Nothing in `AGENTS.md` except the two deferred T17 items below.
+
+**Stop condition, per Decision 2:** if preview evidence shows the query transform does not normalise
+the cache identity, **implementation stops for a contract amendment and an owner decision.** The
+failure is not relabelled "unbounded but cheap" — handler rejection bounds upstream fan-out and WAF
+bounds one IP in one region, but the CDN/Function key space would remain unbounded.
+
+**Closeout absorbed into this claim** — five items, since a board PR cannot record its own merge:
+
+1. Codex's contract claim closed under Active claims (below).
+2. Its merged branch replaced under Active Branches.
+3. The two Review Queue rows for the contract and for blocked implementation updated.
+4. `G1-ABUSE-BOUNDING-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
+   authoritative — the third contract to merge while still calling itself a proposal.
+5. **The deferred T17 guidance carried here** rather than lost between branches: anchor a mutation
+   case on the line that *sets* a value rather than the line that renders it; never pin a constant's
+   value in an extraction regex, or mutating the constant breaks extraction instead of failing an
+   assertion; and adding even an optional parameter changes behaviour at every bare-reference
+   callback site, as `.map(sourceState)` did. These remain Codex's to place in `AGENTS.md` under
+   T17 during Stage 2; recorded here so they survive the branch.
+
+**Also noted, not claimed:** the merged `codex/g1-abuse-bounding-contract` branch was deleted on the
+remote, which contradicts the AGENTS line that omitting a merged branch from the active list "does
+not imply remote branch deletion." Either the convention changed and that line is stale, or the
+deletion was unintended. It cost the usual squash content-equality check, which succeeded only
+because the head commit survived locally from a pre-prune fetch. Flagged for the owner and Codex; no
+edit made.
+
+**Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
+`codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
+verified, application, API, configuration, dependencies and tests byte-identical to `22686bb`. The
+contract it produced is authoritative and governs this implementation.)* Owner-authorized 2026-09-26
+under the approved sequence **G1 → observation Stage 2 → Stage 3**. Documentation and design only.
+This claim absorbed the current-board closeout that #24 could not record about its own merge.
 
 Draft governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Claude holds with
 nothing claimed and reviews the contract read-only when the PR opens.
@@ -254,7 +325,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/g1-abuse-bounding-contract | G1 acceptance contract and #24 board closeout; documentation/design only |
+| Claude | claude/g1-abuse-bounding | G1 abuse and cost bounding implementation: two canonical News representations, zero-fan-out rejection, routing and cache normalisation, client fetch site, tests. Specifies the WAF rule; the owner publishes it |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -263,10 +334,10 @@ Merged branches are omitted from this active list; this does not imply remote br
 | PR / work | Review state | Next action |
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
-| G1 abuse/cost bounding contract | PR #25 open; owner-authorized; documentation/design only | Claude reviews read-only; implementation remains blocked |
+| G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | Blocked on the contract above | Claude claims separately only after the contract merges |
+| G1 abuse/cost bounding implementation | Claimed above; in progress on `claude/g1-abuse-bounding` | Claude implements and gathers preview evidence; owner publishes the WAF rule; Codex reviews |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `22686bb`**, merged through #24 and serving production. Claims and handoffs for

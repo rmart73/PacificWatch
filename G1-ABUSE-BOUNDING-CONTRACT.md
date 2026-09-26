@@ -1,6 +1,9 @@
 # Pacific Watch — G1 Abuse and Cost Bounding Contract
 
-Status: **proposed for review**. Owner-authorized 2026-09-26 under the sequence
+Status: **accepted and authoritative**, merged as #25 in `fcaf55a` after Claude's read-only review
+(three findings, all addressed) and the owner's merge decision. G01–G18 govern the implementation;
+changes to this contract require their own claim and review. Owner-authorized 2026-09-26 under the
+sequence
 **G1 → observation Stage 2 → Stage 3**. This document settles G1 before implementation.
 
 ## Purpose
