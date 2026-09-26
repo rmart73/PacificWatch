@@ -2287,10 +2287,20 @@ const OBSERVATION_LIMITS = {
    unusable rather than permanently "current". */
 const OBS_SKEW_MS = 5 * MIN;
 
-/* NWS sends an ISO 8601 instant carrying its own offset, so Date.parse resolves it. */
+/* NWS sends an ISO 8601 instant carrying its own offset. An explicit zone is REQUIRED here, not
+   merely expected: Date.parse treats an ISO date-time with no offset as LOCAL time, so
+   "2026-09-26T05:53:00" resolves ten hours away from the instant NWS meant for a reader in
+   Hawaii — the same browser-timezone trap guarded against for NOAA below, arriving through a
+   different door. Date.parse also accepts loose non-ISO forms such as "Sep 26 2026", which are
+   not timestamps this app should act on. Both are rejected as unusable rather than guessed,
+   because the contract says a value without a usable authoritative timestamp is not a usable
+   point-in-time reading. */
+const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
 function observedAtFromIso(raw) {
-  if (typeof raw !== 'string' || !raw.trim()) return null;
-  const ms = Date.parse(raw);
+  if (typeof raw !== 'string') return null;
+  const t = raw.trim();
+  if (!ISO_INSTANT_RE.test(t)) return null;
+  const ms = Date.parse(t);
   return isFinite(ms) ? ms : null;
 }
 
@@ -2334,18 +2344,41 @@ function observationState(key, observedAt, now) {
   return 'current';
 }
 
-/* The one state a card or source row should present, combining both clocks. Only 'current'
-   earns a verified dot. Deliberately not wired into any render path in this stage. */
-function combinedObservationState(key, now) {
+/* Island-aware read of the measurement cache. usableCache() cannot serve here because it answers
+   only for STALE sources by design, so this applies the same island guard without the staleness
+   condition. Reading S.cache[key] directly would let the PREVIOUS island's observation decide the
+   newly selected island's state — the same false attribution the request-scope guard exists to
+   prevent, arriving by a different route. */
+function observationEntry(key) {
+  const e = S.cache[key];
+  if (!e) return null;
+  if (ISLAND_SCOPED[key] && e.island !== S.island) return null;
+  return e;
+}
+
+/* The one state a card or source row should present, combining both clocks. Only 'current' earns
+   a verified dot. Deliberately not wired into any render path in this stage.
+
+   valueUsable is the reading's own usability — a measured value present and convertible. Omit it
+   and it defaults to true, so a caller asking purely about clocks gets the clock answer; stage 2
+   passes the real verdict so a missing field cannot ride a good timestamp to 'current'. */
+function combinedObservationState(key, now, valueUsable) {
   const fetchState = sourceState(key, now);
   if (!OBSERVATION_LIMITS[key]) return fetchState;
-  const entry = S.cache[key];
+  const entry = observationEntry(key);
+  /* No reading for the SELECTED island: still checking if nothing has been attempted, otherwise
+     there is nothing to present. An entry belonging to another island is not a fallback. */
   if (!entry) return fetchState === 'loading' ? 'checking' : 'unavailable';
+  /* A reading exists but a fresh request is outstanding and has never completed: report checking
+     rather than presenting the older reading as though it had been verified for this selection. */
+  if (fetchState === 'loading') return 'checking';
   const obs = observationState(key, entry.observedAt, now);
-  /* The measurement verdict is read first: a fresh response never revives a reading already
+  /* The measurement verdicts are read first: a fresh response never revives a reading already
      past its measurement retention, so the network state cannot rescue it. */
   if (obs === 'unusable') return 'observation-unusable';
   if (obs === 'expired') return 'observation-expired';
+  /* A missing or unconvertible value is unusable whatever the clocks say. */
+  if (valueUsable === false) return 'value-unusable';
   if (fetchState === 'unavailable') return 'unavailable';
   if (fetchState === 'stale') return 'fetch-stale';
   if (obs === 'stale') return 'observation-stale';
@@ -2394,15 +2427,31 @@ function sourceOk(key, data, token, observed) {
   const now = Date.now();
   h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
   /* Stamp the island the request STARTED under, never the one selected when it landed. */
-  if (data !== undefined) S.cache[key] = {
-    island: token ? token.island : S.island,
-    data: data,
-    /* The measurement clock travels with the reading it describes, so retained data keeps the
-       timestamp captured with that exact response rather than inheriting a later one. Sources
-       with no point-in-time measurement pass nothing and store null. */
-    observedAt: observed && observed.at != null ? observed.at : null,
-    observedAtRaw: observed && typeof observed.raw === 'string' ? observed.raw : null
-  };
+  if (data !== undefined) {
+    const island = token ? token.island : S.island;
+    const at = observed && observed.at != null ? observed.at : null;
+    const prev = S.cache[key];
+    /* T11 — a response can carry an OLDER source observation than the one already cached, even
+       when it is the newest HTTP request: upstream can republish an earlier reading, and a
+       retried fetch can land behind one that already succeeded. Health above is refreshed either
+       way, because we did reach the source; the measurement clock must never move backwards, and
+       a newer cached reading must not be replaced by an older one. Equal timestamps refresh
+       health and leave the measurement untouched. Compared only within the same island, since a
+       different island's reading is a different measurement, not an earlier one. */
+    if (prev && prev.island === island && prev.observedAt != null && at != null && at < prev.observedAt) {
+      renderSourceHealth();
+      return;
+    }
+    S.cache[key] = {
+      island: island,
+      data: data,
+      /* The measurement clock travels with the reading it describes, so retained data keeps the
+         timestamp captured with that exact response rather than inheriting a later one. Sources
+         with no point-in-time measurement pass nothing and store null. */
+      observedAt: at,
+      observedAtRaw: observed && typeof observed.raw === 'string' ? observed.raw : null
+    };
+  }
   renderSourceHealth();
 }
 

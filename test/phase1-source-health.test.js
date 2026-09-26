@@ -32,14 +32,16 @@ const parts = [
   grab(/const OBSERVATION_LIMITS = \{[\s\S]*?\n\};/, 'OBSERVATION_LIMITS'),
   grab(/const OBS_SKEW_MS = [^;]+;/, 'OBS_SKEW_MS'),
   grab(/const HST_OFFSET_MS = [^;]+;/, 'HST_OFFSET_MS'),
+  grab(/const ISO_INSTANT_RE = [^;]+;/, 'ISO_INSTANT_RE'),
   grab(/function observedAtFromIso\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromIso'),
   grab(/function observedAtFromNoaaLst\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromNoaaLst'),
   grab(/function observationState\(key, observedAt, now\) \{[\s\S]*?\n\}/, 'observationState'),
-  grab(/function combinedObservationState\(key, now\) \{[\s\S]*?\n\}/, 'combinedObservationState'),
+  grab(/function observationEntry\(key\) \{[\s\S]*?\n\}/, 'observationEntry'),
+  grab(/function combinedObservationState\(key, now, valueUsable\) \{[\s\S]*?\n\}/, 'combinedObservationState'),
   grab(/function observationVerified\(state\) \{[^}]*\}/, 'observationVerified')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry})');
 const St = api.S;
 
 /* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
@@ -286,6 +288,96 @@ check('omitting the clock falls back to Date.now()',
   api.sourceState('news'), 'unavailable');
 check('injecting an earlier instant is honoured over Date.now()',
   api.sourceState('news', realNow - 80 * MIN), 'current');
+
+console.log('\nStrict ISO parsing — an unzoned timestamp is not an instant:');
+/* Date.parse treats an ISO date-time with no offset as LOCAL time, so accepting one would place
+   the reading ten hours from where NWS meant it for a Hawaii reader. Rejected, not guessed. */
+check('rejects an unzoned ISO date-time', api.observedAtFromIso('2026-09-26T05:53:00'), null);
+check('rejects a date with no time', api.observedAtFromIso('2026-09-26'), null);
+check('rejects a loose non-ISO form Date.parse would accept',
+  api.observedAtFromIso('Sep 26 2026'), null);
+check('rejects a bare time', api.observedAtFromIso('05:53:00Z'), null);
+check('accepts an explicit +00:00 offset',
+  api.observedAtFromIso('2026-09-26T05:53:00+00:00'), Date.UTC(2026, 8, 26, 5, 53, 0));
+check('accepts Z', api.observedAtFromIso('2026-09-26T05:53:00Z'), Date.UTC(2026, 8, 26, 5, 53, 0));
+/* -10:00 is HST; the instant is ten hours later than the wall time shown. */
+check('accepts a negative offset and applies it',
+  api.observedAtFromIso('2026-09-26T05:53:00-10:00'), Date.UTC(2026, 8, 26, 15, 53, 0));
+check('accepts fractional seconds',
+  api.observedAtFromIso('2026-09-26T05:53:00.500Z'), Date.UTC(2026, 8, 26, 5, 53, 0) + 500);
+
+console.log('\nCombined state — island scope, loading and value usability:');
+/* An entry belonging to another island is not a fallback for the selected one. Reading the cache
+   directly would let Maui's observation decide Kauai's state. */
+St.island = 'kauai';
+setHealth('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 });
+St.cache.nwsWeather = { island: 'maui', data: {}, observedAt: T0 - 5 * MIN, observedAtRaw: null };
+check('another island\'s entry is not read', api.observationEntry('nwsWeather'), null);
+check('and the combined state does not present it',
+  api.combinedObservationState('nwsWeather', T0), 'unavailable');
+St.cache.nwsWeather = { island: 'kauai', data: {}, observedAt: T0 - 5 * MIN, observedAtRaw: null };
+check('the selected island\'s entry is read',
+  api.observationEntry('nwsWeather') !== null, true);
+check('and presents normally', api.combinedObservationState('nwsWeather', T0), 'current');
+/* Sources outside ISLAND_SCOPED are never rejected for an island change. */
+St.cache.news = { island: 'maui', data: {}, observedAt: null, observedAtRaw: null };
+check('a non-island-scoped source ignores the island',
+  api.observationEntry('news') !== null, true);
+
+/* A reading exists, but nothing has completed for this selection yet. */
+setHealth('nwsWeather', { lastAttempt: null, lastSuccess: null, lastError: null, consecutiveFailures: 0 });
+check('an outstanding first request reports checking, not the older reading',
+  api.combinedObservationState('nwsWeather', T0), 'checking');
+
+/* A missing or unconvertible value is unusable whatever the clocks say. */
+setHealth('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 });
+check('an unusable value outranks good clocks',
+  api.combinedObservationState('nwsWeather', T0, false), 'value-unusable');
+check('and is not verified',
+  api.observationVerified(api.combinedObservationState('nwsWeather', T0, false)), false);
+check('a usable value with good clocks is current',
+  api.combinedObservationState('nwsWeather', T0, true), 'current');
+check('omitting usability asks only about the clocks',
+  api.combinedObservationState('nwsWeather', T0), 'current');
+/* An unusable timestamp still outranks the value verdict: both are unknown, and the timestamp
+   verdict is the more specific statement. */
+St.cache.nwsWeather = { island: 'kauai', data: {}, observedAt: null, observedAtRaw: null };
+check('a missing timestamp still reports the timestamp problem',
+  api.combinedObservationState('nwsWeather', T0, false), 'observation-unusable');
+St.island = 'statewide';
+delete St.cache.news;
+
+console.log('\nT11 — an older observation cannot replace a newer cached one:');
+St.cache = {};
+const oTok = api.beginRequest('nwsWeather');
+api.sourceOk('nwsWeather', { p: 'newer' }, oTok, { at: T0 - 10 * MIN, raw: 'newer' });
+check('the first reading is cached', St.cache.nwsWeather.observedAtRaw, 'newer');
+const oldSuccess = St.sourceHealth.nwsWeather.lastSuccess;
+/* A newer HTTP request carrying an OLDER source observation. */
+const oTok2 = api.beginRequest('nwsWeather');
+api.sourceOk('nwsWeather', { p: 'older' }, oTok2, { at: T0 - 40 * MIN, raw: 'older' });
+check('an older observation does not replace it', St.cache.nwsWeather.observedAtRaw, 'newer');
+check('and the measurement clock does not move backwards',
+  St.cache.nwsWeather.observedAt, T0 - 10 * MIN);
+check('but fetch health was still refreshed, because we did reach the source',
+  St.sourceHealth.nwsWeather.lastSuccess >= oldSuccess, true);
+/* Equal timestamps refresh health and leave the measurement alone. */
+const oTok3 = api.beginRequest('nwsWeather');
+api.sourceOk('nwsWeather', { p: 'equal' }, oTok3, { at: T0 - 10 * MIN, raw: 'equal' });
+check('an equal timestamp may refresh the reading without moving the clock',
+  St.cache.nwsWeather.observedAt, T0 - 10 * MIN);
+/* A genuinely newer observation does replace it. */
+const oTok4 = api.beginRequest('nwsWeather');
+api.sourceOk('nwsWeather', { p: 'newest' }, oTok4, { at: T0 - 2 * MIN, raw: 'newest' });
+check('a newer observation does replace it', St.cache.nwsWeather.observedAtRaw, 'newest');
+check('and moves the clock forward', St.cache.nwsWeather.observedAt, T0 - 2 * MIN);
+/* A different island is a different measurement, not an earlier one. */
+St.island = 'maui';
+const oTok5 = api.beginRequest('nwsWeather');
+api.sourceOk('nwsWeather', { p: 'maui' }, oTok5, { at: T0 - 90 * MIN, raw: 'maui' });
+check('another island\'s older reading is still stored for that island',
+  St.cache.nwsWeather.observedAtRaw, 'maui');
+St.island = 'statewide';
 
 console.log('\nsourceOk stores the measurement clock beside the reading:');
 St.cache = {};

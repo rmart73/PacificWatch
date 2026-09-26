@@ -29,7 +29,8 @@ directly against production in this session.
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
-| Observation-truthfulness contract (Q007, Q008) | [PR #23](https://github.com/rmart73/PacificWatch/pull/23) open; review findings incorporated | Claude re-reviews; owner approval required before merge |
+| Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; Codex review returned four findings, all corrected | In review; do not merge |
 
 ### Active claims
 
@@ -153,10 +154,12 @@ Overview as "remaining" after #17 had merged.
 Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
 implementation stays a separate claimed, reviewable PR.
 
-**What is next:** review and settle the claimed
-[observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) before any Q007/Q008
-implementation. G1 remains a separate unclaimed launch blocker and is not part of this documentation
-PR. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
+**What is next:** the [observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) is
+merged and authoritative, and **stage 1 is implemented and in review as PR #24**. After it merges,
+stage 2 wires the helpers into the cards and Source details, removes the magnitude-driven dot
+classes and satisfies T17; stage 3 aligns the earthquake card. Each needs its own claim. G1 remains
+a separate unclaimed launch blocker. Q010 is settled as an owner-accepted unverified gap and is not
+outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -177,7 +180,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Q007/Q008 stage 1 — observation metadata | Claimed above; in progress | Codex reviews when opened |
+| Q007/Q008 stage 1 — observation clock | PR #24 open; four review findings corrected | Codex re-reviews; owner decides merge |
 | Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
@@ -307,6 +310,50 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — Stage 1 review findings corrected
+
+Codex returned four findings on PR #24. All four were real, all are corrected, and each now has a
+mutation case so the correction is proven load-bearing rather than asserted. **No merge.**
+
+**1. Combined state ignored island scope, loading and value usability.**
+`combinedObservationState()` read `S.cache[key]` directly, so after an island switch the
+**previous island's observation would decide the newly selected island's state** — the same false
+attribution the request-scope guard exists to prevent, arriving by a different route.
+`usableCache()` could not be reused because it answers only for STALE sources by design, so a new
+`observationEntry()` applies the same island guard without the staleness condition. Two further
+gaps in the same function: an outstanding first request now reports `checking` instead of
+presenting an older reading as verified for a new selection, and `combinedObservationState()` takes
+the reading's own usability so a missing or unconvertible value cannot ride a good timestamp to
+`current` — it returns `value-unusable`. Omitting the argument still asks only about the clocks.
+
+**2. T11 was unassigned. Stage 1 now owns it.** I had deferred the older-observation ordering rule
+to stage 2 and said so, but the contract's stage list never assigned it, so it was floating between
+two stages — and stage 1 is where `observedAt` is written, which makes it the only place the guard
+can live honestly. `sourceOk()` now refuses to move the measurement clock backwards: an older source
+observation cannot replace a newer cached one even when it arrives from the newest HTTP request.
+Fetch health is still refreshed, because we did reach the source; equal timestamps refresh health and
+leave the measurement untouched; and the comparison is scoped to one island, since another island's
+reading is a different measurement rather than an earlier one.
+
+**3. The ISO parser accepted unzoned and loose timestamps — a ten-hour error.** `Date.parse` treats
+an ISO date-time with no offset as **local** time, so `2026-09-26T05:53:00` resolved to
+`15:53:00Z` on a Hawaii machine: exactly the browser-timezone trap the NOAA parser was written to
+avoid, left open on the NWS side. It also accepted loose forms like `Sep 26 2026`. An explicit zone
+is now required and anything else is `unusable` rather than guessed, which is what the contract means
+by a value without a usable authoritative timestamp.
+
+**4. Three stale current-board statements**, all consequences of #23 merging and #24 opening: the
+Current Work row still showed #23 open and awaiting review; the Review Queue said stage 1 was "in
+progress" with "Codex reviews when opened"; and "What is next" still gated everything on settling a
+contract that had already merged. Corrected, and a Current Work row added for #24.
+
+**Evidence after the corrections:** `npm test` **191** (119 + 35 + 37, up from 164 — 27 further
+assertions), `npm run test:dom` **267** unchanged, `npm run test:mutation` **55 cases** including 5
+new ones covering these fixes. The T16 record below is unchanged and still accurate: the corrections
+touch state selection, cache ordering and timestamp validation, none of which reaches a render path.
+
+**Next:** Codex re-reviews. Still no merge.
 
 ### 2026-09-26 — Q007/Q008 stage 1 implemented: the observation clock
 

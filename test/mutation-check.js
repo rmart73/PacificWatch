@@ -308,7 +308,42 @@ const mutations = [
   { name: 'network state allowed to outrank an expired measurement',
     from: "  if (obs === 'expired') return 'observation-expired';",
     to:   "  if (false) return 'observation-expired';",
-    expect: ['fetch current + past retention -> observation-expired'], suite: 'health' }
+    expect: ['fetch current + past retention -> observation-expired'], suite: 'health' },
+
+  /* ---- Review findings on stage 1 ---- */
+
+  /* The island guard: without it the previous island's observation decides the newly selected
+     island's state, which is the false attribution the request-scope guard exists to prevent. */
+  { name: 'observation cache read without the island guard',
+    from: "  if (ISLAND_SCOPED[key] && e.island !== S.island) return null;\n  return e;\n}",
+    to:   "  return e;\n}",
+    expect: ["another island's entry is not read"], suite: 'health' },
+
+  /* An outstanding first request must not present an older reading as verified for a new
+     selection. */
+  { name: 'loading no longer outranks an existing reading',
+    from: "  if (fetchState === 'loading') return 'checking';\n  const obs = observationState(key, entry.observedAt, now);",
+    to:   "  const obs = observationState(key, entry.observedAt, now);",
+    expect: ['an outstanding first request reports checking, not the older reading'], suite: 'health' },
+
+  /* A missing or unconvertible value must not ride a good timestamp to 'current'. */
+  { name: 'value usability ignored by the combined state',
+    from: "  if (valueUsable === false) return 'value-unusable';",
+    to:   "  if (false) return 'value-unusable';",
+    expect: ['an unusable value outranks good clocks'], suite: 'health' },
+
+  /* Unzoned ISO is parsed as LOCAL time by Date.parse, so dropping the shape check silently
+     shifts every NWS observation by the reader's UTC offset. */
+  { name: 'ISO timestamps accepted without an explicit zone',
+    from: "  if (!ISO_INSTANT_RE.test(t)) return null;",
+    to:   "  if (false) return null;",
+    expect: ['rejects an unzoned ISO date-time'], suite: 'health' },
+
+  /* T11: the measurement clock must never move backwards. */
+  { name: 'older observation allowed to replace a newer cached one',
+    from: "    if (prev && prev.island === island && prev.observedAt != null && at != null && at < prev.observedAt) {",
+    to:   "    if (false) {",
+    expect: ['an older observation does not replace it'], suite: 'health' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
