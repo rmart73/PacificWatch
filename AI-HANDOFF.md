@@ -49,7 +49,15 @@ ahead of the work, on the owner's explicit authorization. Branched from `main` a
 Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), stage 1 of
 the three implementation boundaries it defines.
 
-**Scope — logic and tests only. No visual behaviour change.**
+**FINAL SCOPE, as merged-ready.** Logic, tests, and **one narrow render-path change**: the weather
+and tide fetch paths now render the reading `sourceOk()` accepted rather than the response that
+happened to arrive, so a refused older observation cannot reach the card. Ordinary rendering is
+unaffected — live captures produce byte-identical output to `main` on both islands — and the
+magnitude-driven dot thresholds are untouched, so no dot behaviour changes in this stage.
+
+**Items 1-4 below are the ORIGINAL SCOPE as claimed before review**, retained so the expansion is
+visible rather than smoothed over. Items 5 and 6 were added by review corrections.
+
 
 1. **Observation metadata.** Store a normalized `observedAt` beside the island-scoped cached weather
    and tide data, captured from the source response that produced that exact reading.
@@ -63,14 +71,24 @@ the three implementation boundaries it defines.
 4. **Controlled-time tests** for the above, including both sides of every boundary and exact
    equality.
 
-**Functions and regions touched** — named per the coordination rule, since this is the first change
-to `index.html` in this sequence:
+**Added by review corrections, first round (`89111c7`):** island scoping, loading precedence and
+value usability in `combinedObservationState()`; T11 cache ordering in `sourceOk()`, reassigned to
+this stage from unassigned; and an explicit-zone requirement on the ISO parser.
 
-- `index.html` JS: `sourceOk()` and the `S.cache` entry shape (adding `observedAt`); `usableCache()`;
-  `fetchWeather()` and `fetchTides()` at their cache-write points only; plus new pure helpers added
-  near the source-health registry.
-- `test/`: new controlled-time assertions. `test/dom-behavior.test.js` and, if a pure home suits
-  them better, `test/phase1-source-health.test.js`.
+**Added by review corrections, second round (`8d57e71`):** the T11 render-boundary fix described
+above; real-calendar-date validation in both parsers; and explicit component range checks.
+
+**Functions and regions touched — FINAL**, named per the coordination rule, since this is the first
+change to `index.html` in this sequence:
+
+- `index.html` JS: `sourceOk()` (now returns the entry it settled on) and the `S.cache` entry shape;
+  `usableCache()`; `sourceState()` (optional injected clock, existing callers unchanged);
+  `updateLivePill()` (one line, arity); **`fetchWeather()` and `fetchTides()` at their cache-write
+  points *and* at the render call that follows** — the original claim said cache-write points only,
+  which stopped being true at `8d57e71`; plus new pure helpers near the source-health registry.
+- `test/`: all three suites — `phase1-source-health.test.js` (pure and controlled-time),
+  `dom-behavior.test.js` (render-boundary), `mutation-check.js` (cases, plus the health suite
+  registered as a mutation target).
 - **No CSS and no markup.** `renderWeather()`, `renderTide()` and `renderQuakeCard()` themselves are
   untouched — none of their bodies changed.
 
@@ -109,9 +127,19 @@ remediation, no layout work, no new dependency or serverless route, and nothing 
 this stage ships no dot change at all, so the current dots keep their present behaviour until
 stage 2 replaces it.
 
-**Evidence:** `npm test` **164** (92 + 35 + 37, up from 106 — 58 new observation-clock assertions),
-`npm run test:dom` **267** unchanged, `npm run test:mutation` **50 of 50 caught** (42 existing plus 8 new). The pure suites also
-pass in an empty directory with nothing installed, so the dependency-free rule still holds.
+**Evidence — FINAL, all Claude-reported** (Codex's shell has no Node or npm, so no suite result here
+has been independently reproduced):
+
+- `npm test` **222** (150 + 35 + 37)
+- `npm run test:dom` **281**
+- `npm run test:mutation` **61 of 61 caught**, with no `MISSED`, `ANCHOR LOST` or `AMBIGUOUS`
+- the pure suites pass in an empty directory with nothing installed, so the dependency-free rule
+  still holds
+- rendering verified byte-identical to `main` on both islands from live captures, re-checked after
+  each review round
+
+The figures this claim carried before review — 164 / 267 / 50-of-50 — are superseded; the
+intermediate results are preserved in the handoff entries below rather than overwritten.
 The T16 record is below. Per Codex's ruling, T16 does not require a nonzero rainfall
 accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
 conversion is recorded as separately unverified** under the existing evidence item rather than
@@ -194,7 +222,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/stage1-observation-metadata | Q007/Q008 stage 1: observation metadata, timestamp parsing, combined-state helpers, controlled-time tests. Logic and tests only, no visual change |
+| Claude | claude/stage1-observation-metadata | Q007/Q008 stage 1: observation metadata, timestamp parsing, combined-state helpers, controlled-time tests, and one narrow render-path change so a refused older observation cannot reach the card. Ordinary rendering and dot thresholds unchanged |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -202,15 +230,19 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Q007/Q008 stage 1 — observation clock | PR #24 open; four review findings corrected; **one mutation re-run unverified** | Re-run `test:mutation`, then Codex re-reviews. Do not merge |
+| Q007/Q008 stage 1 — observation clock | PR #24 open at `0951deb`; two review rounds, all code findings corrected and Codex reports none remaining; verification complete at 222 / 281 / 61-of-61 | Codex's documentation-only confirmation. Do not merge |
 | Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `a3f9897`**, merged through #23. Claims and handoffs for #13–#15 are preserved in
-the archive, and the completed #14 test correction is recorded below. No implementation change is
-pending in this PR; every queued item above is documentation, design or separately unclaimed work.
+the archive, and the completed #14 test correction is recorded below.
+
+**An implementation change IS pending review: PR #24 changes `index.html`.** An earlier version of
+this paragraph said none was, which was written when the queue held only documentation and design
+work and was not corrected when stage 1 began. The other queued items above remain documentation,
+design or separately unclaimed work.
 
 ## Outstanding Verification and Decisions
 
