@@ -26,7 +26,32 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
-**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.**
+**Board and AGENTS reconciliation — Claude Code, claude/board-and-agents-reconciliation.**
+Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
+permission. Documentation only.
+
+Scope, exactly three things and nothing else:
+
+1. **Record Codex's answers to Q007–Q011** on the board. They were written into the working tree
+   after #21 merged, so they are not on `main` and would be lost to a tree reset. Reproduced as
+   written.
+2. **Reconcile the stale top of this board** — the deferred item Codex assigned to a separate PR
+   after #21. Covers the `2026-09-07` header date, the `b71fb74` versus `648db0f` conflict,
+   "Remaining: Overview layout/navigation", the "#15 not yet merged" line, the missing #18–#21
+   rows, the now-complete launch-readiness claim still listed as active, and the 200% zoom bullet
+   that still says the check should happen "before that lands" when PR 3 has landed.
+3. **Correct `AGENTS.md` where it is factually wrong about shipped code** — per Codex's Q009
+   answer, taken early rather than buried in later work: the load-bearing table row and the prose
+   that still describe the strip as `hidden` and flag-gated behind `?strip=1`, and the inline
+   handler count of `22` where the file has `31`.
+
+**Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
+implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
+new durable rules beyond correcting statements that no longer match the code. Nothing in
+`index.html`, `api/`, `test/`, `package.json` or `vercel.json`.
+
+**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.** *(complete;
+merged as #21 in `648db0f`. Retained here until this PR reconciles the board.)*
 Claim published 2026-09-08 before editing, in its own commit ahead of the work.
 
 Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
