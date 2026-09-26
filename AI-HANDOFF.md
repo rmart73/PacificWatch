@@ -28,58 +28,36 @@ directly against production in this session.
 | Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
-| Board and AGENTS reconciliation | This PR; claimed above | In review |
+| Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
+| Observation-truthfulness contract (Q007, Q008) | [PR #23](https://github.com/rmart73/PacificWatch/pull/23) open; review findings incorporated | Claude re-reviews; owner approval required before merge |
 
 ### Active claims
 
-**Board and AGENTS reconciliation — Claude Code, claude/board-and-agents-reconciliation.**
-Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
-permission. Documentation only.
+**Observation-truthfulness contract — ChatGPT Codex,
+`codex/observation-truthfulness-contract`.** Claimed 2026-09-25 after #22 merged, with the owner's
+direction that this opening claim also close #22's now-stale current-board entries. Documentation
+and design only.
 
-Scope ledger. Items 1–3 are the original claim; items 4–7 were added later with the owner's
-explicit permission and are named here rather than absorbed silently. An earlier version used an
-exact numeric summary that became stale as authorized follow-up work arrived; the numbered ledger
-below is authoritative:
+Scope:
 
-1. **Record Codex's answers to Q007–Q011** on the board. They were written into the working tree
-   after #21 merged, so they are not on `main` and would be lost to a tree reset. Reproduced as
-   written.
-2. **Reconcile the stale top of this board** — the deferred item Codex assigned to a separate PR
-   after #21. Covers the `2026-09-07` header date, the `b71fb74` versus `648db0f` conflict,
-   "Remaining: Overview layout/navigation", the "#15 not yet merged" line, the missing #18–#21
-   rows, the now-complete launch-readiness claim still listed as active, and the 200% zoom bullet
-   that still says the check should happen "before that lands" when PR 3 has landed.
-3. **Correct `AGENTS.md` where it is factually wrong about shipped code** — per Codex's Q009
-   answer, taken early rather than buried in later work: the load-bearing table row and the prose
-   that still describe the strip as `hidden` and flag-gated behind `?strip=1`, and the inline
-   handler count of `22` where the file has `31`.
-4. **Correct the rainfall evidence in [LAUNCH-READINESS.md](LAUNCH-READINESS.md) and below.**
-   Added to this claim with the owner's permission after the poll completed a second observation
-   round, which both strengthens the record and falsifies one sentence already merged in #21. The
-   conclusion does not change — the divisor is still unverified at a nonzero value — so this
-   corrects evidence and a wrong statement, not a finding.
-5. **Two board corrections authorized by the owner note above.** Retitle the Q007–Q011 block,
-   which still read "awaiting answers" after Codex had answered all five, and settle the Q009
-   wording that still said this PR awaited permission when it had already started with it. The
-   authorizing note is committed alongside them and limits the addition to those two corrections.
-6. **A state-of-the-branch entry for agent coordination**, added at the owner's direction. Records
-   what changed, what was authorized versus what was done, and what remains open and to whom it
-   belongs. Adds no other change. Its original claim that Codex was stale was corrected in
-   `36240c2`; Codex was current through the rainfall correction when it committed `1bb147d`.
-7. **Record the owner's acceptance of the unverified strip-at-200%-zoom gap**, added with the
-   owner's explicit confirmation after Claude's final read-only review. Distinguish it from the
-   navigation zoom pass the owner did verify at `40fba96`, correct the report's implication that
-   all 200% zoom behavior was verified, and mark Q010 accepted so it is not re-raised.
+1. **Close #22 on the current board:** remove its merged claim from Active claims, replace its
+   merged branch in Active Branches, and correct the Review Queue entries that still call #22 open
+   or put G1 "after this PR."
+2. **Write the Q007/Q008 observation-truthfulness contract:** define what observation dots mean;
+   separate source-fetch health from measurement age; preserve and render authoritative observation
+   timestamps, including NOAA tide `t`; define stale, unavailable and missing-measurement behavior;
+   and state acceptance criteria for a later implementation PR.
+3. **Update coordination links and next actions** so Claude can implement only after the contract is
+   reviewed and merged.
 
-**Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
-implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
-new durable rules beyond correcting statements that no longer match the code. Nothing in
-`index.html`, `api/`, `test/`, `package.json` or `vercel.json`.
+**Out of scope:** no `index.html`, API, test or configuration changes; no threshold, freshness-clock
+or tide implementation; no G1 remediation; no layout work; and no new `AGENTS.md` rule. Claude's
+suggested durable rule for closing a merged board claim remains an owner decision, not assumed scope.
 
-**Owner authorization, 2026-09-25:** Claude may make two final board corrections on this branch:
-replace the "awaiting answers" Q007–Q011 heading/copy now that Codex has answered, and update the
-Q009 permission wording so it no longer says this already-started documentation PR still awaits
-permission. No additional scope is authorized by this note.
+**Closed: board and AGENTS reconciliation — Claude Code + ChatGPT Codex,
+`claude/board-and-agents-reconciliation`.** Merged as #22 in `410777d`; the documentation-only
+deploy was verified, and the retained source branch is content-identical to merged `main` despite
+its pre-squash commits not being ancestors of `main`.
 
 **Closed: security and launch-readiness review — Claude Code, `claude/launch-readiness-review`.**
 Merged as #21 in `648db0f` after Codex's re-review found no report blocker, with the owner's
@@ -102,10 +80,10 @@ Overview as "remaining" after #17 had merged.
 Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
 implementation stays a separate claimed, reviewable PR.
 
-**What is next, in order, none of it claimed except this PR:** the `AGENTS.md` corrections in this
-PR (Q009); then the observation-truthfulness contract Codex set out in Q007 and Q008, which is a
-design deliverable before any code; then G1, still the launch blocker. Q010 is settled as an
-owner-accepted unverified gap and is not an outstanding or perishable item.
+**What is next:** review and settle the claimed
+[observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) before any Q007/Q008
+implementation. G1 remains a separate unclaimed launch blocker and is not part of this documentation
+PR. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -118,7 +96,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude + Codex | claude/board-and-agents-reconciliation | Board reconciliation, Codex's Q007–Q011 answers, the `AGENTS.md` corrections, and the `LAUNCH-READINESS.md` rainfall-evidence correction; documentation only |
+| Codex | codex/observation-truthfulness-contract | Q007/Q008 design contract and #22 board closeout; documentation only |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -126,15 +104,13 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Board and AGENTS reconciliation | This PR; open | Codex reviews |
-| Observation-truthfulness contract (Q007, Q008) | Not started; design owed before code | Codex drafts the contract |
-| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately after this PR |
+| Observation-truthfulness contract (Q007, Q008) | PR #23 open; three review findings incorporated | Claude re-reviews the corrections; owner decides merge |
+| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of this contract PR |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `648db0f`**, merged through #21. An earlier version of this line said `b71fb74`,
-which was eight merges stale. Claims and handoffs for #13–#15 are preserved in the archive, and
-the completed #14 test correction is recorded below. No implementation review is pending — every
-queued item above is either documentation or a design step.
+**`main` is at `410777d`**, merged through #22. Claims and handoffs for #13–#15 are preserved in
+the archive, and the completed #14 test correction is recorded below. No implementation change is
+pending in this PR; every queued item above is documentation, design or separately unclaimed work.
 
 ## Outstanding Verification and Decisions
 
@@ -256,6 +232,41 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-25 — Q007/Q008 observation-truthfulness contract drafted
+
+Codex claimed `codex/observation-truthfulness-contract` from merged `main` at `410777d` before
+editing. The opening claim also closes #22's three inevitably stale current-board entries: its
+active claim, merged branch and open review row. No application code, test, API or configuration
+change is in scope.
+
+The draft is [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md). Its core
+decisions are:
+
+- observation dots mean verified, usable and measurement-current versus unknown; raw magnitude
+  never manufactures `warn` or `alert`;
+- fetch verification and source observation time are separate clocks, and neither can impersonate
+  the other;
+- weather uses a 75-minute current window and 180-minute retention, grounded in hourly METAR
+  publication/validity plus NWS processing guidance;
+- NOAA water level uses its authoritative `t`, with an 18-minute current window matching the
+  `date=latest` API definition and 60-minute project retention;
+- earthquake event age remains content inside the 30-day query, while query freshness continues
+  to use fetch health; and
+- old or untimestamped point-in-time values cannot carry an `ok` dot, even after a successful fetch.
+
+The contract includes state/cache requirements, source-detail wording, explicit staging boundaries
+and T01–T17 acceptance criteria. [PR #23](https://github.com/rmart73/PacificWatch/pull/23) is the
+review artifact. Claude reviews the design before any implementation is claimed; the owner decides
+merge. G1 remains separate and unclaimed.
+
+**Claude review findings resolved in the draft:** the 75-minute weather boundary stays. The Nolo
+capture's 77-minute PHNL observation is now named as the expected stale case even with a healthy
+feed, so a later implementation must show “feed current” and “observation stale” rather than widen
+the truth boundary. Stage 2 and T17 require removal of the orphaned `.s-dot.warn`/`.s-dot.alert`
+CSS and reconciliation of the two affected `AGENTS.md` rules when implementation removes their only
+consumers. T13 now pins the intentional partial-weather asymmetry: one usable field keeps the source
+row verified while the missing sibling card alone stays unknown.
 
 ### 2026-09-26 — State of the branch after #21
 
