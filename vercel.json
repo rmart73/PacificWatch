@@ -1,6 +1,29 @@
 {
   "routes": [
     {
+      "src": "^/api/news/hazard$",
+      "dest": "/api/news",
+      "transforms": [
+        {
+          "type": "request.query",
+          "op": "delete",
+          "target": {
+            "key": {
+              "pre": ""
+            }
+          }
+        },
+        {
+          "type": "request.query",
+          "op": "set",
+          "target": {
+            "key": "hazard"
+          },
+          "args": "1"
+        }
+      ]
+    },
+    {
       "src": "^/api/news$",
       "continue": true,
       "transforms": [
@@ -9,9 +32,7 @@
           "op": "delete",
           "target": {
             "key": {
-              "ninc": [
-                "__canonical_none__"
-              ]
+              "pre": ""
             }
           }
         }
