@@ -2,7 +2,33 @@
   "routes": [
     {
       "src": "^/api/news/hazard$",
-      "dest": "/api/news?hazard=1"
+      "dest": "/api/news",
+      "transforms": [
+        {
+          "type": "request.query",
+          "op": "delete",
+          "target": {
+            "key": {
+              "pre": ""
+            }
+          }
+        },
+        {
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "x-pacific-watch-news-representation"
+          }
+        },
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": {
+            "key": "x-pacific-watch-news-representation"
+          },
+          "args": "hazard"
+        }
+      ]
     },
     {
       "src": "^/api/news$",
@@ -15,6 +41,13 @@
             "key": {
               "pre": ""
             }
+          }
+        },
+        {
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "x-pacific-watch-news-representation"
           }
         }
       ]

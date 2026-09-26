@@ -27,6 +27,10 @@ const FEEDS = [
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 /* Outlet feeds carry national wire copy too; this flags the locally actionable ones. */
+/* Internal only: set by routing, never by a caller. Not an x-vercel-* reserved name. */
+const REPRESENTATION_HEADER = 'x-pacific-watch-news-representation';
+const HAZARD_REPRESENTATION = 'hazard';
+
 const HAZARD_RE = /hurricane|tropical storm|tsunami|flood|flash flood|storm|evacuat|wildfire|brush fire|earthquake|erupt|volcan|lava|vog|high surf|swell|shelter|power outage|outage|emergency|warning|advisory|watch|closure|closed|landslide|rockfall/i;
 
 /* Entities are decoded BEFORE tags are stripped, and stripping repeats until
@@ -108,9 +112,25 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
-  const url = new URL(req.url, 'http://localhost');
-  const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 30, 100);
-  const hazardOnly = url.searchParams.get('hazard') === '1';
+  /* REPRESENTATION SELECTION
+     The public surface is two query-free paths. Routing deletes every public query key before
+     cache lookup and carries the representation in an INTERNAL header that it deletes before
+     setting, so a caller cannot forge it: `set` only writes when the key is missing, which is
+     why the delete is not optional.
+
+     Absent  -> all headlines (the plain path, and any direct invocation).
+     'hazard' -> hazard-only.
+     Anything else is not a representation this service defines. It is refused before any
+     upstream work rather than guessed at, and the refusal is not cached. Node joins duplicate
+     headers with ', ', so a forged duplicate lands here too. */
+  const rep = req.headers[REPRESENTATION_HEADER];
+  if (rep !== undefined && rep !== HAZARD_REPRESENTATION) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(400).json({ error: 'unknown representation' });
+    return;
+  }
+  const hazardOnly = rep === HAZARD_REPRESENTATION;
+  const limit = 30;
 
   const settled = await Promise.allSettled(FEEDS.map(fetchFeed));
 
