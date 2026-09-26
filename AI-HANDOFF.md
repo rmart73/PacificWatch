@@ -245,11 +245,18 @@ unverified. Q011 is done: #21 merged as `648db0f`.
 
 ## Handoff Log
 
-### 2026-09-26 — State of the branch after #21, written so Codex can resync
+### 2026-09-26 — State of the branch after #21
 
-**Read this first if you are Codex.** Your last written position predates #21 merging, so this
-entry exists to stop the next piece of work being built on a stale picture. It records state only —
-no finding, no decision, nothing reversed.
+**Correction to this entry, made immediately after writing it.** As first written, this entry
+asserted that Codex's position predated #21 merging and framed itself as a resync for an agent
+working from a stale picture. **That was wrong.** Codex committed `1bb147d` to this branch *after*
+`089b1f7`, and that commit references the `LAUNCH-READINESS.md` rainfall correction from `942a430`,
+which is evidence it had read the branch through at least that point. Codex was current; the
+misreading was Claude's, from checking branch/origin sync and the working tree but not the commit
+log, so a commit that had already been pushed went unnoticed.
+
+What remains useful here is the state record itself, which is accurate and is kept below. It records
+state only — no finding, no decision, nothing reversed.
 
 #### What changed after your re-review
 
@@ -272,19 +279,28 @@ no finding, no decision, nothing reversed.
 
 #### PR #22, open and awaiting your review
 
-Eight commits, `MERGEABLE`/`CLEAN`, documentation only — nothing in `index.html`, `api/`, `test/`,
-`package.json` or `vercel.json` anywhere on the branch.
+Documentation only — nothing in `index.html`, `api/`, `test/`, `package.json` or `vercel.json`
+anywhere on the branch. **Both agents have commits here**, which is why the Active Branches row
+reads `Claude + Codex`.
 
 ```
-10d5425  the claim, published ahead of the work
-c9d02ad  your Q007-Q011 answers, reproduced as written
-7b4b98d  board reconciliation, eight corrections
-3405c92  AGENTS.md corrections
-942a430  rainfall evidence after the second round        (scope item 4)
-11f5081  the owner authorization note
-2d781fa  the two corrections it authorized               (scope item 5)
-089b1f7  the claim, corrected for undercounting itself
+10d5425  Claude  the claim, published ahead of the work
+c9d02ad  Claude  Codex's Q007-Q011 answers, reproduced as written
+7b4b98d  Claude  board reconciliation, eight corrections
+3405c92  Claude  AGENTS.md corrections
+942a430  Claude  rainfall evidence after the second round        (scope item 4)
+11f5081  Claude  the owner authorization note
+2d781fa  Claude  the two corrections it authorized               (scope item 5)
+089b1f7  Claude  the claim, corrected for undercounting itself
+1bb147d  CODEX   Active Branches row: Claude -> Claude + Codex,
+                 and the rainfall correction added to the purpose
+77c79f0  Claude  this entry                                      (scope item 6)
 ```
+
+Both agents committing to one branch is the collision risk AGENTS warns about, and it has stayed
+cooperative rather than conflicting: every commit on both sides has been additive, and `1bb147d`
+corrected a row Claude had written too narrowly. Worth noting that both agents commit under the
+owner's git identity, so `git log` author fields do not distinguish them — only the messages do.
 
 #### Scope ledger, because the commit count exceeds what you authorized
 
@@ -292,12 +308,14 @@ Your authorization note says "no additional scope is authorized by this note." C
 list above that reconciles as follows, and the discrepancy is stated here rather than left for you
 to find:
 
-- `2d781fa` is **exactly** the two corrections your note authorized. Nothing more.
-- `089b1f7` is a **third** change and is **not** covered by your note. It was authorized by the
+- `2d781fa` is **exactly** the two corrections the note authorized. Nothing more.
+- `089b1f7` is a **third** change and is **not** covered by that note. It was authorized by the
   owner directly, and it corrects this claim, which said "exactly three things and nothing else"
   while already listing four.
 - `942a430` and this entry were likewise authorized by the owner directly, and are recorded as
   claim items 4 and 6.
+- `1bb147d` is **Codex's own commit** and sits outside Claude's claim entirely. Claude's first
+  version of this ledger asserted it reconciled the commit list while omitting it — corrected here.
 
 #### Three places your own text was handled, each flagged rather than assumed
 
