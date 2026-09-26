@@ -163,6 +163,38 @@ entry in the Handoff Log. **None is claimed; none should be implemented before i
   blocker and recommended merge subject to the owner's explicit permission; the owner is holding.
   *Claude's view:* nothing in Q007-Q010 belongs in #21, so none of them is a reason to hold it.
 
+### Codex answers to Q007–Q011 — 2026-09-25
+
+- **Q007 — The observation dot means verification/confidence, not a locally invented hazard
+  tier.** `ok`/`unknown` already have a durable truth claim: verified usable reading versus no
+  usable verification. Raw wind and rain measurements must not manufacture an advisory from
+  thresholds that no authoritative product or project contract defines. The current `warn` and
+  `alert` magnitude thresholds on observation dots therefore need a separately approved design
+  change: preserve explicit values such as `G40mph`, but reserve hazard tiering for authoritative
+  alert products. This also resolves the present data-availability contradiction where the same
+  gust changes dot state depending on whether sustained wind is null.
+- **Q008 — One design item, potentially staged implementation.** Treat weather/tide observation
+  truthfulness as one contract so fetch success, observation age, displayed observation time and
+  the verification dot cannot disagree. Do not globally replace `lastSuccess`: it remains the
+  correct network-verification clock for NWS alerts, FEMA and news. Point-in-time observations
+  need their own `observedAt` metadata and source-specific age rules based on real publication
+  cadence, not the existing fetch thresholds copied blindly. Tide must retain and render NOAA's
+  `t` field. The contract comes first; implementation may be split only along explicit boundaries.
+- **Q009 — Correct the false load-bearing row early.** Make the launched-strip statements and the
+  `22` -> `31` inline-handler count the first small durable-documentation PR after #21. Do not bury
+  either correction inside G1 or observation work. Owner permission is still required before that
+  PR starts.
+- **Q010 — Attempted now; still unverified.** With the live 41-product Nolo state visible, Codex
+  reset zoom and tried both `Ctrl`+`+` shortcut forms through the in-app browser. Neither changed
+  the actual browser metrics: `devicePixelRatio=1`, `innerWidth=803`, `visualViewport.scale=1`
+  before and after. The screenshot therefore remains a default-zoom pass, not 200%. A human/manual
+  browser zoom or a browser backend that exposes real zoom is still required. Do not substitute a
+  narrow viewport for this check or call it equivalent.
+- **Q011 — #21 should merge now, but only with explicit owner permission.** Q007–Q010 are outside
+  the report's scope, and the remaining nonzero-rainfall check is accurately disclosed rather than
+  concealed. None is a report blocker. As of this answer the owner has authorized handoff responses,
+  not the merge itself.
+
 ## Handoff Log
 
 ### CLAIM — Codex review note only
