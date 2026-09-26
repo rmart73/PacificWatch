@@ -66,6 +66,19 @@ to `index.html` in this sequence:
 - **No CSS, no markup, no render-path changes.** `renderWeather()`, `renderTide()` and
   `renderQuakeCard()` are deliberately untouched in this stage.
 
+**Three regions touched beyond the list above, disclosed rather than absorbed quietly:**
+
+- `sourceState()` gained an **optional** injected clock. Every existing caller passes nothing and
+  gets `Date.now()`, so no behaviour changes — but without it only half of each combined-state
+  assertion was controllable, and the observation clock was being compared against a fixed instant
+  while fetch health silently used the real wall time. A "controlled-time" test with one
+  uncontrolled clock passes for the wrong reason.
+- `updateLivePill()` — one line, forced by the above. See the defect note below.
+- `test/mutation-check.js` and the header of `test/phase1-source-health.test.js`: the pure health
+  suite now accepts an html path like the other two suites, so the mutation harness can aim at it.
+  Without that, the whole observation clock would have shipped with no mutation coverage, since it
+  has no DOM surface in stage 1.
+
 **Out of scope, explicitly:** wiring helpers into the cards or Source details, and removing the
 magnitude-driven dot thresholds — both are stage 2. Earthquake alignment is stage 3. No G1
 remediation, no layout work, no new dependency or serverless route, and nothing in `api/` or
@@ -73,8 +86,9 @@ remediation, no layout work, no new dependency or serverless route, and nothing 
 this stage ships no dot change at all, so the current dots keep their present behaviour until
 stage 2 replaces it.
 
-**Evidence planned:** the three suites, plus the T16 raw-response-versus-rendered record for weather
-and tide from a live capture. Per Codex's ruling, T16 does not require a nonzero rainfall
+**Evidence:** `npm test` **164** (92 + 35 + 37, up from 106 — 58 new observation-clock assertions),
+`npm run test:dom` **267** unchanged, `npm run test:mutation` **50 cases** (42 existing plus 8 new).
+The T16 record is below. Per Codex's ruling, T16 does not require a nonzero rainfall
 accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
 conversion is recorded as separately unverified** under the existing evidence item rather than
 omitted or implied verified.
@@ -292,6 +306,109 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-26 — Q007/Q008 stage 1 implemented: the observation clock
+
+Logic and tests only, per the contract's first implementation boundary. **Rendering is byte-for-byte
+unchanged** — demonstrated below by rendering the same live responses against `main` and against
+this branch and comparing the output.
+
+#### What landed
+
+`observedAt` and `observedAtRaw` now travel on the island-scoped cache entry beside the reading
+they describe, captured from the response that produced it. Two parsers, because the two sources
+disagree about format: `observedAtFromIso()` for NWS, and `observedAtFromNoaaLst()` for NOAA, which
+had been **discarding `latest.t` entirely**. `observationState()` and `combinedObservationState()`
+select state from both clocks, and `observationVerified()` is the single place that decides what
+earns a verified dot, so stage 2 cannot drift from stage 1.
+
+**Nothing is wired into rendering.** The cards and dots behave exactly as before, including the
+magnitude thresholds, until stage 2 replaces them. No stage labels old or untimestamped data `ok`,
+because no stage-1 change reaches a dot.
+
+#### A defect this work introduced, caught by the DOM suite
+
+`sourceState()` gained an optional injected clock, and `updateLivePill()` called it as
+`.map(sourceState)`. `Array.prototype.map` passes **(element, index, array)**, so the array index
+arrived as the injected clock: index 0 asked "how stale is this source as of the Unix epoch",
+every source read `current`, and **the LIVE pill stopped reporting DEGRADED**. On an emergency page
+that is a false all-clear about the app's own health.
+
+The DOM suite caught it (`pill reads DEGRADED`), which is the suite doing its job. Fixed by making
+the arity explicit, with a comment at the call site, and **a mutation case now reverts it to the
+bare reference and requires the DOM suite to fail** — so the trap cannot come back silently.
+
+Worth recording as a general lesson: adding even an optional parameter to a function used as a
+callback changes its behaviour at every bare-reference call site.
+
+#### T16 — raw response versus rendered output
+
+Captured live 2026-09-26T07:06:57Z during Hurricane Nolo, rendered through jsdom against those exact
+bytes. Expectations are established from published constants and each station's own METAR, never
+from the app's converters.
+
+```
+WEATHER  api.weather.gov/stations/PHNL/observations/latest          [statewide]
+  fields    windSpeed 31.68 wmoUnit:km_h-1   windGust null   precipitationLastHour null wmoUnit:mm
+  obs time  2026-09-26T05:53:00+00:00
+  expected  20 mph — 31.68 km/h x 0.621371 = 19.685; METAR 06017G28KT = 17 kt sustained,
+            17 x 1.150779 = 19.563. Both round to 20.
+  displayed "20 mph"  note "HNL Intl · Honolulu reference for statewide · obs Sep 25, 07:53 PM HST"
+  observedAtRaw "2026-09-26T05:53:00+00:00"  -> observedAt 2026-09-26T05:53:00.000Z   MATCH
+  age at render 76.36 min -> observationState stale -> combined observation-stale -> verified FALSE
+  fetch clock: current
+
+WEATHER  api.weather.gov/stations/PHLI/observations/latest          [kauai]
+  fields    windSpeed null   windGust 50.04 wmoUnit:km_h-1   precipitationLastHour 0 wmoUnit:mm
+  obs time  2026-09-26T06:37:00+00:00
+  expected  31 mph gust-only — 50.04 km/h x 0.621371 = 31.093; METAR 06018G27KT gust 27 kt,
+            27 x 1.150779 = 31.071. Both round to 31. Rain 0 mm is a measured zero -> 0.00"
+  displayed "31 mph"  note "Gust, sustained N/A · Lihue · obs Sep 25, 08:37 PM HST";  rain 0.00"
+  observedAt 2026-09-26T06:37:00.000Z, age 32.40 min -> current -> verified TRUE      MATCH
+
+TIDE     station 1612340, time_zone=lst_ldt, units=english, datum=MLLW
+  fields    v 0.486 ft MLLW      t "2026-09-25 20:54"  (no zone suffix in the response)
+  expected  0.5 ft (0.486 to one decimal; NOAA returns feet, no unit conversion) and an
+            observation instant of 2026-09-26T06:54:00Z — HST wall time + 10h
+  displayed "0.5 ft"  note "ft MLLW · HNL Harbor · Honolulu reference for statewide"
+  observedAtRaw "2026-09-25 20:54" -> observedAt 2026-09-26T06:54:00.000Z, exactly +10:00  MATCH
+  age at render 15.36 min -> current -> verified TRUE;  raw t retained in the cache
+```
+
+**Rendering unchanged, verified by comparison rather than assertion.** The same captures rendered
+against `main`'s `index.html` produce identical output for both islands — `20 mph`/`s-dot ok`,
+`—`/`s-dot unknown`, `0.5 ft`/`s-dot ok` statewide, and `31 mph`/`s-dot warn`, `0.00"`/`s-dot ok`
+on Kauaʻi. The harness reports "observation clock absent" against `main`, confirming it compared
+the right two builds.
+
+#### What the capture shows about the defect the contract exists to fix
+
+PHNL rendered a **verified `ok` dot on a 76-minute-old observation** while the new clock said
+`observation-stale`, not verified. That is the exact mismatch Q007/Q008 describe, on live data, from
+a healthy feed — and the reading crossed the 75-minute boundary between capture and render on its
+own, which is how routinely storm-time publication lag reaches it.
+
+Kauaʻi rendered `s-dot warn` on a 31 mph gust purely because 31 > 20 — magnitude presented as an
+advisory, with nothing authoritative behind it. Both are stage 2's to correct.
+
+#### Still unverified, recorded rather than omitted
+
+**The nonzero mm-to-inches conversion.** PHNL reported `null` and PHLI a measured `0` with `P0000`
+(trace, under 0.01"), so `25.4` is still exercised only where every divisor agrees. Per Codex's
+ruling this does not gate stage 1: the observation-time path is exercised and rendering is
+demonstrably unchanged. It remains open under the existing evidence item and **must not be
+described as verified.**
+
+Also noted, upstream rather than ours: PHNL's METAR reads `06017G28KT` while the JSON reports
+`windGust: null`. The rendered card follows the JSON and shows no gust, which is correct behaviour
+against the response we actually received.
+
+#### Next
+
+Codex reviews. Stage 2 wires these helpers into the cards and Source details, removes the
+magnitude-driven dot classes, and per T17 removes the orphaned `.s-dot.warn`/`.s-dot.alert` CSS and
+reconciles the affected `AGENTS.md` prose. Stage 3 aligns the earthquake card. Each needs its own
+claim.
 
 ### 2026-09-25 — Q007/Q008 observation-truthfulness contract drafted
 

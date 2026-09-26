@@ -1899,7 +1899,11 @@ async function fetchWeather() {
     const data = await res.json();
     if (!data || !data.properties) throw new Error('malformed observation');
     if (!requestIsCurrent(token)) return;   // superseded: the selection moved on
-    sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token);
+    /* Capture the measurement clock from the response that produced this reading. Stage 1
+       stores it; no render path reads it yet. */
+    const obsRaw = data.properties.timestamp;
+    sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,
+             { at: observedAtFromIso(obsRaw), raw: obsRaw });
     renderWeather(data.properties, stationLabel(sta), false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;   // do not fail the current island for an old request
@@ -1958,7 +1962,11 @@ async function fetchTides() {
     /* Cache the QUALIFIED label. Caching sta.name meant a failed refresh dropped the
        Honolulu-reference disclosure — losing it precisely when the reading is stale and
        most needs its caveat. */
-    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);
+    /* NOAA's own observation time was discarded here, so the tide card had no measurement
+       clock to show or to check. Retain the raw value for traceability and the normalized
+       instant for state selection. */
+    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,
+             { at: observedAtFromNoaaLst(latest.t), raw: latest.t });
     renderTide(ft, tideLabel(sta), false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;
@@ -2256,6 +2264,97 @@ Object.keys(S.sourceHealth).forEach(k => {
   h.lastAttempt = null; h.lastSuccess = null; h.lastError = null; h.consecutiveFailures = 0;
 });
 
+/* ---- The observation clock (Q007/Q008, OBSERVATION-TRUTHFULNESS-CONTRACT.md) -------------
+   The registry above answers "did we reach the source". This answers "how old is the
+   measurement the source handed us". They are independent, and conflating them is the defect
+   this exists to prevent: refetching the same hourly METAR every five minutes keeps
+   lastSuccess seconds old while the observation itself ages past usefulness. During Hurricane
+   Nolo a 02:53Z observation was still the newest served at 04:10Z — 77 minutes old from a
+   perfectly healthy feed.
+
+   Neither clock may overwrite or masquerade as the other, and nothing here advances either.
+
+   Only point-in-time measurements get an observation clock. USGS event time is content age
+   inside a 30-day query rather than a stale sensor reading, so earthquakes are absent on
+   purpose — as are alerts, FEMA and news, which keep fetch-health semantics alone. */
+const OBSERVATION_LIMITS = {
+  nwsWeather: { currentMs: 75 * MIN, retainMs: 180 * MIN },
+  noaaTides:  { currentMs: 18 * MIN, retainMs: 60 * MIN }
+};
+
+/* Positive skew only. A source clock a few minutes ahead of ours is ordinary disagreement and
+   counts as age zero; further into the future is not a reading we can place in time, so it is
+   unusable rather than permanently "current". */
+const OBS_SKEW_MS = 5 * MIN;
+
+/* NWS sends an ISO 8601 instant carrying its own offset, so Date.parse resolves it. */
+function observedAtFromIso(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const ms = Date.parse(raw);
+  return isFinite(ms) ? ms : null;
+}
+
+/* NOAA CO-OPS returns "YYYY-MM-DD HH:MM" with NO zone suffix, under time_zone=lst_ldt —
+   local standard/daylight time at the station. Every configured tide station is in Hawaii and
+   Hawaii does not observe DST, so that is HST, UTC-10, all year. Verified against the same
+   reading requested as time_zone=gmt: 17:18 lst_ldt is 03:18Z, exactly -10:00, and NOAA's own
+   station metadata for 1612340 reports timezone HAST with tzcorr -10.
+
+   Never hand this string to new Date(): that applies the BROWSER's timezone, so one identical
+   response would resolve to different instants for readers in different places and the tide
+   would claim an observation time it never had. */
+const HST_OFFSET_MS = 10 * HOUR;
+function observedAtFromNoaaLst(raw) {
+  if (typeof raw !== 'string') return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(raw.trim());
+  if (!m) return null;
+  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], m[6] ? +m[6] : 0);
+  if (!isFinite(wall)) return null;
+  /* The regex accepts field shapes, not field ranges: "2026-13-32" matches and Date.UTC rolls
+     it over silently into a real but wrong instant. Reject anything that did not round-trip. */
+  const back = new Date(wall);
+  if (back.getUTCFullYear() !== +m[1] || back.getUTCMonth() !== +m[2] - 1
+      || back.getUTCDate() !== +m[3] || back.getUTCHours() !== +m[4]
+      || back.getUTCMinutes() !== +m[5]) return null;
+  return wall + HST_OFFSET_MS;   /* HST wall time -> real instant: UTC = local + 10h */
+}
+
+/* current | stale | expired | unusable, or not-applicable for a source with no measurement
+   clock. Boundaries match sourceState(): greater than a limit crosses it, exact equality stays
+   in the younger state. */
+function observationState(key, observedAt, now) {
+  const lim = OBSERVATION_LIMITS[key];
+  if (!lim) return 'not-applicable';
+  if (observedAt == null || !isFinite(observedAt)) return 'unusable';
+  const signed = (now == null ? Date.now() : now) - observedAt;
+  if (signed < -OBS_SKEW_MS) return 'unusable';
+  const age = signed < 0 ? 0 : signed;
+  if (age > lim.retainMs) return 'expired';
+  if (age > lim.currentMs) return 'stale';
+  return 'current';
+}
+
+/* The one state a card or source row should present, combining both clocks. Only 'current'
+   earns a verified dot. Deliberately not wired into any render path in this stage. */
+function combinedObservationState(key, now) {
+  const fetchState = sourceState(key, now);
+  if (!OBSERVATION_LIMITS[key]) return fetchState;
+  const entry = S.cache[key];
+  if (!entry) return fetchState === 'loading' ? 'checking' : 'unavailable';
+  const obs = observationState(key, entry.observedAt, now);
+  /* The measurement verdict is read first: a fresh response never revives a reading already
+     past its measurement retention, so the network state cannot rescue it. */
+  if (obs === 'unusable') return 'observation-unusable';
+  if (obs === 'expired') return 'observation-expired';
+  if (fetchState === 'unavailable') return 'unavailable';
+  if (fetchState === 'stale') return 'fetch-stale';
+  if (obs === 'stale') return 'observation-stale';
+  return 'current';
+}
+
+/* One place decides what earns a verified dot, so stage 2 cannot drift from stage 1. */
+function observationVerified(state) { return state === 'current'; }
+
 /* Q003 — last-known-good is kept separate from health metadata so retention stays explicit
    and greppable instead of buried inside six fetch bodies. */
 S.cache = {};
@@ -2289,13 +2388,21 @@ function requestIsCurrent(token) {
   return !ISLAND_SCOPED[token.key] || token.island === S.island;
 }
 
-function sourceOk(key, data, token) {
+function sourceOk(key, data, token, observed) {
   const h = S.sourceHealth[key];
   if (!h) return;
   const now = Date.now();
   h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
   /* Stamp the island the request STARTED under, never the one selected when it landed. */
-  if (data !== undefined) S.cache[key] = { island: token ? token.island : S.island, data: data };
+  if (data !== undefined) S.cache[key] = {
+    island: token ? token.island : S.island,
+    data: data,
+    /* The measurement clock travels with the reading it describes, so retained data keeps the
+       timestamp captured with that exact response rather than inheriting a later one. Sources
+       with no point-in-time measurement pass nothing and store null. */
+    observedAt: observed && observed.at != null ? observed.at : null,
+    observedAtRaw: observed && typeof observed.raw === 'string' ? observed.raw : null
+  };
   renderSourceHealth();
 }
 
@@ -2308,11 +2415,13 @@ function sourceFail(key, err) {
   renderSourceHealth();
 }
 
-function sourceState(key) {
+function sourceState(key, now) {
   const h = S.sourceHealth[key];
   if (!h || !h.lastAttempt) return 'loading';
   if (!h.lastSuccess) return 'unavailable';
-  const age = Date.now() - h.lastSuccess;
+  /* The clock is injectable so both clocks can be driven from one time base in tests. Callers
+     pass nothing in production and get Date.now(), so this changes no behaviour. */
+  const age = (now == null ? Date.now() : now) - h.lastSuccess;
   if (age > h.staleMs) return 'unavailable';
   if (h.lastError || age > h.freshMs) return 'stale';
   return 'current';
@@ -2400,7 +2509,10 @@ function renderSourceHealth() {
 function updateLivePill() {
   const pill = document.querySelector('.live-pill');
   if (!pill) return;
-  const states = Object.keys(S.sourceHealth).map(sourceState);
+  /* Arity matters here: .map(sourceState) would hand the ARRAY INDEX to sourceState's second
+     parameter as an injected clock, so index 0 asks "how stale is this source as of the Unix
+     epoch" — every source reads current and this pill never reports DEGRADED. Keep the arrow. */
+  const states = Object.keys(S.sourceHealth).map(k => sourceState(k));
   let cls = '', word = 'LIVE', hint = 'All data sources current';
   if (states.indexOf('unavailable') !== -1) {
     cls = ' is-degraded'; word = 'DEGRADED'; hint = 'A data source is unavailable \u2014 see Settings \u203a Data Sources';

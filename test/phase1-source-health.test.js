@@ -1,7 +1,10 @@
 /* Extracts the Phase 1 health logic from index.html and exercises it against the
    acceptance criteria in PHASE1-SOURCE-HEALTH.md. Pure logic only — no DOM. */
 const fs = require('fs');
-const src = fs.readFileSync('index.html', 'utf8').replace(/\r\n/g, '\n');
+const path = require('path');
+/* Takes an html path like the DOM and contrast suites, so test/mutation-check.js can point it
+   at a mutant. Defaults to the real file, resolved from here rather than the cwd. */
+const src = fs.readFileSync(process.argv[2] || path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function grab(re, label) {
   const m = src.match(re);
@@ -19,15 +22,24 @@ const parts = [
   grab(/const ISLAND_SCOPED = \{[^}]*\};/, 'ISLAND_SCOPED'),
   grab(/function beginRequest\(key\) \{[\s\S]*?\n\}/, 'beginRequest'),
   grab(/function requestIsCurrent\(token\) \{[\s\S]*?\n\}/, 'requestIsCurrent'),
-  grab(/function sourceOk\(key, data, token\) \{[\s\S]*?\n\}/, 'sourceOk'),
+  grab(/function sourceOk\(key, data, token, observed\) \{[\s\S]*?\n\}/, 'sourceOk'),
   grab(/function sourceFail\(key, err\) \{[\s\S]*?\n\}/, 'sourceFail'),
-  grab(/function sourceState\(key\) \{[\s\S]*?\n\}/, 'sourceState'),
+  grab(/function sourceState\(key, now\) \{[\s\S]*?\n\}/, 'sourceState'),
   grab(/function isStale\(key\) \{[^}]*\}/, 'isStale'),
   grab(/function usableCache\(key\) \{[\s\S]*?\n\}/, 'usableCache'),
-  grab(/function relAge\(ts\) \{[\s\S]*?\n\}/, 'relAge')
+  grab(/function relAge\(ts\) \{[\s\S]*?\n\}/, 'relAge'),
+  /* Q007/Q008 observation clock — the second, independent clock. */
+  grab(/const OBSERVATION_LIMITS = \{[\s\S]*?\n\};/, 'OBSERVATION_LIMITS'),
+  grab(/const OBS_SKEW_MS = [^;]+;/, 'OBS_SKEW_MS'),
+  grab(/const HST_OFFSET_MS = [^;]+;/, 'HST_OFFSET_MS'),
+  grab(/function observedAtFromIso\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromIso'),
+  grab(/function observedAtFromNoaaLst\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromNoaaLst'),
+  grab(/function observationState\(key, observedAt, now\) \{[\s\S]*?\n\}/, 'observationState'),
+  grab(/function combinedObservationState\(key, now\) \{[\s\S]*?\n\}/, 'combinedObservationState'),
+  grab(/function observationVerified\(state\) \{[^}]*\}/, 'observationVerified')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified})');
 const St = api.S;
 
 /* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
@@ -132,6 +144,165 @@ check('3 min',  api.relAge(Date.now() - 3 * MIN), '3 min ago');
 check('5 hr',   api.relAge(Date.now() - 5 * HOUR), '5 hr ago');
 check('2 days', api.relAge(Date.now() - 50 * HOUR), '2 days ago');
 check('never',  api.relAge(null), 'never');
+
+/* ==========================================================================================
+   Q007/Q008 Stage 1 — the observation clock.
+
+   Every expectation below is a literal or is derived from a published constant, never from the
+   app's own helper, per the two source-handling rules in AGENTS.md. The HST offset is checked
+   against an independently established fact: the same NOAA reading requested as time_zone=gmt
+   returned 03:18Z for an lst_ldt value of 17:18, exactly -10:00, and NOAA's station metadata
+   for 1612340 reports timezone HAST with tzcorr -10.
+   ========================================================================================== */
+
+console.log('\nObservation clock — NWS ISO timestamps:');
+check('parses an ISO instant with offset',
+  api.observedAtFromIso('2026-09-26T02:53:00+00:00'), Date.UTC(2026, 8, 26, 2, 53, 0));
+check('parses a Z-suffixed instant',
+  api.observedAtFromIso('2026-09-26T02:53:00Z'), Date.UTC(2026, 8, 26, 2, 53, 0));
+check('null for a missing timestamp', api.observedAtFromIso(null), null);
+check('null for an empty string', api.observedAtFromIso('   '), null);
+check('null for unparseable text', api.observedAtFromIso('not a time'), null);
+check('null for a non-string', api.observedAtFromIso(1758855180000), null);
+
+console.log('\nObservation clock — NOAA lst_ldt is HST, not the browser zone:');
+/* 17:24 HST is 03:24Z the following day. Written as a UTC literal so the assertion does not
+   depend on the machine running it. */
+check('normalizes lst_ldt as UTC-10',
+  api.observedAtFromNoaaLst('2026-09-25 17:24'), Date.UTC(2026, 8, 26, 3, 24, 0));
+check('accepts optional seconds',
+  api.observedAtFromNoaaLst('2026-09-25 17:24:30'), Date.UTC(2026, 8, 26, 3, 24, 30));
+check('accepts a T separator',
+  api.observedAtFromNoaaLst('2026-09-25T17:24'), Date.UTC(2026, 8, 26, 3, 24, 0));
+/* The whole point of the dedicated parser: new Date() on this string would apply the browser's
+   zone. Asserting the two disagree proves the parser is not just delegating. */
+check('does not agree with browser-local parsing outside HST',
+  api.observedAtFromNoaaLst('2026-09-25 17:24') === new Date('2026-09-25 17:24').getTime(),
+  new Date('2026-09-25 17:24').getTimezoneOffset() === 600);
+check('null for a missing timestamp', api.observedAtFromNoaaLst(undefined), null);
+check('null for a malformed timestamp', api.observedAtFromNoaaLst('2026/09/25 17:24'), null);
+check('null for an out-of-range month', api.observedAtFromNoaaLst('2026-13-25 17:24'), null);
+check('null for an out-of-range day', api.observedAtFromNoaaLst('2026-09-32 17:24'), null);
+check('null for an out-of-range hour', api.observedAtFromNoaaLst('2026-09-25 25:24'), null);
+
+console.log('\nObservation age — weather boundaries, 75 current / 180 retained:');
+const T0 = Date.UTC(2026, 8, 26, 12, 0, 0);
+const wAt = m => api.observationState('nwsWeather', T0 - m * MIN, T0);
+check('0 minutes old is current', wAt(0), 'current');
+check('74 minutes is current', wAt(74), 'current');
+check('75 minutes is current — equality stays younger', wAt(75), 'current');
+check('76 minutes is stale — the Nolo case', wAt(76), 'stale');
+check('77 minutes is stale', wAt(77), 'stale');
+check('179 minutes is stale', wAt(179), 'stale');
+check('180 minutes is stale — equality stays younger', wAt(180), 'stale');
+check('181 minutes is expired', wAt(181), 'expired');
+
+console.log('\nObservation age — tide boundaries, 18 current / 60 retained:');
+const tAt = m => api.observationState('noaaTides', T0 - m * MIN, T0);
+check('17 minutes is current', tAt(17), 'current');
+check('18 minutes is current — equality stays younger', tAt(18), 'current');
+check('19 minutes is stale', tAt(19), 'stale');
+check('59 minutes is stale', tAt(59), 'stale');
+check('60 minutes is stale — equality stays younger', tAt(60), 'stale');
+check('61 minutes is expired', tAt(61), 'expired');
+
+console.log('\nObservation age — unusable timestamps never look current:');
+check('null observedAt is unusable', api.observationState('nwsWeather', null, T0), 'unusable');
+check('NaN observedAt is unusable', api.observationState('nwsWeather', NaN, T0), 'unusable');
+/* Positive skew: inside tolerance counts as age zero, beyond it is unusable rather than
+   permanently current. */
+check('4 minutes into the future is current', wAt(-4), 'current');
+check('5 minutes into the future is current — equality stays inside tolerance', wAt(-5), 'current');
+check('6 minutes into the future is unusable', wAt(-6), 'unusable');
+check('a source with no measurement clock is not-applicable',
+  api.observationState('usgsEarthquakes', T0 - 999 * MIN, T0), 'not-applicable');
+check('alerts have no measurement clock either',
+  api.observationState('nwsAlerts', T0, T0), 'not-applicable');
+check('only weather and tide carry limits',
+  Object.keys(api.OBSERVATION_LIMITS).sort().join(','), 'noaaTides,nwsWeather');
+
+console.log('\nCombined state — both clocks, and only one state earns a verified dot:');
+function setObs(key, health, observedAt) {
+  setHealth(key, health);
+  St.cache[key] = { island: 'statewide', data: {}, observedAt: observedAt, observedAtRaw: null };
+}
+/* Fetch current + observation current is the only verified combination. */
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 }, T0 - 5 * MIN);
+check('fetch current + observation current -> current', api.combinedObservationState('nwsWeather', T0), 'current');
+check('and that is verified', api.observationVerified(api.combinedObservationState('nwsWeather', T0)), true);
+
+/* The defect this contract exists to prevent: a seconds-old lastSuccess must not make a
+   77-minute-old observation look verified. */
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 }, T0 - 77 * MIN);
+check('fetch current + 77-minute observation -> observation-stale',
+  api.combinedObservationState('nwsWeather', T0), 'observation-stale');
+check('and that is NOT verified', api.observationVerified(api.combinedObservationState('nwsWeather', T0)), false);
+
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 }, T0 - 181 * MIN);
+check('fetch current + past retention -> observation-expired',
+  api.combinedObservationState('nwsWeather', T0), 'observation-expired');
+
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 }, null);
+check('fetch current + no usable timestamp -> observation-unusable',
+  api.combinedObservationState('nwsWeather', T0), 'observation-unusable');
+
+/* A stale fetch with a still-usable measurement reports the network problem. */
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0 - 20 * MIN, lastError: 'boom', consecutiveFailures: 1 }, T0 - 20 * MIN);
+check('fetch stale + observation current -> fetch-stale',
+  api.combinedObservationState('nwsWeather', T0), 'fetch-stale');
+
+/* A fresh response never revives a measurement already past retention: the measurement verdict
+   is read before the network one. */
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: T0 - 20 * MIN, lastError: 'boom', consecutiveFailures: 1 }, T0 - 181 * MIN);
+check('expired measurement outranks a merely stale fetch',
+  api.combinedObservationState('nwsWeather', T0), 'observation-expired');
+
+setObs('nwsWeather', { lastAttempt: T0, lastSuccess: null, lastError: 'boom', consecutiveFailures: 3 }, T0);
+check('unavailable fetch -> unavailable', api.combinedObservationState('nwsWeather', T0), 'unavailable');
+
+delete St.cache.nwsWeather;
+setHealth('nwsWeather', { lastAttempt: null, lastSuccess: null, lastError: null, consecutiveFailures: 0 });
+check('no cache yet while loading -> checking', api.combinedObservationState('nwsWeather', T0), 'checking');
+
+/* Sources without a measurement clock fall through to fetch health unchanged — the guarantee
+   that this change does not redefine lastSuccess semantics globally (T14). Both clocks are
+   driven from T0: sourceState takes the same injected instant, so neither assertion can pass
+   because one clock quietly fell back to the real wall time. */
+setHealth('nwsAlerts', { lastAttempt: T0, lastSuccess: T0, lastError: null, consecutiveFailures: 0 });
+check('alerts still report plain fetch health', api.combinedObservationState('nwsAlerts', T0), 'current');
+setHealth('news', { lastAttempt: T0, lastSuccess: T0 - 90 * MIN, lastError: null, consecutiveFailures: 0 });
+check('news past its 60-minute limit still reports plain fetch health',
+  api.combinedObservationState('news', T0), 'unavailable');
+setHealth('news', { lastAttempt: T0, lastSuccess: T0 - 30 * MIN, lastError: null, consecutiveFailures: 0 });
+check('news inside retention reports stale, from the injected clock',
+  api.combinedObservationState('news', T0), 'stale');
+
+/* The injected clock must reach sourceState itself, or half of every combined assertion above
+   would silently be measured against the real wall time instead of T0. Anchored to the real
+   clock here on purpose, because that is the fallback under test. */
+const realNow = Date.now();
+setHealth('news', { lastAttempt: realNow, lastSuccess: realNow - 90 * MIN, lastError: null, consecutiveFailures: 0 });
+check('omitting the clock falls back to Date.now()',
+  api.sourceState('news'), 'unavailable');
+check('injecting an earlier instant is honoured over Date.now()',
+  api.sourceState('news', realNow - 80 * MIN), 'current');
+
+console.log('\nsourceOk stores the measurement clock beside the reading:');
+St.cache = {};
+const tok = api.beginRequest('noaaTides');
+api.sourceOk('noaaTides', { ft: '1.8', name: 'HNL Harbor', t: '2026-09-25 17:24' }, tok,
+             { at: Date.UTC(2026, 8, 26, 3, 24, 0), raw: '2026-09-25 17:24' });
+check('observedAt stored on the cache entry',
+  St.cache.noaaTides.observedAt, Date.UTC(2026, 8, 26, 3, 24, 0));
+check('raw source value retained for traceability',
+  St.cache.noaaTides.observedAtRaw, '2026-09-25 17:24');
+check('the reading itself is untouched', St.cache.noaaTides.data.ft, '1.8');
+check('NOAA t is retained in the cached data', St.cache.noaaTides.data.t, '2026-09-25 17:24');
+const tok2 = api.beginRequest('fema');
+api.sourceOk('fema', [], tok2);
+check('a source passing no clock stores null', St.cache.fema.observedAt, null);
+check('and null raw', St.cache.fema.observedAtRaw, null);
+
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 if (fail) process.exit(1);

@@ -20,7 +20,10 @@ const ROOT = path.join(__dirname, '..');
 /* Cases name the suite that is supposed to catch them. Both suites take an html path. */
 const SUITES = {
   dom: path.join(__dirname, 'dom-behavior.test.js'),
-  contrast: path.join(__dirname, 'contrast.test.js')
+  contrast: path.join(__dirname, 'contrast.test.js'),
+  /* The pure health suite owns the Q007/Q008 observation clock, which has no DOM surface in
+     stage 1 — its assertions would be unmutated otherwise. */
+  health: path.join(__dirname, 'phase1-source-health.test.js')
 };
 const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
@@ -117,8 +120,8 @@ const mutations = [
   /* Both sides of a cached label have to carry the qualifier. Fixing the weather path and
      leaving the tide path was the actual defect, so each is mutated separately. */
   { name: 'the tide cache stores the unqualified station name',
-    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta) }, token);",
-    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name }, token);",
+    from: "    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,",
+    to:   "    sourceOk('noaaTides', { ft: ft, name: sta.name, t: typeof latest.t === 'string' ? latest.t : null }, token,",
     expect: ['and still does after a failed refresh'] },
 
   { name: 'the populated earthquake card drops its query scope',
@@ -252,7 +255,60 @@ const mutations = [
   { name: 'severity flattened to a single accessible colour',
     from: '  --strip-alert:#cc3110; --strip-warn:#b05f12; --strip-ok:#3b7d94; --strip-info:#1b7bb5; --strip-unknown:#637886;',
     to:   '  --strip-alert:#0a0507; --strip-warn:#0a0507; --strip-ok:#0a0507; --strip-info:#0a0507; --strip-unknown:#0a0507;',
-    expect: ['light: five states, five distinct colours'], suite: 'contrast' }
+    expect: ['light: five states, five distinct colours'], suite: 'contrast' },
+
+  /* ---- Q007/Q008 stage 1: the observation clock ---- */
+
+  /* The trap that actually bit during implementation. .map(sourceState) hands the array index
+     to the injected-clock parameter, so index 0 asks for staleness as of the Unix epoch and
+     every source reads current — the pill silently stops reporting DEGRADED. */
+  { name: 'sourceState passed bare to .map, so the index becomes its clock',
+    from: '  const states = Object.keys(S.sourceHealth).map(k => sourceState(k));',
+    to:   '  const states = Object.keys(S.sourceHealth).map(sourceState);',
+    expect: ['pill reads DEGRADED'], suite: 'dom' },
+
+  /* A successful fetch must not make an old observation look current. Widening the weather
+     window past the observed Nolo lag is exactly the "fix" the contract warns against. */
+  { name: 'weather observation window widened past the Nolo case',
+    from: '  nwsWeather: { currentMs: 75 * MIN, retainMs: 180 * MIN },',
+    to:   '  nwsWeather: { currentMs: 95 * MIN, retainMs: 180 * MIN },',
+    expect: ['76 minutes is stale', '77 minutes is stale'], suite: 'health' },
+
+  /* Retention past which a fresh response may not revive a reading. */
+  { name: 'weather retention removed, so nothing is ever withdrawn',
+    from: '  nwsWeather: { currentMs: 75 * MIN, retainMs: 180 * MIN },',
+    to:   '  nwsWeather: { currentMs: 75 * MIN, retainMs: 1800 * MIN },',
+    expect: ['181 minutes is expired'], suite: 'health' },
+
+  /* NOAA lst_ldt is HST. Treating it as UTC shifts every tide observation by ten hours. */
+  { name: 'NOAA lst_ldt treated as UTC instead of HST',
+    from: 'const HST_OFFSET_MS = 10 * HOUR;',
+    to:   'const HST_OFFSET_MS = 0 * HOUR;',
+    expect: ['normalizes lst_ldt as UTC-10'], suite: 'health' },
+
+  /* A malformed future timestamp must not read as permanently current. */
+  { name: 'future-skew guard dropped',
+    from: "  if (signed < -OBS_SKEW_MS) return 'unusable';",
+    to:   "  if (false) return 'unusable';",
+    expect: ['6 minutes into the future is unusable'], suite: 'health' },
+
+  /* Boundary direction: greater-than crosses, equality stays younger. */
+  { name: 'observation boundary uses >= so equality crosses early',
+    from: '  if (age > lim.currentMs) return \'stale\';',
+    to:   '  if (age >= lim.currentMs) return \'stale\';',
+    expect: ['75 minutes is current'], suite: 'health' },
+
+  /* The measurement clock must travel with the reading it describes. */
+  { name: 'sourceOk drops the observation clock',
+    from: "    observedAt: observed && observed.at != null ? observed.at : null,",
+    to:   "    observedAt: null,",
+    expect: ['observedAt stored on the cache entry'], suite: 'health' },
+
+  /* An expired measurement outranks a merely stale fetch, or a reconnect revives dead data. */
+  { name: 'network state allowed to outrank an expired measurement',
+    from: "  if (obs === 'expired') return 'observation-expired';",
+    to:   "  if (false) return 'observation-expired';",
+    expect: ['fetch current + past retention -> observation-expired'], suite: 'health' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
