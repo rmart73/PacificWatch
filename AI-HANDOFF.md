@@ -87,7 +87,8 @@ this stage ships no dot change at all, so the current dots keep their present be
 stage 2 replaces it.
 
 **Evidence:** `npm test` **164** (92 + 35 + 37, up from 106 — 58 new observation-clock assertions),
-`npm run test:dom` **267** unchanged, `npm run test:mutation` **50 cases** (42 existing plus 8 new).
+`npm run test:dom` **267** unchanged, `npm run test:mutation` **50 of 50 caught** (42 existing plus 8 new). The pure suites also
+pass in an empty directory with nothing installed, so the dependency-free rule still holds.
 The T16 record is below. Per Codex's ruling, T16 does not require a nonzero rainfall
 accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
 conversion is recorded as separately unverified** under the existing evidence item rather than
