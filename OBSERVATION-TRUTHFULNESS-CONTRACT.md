@@ -1,6 +1,8 @@
 # Pacific Watch — Observation Truthfulness Contract
 
-Status: **proposed for review**. This document settles Q007 and Q008 before implementation.
+Status: **accepted and authoritative**, merged as #23 in `a3f9897` after Claude's review and the
+owner's merge decision. This document settles Q007 and Q008, and governs their implementation.
+Changes to it require their own claim and review; implementation may not depart from it silently.
 It governs the four Overview observation cards: wind, rain, tide and latest earthquake.
 
 ## Purpose

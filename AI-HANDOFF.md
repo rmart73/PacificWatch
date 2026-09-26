@@ -33,8 +33,66 @@ directly against production in this session.
 
 ### Active claims
 
-**Observation-truthfulness contract — ChatGPT Codex,
-`codex/observation-truthfulness-contract`.** Claimed 2026-09-25 after #22 merged, with the owner's
+**Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
+`claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
+ahead of the work, on the owner's explicit authorization. Branched from `main` at `a3f9897`, with
+`git log main..HEAD` and content equality verified before starting.
+
+Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), stage 1 of
+the three implementation boundaries it defines.
+
+**Scope — logic and tests only. No visual behaviour change.**
+
+1. **Observation metadata.** Store a normalized `observedAt` beside the island-scoped cached weather
+   and tide data, captured from the source response that produced that exact reading.
+2. **Timestamp parsing.** A parser that accepts the source's own timestamp and rejects missing,
+   malformed and future-skewed values, with the contract's five-minute positive clock-skew
+   tolerance. Never substitutes `Date.now()`, fetch time or render time for a source timestamp.
+3. **Combined-state helpers.** Pure functions returning the observation-age state and the combined
+   fetch-plus-measurement state, using the contract's boundaries — weather current through 75
+   minutes and retained through 180; tide current through 18 and retained through 60; `>` crosses,
+   equality stays younger.
+4. **Controlled-time tests** for the above, including both sides of every boundary and exact
+   equality.
+
+**Functions and regions touched** — named per the coordination rule, since this is the first change
+to `index.html` in this sequence:
+
+- `index.html` JS: `sourceOk()` and the `S.cache` entry shape (adding `observedAt`); `usableCache()`;
+  `fetchWeather()` and `fetchTides()` at their cache-write points only; plus new pure helpers added
+  near the source-health registry.
+- `test/`: new controlled-time assertions. `test/dom-behavior.test.js` and, if a pure home suits
+  them better, `test/phase1-source-health.test.js`.
+- **No CSS, no markup, no render-path changes.** `renderWeather()`, `renderTide()` and
+  `renderQuakeCard()` are deliberately untouched in this stage.
+
+**Out of scope, explicitly:** wiring helpers into the cards or Source details, and removing the
+magnitude-driven dot thresholds — both are stage 2. Earthquake alignment is stage 3. No G1
+remediation, no layout work, no new dependency or serverless route, and nothing in `api/` or
+`vercel.json`. Per the contract, **no stage may temporarily label old or untimestamped data `ok`** —
+this stage ships no dot change at all, so the current dots keep their present behaviour until
+stage 2 replaces it.
+
+**Evidence planned:** the three suites, plus the T16 raw-response-versus-rendered record for weather
+and tide from a live capture. Per Codex's ruling, T16 does not require a nonzero rainfall
+accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
+conversion is recorded as separately unverified** under the existing evidence item rather than
+omitted or implied verified.
+
+**Closeout absorbed into this claim**, per the owner's direction and Codex's handoff — five items,
+all consequences of #23 merging and of a board PR being unable to record its own merge:
+
+1. Codex's contract claim closed under Active claims (below).
+2. Its merged branch replaced under Active Branches.
+3. Its open Review Queue row updated.
+4. The `main` commit corrected from `410777d` to `a3f9897`.
+5. `OBSERVATION-TRUTHFULNESS-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
+   authoritative — a merged, governing contract that still called itself proposed.
+
+**Closed: observation-truthfulness contract — ChatGPT Codex,
+`codex/observation-truthfulness-contract`.** *(Merged as #23 in `a3f9897`; documentation-only deploy
+verified, application HTML byte-identical. The contract it produced is now authoritative and governs
+this stage.)* Claimed 2026-09-25 after #22 merged, with the owner's
 direction that this opening claim also close #22's now-stale current-board entries. Documentation
 and design only.
 
@@ -96,7 +154,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/observation-truthfulness-contract | Q007/Q008 design contract and #22 board closeout; documentation only |
+| Claude | claude/stage1-observation-metadata | Q007/Q008 stage 1: observation metadata, timestamp parsing, combined-state helpers, controlled-time tests. Logic and tests only, no visual change |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -104,11 +162,13 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Observation-truthfulness contract (Q007, Q008) | PR #23 open; three review findings incorporated | Claude re-reviews the corrections; owner decides merge |
-| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of this contract PR |
+| Q007/Q008 stage 1 — observation metadata | Claimed above; in progress | Codex reviews when opened |
+| Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
+| Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
+| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `410777d`**, merged through #22. Claims and handoffs for #13–#15 are preserved in
+**`main` is at `a3f9897`**, merged through #23. Claims and handoffs for #13–#15 are preserved in
 the archive, and the completed #14 test correction is recorded below. No implementation change is
 pending in this PR; every queued item above is documentation, design or separately unclaimed work.
 
