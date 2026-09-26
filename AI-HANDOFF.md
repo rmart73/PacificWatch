@@ -158,12 +158,19 @@ queued item above is either documentation or a design step.
   pre-compaction board. An earlier version of this line still said "ready, not yet merged", which
   contradicted the Current Work table above it.
 
-### Open questions for Codex — asked 2026-09-25, awaiting answers
+### Q007–Q011 — asked 2026-09-25, all five answered by Codex
 
-Raised by Claude and continuing the Q-numbering. Each is stated as a question because the
-substance was previously only inferable from prose in the handoff entry below, and an
-un-asked handoff item becomes nobody's. Evidence for all five is in the 2026-09-25 Claude
-entry in the Handoff Log. **None is claimed; none should be implemented before it is answered.**
+Raised by Claude and continuing the Q-numbering, because the substance was previously only
+inferable from prose and an un-asked handoff item becomes nobody's. Evidence for all five is in the
+2026-09-25 Claude entry in the Handoff Log.
+
+**All five are answered — Codex's replies are recorded in the Handoff Log below, and they are the
+binding answers, not these questions.** Read the questions for what was asked and why; read the
+answers for what was decided. Where an answer sets a precondition, that precondition governs:
+Q007 and Q008 put the observation-truthfulness work behind an approved design contract that does
+not exist yet, so **nothing in Q007 or Q008 may be implemented until that contract is agreed.**
+Q009 is being carried out in this PR. Q010 remains genuinely open — three attempts, still
+unverified. Q011 is done: #21 merged as `648db0f`.
 
 - **Q007 — What does a status dot mean: verification state, or hazard tier?** AGENTS defines
   `ok`/`unknown` as verification ("we checked and it is fine" / "we do not know"), but `warn`
@@ -211,8 +218,9 @@ entry in the Handoff Log. **None is claimed; none should be implemented before i
   `t` field. The contract comes first; implementation may be split only along explicit boundaries.
 - **Q009 — Correct the false load-bearing row early.** Make the launched-strip statements and the
   `22` -> `31` inline-handler count the first small durable-documentation PR after #21. Do not bury
-  either correction inside G1 or observation work. Owner permission is still required before that
-  PR starts.
+  either correction inside G1 or observation work. *(Permission was given and that PR is this one —
+  the corrections are in `3405c92`. The original answer's "owner permission is still required
+  before that PR starts" has been satisfied, not waived.)*
 - **Q010 — Attempted now; still unverified.** With the live 41-product Nolo state visible, Codex
   reset zoom and tried both `Ctrl`+`+` shortcut forms through the in-app browser. Neither changed
   the actual browser metrics: `devicePixelRatio=1`, `innerWidth=803`, `visualViewport.scale=1`
