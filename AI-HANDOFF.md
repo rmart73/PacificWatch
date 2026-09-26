@@ -34,6 +34,13 @@ directly against production in this session.
 
 ### Active claims
 
+**End-of-night pause checkpoint — ChatGPT Codex,
+`claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
+record the exact local PR #24 pause state, the pending mutation rerun, and tomorrow's resume order.
+No implementation, test, contract, or PR-status change is in scope. This uses Claude's branch only
+because the unpushed mutation-anchor correction that must be recorded is present there; Claude is
+paused and this claim does not take ownership of Stage 1.
+
 **Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
 `claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
 ahead of the work, on the owner's explicit authorization. Branched from `main` at `a3f9897`, with
@@ -180,7 +187,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Q007/Q008 stage 1 — observation clock | PR #24 open; four review findings corrected | Codex re-reviews; owner decides merge |
+| Q007/Q008 stage 1 — observation clock | PR #24 open; four review findings corrected; **one mutation re-run unverified** | Re-run `test:mutation`, then Codex re-reviews. Do not merge |
 | Q007/Q008 stages 2 and 3 | Not started; gated on stage 1 | Claimed separately after stage 1 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of the Q007/Q008 stages |
@@ -311,6 +318,96 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-26 — END OF NIGHT PAUSE: read this first when resuming
+
+Work stopped mid-verification on PR #24. Nothing is lost — everything is committed and pushed —
+but **one check was still running when we stopped and must be re-run before anything else.**
+
+#### Exact state
+
+| | |
+|---|---|
+| `main` | `a3f9897`, merged through #23 |
+| Branch | `claude/stage1-observation-metadata`, 5 commits, pushed, working tree clean |
+| PR | **#24 open. Q007/Q008 stage 1. NOT merged, and not cleared to merge.** |
+| Claimed | This branch only, stage 1 scope. Nothing else in flight |
+
+```
+80c9897  re-anchor the sourceOk mutation case   <- the unverified one
+89111c7  the four review corrections
+1471bad  first mutation result (50 of 50, before the corrections)
+4f36e7a  stage 1 implementation
+aa6b7e5  the claim, published ahead of the work
+```
+
+#### The one thing to do first on resume
+
+**Re-run `npm run test:mutation` and confirm 55 of 55.** The last completed run was **54 of 55**
+with one `ANCHOR LOST` — the T11 restructure moved `observedAt` into a local `const`, displacing
+the anchor of an earlier case. `80c9897` re-anchors it, but **that run had not finished when work
+stopped, so 55 of 55 is expected and unconfirmed. Do not report it as passing until it has run.**
+
+Everything else is verified: `npm test` **191** (119 + 35 + 37), `npm run test:dom` **267**, the pure
+suites green in an empty directory with nothing installed, and rendering re-checked byte-identical to
+`main` on both islands *after* the corrections, because `sourceOk()` sits on a render path.
+
+#### Where the review stands
+
+Codex returned four findings on #24; all four were real and all are corrected in `89111c7`, each with
+a mutation case so the fix is load-bearing rather than asserted. Details are in the corrections entry
+below. **Codex has not re-reviewed since.** Next action is Claude re-runs mutation, then Codex
+re-reviews, then the owner decides the merge.
+
+#### The finding worth carrying into stage 2
+
+Of the four, the unzoned-ISO one matters most, and it is a lesson about Claude's testing rather than
+about the code. `observedAtFromIso()` used bare `Date.parse`, which treats an ISO date-time with no
+offset as **local** time — `2026-09-26T05:53:00` resolved to `15:53:00Z` on a Hawaii machine. A silent
+ten-hour error on the primary weather source, in the same class as the 3.6x wind defect that produced
+the two source-handling rules in the first place.
+
+**58 new assertions did not catch it, because every fixture fed the parser well-formed NWS output.**
+That is exactly the "fixtures and code sharing the same wrong premise" failure `AGENTS.md` warns
+about, reproduced by the agent who had just written the record about it. Codex found it by reading
+the parser instead of the tests.
+
+**For stage 2: fixture the malformed and hostile shapes of every source field, not just the shapes
+the source happens to send today.**
+
+#### Also worth a decision, not yet claimed
+
+Three mutation anchors were displaced on this branch by ordinary restructuring — the tide
+`sourceOk` call, and `observedAt` twice. The harness behaved correctly each time; `ANCHOR LOST` is
+what it should report. But it is a recurring cost worth a line in the `AGENTS.md` mutation section:
+**restructuring a line that a mutation case pins carries an anchor update with it.** Not written,
+because that is a durable doc and T17 already has Codex reconciling that file in stage 2.
+
+The `.map(sourceState)` arity trap is the other candidate for the load-bearing table, for the same
+reason and with the same caveat.
+
+#### Deliberately not done, and not to be started without a claim
+
+- **Stage 2** — wiring the helpers into the cards and Source details, removing the magnitude-driven
+  dot classes, and T17's orphaned-CSS plus `AGENTS.md` reconciliation. Claude's under the split, but
+  needs its own claim.
+- **Stage 3** — earthquake alignment.
+- **G1** — still the unclaimed launch blocker. Cache-key normalisation, a restricted parameter set,
+  rate limiting. **Not CORS.**
+- **The nonzero mm-to-inches conversion** — still blocked on weather, needs an hour with at least
+  0.01" accumulated. Not a gate on stage 1, per Codex's T16 ruling, and must not be described as
+  verified.
+- **Q010**, the strip at 200% zoom — closed as an owner-accepted unverified gap. Do not re-raise.
+
+#### Resume in this order
+
+1. Re-run `npm run test:mutation`; confirm 55 of 55 and record it.
+2. Ask Codex to re-review #24.
+3. Owner decides the merge. A merge to `main` is a production deploy, though stage 1 changes no
+   rendering.
+4. After #24 merges, claim stage 2 separately — and close out #24's own current-board entries in that
+   opening claim, since a board PR cannot record its own merge.
+
+### 2026-09-26 — Stage 1 review findings corrected
 ### 2026-09-26 — Stage 1 review findings corrected
 
 Codex returned four findings on PR #24. All four were real, all are corrected, and each now has a
