@@ -30,7 +30,7 @@ directly against production in this session.
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; four Codex findings corrected; mutation anchor re-anchored in `80c9897` | Paused pending the confirming 55-of-55 mutation rerun and Codex re-review; do not merge |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; six Codex findings across two review rounds, all corrected | Codex re-reviews. Do not merge |
 
 ### Active claims
 
@@ -318,7 +318,92 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-26 — Stage 1, second review round: two findings, one of which does not reproduce
+
+Codex's second read of PR #24 returned two findings. **One is a real defect that my own tests were
+structurally unable to catch. The second is half right, and the half that is wrong is stated here
+with the evidence rather than quietly fixed as though it had been.**
+
+The first mutation rerun from last night completed at **55 of 55**, which cleared the pause note's
+one pending item; the suites have since changed again for the work below.
+
+#### Finding 1 — T11 protected the cache but not the card. Real, and mine to own.
+
+`sourceOk()` correctly refused an older observation, but both callers then rendered the response
+that had just arrived rather than the reading the cache accepted:
+
+```
+sourceOk('nwsWeather', …)            <- refuses the older observation, keeps the newer
+renderWeather(data.properties, …)    <- renders the refused one anyway
+```
+
+So the cache held the newer measurement while the card displayed the older one, and the two
+disagreed until some later render happened to correct it. On an emergency page that is a wrong
+reading presented as current.
+
+`sourceOk()` now returns the entry it settled on — the stored one when it accepts, the retained one
+when it refuses — and both callers render from that. In the ordinary case the returned entry holds
+the response that just arrived, so nothing changes; in the refused case the card keeps the
+measurement that actually won.
+
+**Why my tests missed it, which is the part worth remembering.** The T11 test called `sourceOk()`
+directly, so it could only ever certify cache ordering. The defect lived one line later, in the
+caller. A unit test aimed at the function cannot see a caller that ignores its result. There are now
+render-boundary tests driving the real `fetchWeather()` and `fetchTides()` paths, plus mutation cases
+that put the refused reading back on screen and require those tests to fail.
+
+#### Finding 2 — half real, and the real half is worse than reported
+
+**Confirmed, and worse than described: `observedAtFromIso()` accepted impossible calendar dates.**
+The regex checked shape and then delegated to `Date.parse`, which does not reject an impossible day
+— **it rolls it forward silently.** Measured:
+
+```
+2026-02-30T05:53:00Z  ->  2026-03-02   (two days later)
+2026-04-31T05:53:00Z  ->  2026-05-01
+2026-02-29T05:53:00Z  ->  2026-03-01   (non-leap year)
+```
+
+An impossible timestamp became a plausible one up to two days from what the source sent — strictly
+worse than a rejection, because nothing on screen would look wrong. Both parsers now range-check
+every component and verify the date through a shared `isRealCalendarDate()` round-trip. Real leap
+days round-trip and are kept, which is asserted, because a validator that rejects 2024-02-29 would
+be worse than none.
+
+**Does not reproduce: the claim that `observedAtFromNoaaLst()` accepts `17:24:60`.** It does not.
+An out-of-range second rolls the minute, and the existing round-trip compared minutes, so the value
+was already rejected. Tested exhaustively rather than argued: all one hundred two-digit second
+values were fed to the parser, and **exactly 00–59 were accepted, with every value 60–99 rejected.**
+
+The fix was still made, for a reason worth stating: seconds were being validated only as a *side
+effect* of the minute comparison. That is fragile — reorder or remove the minute check and the
+seconds guard vanishes with no test failing. Seconds are now range-checked explicitly, and both
+`60` and `99` are asserted directly.
+
+#### Evidence
+
+`npm test` **222** (150 + 35 + 37, up from 191 — 31 further assertions), `npm run test:dom` **281**
+(up from 267 — 14 render-boundary assertions across weather and tide), and **61 mutation cases**, up
+from 55. The caught count is recorded in the following commit rather than asserted here.
+
+**Rendering re-verified unchanged after this round**, which mattered more than usual because this
+round changed what the render calls receive: the live captures produce output byte-identical to
+`main` on both islands.
+
+#### A note on the review asymmetry
+
+Codex's shell has no Node or npm, so it cannot run any suite. Every number in this branch is
+Claude's, reproduced in Claude's shell. Codex reviews by reading, which found the two defects above
+and four before them — but it means **no suite result here has been independently reproduced**, and
+that should be read as a limit on the evidence rather than a gap in Codex's review. Both defects it
+found this round were invisible to a green suite, which is the argument for reading the code.
+
 ### 2026-09-26 — END OF NIGHT PAUSE: read this first when resuming
+### 2026-09-26 — END OF NIGHT PAUSE (superseded by the entry above)
+
+> **Superseded.** The pending 55-of-55 mutation rerun this entry waits on completed, and a second
+> review round has happened since. Retained as the record of where work stopped, not as current
+> state.
 
 Work stopped mid-verification on PR #24. The implementation and its correction are committed, but
 **one check was still running when work stopped and must be re-run before anything else.** The

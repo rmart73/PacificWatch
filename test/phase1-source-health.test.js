@@ -32,6 +32,7 @@ const parts = [
   grab(/const OBSERVATION_LIMITS = \{[\s\S]*?\n\};/, 'OBSERVATION_LIMITS'),
   grab(/const OBS_SKEW_MS = [^;]+;/, 'OBS_SKEW_MS'),
   grab(/const HST_OFFSET_MS = [^;]+;/, 'HST_OFFSET_MS'),
+  grab(/function isRealCalendarDate\(y, mo, d\) \{[\s\S]*?\n\}/, 'isRealCalendarDate'),
   grab(/const ISO_INSTANT_RE = [^;]+;/, 'ISO_INSTANT_RE'),
   grab(/function observedAtFromIso\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromIso'),
   grab(/function observedAtFromNoaaLst\(raw\) \{[\s\S]*?\n\}/, 'observedAtFromNoaaLst'),
@@ -41,7 +42,7 @@ const parts = [
   grab(/function observationVerified\(state\) \{[^}]*\}/, 'observationVerified')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate})');
 const St = api.S;
 
 /* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
@@ -305,6 +306,79 @@ check('accepts a negative offset and applies it',
   api.observedAtFromIso('2026-09-26T05:53:00-10:00'), Date.UTC(2026, 8, 26, 15, 53, 0));
 check('accepts fractional seconds',
   api.observedAtFromIso('2026-09-26T05:53:00.500Z'), Date.UTC(2026, 8, 26, 5, 53, 0) + 500);
+
+console.log('\nImpossible calendar dates — a regex checks shape, not existence:');
+/* Date.parse and Date.UTC both ROLL an impossible day forward rather than refusing it, turning an
+   impossible timestamp into a plausible one up to two days from what the source sent. Expected
+   values here are established from the Gregorian calendar, not from the app: February has 28 days
+   in 2026 and 29 in 2024; April has 30. */
+check('ISO: Feb 30 is rejected, not rolled to Mar 2',
+  api.observedAtFromIso('2026-02-30T05:53:00Z'), null);
+check('ISO: Apr 31 is rejected, not rolled to May 1',
+  api.observedAtFromIso('2026-04-31T05:53:00Z'), null);
+check('ISO: Feb 29 in a non-leap year is rejected',
+  api.observedAtFromIso('2026-02-29T05:53:00Z'), null);
+check('ISO: month 00 is rejected', api.observedAtFromIso('2026-00-10T05:53:00Z'), null);
+check('ISO: month 13 is rejected', api.observedAtFromIso('2026-13-01T05:53:00Z'), null);
+check('ISO: day 00 is rejected', api.observedAtFromIso('2026-09-00T05:53:00Z'), null);
+check('ISO: hour 24 is rejected', api.observedAtFromIso('2026-09-25T24:00:00Z'), null);
+check('ISO: minute 60 is rejected', api.observedAtFromIso('2026-09-25T05:60:00Z'), null);
+check('ISO: second 60 is rejected', api.observedAtFromIso('2026-09-25T05:53:60Z'), null);
+/* The real leap day must survive — a validator that rejects it is worse than none. */
+check('ISO: a real leap day is kept',
+  api.observedAtFromIso('2024-02-29T05:53:00Z'), Date.UTC(2024, 1, 29, 5, 53, 0));
+check('ISO: the last second of the year is kept',
+  api.observedAtFromIso('2026-12-31T23:59:59Z'), Date.UTC(2026, 11, 31, 23, 59, 59));
+
+check('NOAA: Feb 30 is rejected', api.observedAtFromNoaaLst('2026-02-30 17:24'), null);
+check('NOAA: Feb 29 in a non-leap year is rejected',
+  api.observedAtFromNoaaLst('2026-02-29 17:24'), null);
+check('NOAA: month 00 is rejected', api.observedAtFromNoaaLst('2026-00-10 17:24'), null);
+check('NOAA: hour 24 is rejected', api.observedAtFromNoaaLst('2026-09-25 24:00'), null);
+check('NOAA: minute 60 is rejected', api.observedAtFromNoaaLst('2026-09-25 17:60'), null);
+/* Seconds are range-checked explicitly now. An out-of-range second also rolls the minute and
+   would be caught that way, but relying on that side effect means the guard vanishes silently if
+   the minute check is ever reordered. Both 60 and 99 are asserted. */
+check('NOAA: second 60 is rejected', api.observedAtFromNoaaLst('2026-09-25 17:24:60'), null);
+check('NOAA: second 99 is rejected', api.observedAtFromNoaaLst('2026-09-25 17:24:99'), null);
+check('NOAA: second 59 is kept',
+  api.observedAtFromNoaaLst('2026-09-25 17:24:59'), Date.UTC(2026, 8, 26, 3, 24, 59));
+check('NOAA: a real leap day is kept',
+  /* Feb 29 17:24 HST is Mar 1 03:24Z. Written as March 1 rather than as hour 27 on Feb 29,
+     since leaning on hour rollover in a test about rejecting rollover invites confusion. */
+  api.observedAtFromNoaaLst('2024-02-29 17:24'), Date.UTC(2024, 2, 1, 3, 24, 0));
+check('NOAA: optional seconds still omitted cleanly',
+  api.observedAtFromNoaaLst('2026-09-25 17:24'), Date.UTC(2026, 8, 26, 3, 24, 0));
+
+/* The shared predicate, asserted directly so its contract is visible. */
+check('isRealCalendarDate: 2026-02-28 exists', api.isRealCalendarDate(2026, 2, 28), true);
+check('isRealCalendarDate: 2026-02-29 does not', api.isRealCalendarDate(2026, 2, 29), false);
+check('isRealCalendarDate: 2024-02-29 does', api.isRealCalendarDate(2024, 2, 29), true);
+check('isRealCalendarDate: 2026-04-31 does not', api.isRealCalendarDate(2026, 4, 31), false);
+check('isRealCalendarDate: 2026-12-31 exists', api.isRealCalendarDate(2026, 12, 31), true);
+
+console.log('\nsourceOk reports which measurement it settled on:');
+/* Finding 1: the cache guard is only half the story. Callers must render what sourceOk KEPT, so
+   it has to say so. */
+St.cache = {};
+St.island = 'statewide';
+setHealth('nwsWeather', { lastAttempt: null, lastSuccess: null, lastError: null, consecutiveFailures: 0 });
+const rTok = api.beginRequest('nwsWeather');
+const firstKept = api.sourceOk('nwsWeather', { p: 'newer' }, rTok, { at: T0 - 10 * MIN, raw: 'newer' });
+check('returns the entry it stored', firstKept && firstKept.data.p, 'newer');
+const rTok2 = api.beginRequest('nwsWeather');
+const secondKept = api.sourceOk('nwsWeather', { p: 'older' }, rTok2, { at: T0 - 40 * MIN, raw: 'older' });
+check('returns the KEPT entry when it refuses an older observation',
+  secondKept && secondKept.data.p, 'newer');
+check('so a caller rendering the return value cannot show the refused reading',
+  secondKept.observedAt, T0 - 10 * MIN);
+const rTok3 = api.beginRequest('nwsWeather');
+const thirdKept = api.sourceOk('nwsWeather', { p: 'newest' }, rTok3, { at: T0 - 1 * MIN, raw: 'newest' });
+check('and returns the new entry when it accepts one', thirdKept && thirdKept.data.p, 'newest');
+/* A source with no measurement clock still gets its entry back. */
+const fTok = api.beginRequest('fema');
+check('a clockless source still returns its entry',
+  (api.sourceOk('fema', [], fTok) || {}).island !== undefined, true);
 
 console.log('\nCombined state — island scope, loading and value usability:');
 /* An entry belonging to another island is not a fallback for the selected one. Reading the cache

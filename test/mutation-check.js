@@ -343,7 +343,47 @@ const mutations = [
   { name: 'older observation allowed to replace a newer cached one',
     from: "    if (prev && prev.island === island && prev.observedAt != null && at != null && at < prev.observedAt) {",
     to:   "    if (false) {",
-    expect: ['an older observation does not replace it'], suite: 'health' }
+    expect: ['an older observation does not replace it'], suite: 'health' },
+
+  /* ---- Second review round ---- */
+
+  /* The cache guard is only half of T11. These two put the refused reading back on screen, which
+     is what the code did before: cache and card disagreed until some later render corrected it. */
+  { name: 'fetchWeather renders the response instead of the accepted reading',
+    from: "    if (kept) renderWeather(kept.data.p, kept.data.label, false);",
+    to:   "    renderWeather(data.properties, stationLabel(sta), false);",
+    expect: ['the older observation does not reach the card'], suite: 'dom' },
+
+  { name: 'fetchTides renders the response instead of the accepted reading',
+    from: "    if (kept) renderTide(kept.data.ft, kept.data.name, false);",
+    to:   "    renderTide(ft, tideLabel(sta), false);",
+    expect: ['the older tide observation does not reach the card'], suite: 'dom' },
+
+  /* If sourceOk stops reporting what it kept, the callers have nothing truthful to render. */
+  { name: 'sourceOk stops reporting the kept entry when it refuses one',
+    from: "      return prev;",
+    to:   "      return null;",
+    expect: ['returns the KEPT entry when it refuses an older observation'], suite: 'health' },
+
+  /* Date.parse rolls an impossible day forward rather than refusing it, so without this check
+     2026-02-30 silently becomes March 2 — an impossible timestamp made plausible. */
+  { name: 'impossible calendar dates accepted and rolled forward',
+    from: "  if (!isRealCalendarDate(y, mo, d)) return null;\n  const ms = Date.parse(raw.trim());",
+    to:   "  const ms = Date.parse(raw.trim());",
+    expect: ['ISO: Feb 30 is rejected, not rolled to Mar 2'], suite: 'health' },
+
+  /* The same rollover through the NOAA path. */
+  { name: 'NOAA component ranges no longer checked',
+    from: "  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return null;\n  if (!isRealCalendarDate(y, mo, d)) return null;\n  const wall = Date.UTC(y, mo - 1, d, h, mi, se);",
+    to:   "  const wall = Date.UTC(y, mo - 1, d, h, mi, se);",
+    expect: ['NOAA: second 60 is rejected'], suite: 'health' },
+
+  /* A validator that rejects the real leap day would be worse than none, so prove the assertion
+     protecting it can fail too. */
+  { name: 'calendar validation made too strict, rejecting real leap days',
+    from: "  const back = new Date(Date.UTC(y, mo - 1, d));\n  return back.getUTCFullYear() === y && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d;",
+    to:   "  return mo === 2 ? d <= 28 : true;",
+    expect: ['isRealCalendarDate: 2024-02-29 does'], suite: 'health' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));

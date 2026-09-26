@@ -1902,9 +1902,13 @@ async function fetchWeather() {
     /* Capture the measurement clock from the response that produced this reading. Stage 1
        stores it; no render path reads it yet. */
     const obsRaw = data.properties.timestamp;
-    sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,
-             { at: observedAtFromIso(obsRaw), raw: obsRaw });
-    renderWeather(data.properties, stationLabel(sta), false);
+    /* Render from whatever sourceOk SETTLED on, never from the response we happened to receive.
+       An older observation arriving from a newer request is refused by the cache; rendering the
+       response regardless would put the refused reading on screen and leave the card disagreeing
+       with the cache until some later render happened to correct it. */
+    const kept = sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,
+                          { at: observedAtFromIso(obsRaw), raw: obsRaw });
+    if (kept) renderWeather(kept.data.p, kept.data.label, false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;   // do not fail the current island for an old request
     sourceFail('nwsWeather', e.message);
@@ -1965,9 +1969,10 @@ async function fetchTides() {
     /* NOAA's own observation time was discarded here, so the tide card had no measurement
        clock to show or to check. Retain the raw value for traceability and the normalized
        instant for state selection. */
-    sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,
-             { at: observedAtFromNoaaLst(latest.t), raw: latest.t });
-    renderTide(ft, tideLabel(sta), false);
+    /* As in fetchWeather: render the reading the cache accepted, not the one that arrived. */
+    const kept = sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,
+                          { at: observedAtFromNoaaLst(latest.t), raw: latest.t });
+    if (kept) renderTide(kept.data.ft, kept.data.name, false);
   } catch(e) {
     if (!requestIsCurrent(token)) return;
     sourceFail('noaaTides', e.message);
@@ -2287,6 +2292,17 @@ const OBSERVATION_LIMITS = {
    unusable rather than permanently "current". */
 const OBS_SKEW_MS = 5 * MIN;
 
+/* Is this a date that exists? A regex can only check the SHAPE of the fields, and both Date.UTC
+   and Date.parse roll impossible days over silently rather than refusing them: "2026-02-30"
+   becomes March 2 and "2026-04-31" becomes May 1. That turns an impossible timestamp into a
+   plausible one up to two days from the value the source actually sent, which is worse than a
+   rejection. Round-tripping through UTC is the check — if the fields do not come back unchanged,
+   the date was rolled and did not exist. Real leap days round-trip and are kept. */
+function isRealCalendarDate(y, mo, d) {
+  const back = new Date(Date.UTC(y, mo - 1, d));
+  return back.getUTCFullYear() === y && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d;
+}
+
 /* NWS sends an ISO 8601 instant carrying its own offset. An explicit zone is REQUIRED here, not
    merely expected: Date.parse treats an ISO date-time with no offset as LOCAL time, so
    "2026-09-26T05:53:00" resolves ten hours away from the instant NWS meant for a reader in
@@ -2294,13 +2310,19 @@ const OBS_SKEW_MS = 5 * MIN;
    different door. Date.parse also accepts loose non-ISO forms such as "Sep 26 2026", which are
    not timestamps this app should act on. Both are rejected as unusable rather than guessed,
    because the contract says a value without a usable authoritative timestamp is not a usable
-   point-in-time reading. */
-const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
+   point-in-time reading.
+
+   The shape check is not sufficient on its own: Date.parse accepts an impossible day-of-month and
+   rolls it forward, so the components are range-checked and the calendar date verified too. */
+const ISO_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
 function observedAtFromIso(raw) {
   if (typeof raw !== 'string') return null;
-  const t = raw.trim();
-  if (!ISO_INSTANT_RE.test(t)) return null;
-  const ms = Date.parse(t);
+  const m = ISO_INSTANT_RE.exec(raw.trim());
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3], h = +m[4], mi = +m[5], se = m[6] ? +m[6] : 0;
+  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return null;
+  if (!isRealCalendarDate(y, mo, d)) return null;
+  const ms = Date.parse(raw.trim());
   return isFinite(ms) ? ms : null;
 }
 
@@ -2318,14 +2340,17 @@ function observedAtFromNoaaLst(raw) {
   if (typeof raw !== 'string') return null;
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(raw.trim());
   if (!m) return null;
-  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], m[6] ? +m[6] : 0);
+  const y = +m[1], mo = +m[2], d = +m[3], h = +m[4], mi = +m[5], se = m[6] ? +m[6] : 0;
+  /* The regex accepts field shapes, not field ranges: "2026-13-32" and "17:24:60" both match it,
+     and Date.UTC rolls them over silently into real but wrong instants. Range-check every
+     component explicitly. Seconds are checked here rather than left to the round-trip below:
+     an out-of-range second does roll the minute and would be caught that way, but relying on
+     that side effect means the seconds guard disappears silently if the minute check is ever
+     reordered or removed. */
+  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return null;
+  if (!isRealCalendarDate(y, mo, d)) return null;
+  const wall = Date.UTC(y, mo - 1, d, h, mi, se);
   if (!isFinite(wall)) return null;
-  /* The regex accepts field shapes, not field ranges: "2026-13-32" matches and Date.UTC rolls
-     it over silently into a real but wrong instant. Reject anything that did not round-trip. */
-  const back = new Date(wall);
-  if (back.getUTCFullYear() !== +m[1] || back.getUTCMonth() !== +m[2] - 1
-      || back.getUTCDate() !== +m[3] || back.getUTCHours() !== +m[4]
-      || back.getUTCMinutes() !== +m[5]) return null;
   return wall + HST_OFFSET_MS;   /* HST wall time -> real instant: UTC = local + 10h */
 }
 
@@ -2440,7 +2465,9 @@ function sourceOk(key, data, token, observed) {
        different island's reading is a different measurement, not an earlier one. */
     if (prev && prev.island === island && prev.observedAt != null && at != null && at < prev.observedAt) {
       renderSourceHealth();
-      return;
+      /* Hand back the reading we KEPT, not the one we refused. Callers render from this, so the
+         screen and the cache cannot disagree about which measurement won. */
+      return prev;
     }
     S.cache[key] = {
       island: island,
@@ -2451,6 +2478,8 @@ function sourceOk(key, data, token, observed) {
       observedAt: at,
       observedAtRaw: observed && typeof observed.raw === 'string' ? observed.raw : null
     };
+    renderSourceHealth();
+    return S.cache[key];
   }
   renderSourceHealth();
 }
