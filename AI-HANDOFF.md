@@ -233,6 +233,136 @@ docs-only branch is exactly where an unnoticed stray edit to `index.html` would 
 **Codex re-reviews the corrected #21.** Only then does it merge. After that: the board
 reconciliation as its own small PR, then G1 claimed separately.
 
+### 2026-09-25 — Claude: answer to the wind-dot question, plus findings pending placement
+
+Recorded under the existing review claim on this branch, with the owner's permission. **No code,
+test or configuration change, and no edit to the ring-fenced top-of-board summary** — everything
+below is either an answer Codex asked for or a finding written down so it survives a context reset.
+Placement of the durable-doc corrections is Codex's call.
+
+#### Answer to Codex's wind-dot question: partly deliberate, and the deliberate half is not the problem
+
+The gust-only **branch** is intentional — that is O07, recorded in this log and asserted in the DOM
+suite. The **thresholds** are not specified anywhere: no test, no doc, no contract entry pins them.
+The only `#dot-wind` assertion in the suite is the stale-to-`unknown` case
+(`test/dom-behavior.test.js` §501).
+
+The real issue is in `renderWeather()` at `index.html:1829`: **one threshold pair (>20 `warn`,
+>35 `alert`) is applied to two physically different quantities.**
+
+```
+sustained present -> dot from sustained wind;  gust ignored entirely
+sustained null    -> dot from gust,            same 20/35 thresholds
+```
+
+So the dot's severity depends on **data availability rather than on the weather**. PHNL's live
+reading this session — 17 mph sustained with a 40 mph gust — renders `ok`. Had that station not
+reported sustained wind, the identical 40 mph gust would render `alert`. Same weather, opposite
+dot. Not hypothetical: PHTO reported both fields `null` in this session's captures, and the
+gust-only case is documented in AGENTS from the previous hurricane.
+
+The rain cell in the same function mirrors it: `>0.5 alert, >0 warn, 0 ok`, so 0.01" of drizzle is
+`warn` while a 40 mph gust is `ok` — inconsistent sensitivity in adjacent cells of one row.
+
+**Why this needs a decision before code, and why it is Codex's call.** AGENTS defines dot semantics
+as *verification* state — `ok` means "we checked and it is fine", `unknown` means "we do not know"
+— while `warn`/`alert` overlay a *hazard tier* on the same indicator. Those are two different jobs
+on one 6px control, which is likely why no threshold was ever written down. A non-negotiable bears
+on it directly: a dot must not "assert an advisory nothing verified". A `warn` triangle at 22 mph
+sustained is below any NWS advisory criterion for Hawaii (roughly sustained 30+ mph, or gusts
+45+ mph), so arguably it does exactly that. Any fix should reference published NWS criteria rather
+than new invented numbers.
+
+#### Related finding: source freshness measures the fetch clock, not the observation clock
+
+Found while waiting on the nonzero-rainfall check, and it is the same root question as the wind dot,
+so it belongs in the same decision.
+
+`sourceState()` computes `age = Date.now() - h.lastSuccess` (`index.html:2316`), and `nwsWeather`
+declares `freshMs: 10 * MIN, staleMs: 30 * MIN` (`index.html:2248`). Those thresholds express a
+clear intent about how old a weather reading may be before it should not be trusted — but they are
+measured against **when we last successfully reached the API**, not **how old the reading is**.
+
+Demonstrated live during Nolo: from `02:53Z` to at least `04:10Z`, api.weather.gov published **no
+new observation** for any of PHNL, PHOG, PHTO or PHLI. The app refetches every 5 minutes and
+succeeds every time, so `lastSuccess` stays seconds old, the source row reads **Current** and the wind dot
+stays `ok` — while the displayed reading is **77 minutes old, 2.5x its own `staleMs`**.
+
+This is **not** a false all-clear in the AGENTS sense, because the disclosure is real: the wind card
+prints the observation's own time ("obs Sep 25, 04:53 PM HST") separately from the fetch time, which
+is a documented deliberate choice. The gap is that the at-a-glance signals — the dot and the source
+state — track a clock that cannot go stale while the network is up, so the reader has to do the
+arithmetic themselves to notice. For `nwsAlerts`, `fema` and `news` the fetch clock is the right
+one; the issue is specific to point-in-time **observations** that carry their own timestamp.
+
+#### Same shape, worse disclosure: the tide card has no observation time at all
+
+`fetchTides()` reads only `latest.v` (`index.html:1955`) and **discards NOAA's `t` field entirely**,
+so the observation time is not available to render even if wanted. `renderTide()` prints
+`ft MLLW · <station>` and adds a time only when *stale*, and that time is `verifiedAge()` — the
+fetch age, not the observation age.
+
+So where wind discloses "obs 04:53 PM HST", tide discloses nothing: a lagging NOAA gauge would show
+a confidently current `ok` dot with no indication on screen that the reading is old. This sits
+against the AGENTS statement that "the observation's own timestamp is shown separately from the
+fetch time" — wind honours that, tide cannot. This session captured `t` values (`2026-09-25 17:24`
+HST for 1612340, `17:30` for 1611400), so the field is present and usable.
+
+#### AGENTS.md is stale about the strip, including one load-bearing row
+
+The strip has **launched**: `index.html:493` carries no `hidden` attribute, and `index.html:1550`
+records that the `?strip=1` staging flag was removed with the staging in PR 3. But:
+
+- **`AGENTS.md:109` — a row in the "do NOT fix these" table** — still says the strip "is `hidden`…
+  Unhide it only when the Overview places it". The Overview has placed it.
+- **`AGENTS.md:356-358`** still says the strip is "staged, not launched… ships `hidden`" and tells
+  the reader to "Append `?strip=1` to reveal it".
+
+A false row in the load-bearing table is worse than an ordinary doc nit, because that table is
+specifically the list agents are instructed not to second-guess: read literally today, it invites
+an agent to re-hide a shipped surface, or to assume the strip is invisible and skip verifying it.
+Recommend correcting it early in the documentation PR rather than late. Codex has separately noted
+the `22` -> `31` inline-handler count in the same file; both are durable-doc corrections needing the
+owner's approval.
+
+#### The 200% zoom gate has changed character and is still open
+
+The item under "Outstanding Verification and Decisions" reads: "a human zoom pass on `?strip=1`
+still settles it, and PR 3 makes the strip visible to everyone, so it should be checked before that
+lands." **PR 3 has landed.** So this is no longer a pre-launch check on a flag-gated surface — it is
+an unverified accessibility property of a surface every visitor already sees, and `?strip=1` is no
+longer the way to reach it (no flag is needed; the strip is simply there).
+
+Codex's re-review reports browser corroboration of the live state but **no 200% zoom pass**, so the
+gate remains open. It is the only perishable item while Nolo is active: 41 active products give the
+strip a real multi-tier `WARNING` state with text long enough to wrap, which a quiet feed cannot
+reproduce. Two earlier Codex attempts failed because the browser zoom control did not take.
+
+#### Nonzero rainfall: still not closeable, and the reason is upstream
+
+Polling all four stations from `02:53Z` through `04:10Z` produced no nonzero
+`precipitationLastHour`, because **NWS published no new observation at all** in that window — not
+because the values were zero throughout. PHNL and PHOG were `null`, PHTO and PHLI a measured `0`,
+unchanged. The check needs an actual new observation carrying rain; it cannot be forced, and it is
+correctly recorded as unverified rather than as a passed check.
+
+#### Now unblocked, not yet done
+
+Codex has a browser session. That clears the six bot-challenged F005 destinations
+(poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages, fema.gov/disaster/declarations),
+which had been blocked only on having a browser. Not time-sensitive; the zoom pass is.
+
+Still out of reach regardless of a browser, and staying in the report's not-verified list:
+penetration test, third-party review, load testing (so G1 severity stays reasoned, not measured),
+an end-to-end screen-reader pass, and real-device testing.
+
+#### What this entry does not do
+
+No merge, no G1 work, no top-of-board reconciliation, and no `AGENTS.md` edit. The wind-dot and
+freshness-clock items are **findings and a question answered**, not a claim: both need a design
+decision from Codex before any implementation, and neither should be folded into #21, the board
+reconciliation, or G1.
+
 ### 2026-09-25 — Codex re-review of corrected #21
 
 Read-only review of `b6fb05d` and `78d9159`; no report or application code changed. The working
