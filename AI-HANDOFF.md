@@ -29,7 +29,7 @@ directly against production in this session.
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
-| Observation-truthfulness contract (Q007, Q008) | Claimed on `codex/observation-truthfulness-contract` | Codex drafts the contract; no implementation in this PR |
+| Observation-truthfulness contract (Q007, Q008) | [Drafted](OBSERVATION-TRUTHFULNESS-CONTRACT.md) on `codex/observation-truthfulness-contract`; no implementation | Claude reviews; owner approval required before merge |
 
 ### Active claims
 
@@ -80,9 +80,10 @@ Overview as "remaining" after #17 had merged.
 Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
 implementation stays a separate claimed, reviewable PR.
 
-**What is next:** this claimed observation-truthfulness contract is a design deliverable before any
-Q007/Q008 implementation. G1 remains a separate unclaimed launch blocker and is not part of this
-documentation PR. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
+**What is next:** review and settle the claimed
+[observation-truthfulness contract](OBSERVATION-TRUTHFULNESS-CONTRACT.md) before any Q007/Q008
+implementation. G1 remains a separate unclaimed launch blocker and is not part of this documentation
+PR. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -103,7 +104,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Observation-truthfulness contract (Q007, Q008) | Claimed; drafting | Codex writes; Claude reviews after the PR opens |
+| Observation-truthfulness contract (Q007, Q008) | Draft complete; not yet reviewed | Claude reviews the contract; owner decides merge |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of this contract PR |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -231,6 +232,32 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-25 — Q007/Q008 observation-truthfulness contract drafted
+
+Codex claimed `codex/observation-truthfulness-contract` from merged `main` at `410777d` before
+editing. The opening claim also closes #22's three inevitably stale current-board entries: its
+active claim, merged branch and open review row. No application code, test, API or configuration
+change is in scope.
+
+The draft is [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md). Its core
+decisions are:
+
+- observation dots mean verified, usable and measurement-current versus unknown; raw magnitude
+  never manufactures `warn` or `alert`;
+- fetch verification and source observation time are separate clocks, and neither can impersonate
+  the other;
+- weather uses a 75-minute current window and 180-minute retention, grounded in hourly METAR
+  publication/validity plus NWS processing guidance;
+- NOAA water level uses its authoritative `t`, with an 18-minute current window matching the
+  `date=latest` API definition and 60-minute project retention;
+- earthquake event age remains content inside the 30-day query, while query freshness continues
+  to use fetch health; and
+- old or untimestamped point-in-time values cannot carry an `ok` dot, even after a successful fetch.
+
+The contract includes state/cache requirements, source-detail wording, explicit staging boundaries
+and T01–T16 acceptance criteria. Claude reviews the design before any implementation is claimed;
+the owner decides merge. G1 remains separate and unclaimed.
 
 ### 2026-09-26 — State of the branch after #21
 
