@@ -106,7 +106,130 @@ No implementation review is pending.
 
 ## Handoff Log
 
+### 2026-09-25 — #21 corrections landed; source evidence completed except one item
+
+**Supersedes the "corrections owed on #21" list in the end-of-night entry below.** All four are
+done; that list is kept for the record, not as outstanding work. Still **report only — no
+remediation in this branch**, and the top-of-board summary was deliberately left alone (see below).
+
+Claimed under the existing review claim on `claude/launch-readiness-review`, extended 2026-09-08 to
+cover the handoff record. No new claim was needed and none was taken.
+
+#### The four report corrections, as Codex specified them
+
+1. **Security conclusions scoped to the checks performed.** "No XSS" and "no SSRF" no longer appear
+   as system properties. Section 1 gained a "How to read" preamble stating that each row is the
+   outcome of a specific check on a specific surface; the SSRF row is retitled to `api/news.js`,
+   the XSS rows to "the 19 enumerated `innerHTML` interpolations" and "three specific hostile
+   payloads". The Assessment now says a bounded manual review finding nothing is weak evidence of
+   absence and must not be read as clearance.
+2. **CORS removed as an abuse control.** G1's mitigations are now cache-key normalisation, a
+   restricted parameter set, and per-IP rate limiting on misses. A new paragraph states plainly that
+   CORS is browser-enforced, that `curl`/a script/a server ignores it, and that tightening
+   `Access-Control-Allow-Origin` would not remove a single invocation. It is explicitly listed as
+   *not* a fix, and the opening line no longer leads with `Access-Control-Allow-Origin: *`.
+3. **G6 is no longer "structural".** Retitled "not yet done, *not* structural". A single file can
+   ship without `'unsafe-inline'`: hashes (or a nonce) for the two inline `<script>` blocks, and the
+   31 inline `onclick=` attributes moved to `addEventListener` — required because a hash or nonce
+   does **not** authorise an inline event-handler attribute, and `'unsafe-hashes'` would give back
+   most of what is being removed. Severity stays Low.
+4. **G2 split into the two failures it was conflating.** Retitled "A reload while offline has
+   nothing to serve", severity **High -> Medium–High**. An already-open page does *not* blank: it
+   keeps last-known-good, marks sources stale with an age, and withdraws retained data past the
+   stale window — cited to `test/dom-behavior.test.js` §2, §4, §5 and strip states 6–7. The real
+   gap is reload or cold start while offline, where no service worker or manifest exists (zero
+   occurrences of either in `index.html`) so the document itself is never cached.
+
+#### Source-to-display evidence — recaptured live during Hurricane Nolo
+
+Captured 2026-09-26Z / 2026-09-25 HST with **41 active NWS products** for HI (19 Tropical Storm
+Watches, 8 Hurricane Watches, 8 Tropical Storm Warnings, 2 TCLS, 2 High Surf Advisories, 1 Flood
+Watch, 1 Wind Advisory). Live responses were captured to disk and `index.html` was rendered against
+those exact bytes in jsdom — the local-render route, since the preview is behind SSO. The expanded
+five-field record is in [LAUNCH-READINESS.md](LAUNCH-READINESS.md); the compact form:
+
+```
+WIND   PHNL  windSpeed 27.72 / windGust 64.8  wmoUnit:km_h-1   obs 2026-09-26T02:53:00Z
+             expected 17 mph / G40  -- km/h x 0.621371, AND METAR 04015G35KT
+             (15 kt x 1.150779 = 17.26; 35 kt = 40.28).  displayed "17 mph" "G40mph"   MATCH
+WIND   PHLI  windSpeed 35.28 / windGust 46.44 wmoUnit:km_h-1   obs 2026-09-26T02:53:00Z
+             expected 22 mph / G29  -- METAR 04019G25KT (19 kt = 21.87; 25 kt = 28.77)
+             displayed "22 mph" "G29mph"                                               MATCH
+RAIN   PHNL  precipitationLastHour null  wmoUnit:mm            obs 2026-09-26T02:53:00Z
+             expected withheld.  displayed "—" / "Not reported", dot unknown           MATCH
+RAIN   PHLI  precipitationLastHour 0     wmoUnit:mm            obs 2026-09-26T02:53:00Z
+             METAR ... -RA ... P0000.  expected 0.00" as a VERIFIED reading, dot ok
+             displayed "0.00\"" / "1-hr · Lihue", dot ok                                MATCH
+TIDE   1612340  v 1.814 ft MLLW   obs 2026-09-25 17:24 HST (UTC-10)
+             expected 1.8 ft (units=english returns feet; one-decimal rounding only)
+             displayed "1.8 ft"                                                        MATCH
+TIDE   1611400  v 1.539 ft MLLW   obs 2026-09-25 17:30 HST.  displayed "1.5 ft"        MATCH
+QUAKE  statewide  id hv75043832  net hv  place "10 km SE of Pāhala, Hawaii"
+             mag 2.09 magType md   obs 2026-09-26T03:21:21.430Z   10 of limit 10
+             expected M 2.1 and a non-complete count.  displayed "M 2.1 … 10+ in range" MATCH
+QUAKE  kauai     0 features -- successful fetch, genuinely empty
+             expected verified-empty with ok dot.  displayed "None" /
+             "No M2.0+ within 200 km of Kauai in 30 days", dot ok                      MATCH
+```
+
+The three incomplete entries are now addressed:
+
+- **Rainfall** — the **measured-zero** path is now exercised, and it is a genuinely different path
+  from null: `0` renders `0.00"` with an `ok` dot, `null` renders `—` / "Not reported" with an
+  `unknown` ring. That is the `ok`-versus-`unknown` semantics the non-negotiables require, confirmed
+  on live data, and it is the pairing the historical "invented 0.00 rainfall" defect got wrong.
+- **Tide timezone** — settled by experiment, not assumption. The same reading requested twice:
+  `lst_ldt` -> `2026-09-25 17:18`, `gmt` -> `2026-09-26 03:18`, an offset of exactly **-10:00**.
+  NOAA's station metadata for 1612340 gives `timezone: "HAST"`, `timezonecorr: -10`. Hawaii runs no
+  DST, so `lst_ldt` is **HST / UTC-10 year round**. The earlier bare `2026-09-07 20:06` was HST,
+  i.e. `2026-09-08T06:06Z`. The endpoint returns no zone suffix, which is what made it ambiguous.
+- **Earthquake identity** — `hv75043832`, network `hv`, "10 km SE of Pāhala, Hawaii", `magType md`,
+  so the reading can be re-fetched and re-checked. Two behaviours confirmed incidentally: a full
+  page of results renders **"10+ in range"** rather than a complete count of ten, and Kauaʻi's
+  empty-but-successful query renders **verified empty** with an `ok` dot and a statement of radius
+  and window, not `unavailable`.
+
+#### Still unverified, recorded rather than omitted
+
+**The mm-to-inches divisor against a nonzero live reading.** No station in the app's set reported a
+nonzero `precipitationLastHour` in the capture window — PHNL and PHOG `null`, PHTO and PHLI `0` — so
+`25.4` is exercised only at zero, where every divisor agrees. PHLI reported
+`precipitationLast3Hours: 0.5 mm`, but the app reads only `precipitationLastHour`, so that value
+reaches no render path and is not evidence. A poll across all four stations ran through the
+`2026-09-26T02:53Z` observation round and caught no nonzero value; the poll window is stated here
+rather than generalised, because "we looked and found none" is only as strong as the window it
+covers. **This is the same shape as the wind defect and is the one source-to-display gap still
+open** — worth closing on the next rain event, with the expectation taken from `mm / 25.4` and
+cross-checked against the METAR `Pnnnn` hundredths-of-an-inch group.
+
+#### Deliberately not done in this branch
+
+- **No G1 remediation.** #21 stays a report. The bounding work is specified under G1.
+- **No top-of-board reconciliation.** Per Codex, that is a separate small PR *after* #21 merges. The
+  stale header, the `b71fb74`/`3f5a885` conflict, "Remaining: Overview layout/navigation", the
+  "#15 not yet merged" line and the missing #18–#21 rows are all untouched here. Note this staleness
+  **predates this branch** — those lines are already in `main`; #21 only appended an accurate newer
+  record beneath them, which is what made the contradiction visible.
+- **No `AGENTS.md` edit.** One inaccuracy spotted and left alone for Codex to place: AGENTS says
+  **22** `onclick=` handlers in two spots, and the current `index.html` has **31**. G6 notes the
+  discrepancy rather than silently fixing a durable doc under a report claim.
+
+#### Evidence
+
+`npm test` 106 (34 + 35 + 37), `npm run test:dom` 267, both green. This branch changes two
+markdown files and no code, so the suites are unchanged-by-construction rather than evidence of a
+working change; they are recorded to show nothing was disturbed.
+
+#### Next action
+
+**Codex re-reviews the corrected #21.** Only then does it merge. After that: the board
+reconciliation as its own small PR, then G1 claimed separately.
+
 ### 2026-09-08 — END OF NIGHT HANDOFF: read this first when resuming
+
+> **Read the 2026-09-25 entry above first.** The four corrections this entry lists as owed on #21
+> have since landed, and the source evidence is complete but for the nonzero-rainfall check. The
+> list below is retained as the record of what was asked for, not as outstanding work.
 
 Both the owner and Codex paused under an active tropical storm warning with unstable power.
 Recorded here rather than in conversation so either agent can resume without chat history.
