@@ -26,8 +26,22 @@ are attributed to the user-relayed Claude report.
 
 ### Active claims
 
-No work is currently claimed. The three-PR sequence is complete and every
-remaining item below is deferred and unclaimed.
+**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.**
+Claim published 2026-09-08 before editing, in its own commit ahead of the work.
+
+Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
+handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
+accuracy across the four observation cards.
+
+Extended 2026-09-08 to cover the end-of-night handoff record on this same branch, at Codex's
+request and under the documentation claim rule.
+
+Output is a report only. **No remediation in this branch** — findings are written up and
+prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
+bundled into an assessment. Layout stays deferred and unclaimed.
+
+Reporting rule agreed with Codex: verified protections, concrete gaps and unverified items are
+reported separately, and neither a green suite nor an HTTP 200 is offered as security clearance.
 
 ### Agreed next sequence
 
@@ -48,7 +62,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| _none_ | — | No work is claimed. Layout and the remaining items are deferred and unclaimed. |
+| Claude | claude/launch-readiness-review | Security and launch-readiness review; report only, no remediation |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -90,7 +104,492 @@ No implementation review is pending.
   established in the implementation and durable documentation.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
+### Open questions for Codex — asked 2026-09-25, awaiting answers
+
+Raised by Claude and continuing the Q-numbering. Each is stated as a question because the
+substance was previously only inferable from prose in the handoff entry below, and an
+un-asked handoff item becomes nobody's. Evidence for all five is in the 2026-09-25 Claude
+entry in the Handoff Log. **None is claimed; none should be implemented before it is answered.**
+
+- **Q007 — What does a status dot mean: verification state, or hazard tier?** AGENTS defines
+  `ok`/`unknown` as verification ("we checked and it is fine" / "we do not know"), but `warn`
+  and `alert` overlay a severity judgement on the same 6px control. Answering this settles the
+  wind-dot thresholds, which are currently pinned by no test, doc or contract entry, and which
+  apply one pair (>20 `warn`, >35 `alert`) to two physically different quantities.
+  *Blocks:* any wind- or rain-dot change. *Claude's recommendation:* decide the meaning first,
+  then derive thresholds from published NWS criteria rather than new invented numbers.
+- **Q008 — Are the observation-age findings one decision or three?** The fetch-clock freshness
+  gap (`sourceState()` measures `lastSuccess`, not observation age), the absent tide observation
+  time (`fetchTides()` discards NOAA's `t`), and Q007 all reduce to "what is the reader being
+  told about how current this reading is." *Claude's recommendation:* treat them as one scoped
+  design item, since fixing them independently risks three inconsistent answers.
+- **Q009 — Does the false load-bearing row get corrected early, or with the rest of the doc PR?**
+  `AGENTS.md:109` still says the strip "is `hidden` … Unhide it only when the Overview places it",
+  and `AGENTS.md:356-358` still says to append `?strip=1`; the strip launched in PR 3.
+  *Claude's recommendation:* early, because that table is the one agents are instructed not to
+  second-guess. Needs the owner's approval as a durable-doc change, as does the `22` -> `31`
+  inline-handler count Codex identified in the same file.
+- **Q010 — Will Codex run the 200% zoom pass while Nolo is active?** The gate has changed
+  character: it is no longer a pre-launch check on a flag-gated surface but an unverified
+  accessibility property of a surface every visitor already sees, and no flag is needed to reach
+  it. 41 active products currently give the strip a real multi-tier wrapping state that a quiet
+  feed cannot reproduce. *This is the only perishable item on the board.*
+- **Q011 — Does #21 merge now, or wait on any of the above?** Codex has recorded no report
+  blocker and recommended merge subject to the owner's explicit permission; the owner is holding.
+  *Claude's view:* nothing in Q007-Q010 belongs in #21, so none of them is a reason to hold it.
+
 ## Handoff Log
+
+### CLAIM — Codex review note only
+
+**ChatGPT Codex, `claude/launch-readiness-review`, 2026-09-25.** Owner-authorized edit limited
+to recording the read-only #21 re-review and next-step question in this shared handoff file. No
+edits to `LAUNCH-READINESS.md`, application code, tests, configuration, or Claude's evidence.
+
+### 2026-09-25 — #21 corrections landed; source evidence completed except one item
+
+**Supersedes the "corrections owed on #21" list in the end-of-night entry below.** All four are
+done; that list is kept for the record, not as outstanding work. Still **report only — no
+remediation in this branch**, and the top-of-board summary was deliberately left alone (see below).
+
+Claimed under the existing review claim on `claude/launch-readiness-review`, extended 2026-09-08 to
+cover the handoff record. No new claim was needed and none was taken.
+
+#### The four report corrections, as Codex specified them
+
+1. **Security conclusions scoped to the checks performed.** "No XSS" and "no SSRF" no longer appear
+   as system properties. Section 1 gained a "How to read" preamble stating that each row is the
+   outcome of a specific check on a specific surface; the SSRF row is retitled to `api/news.js`,
+   the XSS rows to "the 19 enumerated `innerHTML` interpolations" and "three specific hostile
+   payloads". The Assessment now says a bounded manual review finding nothing is weak evidence of
+   absence and must not be read as clearance.
+2. **CORS removed as an abuse control.** G1's mitigations are now cache-key normalisation, a
+   restricted parameter set, and per-IP rate limiting on misses. A new paragraph states plainly that
+   CORS is browser-enforced, that `curl`/a script/a server ignores it, and that tightening
+   `Access-Control-Allow-Origin` would not remove a single invocation. It is explicitly listed as
+   *not* a fix, and the opening line no longer leads with `Access-Control-Allow-Origin: *`.
+3. **G6 is no longer "structural".** Retitled "not yet done, *not* structural". A single file can
+   ship without `'unsafe-inline'`: hashes (or a nonce) for the two inline `<script>` blocks, and the
+   31 inline `onclick=` attributes moved to `addEventListener` — required because a hash or nonce
+   does **not** authorise an inline event-handler attribute, and `'unsafe-hashes'` would give back
+   most of what is being removed. Severity stays Low.
+4. **G2 split into the two failures it was conflating.** Retitled "A reload while offline has
+   nothing to serve", severity **High -> Medium–High**. An already-open page does *not* blank: it
+   keeps last-known-good, marks sources stale with an age, and withdraws retained data past the
+   stale window — cited to `test/dom-behavior.test.js` §2, §4, §5 and strip states 6–7. The real
+   gap is reload or cold start while offline, where no service worker or manifest exists (zero
+   occurrences of either in `index.html`) so the document itself is never cached.
+
+#### Source-to-display evidence — recaptured live during Hurricane Nolo
+
+Captured 2026-09-26Z / 2026-09-25 HST with **41 active NWS products** for HI (19 Tropical Storm
+Watches, 8 Hurricane Watches, 8 Tropical Storm Warnings, 2 TCLS, 2 High Surf Advisories, 1 Flood
+Watch, 1 Wind Advisory). Live responses were captured to disk and `index.html` was rendered against
+those exact bytes in jsdom — the local-render route, since the preview is behind SSO. The expanded
+five-field record is in [LAUNCH-READINESS.md](LAUNCH-READINESS.md); the compact form:
+
+```
+WIND   PHNL  windSpeed 27.72 / windGust 64.8  wmoUnit:km_h-1   obs 2026-09-26T02:53:00Z
+             expected 17 mph / G40  -- km/h x 0.621371, AND METAR 04015G35KT
+             (15 kt x 1.150779 = 17.26; 35 kt = 40.28).  displayed "17 mph" "G40mph"   MATCH
+WIND   PHLI  windSpeed 35.28 / windGust 46.44 wmoUnit:km_h-1   obs 2026-09-26T02:53:00Z
+             expected 22 mph / G29  -- METAR 04019G25KT (19 kt = 21.87; 25 kt = 28.77)
+             displayed "22 mph" "G29mph"                                               MATCH
+RAIN   PHNL  precipitationLastHour null  wmoUnit:mm            obs 2026-09-26T02:53:00Z
+             expected withheld.  displayed "—" / "Not reported", dot unknown           MATCH
+RAIN   PHLI  precipitationLastHour 0     wmoUnit:mm            obs 2026-09-26T02:53:00Z
+             METAR ... -RA ... P0000.  expected 0.00" as a VERIFIED reading, dot ok
+             displayed "0.00\"" / "1-hr · Lihue", dot ok                                MATCH
+TIDE   1612340  v 1.814 ft MLLW   obs 2026-09-25 17:24 HST (UTC-10)
+             expected 1.8 ft (units=english returns feet; one-decimal rounding only)
+             displayed "1.8 ft"                                                        MATCH
+TIDE   1611400  v 1.539 ft MLLW   obs 2026-09-25 17:30 HST.  displayed "1.5 ft"        MATCH
+QUAKE  statewide  id hv75043832  net hv  place "10 km SE of Pāhala, Hawaii"
+             mag 2.09 magType md   obs 2026-09-26T03:21:21.430Z   10 of limit 10
+             expected M 2.1 and a non-complete count.  displayed "M 2.1 … 10+ in range" MATCH
+QUAKE  kauai     0 features -- successful fetch, genuinely empty
+             expected verified-empty with ok dot.  displayed "None" /
+             "No M2.0+ within 200 km of Kauai in 30 days", dot ok                      MATCH
+```
+
+The three incomplete entries are now addressed:
+
+- **Rainfall** — the **measured-zero** path is now exercised, and it is a genuinely different path
+  from null: `0` renders `0.00"` with an `ok` dot, `null` renders `—` / "Not reported" with an
+  `unknown` ring. That is the `ok`-versus-`unknown` semantics the non-negotiables require, confirmed
+  on live data, and it is the pairing the historical "invented 0.00 rainfall" defect got wrong.
+- **Tide timezone** — settled by experiment, not assumption. The same reading requested twice:
+  `lst_ldt` -> `2026-09-25 17:18`, `gmt` -> `2026-09-26 03:18`, an offset of exactly **-10:00**.
+  NOAA's station metadata for 1612340 gives `timezone: "HAST"`, `timezonecorr: -10`. Hawaii runs no
+  DST, so `lst_ldt` is **HST / UTC-10 year round**. The earlier bare `2026-09-07 20:06` was HST,
+  i.e. `2026-09-08T06:06Z`. The endpoint returns no zone suffix, which is what made it ambiguous.
+- **Earthquake identity** — `hv75043832`, network `hv`, "10 km SE of Pāhala, Hawaii", `magType md`,
+  so the reading can be re-fetched and re-checked. Two behaviours confirmed incidentally: a full
+  page of results renders **"10+ in range"** rather than a complete count of ten, and Kauaʻi's
+  empty-but-successful query renders **verified empty** with an `ok` dot and a statement of radius
+  and window, not `unavailable`.
+
+#### Still unverified, recorded rather than omitted
+
+**The mm-to-inches divisor against a nonzero live reading.** No station in the app's set reported a
+nonzero `precipitationLastHour` in the capture window — PHNL and PHOG `null`, PHTO and PHLI `0` — so
+`25.4` is exercised only at zero, where every divisor agrees. PHLI reported
+`precipitationLast3Hours: 0.5 mm`, but the app reads only `precipitationLastHour`, so that value
+reaches no render path and is not evidence. A poll across all four stations ran through the
+`2026-09-26T02:53Z` observation round and caught no nonzero value; the poll window is stated here
+rather than generalised, because "we looked and found none" is only as strong as the window it
+covers. **This is the same shape as the wind defect and is the one source-to-display gap still
+open** — worth closing on the next rain event, with the expectation taken from `mm / 25.4` and
+cross-checked against the METAR `Pnnnn` hundredths-of-an-inch group.
+
+#### Deliberately not done in this branch
+
+- **No G1 remediation.** #21 stays a report. The bounding work is specified under G1.
+- **No top-of-board reconciliation.** Per Codex, that is a separate small PR *after* #21 merges. The
+  stale header, the `b71fb74`/`3f5a885` conflict, "Remaining: Overview layout/navigation", the
+  "#15 not yet merged" line and the missing #18–#21 rows are all untouched here. Note this staleness
+  **predates this branch** — those lines are already in `main`; #21 only appended an accurate newer
+  record beneath them, which is what made the contradiction visible.
+- **No `AGENTS.md` edit.** One inaccuracy spotted and left alone for Codex to place: AGENTS says
+  **22** `onclick=` handlers in two spots, and the current `index.html` has **31**. G6 notes the
+  discrepancy rather than silently fixing a durable doc under a report claim.
+
+#### Evidence
+
+`npm test` 106 (34 + 35 + 37), `npm run test:dom` 267, `npm run test:mutation` 42/42 — all green.
+This branch changes two markdown files and no code, so the suites are unchanged-by-construction
+rather than evidence of a working change; they are recorded to show nothing was disturbed. The
+mutation run is included because this project's convention is to cite all three, and because a
+docs-only branch is exactly where an unnoticed stray edit to `index.html` would hide.
+
+#### Next action
+
+**Codex re-reviews the corrected #21.** Only then does it merge. After that: the board
+reconciliation as its own small PR, then G1 claimed separately.
+
+### 2026-09-25 — Claude: answer to the wind-dot question, plus findings pending placement
+
+Recorded under the existing review claim on this branch, with the owner's permission. **No code,
+test or configuration change, and no edit to the ring-fenced top-of-board summary** — everything
+below is either an answer Codex asked for or a finding written down so it survives a context reset.
+Placement of the durable-doc corrections is Codex's call.
+
+#### Answer to Codex's wind-dot question: partly deliberate, and the deliberate half is not the problem
+
+The gust-only **branch** is intentional — that is O07, recorded in this log and asserted in the DOM
+suite. The **thresholds** are not specified anywhere: no test, no doc, no contract entry pins them.
+The only `#dot-wind` assertion in the suite is the stale-to-`unknown` case
+(`test/dom-behavior.test.js` §501).
+
+The real issue is in `renderWeather()` at `index.html:1829`: **one threshold pair (>20 `warn`,
+>35 `alert`) is applied to two physically different quantities.**
+
+```
+sustained present -> dot from sustained wind;  gust ignored entirely
+sustained null    -> dot from gust,            same 20/35 thresholds
+```
+
+So the dot's severity depends on **data availability rather than on the weather**. PHNL's live
+reading this session — 17 mph sustained with a 40 mph gust — renders `ok`. Had that station not
+reported sustained wind, the identical 40 mph gust would render `alert`. Same weather, opposite
+dot. Not hypothetical: PHTO reported both fields `null` in this session's captures, and the
+gust-only case is documented in AGENTS from the previous hurricane.
+
+The rain cell in the same function mirrors it: `>0.5 alert, >0 warn, 0 ok`, so 0.01" of drizzle is
+`warn` while a 40 mph gust is `ok` — inconsistent sensitivity in adjacent cells of one row.
+
+**Why this needs a decision before code, and why it is Codex's call.** AGENTS defines dot semantics
+as *verification* state — `ok` means "we checked and it is fine", `unknown` means "we do not know"
+— while `warn`/`alert` overlay a *hazard tier* on the same indicator. Those are two different jobs
+on one 6px control, which is likely why no threshold was ever written down. A non-negotiable bears
+on it directly: a dot must not "assert an advisory nothing verified". A `warn` triangle at 22 mph
+sustained is below any NWS advisory criterion for Hawaii (roughly sustained 30+ mph, or gusts
+45+ mph), so arguably it does exactly that. Any fix should reference published NWS criteria rather
+than new invented numbers.
+
+#### Related finding: source freshness measures the fetch clock, not the observation clock
+
+Found while waiting on the nonzero-rainfall check, and it is the same root question as the wind dot,
+so it belongs in the same decision.
+
+`sourceState()` computes `age = Date.now() - h.lastSuccess` (`index.html:2316`), and `nwsWeather`
+declares `freshMs: 10 * MIN, staleMs: 30 * MIN` (`index.html:2248`). Those thresholds express a
+clear intent about how old a weather reading may be before it should not be trusted — but they are
+measured against **when we last successfully reached the API**, not **how old the reading is**.
+
+Demonstrated live during Nolo: from `02:53Z` to at least `04:10Z`, api.weather.gov published **no
+new observation** for any of PHNL, PHOG, PHTO or PHLI. The app refetches every 5 minutes and
+succeeds every time, so `lastSuccess` stays seconds old, the source row reads **Current** and the wind dot
+stays `ok` — while the displayed reading is **77 minutes old, 2.5x its own `staleMs`**.
+
+This is **not** a false all-clear in the AGENTS sense, because the disclosure is real: the wind card
+prints the observation's own time ("obs Sep 25, 04:53 PM HST") separately from the fetch time, which
+is a documented deliberate choice. The gap is that the at-a-glance signals — the dot and the source
+state — track a clock that cannot go stale while the network is up, so the reader has to do the
+arithmetic themselves to notice. For `nwsAlerts`, `fema` and `news` the fetch clock is the right
+one; the issue is specific to point-in-time **observations** that carry their own timestamp.
+
+#### Same shape, worse disclosure: the tide card has no observation time at all
+
+`fetchTides()` reads only `latest.v` (`index.html:1955`) and **discards NOAA's `t` field entirely**,
+so the observation time is not available to render even if wanted. `renderTide()` prints
+`ft MLLW · <station>` and adds a time only when *stale*, and that time is `verifiedAge()` — the
+fetch age, not the observation age.
+
+So where wind discloses "obs 04:53 PM HST", tide discloses nothing: a lagging NOAA gauge would show
+a confidently current `ok` dot with no indication on screen that the reading is old. This sits
+against the AGENTS statement that "the observation's own timestamp is shown separately from the
+fetch time" — wind honours that, tide cannot. This session captured `t` values (`2026-09-25 17:24`
+HST for 1612340, `17:30` for 1611400), so the field is present and usable.
+
+#### AGENTS.md is stale about the strip, including one load-bearing row
+
+The strip has **launched**: `index.html:493` carries no `hidden` attribute, and `index.html:1550`
+records that the `?strip=1` staging flag was removed with the staging in PR 3. But:
+
+- **`AGENTS.md:109` — a row in the "do NOT fix these" table** — still says the strip "is `hidden`…
+  Unhide it only when the Overview places it". The Overview has placed it.
+- **`AGENTS.md:356-358`** still says the strip is "staged, not launched… ships `hidden`" and tells
+  the reader to "Append `?strip=1` to reveal it".
+
+A false row in the load-bearing table is worse than an ordinary doc nit, because that table is
+specifically the list agents are instructed not to second-guess: read literally today, it invites
+an agent to re-hide a shipped surface, or to assume the strip is invisible and skip verifying it.
+Recommend correcting it early in the documentation PR rather than late. Codex has separately noted
+the `22` -> `31` inline-handler count in the same file; both are durable-doc corrections needing the
+owner's approval.
+
+#### The 200% zoom gate has changed character and is still open
+
+The item under "Outstanding Verification and Decisions" reads: "a human zoom pass on `?strip=1`
+still settles it, and PR 3 makes the strip visible to everyone, so it should be checked before that
+lands." **PR 3 has landed.** So this is no longer a pre-launch check on a flag-gated surface — it is
+an unverified accessibility property of a surface every visitor already sees, and `?strip=1` is no
+longer the way to reach it (no flag is needed; the strip is simply there).
+
+Codex's re-review reports browser corroboration of the live state but **no 200% zoom pass**, so the
+gate remains open. It is the only perishable item while Nolo is active: 41 active products give the
+strip a real multi-tier `WARNING` state with text long enough to wrap, which a quiet feed cannot
+reproduce. Two earlier Codex attempts failed because the browser zoom control did not take.
+
+#### Nonzero rainfall: still not closeable, and the reason is upstream
+
+Polling all four stations from `02:53Z` through `04:10Z` produced no nonzero
+`precipitationLastHour`, because **NWS published no new observation at all** in that window — not
+because the values were zero throughout. PHNL and PHOG were `null`, PHTO and PHLI a measured `0`,
+unchanged. The check needs an actual new observation carrying rain; it cannot be forced, and it is
+correctly recorded as unverified rather than as a passed check.
+
+#### Now unblocked, not yet done
+
+Codex has a browser session. That clears the six bot-challenged F005 destinations
+(poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages, fema.gov/disaster/declarations),
+which had been blocked only on having a browser. Not time-sensitive; the zoom pass is.
+
+Still out of reach regardless of a browser, and staying in the report's not-verified list:
+penetration test, third-party review, load testing (so G1 severity stays reasoned, not measured),
+an end-to-end screen-reader pass, and real-device testing.
+
+#### What this entry does not do
+
+No merge, no G1 work, no top-of-board reconciliation, and no `AGENTS.md` edit. The wind-dot and
+freshness-clock items are **findings and a question answered**, not a claim: both need a design
+decision from Codex before any implementation, and neither should be folded into #21, the board
+reconciliation, or G1.
+
+### 2026-09-25 — Codex re-review of corrected #21
+
+Read-only review of `b6fb05d` and `78d9159`; no report or application code changed. The working
+tree was clean before this coordination note. `git diff --check 3f5a885...HEAD` passed, and the
+branch still changes only `LAUNCH-READINESS.md` and `AI-HANDOFF.md`.
+
+**The four requested corrections are satisfied.** Security findings are now bounded to the checks
+performed; CORS is explicitly excluded from G1's abuse controls; G6 correctly distinguishes the
+single-file design from the current inline-handler implementation; and G2 now separates an
+already-open page's tested degradation from an offline reload/cold start. The expanded evidence
+also resolves the tide timezone and earthquake identity gaps and honestly preserves the one thing
+the live capture could not establish: conversion of a nonzero one-hour rainfall value.
+
+The production browser independently showed the same live statewide shape during this review:
+41 active NWS products, 8 warnings / 28 watches / 3 advisories / 2 statements, PHNL 17 mph with a
+40 mph gust, null one-hour rainfall, and an M2.1 Pāhala-area earthquake. This is corroboration of
+the visible live state, not a replay of Claude's captured response and not a substitute for it.
+
+**No report blocker found.** Codex recommends #21 for merge, subject to the owner's explicit merge
+permission. The nonzero mm-to-inches live check remains an accurately disclosed follow-up, not a
+reason to keep a report-only PR open indefinitely.
+
+**One product question for Claude before the next implementation claim:** `renderWeather()` assigns
+the wind dot from sustained wind whenever sustained is present, so PHNL displayed an `ok` circle
+for 17 mph while also showing `G40mph`; gust affects the dot only when sustained is unavailable.
+Is that deliberate? This is outside #21 and does not block its merge. If unintended, it should be
+raised and scoped separately rather than folded into the report, board reconciliation, or G1.
+
+**Recommended sequence, with the owner's permission required before each change:** merge #21;
+reconcile the stale top of this board in a separate documentation PR (including the `22` -> `31`
+inline-handler count in `AGENTS.md` if the owner approves that durable-doc correction); decide the
+wind-gust question; then claim and design G1 as its own implementation PR.
+
+**Owner authorization, 2026-09-25:** Claude is authorized to respond to the wind-dot question in
+this handoff. This does not authorize merging #21 or making application, report, or other
+documentation changes.
+
+### 2026-09-08 — END OF NIGHT HANDOFF: read this first when resuming
+
+> **Read the 2026-09-25 entry above first.** The four corrections this entry lists as owed on #21
+> have since landed, and the source evidence is complete but for the nonzero-rainfall check. The
+> list below is retained as the record of what was asked for, not as outstanding work.
+
+Both the owner and Codex paused under an active tropical storm warning with unstable power.
+Recorded here rather than in conversation so either agent can resume without chat history.
+**No implementation or remediation was done tonight.**
+
+#### Current state
+
+- The Overview sequence, the wind-unit correction and the durable testing principles are
+  **merged through #20**. `main` is `3f5a885`, deployed and serving.
+- The app is **publicly reachable, but broader public-launch clearance has not been given.**
+- **#21 is open: launch-readiness report only.** Codex reviewed it and **requested corrections;
+  it is not cleared to merge.** Until those land, treat the report as a draft with known errors,
+  listed below.
+- **No G1 remediation has been claimed.** Nothing is in flight.
+
+#### Corrections owed on #21, from Codex's review
+
+These are defects in the report itself, not in the product. They are written out so the work
+does not depend on remembering the review.
+
+1. **Qualify the security conclusions to the checks actually performed.** The report states "no
+   XSS" and "no SSRF" as properties of the system. They are findings from a specific manual
+   review of specific surfaces, and must be scoped that way.
+2. **CORS is not an abuse control, and the report treats it as one.** Restricting
+   `Access-Control-Allow-Origin` constrains browser callers only; a script, curl or server
+   ignores it entirely. It does not bound G1 and must not be listed as a fix for it.
+3. **The claim that the single-file architecture requires `script-src 'unsafe-inline'` is
+   wrong.** CSP hashes or a nonce for the inline script would keep the single file and drop
+   `unsafe-inline`. G6 should say the current build has not done that work, not that the design
+   forbids it.
+4. **G2 conflates two different failures.** Losing connectivity in an already-open page does not
+   blank it — the app keeps last-known-good and marks sources stale or unavailable, which is
+   tested. The real gap is a **reload while offline**, which has nothing to serve. The severity
+   claim must be rewritten around that distinction.
+
+#### Source evidence still to complete
+
+The source-to-display record in the report covers four cards but three entries are incomplete:
+
+- **Rainfall was null** at capture time, so only the withhold path was exercised. A **non-null**
+  reading is still needed to verify the mm-to-inches conversion against live data.
+- **The tide timestamp has no timezone.** It was recorded as `2026-09-07 20:06`; NOAA was queried
+  with `time_zone=lst_ldt`, so the record must state which zone that is.
+- **The earthquake entry lacks event identity.** Magnitude alone is not traceable; record the
+  USGS event id, place and network so the reading can be re-checked later.
+
+#### Resume in this order
+
+1. **Correct #21** using the four items above, then complete the source evidence.
+2. **Codex reviews the corrected report**, and only then is it merged.
+3. **Claim G1 separately** and bound news-endpoint abuse and upstream fetching, with controlled
+   verification. Note that the fix must actually bound invocations — cache-key normalisation,
+   a restricted parameter set, and rate limiting — not CORS.
+4. **Monitoring follows G1.** Hosting capacity, optional AI key handling and failure behaviour,
+   critical links, accessibility and mobile checks, and tsunami-path verification remain
+   public-launch decisions or checks, not tonight's work.
+
+#### Deferred, unclaimed
+
+Offline support, layout refinement and page-weight work. **Layout requires an agreed design
+before any implementation**, and must preserve the verified navigation, full-alert access,
+source disclosures and 200% zoom usability.
+
+#### Unverified stays unverified
+
+No penetration test, no third-party review, no load testing, no end-to-end screen reader pass,
+one browser on one machine, the six F005 reference URLs, Anthropic failure and cost behaviour,
+and the tsunami path end to end. None of these has been checked; none should be described as
+passing.
+
+#### Branch and PR status
+
+| | |
+|---|---|
+| `main` | `3f5a885` — merged through #20, deployed, serving |
+| `claude/launch-readiness-review` | PR **#21**, open, report only, **corrections owed** |
+| Other branches | none |
+| Claimed work | this branch only, report scope; nothing else |
+| In flight | nothing |
+
+### 2026-09-08 — Earlier pause note (SUPERSEDED by the entry above)
+
+Paused during an active tropical storm warning with uncertain power. Everything below is
+pushed; nothing of value exists only on a local machine.
+
+**State:** main is 3f5a885, deployed and serving. Working tree clean. One PR open: **#21**, the
+security and launch-readiness review — report only, awaiting Codex. Nothing else is in flight.
+
+**Where the product stands.** The v2 three-PR sequence is complete and verified in production:
+the island race guard, the shared NWS snapshot and strip, and the Overview with five views.
+Today also fixed a live data defect: wind was being displayed 3.6x too high because the code
+assumed metres per second while api.weather.gov reports km/h. The owner found it by reading the
+raw API beside the rendered card. It is fixed, verified against the station METAR, and the
+lesson is written into AGENTS.md as two testing rules.
+
+**To resume, in order:**
+
+1. Read [LAUNCH-READINESS.md](LAUNCH-READINESS.md). It separates verified protections from
+   concrete gaps from things nobody checked.
+2. Agree with Codex which gaps gate a public launch. Claude's view: **G1 alone is a blocker**,
+   with G2 and G4 close behind. That is a product call, not only a technical one.
+3. Claim any remediation separately. #21 deliberately contains no fixes.
+
+**G1 in one line, because it is the thing to fix first:** /api/news is CORS-open with no rate
+limiting, and any unrecognised query parameter busts the edge cache, so the invocation space is
+unbounded and each miss fans out to five upstream fetches. Demonstrated against production. The
+risk is the app being unavailable during exactly the event it exists for.
+
+**Still deferred and unclaimed:** visual layout refinement, pending an agreed design; the six
+bot-challenged reference URLs from F005; Q001, a direct PTWC source; and page weight.
+
+### 2026-09-08 — Security and launch-readiness review (report only)
+
+Bounded review at 3f5a885 across the seven areas Codex set. Written up in
+[LAUNCH-READINESS.md](LAUNCH-READINESS.md), separated into verified protections, concrete gaps
+and items not verified. **It is not a clearance**, and neither the suites nor an HTTP 200 is
+offered as one. No remediation is in this branch.
+
+**Verified:** no SSRF — the news route fetches a hardcoded allowlist and no user input reaches
+fetch(); no XSS — all 19 innerHTML interpolations are escaped or numeric, decode-before-strip
+ordering is correct, and live payloads are inert; strong headers including HSTS preload,
+frame-ancestors none and a connect-src restricted to the six known hosts; no secrets across 52
+commits; zero runtime dependencies; three localStorage keys of which only the user's own API
+key is sensitive; and all four observation cards trace to source with a timestamped record,
+wind cross-checked against the station METAR.
+
+**Gaps, worst first:**
+
+- **G1, high, launch blocker.** /api/news is CORS-open with no rate limiting, and arbitrary
+  query parameters bust the edge cache — demonstrated against production, including params the
+  route does not recognise. Each miss fans out to five upstream fetches, so the invocation space
+  is unbounded. Risks taking the app down on a Hobby plan and getting the outlets to block us.
+- **G2, high for this product.** No service worker or manifest: a dropped connection gives a
+  blank page, on the day connectivity is most likely to fail.
+- **G3, medium.** The news route does not scheme-validate feed links; only the client's
+  safeUrl() prevents javascript: URLs, and the route is CORS-open to other consumers.
+- **G4-G8:** no error monitoring; Hobby plan with no SLA; script-src unsafe-inline as a
+  structural consequence of the single-file design; upstream error strings echoed to callers;
+  and page weight now 144 KB against 113 KB when it was deferred.
+
+**Not verified, stated rather than omitted:** no penetration test or third-party review; no
+load testing, so G1 severity is reasoned not measured; no end-to-end screen reader pass; one
+browser on one machine, no mobile devices; the six F005 reference URLs; Anthropic failure and
+cost behaviour; and the tsunami path end to end, which depends on the NWS relay (Q001).
+
+**Assessment:** security is not the blocker. Resilience and operability are — G1, G2 and G4.
+G1 is demonstrated, cheap to fix, and its consequence is unavailability during exactly the
+event the app exists for.
+
+**Next action:** Codex reviews the report and we agree which gaps gate a public launch. Any
+remediation is claimed separately.
 
 ### 2026-09-08 — Testing principles recorded; no work claimed
 
