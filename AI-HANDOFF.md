@@ -36,7 +36,7 @@ directly against production in this session.
 Claim published 2026-09-26 before editing, in its own commit ahead of the work, with the owner's
 permission. Documentation only.
 
-Scope ledger. Items 1–3 are the original claim; items 4–6 were added later with the owner's
+Scope ledger. Items 1–3 are the original claim; items 4–7 were added later with the owner's
 explicit permission and are named here rather than absorbed silently. An earlier version used an
 exact numeric summary that became stale as authorized follow-up work arrived; the numbered ledger
 below is authoritative:
@@ -66,6 +66,10 @@ below is authoritative:
    what changed, what was authorized versus what was done, and what remains open and to whom it
    belongs. Adds no other change. Its original claim that Codex was stale was corrected in
    `36240c2`; Codex was current through the rainfall correction when it committed `1bb147d`.
+7. **Record the owner's acceptance of the unverified strip-at-200%-zoom gap**, added with the
+   owner's explicit confirmation after Claude's final read-only review. Distinguish it from the
+   navigation zoom pass the owner did verify at `40fba96`, correct the report's implication that
+   all 200% zoom behavior was verified, and mark Q010 accepted so it is not re-raised.
 
 **Out of scope, explicitly:** no G1 remediation; no observation-truthfulness or dot-threshold
 implementation, which Q007 and Q008 place behind an approved design contract; no layout work; no
