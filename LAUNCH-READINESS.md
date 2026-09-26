@@ -374,9 +374,14 @@ is a reason no finding in this report should be generalised into a property of t
 - **No penetration test and no third-party security review.** Nothing here is an external audit.
 - **Behaviour under load.** No concurrency or sustained-traffic testing. G1's practical severity
   is reasoned, not measured against a real limit.
-- **End-to-end screen reader pass.** Contrast is verified arithmetically and 200% zoom usability
-  was confirmed by the owner in a browser; announcement order and control labelling beyond the
-  Overview reading order have not been checked with an actual screen reader.
+- **End-to-end screen reader pass.** Contrast is verified arithmetically; announcement order and
+  control labelling beyond the Overview reading order have not been checked with an actual screen
+  reader.
+- **The NWS strip at 200% zoom.** The owner confirmed navigation and control usability at 200% on
+  `40fba96`, before the strip became visible. The strip's wrapping and reflow at 200% therefore
+  remain unverified after three attempts in which the browser zoom did not change. The owner
+  accepted this unverified gap on 2026-09-25; do not describe it as verified or re-raise it unless
+  the implementation changes or the owner reopens the decision.
 - **Real-device testing.** One browser on one machine. No iOS or Android verification.
 - **The six bot-challenged reference destinations** from F005 remain unchecked.
 - **Anthropic API failure modes.** Rate limiting, quota exhaustion and cost behaviour for a user

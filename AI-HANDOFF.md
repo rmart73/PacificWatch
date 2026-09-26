@@ -104,8 +104,8 @@ implementation stays a separate claimed, reviewable PR.
 
 **What is next, in order, none of it claimed except this PR:** the `AGENTS.md` corrections in this
 PR (Q009); then the observation-truthfulness contract Codex set out in Q007 and Q008, which is a
-design deliverable before any code; then G1, still the launch blocker. The 200% zoom check (Q010)
-is independent of all three and is the only perishable item.
+design deliverable before any code; then G1, still the launch blocker. Q010 is settled as an
+owner-accepted unverified gap and is not an outstanding or perishable item.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -151,8 +151,8 @@ queued item above is either documentation or a design step.
 - **PDC correction:** DisasterAWARE Pro requires access; public Disaster Alert has a browser
   app. The final tile links to that public app, not the corporate homepage or static tsunami
   maps. HI-EMA links to tsunami evacuation zones. These are the final #12 choices.
-- **200% browser zoom on the strip: still unverified after three attempts, and the item has
-  changed character.** PR 3 has landed: the strip is visible to every visitor (`index.html`
+- **200% browser zoom on the strip: unverified after three attempts and owner-accepted.** PR 3 has
+  landed: the strip is visible to every visitor (`index.html`
   carries no `hidden` attribute) and the `?strip=1` staging flag was removed with the staging, so
   the old instruction to test via that flag no longer applies — no flag is needed to reach it.
   This is therefore no longer a pre-launch check on a staged surface but an unverified
@@ -160,10 +160,13 @@ queued item above is either documentation or a design step.
   control had no effect; a third during Hurricane Nolo tried both `Ctrl`+`+` forms against the
   live 41-product state and reported `devicePixelRatio`, `innerWidth` and `visualViewport.scale`
   unchanged, so that pass was default zoom rather than 200%. **A narrow viewport is not a
-  substitute and must not be recorded as one.** Needs a human zoom pass, or a browser backend
-  that exposes real zoom. Merged under the O14 exception, not waived.
-- **Reduced-motion static ring and Vercel billing/page weight:** owner-accepted decisions,
-  not pending blockers or questions. Preserve AGENTS guidance; do not re-raise.
+  substitute and must not be recorded as one.** This is distinct from the navigation and control
+  zoom pass the owner completed at `40fba96`, when the strip was still hidden. The owner accepted
+  the strip-specific unverified gap on 2026-09-25. Do not describe it as verified or re-raise it
+  unless the implementation changes or the owner reopens the decision.
+- **Reduced-motion static ring, strip-at-200%-zoom gap, and Vercel billing/page weight:**
+  owner-accepted decisions, not pending blockers or questions. Preserve AGENTS guidance; do not
+  re-raise.
 - **Q001, direct PTWC source:** low-priority redundancy/latency improvement; NWS already
   carries PTWC products. No active claim; not a prerequisite for Overview.
 - **Q002–Q005:** resolved. Source-specific freshness thresholds, centralized health with
@@ -184,8 +187,9 @@ binding answers, not these questions.** Read the questions for what was asked an
 answers for what was decided. Where an answer sets a precondition, that precondition governs:
 Q007 and Q008 put the observation-truthfulness work behind an approved design contract that does
 not exist yet, so **nothing in Q007 or Q008 may be implemented until that contract is agreed.**
-Q009 is being carried out in this PR. Q010 remains genuinely open — three attempts, still
-unverified. Q011 is done: #21 merged as `648db0f`.
+Q009 is being carried out in this PR. Q010 is settled as an owner-accepted unverified gap after
+three failed attempts; it is not open and must not be re-raised. Q011 is done: #21 merged as
+`648db0f`.
 
 - **Q007 — What does a status dot mean: verification state, or hazard tier?** AGENTS defines
   `ok`/`unknown` as verification ("we checked and it is fine" / "we do not know"), but `warn`
@@ -209,7 +213,9 @@ unverified. Q011 is done: #21 merged as `648db0f`.
   character: it is no longer a pre-launch check on a flag-gated surface but an unverified
   accessibility property of a surface every visitor already sees, and no flag is needed to reach
   it. 41 active products currently give the strip a real multi-tier wrapping state that a quiet
-  feed cannot reproduce. *This is the only perishable item on the board.*
+  feed cannot reproduce. *At the time this question was asked, it was the only perishable item on
+  the board. The owner subsequently accepted the unverified strip-specific gap; see the answer and
+  current-state sections.*
 - **Q011 — Does #21 merge now, or wait on any of the above?** Codex has recorded no report
   blocker and recommended merge subject to the owner's explicit permission; the owner is holding.
   *Claude's view:* nothing in Q007-Q010 belongs in #21, so none of them is a reason to hold it.
@@ -241,7 +247,9 @@ unverified. Q011 is done: #21 merged as `648db0f`.
   the actual browser metrics: `devicePixelRatio=1`, `innerWidth=803`, `visualViewport.scale=1`
   before and after. The screenshot therefore remains a default-zoom pass, not 200%. A human/manual
   browser zoom or a browser backend that exposes real zoom is still required. Do not substitute a
-  narrow viewport for this check or call it equivalent.
+  narrow viewport for this check or call it equivalent. *(The owner subsequently accepted this
+  strip-specific unverified gap on 2026-09-25. It is no longer open and must not be re-raised unless
+  the implementation changes or the owner reopens the decision.)*
 - **Q011 — #21 should merge now, but only with explicit owner permission.** Q007–Q010 are outside
   the report's scope, and the remaining nonzero-rainfall check is accurately disclosed rather than
   concealed. None is a report blocker. As of this answer the owner has authorized handoff responses,
@@ -336,9 +344,10 @@ Any of the three can be changed cheaply if you would rather it read differently.
 
 #### What is open, and whose it is
 
-- **Q010, the 200% zoom pass — yours, and the only perishable item.** Three attempts have failed.
-  Not closeable by Claude: no browser here, and the preview is behind SSO. It decays as Nolo moves
-  off, because a quiet feed cannot reproduce a multi-tier wrapping strip.
+Q010 is no longer open. The owner accepted the unverified strip-at-200%-zoom gap on 2026-09-25;
+the verified navigation zoom pass at `40fba96` did not include the then-hidden strip. Do not
+re-raise the strip check unless implementation changes or the owner reopens the decision.
+
 - **The Q007/Q008 observation-truthfulness contract — yours.** It gates all dot-threshold, freshness
   clock and tide `t` work, and does not exist yet. Nothing should be implemented until it does.
 - **G1 — unclaimed, still the launch blocker.** Bounding work specified in
@@ -575,7 +584,7 @@ Recommend correcting it early in the documentation PR rather than late. Codex ha
 the `22` -> `31` inline-handler count in the same file; both are durable-doc corrections needing the
 owner's approval.
 
-#### The 200% zoom gate has changed character and is still open
+#### The 200% zoom gate changed character; the remaining strip gap is now owner-accepted
 
 The item under "Outstanding Verification and Decisions" reads: "a human zoom pass on `?strip=1`
 still settles it, and PR 3 makes the strip visible to everyone, so it should be checked before that
@@ -583,10 +592,16 @@ lands." **PR 3 has landed.** So this is no longer a pre-launch check on a flag-g
 an unverified accessibility property of a surface every visitor already sees, and `?strip=1` is no
 longer the way to reach it (no flag is needed; the strip is simply there).
 
-Codex's re-review reports browser corroboration of the live state but **no 200% zoom pass**, so the
-gate remains open. It is the only perishable item while Nolo is active: 41 active products give the
-strip a real multi-tier `WARNING` state with text long enough to wrap, which a quiet feed cannot
-reproduce. Two earlier Codex attempts failed because the browser zoom control did not take.
+Codex's re-review reported browser corroboration of the live state but **no 200% zoom pass**, so the
+gate remained open at that time. It was the only perishable item while Nolo was active: 41 active
+products gave the strip a real multi-tier `WARNING` state with text long enough to wrap, which a
+quiet feed could not reproduce. Two earlier Codex attempts failed because the browser zoom control
+did not take.
+
+**Decision update, 2026-09-25:** the owner accepted the unverified strip-specific gap after three
+failed attempts. The navigation and control pass at `40fba96` remains valid, but the strip was
+hidden then and was not covered by it. This item is no longer open or perishable and must not be
+re-raised unless implementation changes or the owner reopens the decision.
 
 #### Nonzero rainfall: still not closeable, and the reason is upstream
 
@@ -610,7 +625,8 @@ which cannot be forced, and it stays recorded as unverified rather than as a pas
 
 Codex has a browser session. That clears the six bot-challenged F005 destinations
 (poweroutage.us, khon2.com, www.pdc.org, two USGS webcam pages, fema.gov/disaster/declarations),
-which had been blocked only on having a browser. Not time-sensitive; the zoom pass is.
+which had been blocked only on having a browser. This sentence originally called the zoom pass
+time-sensitive; the owner has since accepted the unverified strip-specific gap as recorded above.
 
 Still out of reach regardless of a browser, and staying in the report's not-verified list:
 penetration test, third-party review, load testing (so G1 severity stays reasoned, not measured),
