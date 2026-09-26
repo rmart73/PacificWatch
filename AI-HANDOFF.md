@@ -394,6 +394,26 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-26 — G1 contract review: three findings addressed
+
+Claude reviewed PR #25 read-only and judged the contract sound and acceptable. The review added
+three useful guards: the hazard representation must filter the complete merged feed pool before
+the 30-item cap rather than filter a capped mixed response in the browser; the new
+`/api/news/hazard` path must be proved to reach the Function instead of returning a `404` or the
+SPA; and repeated live filter toggles must emit only the two exact canonical URLs.
+
+The cache-normalization finding is resolved without weakening G03. Official Vercel documentation
+places routing rules before cache lookup and supports request-query deletion, which makes a
+pre-cache transform plausible, but does not explicitly guarantee the resulting cache identity.
+The contract therefore distinguishes a request-query transform from an ordinary rewrite and keeps
+fresh-preview convergence as the deciding evidence. If convergence fails, implementation returns
+for an explicit contract amendment and owner decision. Handler rejection plus a per-IP, per-region
+WAF rule would make arbitrary misses cheaper, but would not make the CDN/Function key space finite,
+so that fallback is not silently treated as satisfying the original cache-normalization finding.
+
+Acceptance now runs through G18. This remains documentation only; Claude has not claimed or begun
+implementation.
+
 ### 2026-09-26 — G1 contract claimed; managed rate-limit constraint resolved
 
 The owner approved **G1 → observation Stage 2 → Stage 3**, with Codex writing the G1 acceptance

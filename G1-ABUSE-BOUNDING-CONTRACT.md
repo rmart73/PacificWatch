@@ -41,13 +41,21 @@ The implementation PR must name the final two URLs and update `index.html` to us
 add another independent RSS implementation: both representations share the existing feed list,
 parser, user agent, timeout, deduplication and response construction.
 
+The hazard representation is not a client-side view of the capped all-headlines response. The
+server filters the complete merged feed pool for hazard matches **before** sorting and applying the
+30-item cap. Fetching 30 mixed headlines and then filtering them in the browser could discard
+qualifying hazard items that fell outside that mixed cap, so collapsing the two representations in
+that way is prohibited.
+
 ### 2. Surplus input is normalized before cache lookup or rejected before fan-out
 
-The preferred design uses Vercel routing/query transforms or an equivalent pre-Function mechanism
-to remove irrelevant query data before the CDN chooses a key. Official Vercel configuration supports
-request-query transforms, and Vercel documents CDN keys as including the URL path and query
-parameters. This contract does not assume that a proposed transform works merely because it builds:
-preview evidence below must demonstrate convergence to the canonical cache entry.
+The preferred design uses a Vercel **request-query transform** or an equivalent pre-Function
+mechanism to remove irrelevant query data before the CDN chooses a key. A rewrite by itself is not
+accepted as proof of normalization. Vercel documents that routing rules run before cache lookup,
+its configuration supports request-query deletion, and CDN keys include the URL path and query
+parameters. The documentation does not explicitly promise that a transformed request produces the
+intended canonical cache identity, however, so this contract does not assume it works merely because
+it builds: preview evidence below must demonstrate convergence to the canonical cache entry.
 
 Defence in depth remains in the handler. If any unknown key, duplicate key, invalid value or
 non-canonical request reaches application code, it must be rejected or redirected **before**
@@ -57,7 +65,10 @@ and a bounded JSON error; they do not echo raw input.
 If preview evidence shows that the chosen routing method does not normalize the cache identity,
 implementation stops and returns for a contract amendment. A `400` produced only after an
 arbitrary cache miss is useful upstream protection, but it does not satisfy canonical cache
-behaviour by itself.
+behaviour by itself. Nor may the failure be relabelled automatically as "unbounded but cheap":
+handler rejection would bound upstream fan-out and WAF would bound one IP in one region, but the
+CDN/Function key space would remain unbounded. Accepting that fallback requires an explicit contract
+amendment and owner decision.
 
 ### 3. Managed WAF rate limiting supplies shared state
 
@@ -131,7 +142,8 @@ computed through production helpers.
 - Each canonical representation makes at most five upstream attempts on a miss.
 - The all-headlines representation returns at most 30 items.
 - The hazard representation returns at most 30 items and every returned fixture matches the
-  independently defined hazard expectation.
+  independently defined hazard expectation. A fixture with more than 30 mixed items proves that
+  hazard filtering occurs over the complete merged pool before the 30-item cap.
 - Unknown keys, duplicate keys, invalid values and legacy `limit` variants perform **zero**
   upstream attempts when they reach the handler.
 - `OPTIONS` and every unsupported method perform zero upstream attempts.
@@ -146,6 +158,10 @@ computed through production helpers.
 
 On a fresh preview deployment, capture status, `x-vercel-cache`, response body `updated`, canonical
 URL and request URL for both representations.
+
+First prove that `/api/news/hazard` reaches the shared News Function and returns the hazard
+representation. A build-success signal is insufficient: the path must not return a filesystem
+`404`, the SPA document or the all-headlines representation.
 
 For each representation:
 
@@ -203,7 +219,7 @@ After merge and final WAF publication:
 | ID | Required result | Evidence |
 |---|---|---|
 | G01 | The public News API has exactly two canonical representations: all and hazard, each fixed at 30 items | Source inspection + handler tests |
-| G02 | The browser calls only the two canonical representations and sends no caller-selected limit | `index.html` source assertion + DOM fetch capture |
+| G02 | Repeated live filter toggles call only the exact `/api/news` and `/api/news/hazard` URLs, with no caller-selected limit, query string or third request shape | `index.html` source assertion + DOM fetch capture |
 | G03 | Random unknown query strings converge to the appropriate canonical CDN identity rather than creating independent expensive misses | Fresh-preview header/body record + Function logs if needed |
 | G04 | Unknown, duplicate, invalid and legacy parameter shapes that reach the handler perform zero upstream attempts | Fetch-counter tests |
 | G05 | A canonical miss performs no more than five upstream attempts | Fetch-counter tests |
@@ -218,6 +234,8 @@ After merge and final WAF publication:
 | G14 | CORS is not changed or cited as an abuse control | Diff + PR description |
 | G15 | Preview and production evidence distinguish deploy, cache, Function execution and WAF enforcement rather than treating HTTP 200 as proof of all four | Evidence review |
 | G16 | The implementation claim names every changed route, function, test and external WAF action before work begins | `AI-HANDOFF.md` claim review |
+| G17 | `/api/news/hazard` resolves on preview to the shared News Function's hazard representation, not a `404`, SPA document or all-headlines response | Preview response/body record + routing inspection |
+| G18 | Hazard selection filters the complete merged feed pool before the 30-item cap; the browser does not derive it by filtering the capped all-headlines response | More-than-30 mixed fixture + source inspection |
 
 ## Implementation boundary and ownership
 
