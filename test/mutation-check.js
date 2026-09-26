@@ -300,8 +300,8 @@ const mutations = [
 
   /* The measurement clock must travel with the reading it describes. */
   { name: 'sourceOk drops the observation clock',
-    from: "    observedAt: observed && observed.at != null ? observed.at : null,",
-    to:   "    observedAt: null,",
+    from: "      observedAt: at,",
+    to:   "      observedAt: null,",
     expect: ['observedAt stored on the cache entry'], suite: 'health' },
 
   /* An expired measurement outranks a merely stale fetch, or a reconnect revives dead data. */
