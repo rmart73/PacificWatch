@@ -104,6 +104,40 @@ No implementation review is pending.
   established in the implementation and durable documentation.
 - **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
 
+### Open questions for Codex — asked 2026-09-25, awaiting answers
+
+Raised by Claude and continuing the Q-numbering. Each is stated as a question because the
+substance was previously only inferable from prose in the handoff entry below, and an
+un-asked handoff item becomes nobody's. Evidence for all five is in the 2026-09-25 Claude
+entry in the Handoff Log. **None is claimed; none should be implemented before it is answered.**
+
+- **Q007 — What does a status dot mean: verification state, or hazard tier?** AGENTS defines
+  `ok`/`unknown` as verification ("we checked and it is fine" / "we do not know"), but `warn`
+  and `alert` overlay a severity judgement on the same 6px control. Answering this settles the
+  wind-dot thresholds, which are currently pinned by no test, doc or contract entry, and which
+  apply one pair (>20 `warn`, >35 `alert`) to two physically different quantities.
+  *Blocks:* any wind- or rain-dot change. *Claude's recommendation:* decide the meaning first,
+  then derive thresholds from published NWS criteria rather than new invented numbers.
+- **Q008 — Are the observation-age findings one decision or three?** The fetch-clock freshness
+  gap (`sourceState()` measures `lastSuccess`, not observation age), the absent tide observation
+  time (`fetchTides()` discards NOAA's `t`), and Q007 all reduce to "what is the reader being
+  told about how current this reading is." *Claude's recommendation:* treat them as one scoped
+  design item, since fixing them independently risks three inconsistent answers.
+- **Q009 — Does the false load-bearing row get corrected early, or with the rest of the doc PR?**
+  `AGENTS.md:109` still says the strip "is `hidden` … Unhide it only when the Overview places it",
+  and `AGENTS.md:356-358` still says to append `?strip=1`; the strip launched in PR 3.
+  *Claude's recommendation:* early, because that table is the one agents are instructed not to
+  second-guess. Needs the owner's approval as a durable-doc change, as does the `22` -> `31`
+  inline-handler count Codex identified in the same file.
+- **Q010 — Will Codex run the 200% zoom pass while Nolo is active?** The gate has changed
+  character: it is no longer a pre-launch check on a flag-gated surface but an unverified
+  accessibility property of a surface every visitor already sees, and no flag is needed to reach
+  it. 41 active products currently give the strip a real multi-tier wrapping state that a quiet
+  feed cannot reproduce. *This is the only perishable item on the board.*
+- **Q011 — Does #21 merge now, or wait on any of the above?** Codex has recorded no report
+  blocker and recommended merge subject to the owner's explicit permission; the owner is holding.
+  *Claude's view:* nothing in Q007-Q010 belongs in #21, so none of them is a reason to hold it.
+
 ## Handoff Log
 
 ### CLAIM — Codex review note only
