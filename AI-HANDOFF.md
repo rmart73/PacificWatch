@@ -30,16 +30,16 @@ directly against production in this session.
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; Codex review returned four findings, all corrected | In review; do not merge |
+| Q007/Q008 stage 1 — observation clock | [PR #24](https://github.com/rmart73/PacificWatch/pull/24) open; four Codex findings corrected; mutation anchor re-anchored in `80c9897` | Paused pending the confirming 55-of-55 mutation rerun and Codex re-review; do not merge |
 
 ### Active claims
 
-**End-of-night pause checkpoint — ChatGPT Codex,
+**Closed: end-of-night pause checkpoint — ChatGPT Codex,
 `claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
-record the exact local PR #24 pause state, the pending mutation rerun, and tomorrow's resume order.
-No implementation, test, contract, or PR-status change is in scope. This uses Claude's branch only
-because the unpushed mutation-anchor correction that must be recorded is present there; Claude is
-paused and this claim does not take ownership of Stage 1.
+record the exact PR #24 pause state, the pending mutation rerun, and tomorrow's resume order.
+No implementation, test, contract, or PR-status change was in scope. This used Claude's branch only
+because the mutation-anchor correction being recorded was present there; Claude was paused and this
+did not transfer ownership of Stage 1. Claim commit `d982878`; checkpoint commit follows it.
 
 **Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
 `claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
@@ -320,20 +320,21 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ### 2026-09-26 — END OF NIGHT PAUSE: read this first when resuming
 
-Work stopped mid-verification on PR #24. Nothing is lost — everything is committed and pushed —
-but **one check was still running when we stopped and must be re-run before anything else.**
+Work stopped mid-verification on PR #24. The implementation and its correction are committed, but
+**one check was still running when work stopped and must be re-run before anything else.** The
+end-of-night documentation commits do not clear that check or change the review verdict.
 
 #### Exact state
 
 | | |
 |---|---|
 | `main` | `a3f9897`, merged through #23 |
-| Branch | `claude/stage1-observation-metadata`, 5 commits, pushed, working tree clean |
+| Branch | `claude/stage1-observation-metadata`; Stage 1 implementation tip `80c9897`, followed only by the owner-authorized pause documentation |
 | PR | **#24 open. Q007/Q008 stage 1. NOT merged, and not cleared to merge.** |
 | Claimed | This branch only, stage 1 scope. Nothing else in flight |
 
 ```
-80c9897  re-anchor the sourceOk mutation case   <- the unverified one
+80c9897  re-anchor the sourceOk mutation case   <- confirming run still pending
 89111c7  the four review corrections
 1471bad  first mutation result (50 of 50, before the corrections)
 4f36e7a  stage 1 implementation
@@ -347,9 +348,10 @@ with one `ANCHOR LOST` — the T11 restructure moved `observedAt` into a local `
 the anchor of an earlier case. `80c9897` re-anchors it, but **that run had not finished when work
 stopped, so 55 of 55 is expected and unconfirmed. Do not report it as passing until it has run.**
 
-Everything else is verified: `npm test` **191** (119 + 35 + 37), `npm run test:dom` **267**, the pure
-suites green in an empty directory with nothing installed, and rendering re-checked byte-identical to
-`main` on both islands *after* the corrections, because `sourceOk()` sits on a render path.
+Claude reports everything else verified: `npm test` **191** (119 + 35 + 37), `npm run test:dom`
+**267**, the pure suites green in an empty directory with nothing installed, and rendering
+re-checked byte-identical to `main` on both islands *after* the corrections, because `sourceOk()`
+sits on a render path. Codex has not independently rerun those suites in its current shell.
 
 #### Where the review stands
 
