@@ -110,7 +110,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/board-and-agents-reconciliation | Board reconciliation, Codex's Q007–Q011 answers, and the `AGENTS.md` corrections; documentation only |
+| Claude + Codex | claude/board-and-agents-reconciliation | Board reconciliation, Codex's Q007–Q011 answers, the `AGENTS.md` corrections, and the `LAUNCH-READINESS.md` rainfall-evidence correction; documentation only |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
