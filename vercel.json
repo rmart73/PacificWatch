@@ -2,18 +2,7 @@
   "routes": [
     {
       "src": "^/api/news/hazard$",
-      "dest": "/api/news?hazard=1",
-      "transforms": [
-        {
-          "type": "request.query",
-          "op": "delete",
-          "target": {
-            "key": {
-              "pre": ""
-            }
-          }
-        }
-      ]
+      "dest": "/api/news?hazard=1"
     },
     {
       "src": "^/api/news$",
