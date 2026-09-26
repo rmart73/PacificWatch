@@ -8,8 +8,9 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-07. PR state was checked through GitHub; production observations below
-are attributed to the user-relayed Claude report.
+Updated 2026-09-26. PR state was checked through GitHub. Production observations below are
+attributed to the user-relayed Claude report, except the #21 deploy check, which was verified
+directly against production in this session.
 
 | Work | State | Owner / next action |
 |---|---|---|
@@ -23,6 +24,11 @@ are attributed to the user-relayed Claude report.
 | Shared snapshot / NWS strip | #16 merged in d9188e6; production verified | Closed |
 | Overview layout / navigation | #17 merged in fd5771a; production verified | Closed |
 | Q006 board compaction | #15 merged in b71fb74; archive verified byte-identical to the pre-compaction board | Closed |
+| #17 production record | #18 merged in 5249e53 | Closed |
+| Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
+| Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
+| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
+| Board and AGENTS reconciliation | This PR; claimed above | In review |
 
 ### Active claims
 
@@ -50,31 +56,31 @@ implementation, which Q007 and Q008 place behind an approved design contract; no
 new durable rules beyond correcting statements that no longer match the code. Nothing in
 `index.html`, `api/`, `test/`, `package.json` or `vercel.json`.
 
-**Security and launch-readiness review — Claude Code, claude/launch-readiness-review.** *(complete;
-merged as #21 in `648db0f`. Retained here until this PR reconciles the board.)*
-Claim published 2026-09-08 before editing, in its own commit ahead of the work.
+**Closed: security and launch-readiness review — Claude Code, `claude/launch-readiness-review`.**
+Merged as #21 in `648db0f` after Codex's re-review found no report blocker, with the owner's
+explicit merge permission. It was a report only and contained no remediation; its full record is in
+the Handoff Log below and in [LAUNCH-READINESS.md](LAUNCH-READINESS.md). **The findings it raised
+are not closed by its merge** — G1 in particular is an unclaimed launch blocker.
 
-Scope, as bounded by Codex: API routes; secrets and browser storage; untrusted-content
-handling; dependencies; deployment configuration; abuse and cost controls; and source-to-display
-accuracy across the four observation cards.
-
-Extended 2026-09-08 to cover the end-of-night handoff record on this same branch, at Codex's
-request and under the documentation claim rule.
-
-Output is a report only. **No remediation in this branch** — findings are written up and
-prioritised, and any fix is claimed separately so it can be reviewed as a change rather than
-bundled into an assessment. Layout stays deferred and unclaimed.
-
-Reporting rule agreed with Codex: verified protections, concrete gaps and unverified items are
-reported separately, and neither a green suite nor an HTTP 200 is offered as security clearance.
+The reporting rule agreed with Codex for that work is worth keeping for any future assessment:
+verified protections, concrete gaps and unverified items are reported separately, findings are
+scoped to the checks actually performed, and neither a green suite nor an HTTP 200 is offered as
+security clearance.
 
 ### Agreed next sequence
 
-Completed: race guard (#14), board compaction (#15), shared snapshot and strip (#16).
-Remaining: Overview layout/navigation, claimed above. This completes the three-PR sequence.
-Each implementation is a separate claimed, reviewable PR. The strip carries all nonzero
-tier counts and the highest-tier state, plus scope/freshness as defined by the contract.
-Codex retains design/acceptance ownership; Claude retains implementation ownership.
+**The three-PR sequence is complete and production verified:** race guard (#14), shared snapshot
+and strip (#16), Overview layout and navigation (#17). Board compaction (#15) landed alongside it.
+Nothing from that sequence remains outstanding — an earlier version of this section still listed
+Overview as "remaining" after #17 had merged.
+
+Codex retains design/acceptance ownership; Claude retains implementation ownership. Each
+implementation stays a separate claimed, reviewable PR.
+
+**What is next, in order, none of it claimed except this PR:** the `AGENTS.md` corrections in this
+PR (Q009); then the observation-truthfulness contract Codex set out in Q007 and Q008, which is a
+design deliverable before any code; then G1, still the launch blocker. The 200% zoom check (Q010)
+is independent of all three and is the only perishable item.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -87,7 +93,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/launch-readiness-review | Security and launch-readiness review; report only, no remediation |
+| Claude | claude/board-and-agents-reconciliation | Board reconciliation, Codex's Q007–Q011 answers, and the `AGENTS.md` corrections; documentation only |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -95,11 +101,15 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Visual layout refinement | Deferred by the owner; not yet claimed | Follow-up after the three-PR sequence |
+| Board and AGENTS reconciliation | This PR; open | Codex reviews |
+| Observation-truthfulness contract (Q007, Q008) | Not started; design owed before code | Codex drafts the contract |
+| G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately after this PR |
+| Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-#13, #14 and #15 are merged; main is at b71fb74. Their claims and handoffs are preserved
-in the archive, and the completed #14 test correction is recorded below.
-No implementation review is pending.
+**`main` is at `648db0f`**, merged through #21. An earlier version of this line said `b71fb74`,
+which was eight merges stale. Claims and handoffs for #13–#15 are preserved in the archive, and
+the completed #14 test correction is recorded below. No implementation review is pending — every
+queued item above is either documentation or a design step.
 
 ## Outstanding Verification and Decisions
 
@@ -116,10 +126,17 @@ No implementation review is pending.
 - **PDC correction:** DisasterAWARE Pro requires access; public Disaster Alert has a browser
   app. The final tile links to that public app, not the corporate homepage or static tsunami
   maps. HI-EMA links to tsunami evacuation zones. These are the final #12 choices.
-- **200% browser zoom on the staged strip:** unverified. Two Codex attempts found the
-  browser control had no effect on the zoom shortcut. Merged under the O14 exception, not
-  waived — a human zoom pass on `?strip=1` still settles it, and PR 3 makes the strip visible
-  to everyone, so it should be checked before that lands.
+- **200% browser zoom on the strip: still unverified after three attempts, and the item has
+  changed character.** PR 3 has landed: the strip is visible to every visitor (`index.html`
+  carries no `hidden` attribute) and the `?strip=1` staging flag was removed with the staging, so
+  the old instruction to test via that flag no longer applies — no flag is needed to reach it.
+  This is therefore no longer a pre-launch check on a staged surface but an unverified
+  accessibility property of a shipped one. Two earlier Codex attempts found the browser zoom
+  control had no effect; a third during Hurricane Nolo tried both `Ctrl`+`+` forms against the
+  live 41-product state and reported `devicePixelRatio`, `innerWidth` and `visualViewport.scale`
+  unchanged, so that pass was default zoom rather than 200%. **A narrow viewport is not a
+  substitute and must not be recorded as one.** Needs a human zoom pass, or a browser backend
+  that exposes real zoom. Merged under the O14 exception, not waived.
 - **Reduced-motion static ring and Vercel billing/page weight:** owner-accepted decisions,
   not pending blockers or questions. Preserve AGENTS guidance; do not re-raise.
 - **Q001, direct PTWC source:** low-priority redundancy/latency improvement; NWS already
@@ -127,7 +144,9 @@ No implementation review is pending.
 - **Q002–Q005:** resolved. Source-specific freshness thresholds, centralized health with
   separate scoped caches, dependency-free pure tests, and jsdom as a dev dependency are
   established in the implementation and durable documentation.
-- **Q006:** decision accepted by assignment; #15 reconciled and ready, not yet merged.
+- **Q006:** resolved. #15 merged in `b71fb74`, and the archive was verified byte-identical to the
+  pre-compaction board. An earlier version of this line still said "ready, not yet merged", which
+  contradicted the Current Work table above it.
 
 ### Open questions for Codex — asked 2026-09-25, awaiting answers
 
