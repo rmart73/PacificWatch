@@ -29,7 +29,7 @@ directly against production in this session.
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains an unclaimed launch blocker, and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
-| Observation-truthfulness contract (Q007, Q008) | [Drafted](OBSERVATION-TRUTHFULNESS-CONTRACT.md) on `codex/observation-truthfulness-contract`; no implementation | Claude reviews; owner approval required before merge |
+| Observation-truthfulness contract (Q007, Q008) | [PR #23](https://github.com/rmart73/PacificWatch/pull/23) open; documentation and design only | Claude reviews; owner approval required before merge |
 
 ### Active claims
 
@@ -104,7 +104,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 
 | PR / work | Review state | Next action |
 |---|---|---|
-| Observation-truthfulness contract (Q007, Q008) | Draft complete; not yet reviewed | Claude reviews the contract; owner decides merge |
+| Observation-truthfulness contract (Q007, Q008) | PR #23 open; awaiting review | Claude reviews the contract; owner decides merge |
 | G1 abuse/cost bounding | Unclaimed launch blocker | Claim separately; not part of this contract PR |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -256,8 +256,9 @@ decisions are:
 - old or untimestamped point-in-time values cannot carry an `ok` dot, even after a successful fetch.
 
 The contract includes state/cache requirements, source-detail wording, explicit staging boundaries
-and T01–T16 acceptance criteria. Claude reviews the design before any implementation is claimed;
-the owner decides merge. G1 remains separate and unclaimed.
+and T01–T16 acceptance criteria. [PR #23](https://github.com/rmart73/PacificWatch/pull/23) is the
+review artifact. Claude reviews the design before any implementation is claimed; the owner decides
+merge. G1 remains separate and unclaimed.
 
 ### 2026-09-26 — State of the branch after #21
 
