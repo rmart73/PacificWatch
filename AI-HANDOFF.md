@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **Blocked on G11/G12 only.** The owner runs [G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md); Codex then verifies the WAF evidence and presents the merge decision |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **G11 evidence accepted; G12 pending.** The temp rule matched production and was corrected — see the incident entry. Codex verifies the WAF evidence and presents the merge decision |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,89 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-27 — the temp WAF rule matched production; G12 data captured by accident
+
+**The 5-per-60 test rule throttled production `/api/news`.** It was caught within minutes, production
+is recovered and verified, and **no user was affected** — the owner confirms Pacific Watch has not
+been broadcast, so the only traffic was the owner's and mine. A configuration defect with no user
+impact, not an outage. Recorded at full length anyway, because the guard rail that failed is the one
+this procedure was built around.
+
+#### What broke
+
+Vercel AND-s conditions **inside** a condition card and OR-s the cards. The rule was built as:
+
+```
+(Path = /api/news)                                  <- no hostname row: matches EVERY hostname
+   OR
+(Path = /api/news/hazard AND Hostname = preview)    <- the guard applied only here
+```
+
+So the hostname guard covered the hazard path and left plain `/api/news` matching production. The
+correct shape repeats the hostname row inside **both** cards.
+
+#### Whose error this is
+
+**Mine, at the step that was supposed to catch exactly this.** The first version of
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) led with the warning that a
+path-only rule reaches production, and then said to add *a* hostname condition without saying it
+must be attached to each path clause. The owner built it, sent a screenshot, and **I read that
+screenshot and confirmed it was correct.** It was not. The owner then acted on my confirmation.
+
+Writing the warning and then failing to apply it while reviewing the very artifact it was about is
+the part worth keeping. The document was not wrong about the risk; it was useless about the
+mechanism, and the review that should have compensated repeated the same assumption.
+
+It also means production was throttled during the **first** test run, not only the second. The
+"production healthy, 6 of 6 `200`" check recorded earlier ran *after* the rule had been disabled,
+which is precisely why it looked clean.
+
+#### Measured, during and after
+
+```
+production /api/news, rule live      req 1-3  200  cache=HIT
+                                     req 4-9  429  cache=(empty)
+production /api/news, rule off       req 1-7  200        (after a full 60s window reset)
+production /                         200                 (the site itself was never affected)
+production /api/news/hazard          404                 (correct: #26 is unmerged)
+```
+
+The trip at request 4 rather than 6 is the owner's own browser requests already counted against the
+same 60-second window.
+
+#### The accident answered the open question
+
+The board asked, before any of this, whether the firewall counts **requests at the edge** or only
+Function invocations — `/api/news` is CDN-cached, so most burst traffic never reaches the handler.
+
+**It counts requests.** Requests 1-3 were served `cache=HIT` and still consumed the limit, and the
+`429`s carry no cache header at all, meaning they are refused at the edge before cache is consulted.
+That is the stronger of the two outcomes and the one G1 needs, since the demonstrated vector was
+cheap cache-missing traffic.
+
+**This is a real G12 observation gathered the wrong way.** It is a controlled response record at
+5-per-60 with per-request statuses, but against production rather than the preview hostname G12
+specifies. It is recorded as evidence of *behaviour* and explicitly not offered as the clean
+preview-only run. Codex decides whether it satisfies G12; the recommendation is to re-run it
+properly, which also tests the corrected rule shape.
+
+#### Corrections made to the procedure
+
+1. The grouping is now shown as a WRONG/RIGHT block, with the instruction to repeat the hostname row
+   **in every card** and to read each card back separately before saving.
+2. A **mandatory production check before generating any test traffic**: seven requests to production
+   `/api/news`, all of which must be `200`. Seven is above the temporary limit of five, so a
+   mis-scoped rule reveals itself there instead of on the preview.
+3. Recovery is now verified on **both** hostnames and only after a full 60-second wait, so an
+   open rate-limit window is not mistaken for a rule that is still live.
+4. The reset step now says why deleting beats disabling, using this incident as the reason.
+
+#### State
+
+Temp rule **off and verified off**. Final 100-per-60 rule is live and correct — both paths, no
+hostname condition, IP key, 429 — and production serves normally under it. **G11 evidence stands.**
+G12 is pending the owner's decision on a clean re-run.
 
 ### 2026-09-27 — code review clean; G11/G12 procedure handed to the owner
 

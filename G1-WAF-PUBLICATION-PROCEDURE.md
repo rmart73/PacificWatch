@@ -49,14 +49,31 @@ a normal logged-in browser avoids the question entirely.
 
 The point is to see a `429` with your own eyes at a limit low enough to trigger by hand.
 
-> ### ⚠ The one mistake that would reach production
+> ### ⚠ The one mistake that would reach production — and it already happened once
 >
 > A rate-limit rule with **only** path conditions applies to **every hostname on the project,
-> including production**. A 5-per-60 rule like that would throttle real users at five requests a
-> minute during a hurricane.
+> including production**. A 5-per-60 rule like that throttles real users at five requests a minute.
 >
-> **The hostname condition in step 3 is what keeps this off production. Do not skip it, and confirm
-> it is present before saving.**
+> **On 2026-09-27 this rule was built with the hostname condition present but bound to the wrong
+> clause, and production `/api/news` was rate limited at 5-per-60.** The first version of this
+> document said to add a hostname condition and did not say how to attach it to *both* paths. It
+> looked correct in a screenshot to the author of this document, who confirmed it. Read the shape
+> section below rather than trusting the presence of a hostname row.
+>
+> **Vercel AND-s the conditions inside one card and OR-s the cards.** So a hostname row sitting in
+> the second card applies only to the second card:
+>
+> ```
+> WRONG   (Path = /api/news)                              <- matches EVERY hostname
+>            OR
+>         (Path = /api/news/hazard AND Hostname = preview)
+>
+> RIGHT   (Path = /api/news        AND Hostname = preview)
+>            OR
+>         (Path = /api/news/hazard AND Hostname = preview)
+> ```
+>
+> **Every card needs its own hostname row.** One hostname row for the whole rule is the failure.
 
 1. **Firewall → Custom Rules → add a new rule.** Name it something obviously temporary:
    `TEMP G12 test — DELETE ME`.
@@ -66,16 +83,20 @@ The point is to see a `429` with your own eyes at a limit low enough to trigger 
    requiring both paths at once matches nothing, which would look exactly like a rate limit that
    never triggers.
 
-3. **Hostname condition — the guard rail.** Add a condition on the **hostname**, `equals`:
+3. **Hostname condition — the guard rail. Add it to _each_ card, not once.** In the card holding
+   `/api/news`, add a second condition on the **hostname**, `equals`:
 
    ```
    pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
    ```
 
-   This must be **AND**'d with the path group: *(hostname is the preview) AND (path is one of the
-   two)*. If the editor only offers one flat list of conditions, use whatever grouping or nesting it
-   provides to get that shape, and if it genuinely cannot express it, **stop and tell me** rather
-   than saving a rule that could match production.
+   Then add **the same hostname condition again** inside the card holding `/api/news/hazard`. Both
+   cards must read *path AND hostname*. A single hostname row shared by the rule does not exist in
+   this editor — the row you see belongs to whichever card contains it, and the other card is then
+   unguarded and matches production.
+
+   Before saving, read the rule back one card at a time and say out loud which hostnames each card
+   matches. A card without a hostname row matches all of them.
 
 4. **Action: rate limit.** Configure it to mean:
 
@@ -95,6 +116,21 @@ The point is to see a `429` with your own eyes at a limit low enough to trigger 
 
 6. **Screenshot the saved rule**, showing the conditions, the 5/60 values, the IP key, and the
    enforcing action. This is evidence item 1.
+
+7. **Prove production is untouched — do this before generating any test traffic.** This is the step
+   that catches a mis-scoped rule, and it takes fifteen seconds:
+
+   ```bash
+   for i in $(seq 1 7); do
+     curl -s -o /dev/null -w "req $i -> HTTP %{http_code}\n" \
+       "https://pacific-watch.vercel.app/api/news"
+   done
+   ```
+
+   **All seven must return `200`.** Seven is chosen deliberately: it is above the temporary limit of
+   five, so if the rule is matching production at all, requests 6 and 7 return `429` and you have
+   found the problem before touching the preview. If any request returns `429`, **disable the rule
+   immediately** — the hostname condition is not doing what it appears to.
 
 ---
 
@@ -160,11 +196,16 @@ you exercised, and the approximate wall-clock time. Wait 60+ seconds and confirm
 
 Do this immediately after capturing the evidence. A forgotten 5-per-60 rule is worse than no rule.
 
-1. **Delete the `TEMP G12 test — DELETE ME` rule.** Disabling it also works, but deleting removes
-   the chance of it being re-enabled by accident later.
+1. **Delete the `TEMP G12 test — DELETE ME` rule.** Disabling also works and satisfies this step.
+   Deleting is preferred, because a disabled rule named like a test is a 5-per-60 production
+   throttle that someone can switch on later without knowing what it does — which is close to what
+   happened on 2026-09-27, when it was re-enabled deliberately and matched production anyway.
 2. **Publish** the change, the same second step as before.
-3. **Confirm recovery:** reload the preview `/api/news` six or more times quickly. Every request
-   should return `200` now. Capture this — it is what proves the temporary rule is gone.
+3. **Confirm recovery on both hostnames.** Wait at least 60 seconds first, so a still-open rate-limit
+   window is not mistaken for a rule that is still live. Then seven quick requests to the preview
+   `/api/news` **and** seven to production `https://pacific-watch.vercel.app/api/news`. All fourteen
+   should return `200`. Capture this — it proves the temporary rule is gone rather than merely
+   between windows.
 
 ---
 
