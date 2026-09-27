@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **G11 evidence accepted; G12 pending.** The temp rule matched production and was corrected — see the incident entry. Codex verifies the WAF evidence and presents the merge decision |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **G12 open — rerun required.** The accidental production run does not satisfy G12. Owner works from [G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) revision 3; Codex then verifies and presents the merge decision |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,121 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-27 — G12 rerun required; procedure revision 3 and a platform constraint
+
+Codex ruled that the accidental production run **does not satisfy G12**: it misses the explicit
+preview-hostname condition and proves nothing about the corrected grouping. The behavioural finding
+is kept, G12 stays open, #26 stays unmerged. That is the right call — the evidence was real but it
+was not the test the contract asks for.
+
+#### A platform constraint that invalidated the original sequence
+
+**Hobby allows exactly one WAF rate-limit rule per project.** Verified directly against
+[Vercel's rate-limiting docs](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)
+rather than taken on report:
+
+> | Number of rules | **1 per project** | 40 per project | 1000 per project |
+
+with the note that the Hobby figure applies to rate-limit rules specifically, and that Hobby allows
+up to three total custom firewall rules.
+
+The final 100-per-60 rule occupies that single slot, so **revision 1's instruction to add a second,
+temporary rate-limit rule was impossible on this plan** — and it was already superseded by the
+grouping incident before anyone reached that wall.
+
+The rerun therefore **edits the one rule in place** and edits it back. Two consequences recorded
+rather than glossed: production has **no rate limit for the duration of the test**, which is
+unavoidable here and is why the window must be minutes; and the final rule's configuration must be
+captured **before** editing, because the thing being overwritten is both the restore target and the
+G11 evidence.
+
+#### The rule shape, settled
+
+Vercel's own rule builder produced the form that removes the ambiguity entirely:
+
+```
+If   Hostname      Equals     pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+And  Request Path  Is any of  /api/news, /api/news/hazard
+```
+
+`Is any of` carries both paths in **one** condition row, so there are no OR'd sibling cards and no
+grouping question to get wrong. The owner was right to push back on my reading of the card layout —
+I was inferring structure from a screenshot. What the measurement established was never the layout,
+only that `/api/news` matched production; this shape makes the layout irrelevant.
+
+#### G11 — final rule, transcribed for acceptance
+
+Codex asked for the actual final-rule record rather than a description. As displayed in the
+dashboard before any rerun edit:
+
+```
+Name          Final Rule
+Rule ID       rule_final_rule_XfLFC2
+Description   (empty)
+If            Request Path   Equals   /api/news
+   OR
+If            Request Path   Equals   /api/news/hazard
+   AND
+Rate Limit    Fixed Window | 60 seconds | 100 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+**This transcription is read from a screenshot and is the author's reading of it, not an API dump.**
+Given that a prior misreading of this same UI is what caused the incident, Codex should treat the
+Phase 0 capture in the rerun as the authoritative G11 record and this as provisional.
+
+For reference, the temporary rule as it stood during the incident:
+
+```
+Rule ID       rule_temp_test_rule_oYltUL
+If            Request Path   Equals   /api/news              <- no hostname row
+   OR
+If            Request Path   Equals   /api/news/hazard
+   And        Hostname       Equals   pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+   AND
+Rate Limit    Fixed Window | 60 seconds | 5 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+#### Procedure revision 3 — the four safeguards
+
+1. **Fail closed.** If the preview run produces no rule-generated `429`, the procedure now requires
+   restoring the rule, verifying recovery, stopping, and **reporting G12 failed**. It says in terms
+   not to write it up as a platform limitation or as "configured correctly but unobservable". A rate
+   limit that cannot be seen firing is the exact thing G12 exists to catch.
+2. **Clean window and region evidence.** A mandatory 65-second untouched wait before the burst, and
+   per-request capture of status, `x-vercel-cache` **and** `x-vercel-id`. An off-by-one in the
+   changeover may not be attributed to regions without IDs demonstrating it — which retroactively
+   disqualifies the "tripped at request 4" reading from the incident as anything but a partially
+   consumed window.
+3. **Both paths, plus rule attribution.** At least one `429` on each canonical path, and a captured
+   Firewall live-traffic event showing the rate-limited requests grouped under that custom rule.
+   A `429` in a response log does not prove which component produced it.
+4. **Bypass and platform usability.** A bypass-header run that does not trigger must be retried
+   through the authenticated browser before failure is declared. Both loops are now labelled Bash
+   and given Windows PowerShell / `curl.exe` equivalents.
+
+#### The no-compute claim now has a citation
+
+Vercel's [request pipeline](https://vercel.com/docs/how-vercel-cdn-works) runs the Firewall layer
+ahead of routing, caching and compute, and states plainly: **"Blocked requests never reach the
+routing or caching layers."** So a WAF-generated `429` costs no Function invocation and no upstream
+fan-out. That was previously an inference from my own measurements; it is now a documented platform
+property, and the incident observation — `cache=HIT` responses still consuming the limit, `429`s
+carrying no cache header — is consistent with it rather than the sole basis for it.
+
+#### Attribution
+
+The **"no user impact"** finding is the **owner's statement**: Pacific Watch has not been broadcast,
+so the only traffic during the incident was the owner's and mine. It is recorded as the owner's
+account, not as an independent verification. **The production throttling remains recorded as an
+incident regardless.**
+
+#### State
+
+G11 credible, pending the Phase 0 capture for final acceptance. **G12 open.** #26 unmerged. No
+dashboard change is to be made until the owner works from revision 3.
 
 ### 2026-09-27 — the temp WAF rule matched production; G12 data captured by accident
 

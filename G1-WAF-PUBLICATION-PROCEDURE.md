@@ -1,15 +1,17 @@
-# G1 — WAF publication procedure (owner-only)
+# G1 — WAF procedure (owner-only)
 
-This is the step-by-step for **G11** and **G12**, the last two acceptance items in
+Step-by-step for **G11** and **G12**, the last two acceptance items in
 [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Everything else in G1 is code
-complete, reviewed clean, and waiting on this.
+complete and reviewed clean.
 
-**Every action in this document is the owner's.** Publishing a firewall rule, accepting the
-metered-pricing acknowledgement, and generating the test traffic are external actions with billing
-consequences. No agent performs them, and no agent has touched Vercel project settings.
+**Every action here is the owner's.** Publishing a firewall rule, accepting the metered-pricing
+acknowledgement, and generating test traffic are external actions with billing consequences. No
+agent performs them, and no agent has touched Vercel project settings.
 
-Written by Claude Code at Codex's request. Codex verifies the evidence afterward and then presents
-the merge decision for PR #26.
+**Revision 3.** Revision 1 produced a rule that throttled production — see the incident in
+[AI-HANDOFF.md](AI-HANDOFF.md). Revision 2 fixed the grouping guidance. Revision 3 adds the
+safeguards from Codex's review and corrects a platform constraint that invalidated the original
+sequence.
 
 ---
 
@@ -18,245 +20,248 @@ the merge decision for PR #26.
 | ID | Requirement | Evidence |
 |---|---|---|
 | **G11** | One rule covering **only** the two news representations, keyed on **IP**, **fixed 60-second** window, final limit **100**, action enforcing **429** | Final dashboard rule record |
-| **G12** | Enforcement actually observed at a temporary **5-per-60** setting, then restored to and recorded at **100-per-60** | Controlled response record + final rule record |
+| **G12** | Enforcement observed at a temporary **5-per-60** setting **on the preview hostname**, then restored to and recorded at **100-per-60** | Controlled response record + final rule record |
 | **G13** | Evidence states counters are **per region** and does not generalize to distributed attacks | Already written into the PR and board |
 
-Two rules get built over the course of this: a **temporary test rule** scoped to the preview
-hostname, and the **final production rule**. G12 exists because a rule that is configured but not
-enforcing looks identical to one that works, right up to the moment it is needed.
+---
+
+## The constraint that shapes this whole sequence
+
+**Hobby allows exactly one WAF rate-limit rule per project.** From
+[Vercel's rate-limiting docs](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting):
+
+> | Number of rules | **1 per project** | 40 per project | 1000 per project |
+>
+> The Hobby limit above applies to WAF Rate Limiting rules. Hobby projects can have up to 3 total
+> custom firewall rules.
+
+The final 100-per-60 rule already occupies that slot. **You cannot add a temporary second
+rate-limit rule.** Revision 1 of this document told you to do exactly that, which is wrong on this
+plan.
+
+The single rule is therefore **edited in place** into the test configuration and **edited back**
+afterward. Two consequences worth stating plainly:
+
+- **Production has no rate limit for the duration of the test.** That is unavoidable on this plan.
+  Keep the window short — minutes, not hours — and restore immediately after capture.
+- **Capture the final rule's configuration before editing it**, because you are about to overwrite
+  the thing you will need to restore, and G11 is accepted against that record.
 
 ---
 
-## Before you start
+## Rule shape — the part that went wrong before
 
-**A note on the dashboard labels below.** I cannot see your dashboard, so treat the label text as
-approximate and the *meaning* as exact. Vercel renames these controls periodically. Each step says
-what the setting must do, so if a label reads differently, match the meaning and note the difference
-in your record — that is useful information, not a deviation.
+The rule must match:
 
-- Vercel → your project → **Firewall** tab. Custom rules live here.
-- Rate limiting is **metered**. The first rate-limit rule you save will ask you to accept pricing.
-  You have already read it and approved this step; accepting it is still yours to click.
-- Have somewhere to paste terminal output and save screenshots as you go.
+```
+hostname == "pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app"
+  AND ( path == "/api/news" OR path == "/api/news/hazard" )
+```
 
-**Do not put the deployment protection bypass secret into anything you save or paste.** If you test
-with `curl` and a bypass header, capture the *response* lines only, never the request headers. Using
-a normal logged-in browser avoids the question entirely.
+The form Vercel's own rule builder produces, and the one to use:
+
+```
+If   Hostname      Equals     pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+And  Request Path  Is any of  /api/news, /api/news/hazard
+```
+
+`Is any of` puts both paths in **one** condition row, so there are no OR'd cards and no grouping
+question. That is what makes this shape reliable.
+
+**What failed before:** two separate path conditions OR'd as sibling cards, with the hostname
+condition inside only the second one. Vercel ANDs conditions within a card and ORs the cards, so
+`/api/news` was left unguarded and matched production.
+
+Check any built rule against this table before publishing:
+
+| Hostname | Path | Must match? |
+|---|---|---|
+| preview | `/api/news` | ✅ yes |
+| preview | `/api/news/hazard` | ✅ yes |
+| preview | anything else | ❌ no |
+| **`pacific-watch.vercel.app`** | **`/api/news`** | ❌ **no — this is the one that broke** |
+| `pacific-watch.vercel.app` | anything | ❌ no |
 
 ---
 
-## Phase 1 — the temporary test rule (preview only)
+## Phase 0 — capture the current final rule
 
-The point is to see a `429` with your own eyes at a limit low enough to trigger by hand.
+Before changing anything.
 
-> ### ⚠ The one mistake that would reach production — and it already happened once
->
-> A rate-limit rule with **only** path conditions applies to **every hostname on the project,
-> including production**. A 5-per-60 rule like that throttles real users at five requests a minute.
->
-> **On 2026-09-27 this rule was built with the hostname condition present but bound to the wrong
-> clause, and production `/api/news` was rate limited at 5-per-60.** The first version of this
-> document said to add a hostname condition and did not say how to attach it to *both* paths. It
-> looked correct in a screenshot to the author of this document, who confirmed it. Read the shape
-> section below rather than trusting the presence of a hostname row.
->
-> **Vercel AND-s the conditions inside one card and OR-s the cards.** So a hostname row sitting in
-> the second card applies only to the second card:
->
-> ```
-> WRONG   (Path = /api/news)                              <- matches EVERY hostname
->            OR
->         (Path = /api/news/hazard AND Hostname = preview)
->
-> RIGHT   (Path = /api/news        AND Hostname = preview)
->            OR
->         (Path = /api/news/hazard AND Hostname = preview)
-> ```
->
-> **Every card needs its own hostname row.** One hostname row for the whole rule is the failure.
+1. Open the existing rate-limit rule and **screenshot it**, or transcribe every field exactly:
+   name, rule ID, each condition row, the rate-limit algorithm, window, limit, keys, and the action.
+2. This is **G11 evidence** and the restore target. Do not proceed without it.
 
-1. **Firewall → Custom Rules → add a new rule.** Name it something obviously temporary:
-   `TEMP G12 test — DELETE ME`.
+---
 
-2. **Path conditions.** Add a condition on the **request path**, `equals`, value `/api/news`. Add a
-   second condition for `/api/news/hazard`. These two must be **OR**'d — any-of, not all-of. A rule
-   requiring both paths at once matches nothing, which would look exactly like a rate limit that
-   never triggers.
+## Phase 1 — edit the single rule into the preview-only test configuration
 
-3. **Hostname condition — the guard rail. Add it to _each_ card, not once.** In the card holding
-   `/api/news`, add a second condition on the **hostname**, `equals`:
-
-   ```
-   pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
-   ```
-
-   Then add **the same hostname condition again** inside the card holding `/api/news/hazard`. Both
-   cards must read *path AND hostname*. A single hostname row shared by the rule does not exist in
-   this editor — the row you see belongs to whichever card contains it, and the other card is then
-   unguarded and matches production.
-
-   Before saving, read the rule back one card at a time and say out loud which hostnames each card
-   matches. A card without a hostname row matches all of them.
-
-4. **Action: rate limit.** Configure it to mean:
+1. **Edit the existing rule.** Do not create a second one.
+2. Set the conditions to the `Is any of` shape above — hostname AND the two-path list.
+3. Set the rate limit to:
 
    | Setting | Value |
    |---|---|
-   | Requests | **5** |
-   | Window | **60 seconds**, fixed |
-   | Key / group by | **IP address** |
-   | Action when exceeded | **Deny / 429**, enforcing |
+   | Algorithm | **Fixed Window** |
+   | Window | **60 seconds** |
+   | Limit | **5 requests** |
+   | Keys | **IP Address** |
+   | Action | **429 Too Many Requests**, enforcing |
 
-   If there is a **log-only**, **observe**, or **dry-run** toggle, it must be **off**. A log-only
-   rule produces no `429` and G12 cannot be satisfied by it.
+   Any **Log** action must be off. Vercel's docs are explicit: *"The Log action will not perform any
+   blocks."* A log-only rule cannot satisfy G12.
 
-5. **Save, then publish.** Firewall changes usually need a second, explicit publish or deploy action
-   after saving — a "Review changes" / "Publish" button. The rule is not live until that completes.
-   Accept the metered-pricing acknowledgement when prompted.
+4. **Save, then Review Changes → Publish.** The rule is not live until Publish completes.
+5. **Screenshot the published test rule.** Evidence item 1.
 
-6. **Screenshot the saved rule**, showing the conditions, the 5/60 values, the IP key, and the
-   enforcing action. This is evidence item 1.
+### Phase 1 gate — prove production is untouched
 
-7. **Prove production is untouched — do this before generating any test traffic.** This is the step
-   that catches a mis-scoped rule, and it takes fifteen seconds:
+Run this **before generating any preview traffic**. Seven requests, because seven is above the
+limit of five: if the rule is matching production at all, requests 6 and 7 return `429` and you have
+found it here instead of after the test.
 
-   ```bash
-   for i in $(seq 1 7); do
-     curl -s -o /dev/null -w "req $i -> HTTP %{http_code}\n" \
-       "https://pacific-watch.vercel.app/api/news"
-   done
-   ```
+**Bash / Git Bash / macOS / Linux:**
 
-   **All seven must return `200`.** Seven is chosen deliberately: it is above the temporary limit of
-   five, so if the rule is matching production at all, requests 6 and 7 return `429` and you have
-   found the problem before touching the preview. If any request returns `429`, **disable the rule
-   immediately** — the hostname condition is not doing what it appears to.
+```bash
+for i in $(seq 1 7); do
+  curl -s -o /dev/null -w "req $i -> HTTP %{http_code}\n" \
+    "https://pacific-watch.vercel.app/api/news"
+done
+```
+
+**Windows PowerShell:**
+
+```powershell
+1..7 | ForEach-Object {
+  curl.exe -s -o NUL -w ('req ' + $_ + ' -> HTTP %{http_code}\n') `
+    "https://pacific-watch.vercel.app/api/news"
+}
+```
+
+**All seven must be `200`.** If any request returns `429`, **stop**: restore the rule per Phase 4,
+verify recovery, and report the grouping is still wrong. Do not continue to the burst.
 
 ---
 
 ## Phase 2 — observe enforcement
 
-Run the burst from a browser or a terminal, from one machine, so all requests share one source IP.
+### Clean window first
 
-### Browser method
+**Wait at least 65 seconds without touching either preview API path.** The window is fixed at 60
+seconds; starting a burst inside a partially consumed window is what produced the earlier
+"tripped at request 4" reading, which cannot be cleanly attributed.
 
-Open the preview URL and hold **Cmd/Ctrl-R** to reload roughly eight times in under a minute:
+### Record every request
 
-```
-https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news
-```
+For **each** request capture **status**, **`x-vercel-cache`**, and **`x-vercel-id`**. The
+`x-vercel-id` prefix is the region, and it is the only thing that can justify an off-by-one in the
+changeover. **Do not attribute an early or late trip to regions without IDs that demonstrate it.**
 
-The first few loads return JSON. Once the limit trips you should get an error page or a plain
-`429`. Screenshot it, and capture the status in the Network tab.
-
-### Terminal method (cleaner evidence)
+**Bash:**
 
 ```bash
-for i in $(seq 1 8); do
-  curl -s -o /dev/null \
-    -w "req $i -> HTTP %{http_code}  cache=%header{x-vercel-cache}\n" \
-    "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news"
+for path in /api/news /api/news/hazard; do
+  echo "=== $path ==="
+  for i in $(seq 1 8); do
+    curl -s -o /dev/null \
+      -w "req $i -> HTTP %{http_code}  cache=%header{x-vercel-cache}  id=%header{x-vercel-id}\n" \
+      "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app$path"
+  done
+  echo "waiting 65s for a clean window"; sleep 65
 done
 ```
 
-Preview deployments are protection-gated, so unauthenticated `curl` may return `401` on every line.
-If that happens, use the browser method — or add your bypass header and **capture only this output,
-not the command**.
+**Windows PowerShell:**
 
-### What to expect, and what to record either way
-
-Roughly the first five requests `200`, the rest `429`. The exact changeover can land a request
-early or late — the counter is per region and your requests may not all land in the same one.
-**Record what you actually saw**, including a changeover at 4 or 6. G12 asks for the enforcement
-path to be observed, not for a precise off-by-one.
-
-**One thing worth watching, and worth recording whichever way it goes:** `/api/news` is
-CDN-cached, so most of these requests are served from cache without the Function running. If the
-`429`s appear anyway, the firewall is counting **requests at the edge** rather than Function
-invocations — which is the stronger result and exactly what G1 needs, since the abuse vector was
-cheap cache-missing traffic. If instead cached requests sail through and never trip the limit, that
-is a real limitation of this defense and needs to go in the record plainly. **Do not assume the
-first outcome.** Report the statuses you saw.
-
-Then confirm the second representation is covered too:
-
-```
-https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news/hazard
+```powershell
+foreach ($path in '/api/news', '/api/news/hazard') {
+  "=== $path ==="
+  1..8 | ForEach-Object {
+    curl.exe -s -o NUL `
+      -w ('req ' + $_ + ' -> HTTP %{http_code}  cache=%header{x-vercel-cache}  id=%header{x-vercel-id}\n') `
+      "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app$path"
+  }
+  'waiting 65s for a clean window'; Start-Sleep -Seconds 65
+}
 ```
 
-A few reloads should `429` on the same counter or its own — either is fine; note which.
+**Required: at least one `429` on _each_ of the two canonical paths.** One path is not sufficient —
+the rule claims to cover both representations.
 
-**Capture for evidence item 2:** the request-by-request status list (or screenshots), which paths
-you exercised, and the approximate wall-clock time. Wait 60+ seconds and confirm a request returns
-`200` again — that shows the window resets rather than the endpoint being permanently broken.
+### If the preview is protection-gated
+
+Preview deployments require authentication. If unauthenticated `curl` returns `401` on every line,
+or if a bypass-header run produces **no** `429`, that is **not** a failure yet: retry through the
+**authenticated browser** with DevTools open, capturing the status, `x-vercel-cache` and
+`x-vercel-id` columns from the Network tab. Only declare failure after the browser run also fails to
+trigger.
+
+### Rule attribution — proving the 429 came from the rule
+
+A `429` in a response log does not by itself prove the custom rule produced it. Capture the
+**Firewall live-traffic event** for these requests: Firewall overview → select your Custom Rule from
+the traffic grouping drop-down → confirm the rate-limited requests appear against **that rule**.
+Screenshot it. This is what separates "the rule enforced" from "something returned 429".
+
+**Why this also establishes zero compute.** Vercel's
+[request pipeline](https://vercel.com/docs/how-vercel-cdn-works) runs the Firewall layer before
+routing, caching and compute, and states: *"Blocked requests never reach the routing or caching
+layers."* So a WAF-generated `429` invokes no Function and performs no upstream fan-out. That is a
+documented property, not an inference from response timing.
+
+### Fail closed
+
+**If the preview run produces no rule-generated `429`** — after both the bypass and browser
+attempts — then:
+
+1. Restore the rule per Phase 4 immediately.
+2. Verify recovery per Phase 5.
+3. **Stop, and report G12 as failed.**
+
+Do **not** continue, and do **not** write it up as "a limitation of the platform" or "enforcement
+could not be observed but the rule is configured correctly." A rate limit that cannot be observed
+firing is exactly the thing G12 exists to catch. G12 failing is a valid, reportable outcome; G12
+being quietly downgraded to a caveat is not.
 
 ---
 
-## Phase 3 — reset
+## Phase 3 — restore immediately
 
-Do this immediately after capturing the evidence. A forgotten 5-per-60 rule is worse than no rule.
+Do this as soon as capture is complete, before writing anything up.
 
-1. **Delete the `TEMP G12 test — DELETE ME` rule.** Disabling also works and satisfies this step.
-   Deleting is preferred, because a disabled rule named like a test is a 5-per-60 production
-   throttle that someone can switch on later without knowing what it does — which is close to what
-   happened on 2026-09-27, when it was re-enabled deliberately and matched production anyway.
-2. **Publish** the change, the same second step as before.
-3. **Confirm recovery on both hostnames.** Wait at least 60 seconds first, so a still-open rate-limit
-   window is not mistaken for a rule that is still live. Then seven quick requests to the preview
-   `/api/news` **and** seven to production `https://pacific-watch.vercel.app/api/news`. All fourteen
-   should return `200`. Capture this — it proves the temporary rule is gone rather than merely
-   between windows.
+1. **Edit the same rule back** to the final configuration captured in Phase 0:
+   - Remove the hostname condition.
+   - Conditions: request path `Is any of` `/api/news`, `/api/news/hazard`.
+   - Limit **100**, window **60 seconds**, Fixed Window, key **IP Address**, action **429**
+     enforcing.
+2. **Save → Review Changes → Publish.**
+3. **Screenshot the restored active rule.** Evidence item 3, and the record G11 is accepted against.
 
 ---
 
-## Phase 4 — the final production rule
+## Phase 4 — verify recovery on both hostnames
 
-Now the rule the contract actually specifies. Note two differences from the test rule: the limit is
-**100**, and there is **no hostname condition** — G11 requires it to cover both representations
-wherever they are served.
+**Wait a full 65 seconds first**, so an open rate-limit window is not mistaken for a rule that is
+still live.
 
-1. **Firewall → Custom Rules → add a new rule.** Name it for what it does, something a future
-   reader understands without this document: `News API rate limit — 100/60 per IP`.
-
-2. **Path conditions only.** Request path `equals` `/api/news`, **OR** request path `equals`
-   `/api/news/hazard`. **No hostname condition this time.** No other paths — G11 says the rule
-   covers *only* these two representations, so a broader pattern such as `/api/*` fails it.
-
-3. **Action: rate limit.**
-
-   | Setting | Value |
-   |---|---|
-   | Requests | **100** |
-   | Window | **60 seconds**, fixed |
-   | Key / group by | **IP address** |
-   | Action when exceeded | **Deny / 429**, enforcing |
-
-   Log-only **off**, again.
-
-4. **Save and publish.**
-
-5. **Confirm normal traffic is unaffected:** load the production site and the news card should
-   populate as usual. One person browsing is nowhere near 100 requests a minute.
-
-6. **Screenshot the final saved rule.** This is evidence item 3, and it is the record G11 is
-   accepted against.
+Then seven quick requests to **preview** `/api/news` and seven to **production**
+`https://pacific-watch.vercel.app/api/news`. **All fourteen must return `200`.**
 
 ---
 
 ## Phase 5 — hand back
 
-Give me, or paste into the board yourself:
+1. Final rule configuration from **Phase 0** — screenshot or exact field transcription.
+2. Published **test** rule screenshot (Phase 1, step 5).
+3. Production gate result — seven `200`s (Phase 1 gate).
+4. Per-request records for **both** preview paths: status, `x-vercel-cache`, `x-vercel-id`
+   (Phase 2).
+5. **Firewall live-traffic screenshot** attributing the `429`s to the custom rule (Phase 2).
+6. **Restored** final rule screenshot (Phase 3, step 3).
+7. Recovery verification, both hostnames, fourteen `200`s (Phase 4).
+8. Any label or behaviour that differed from this document.
 
-1. **Screenshot of the temporary 5/60 rule** as configured (Phase 1, step 6).
-2. **The observed response record** — statuses per request, both paths, plus the post-window `200`
-   (Phase 2). Include whether cached requests counted toward the limit.
-3. **Screenshot of the final 100/60 rule** (Phase 4, step 6).
-4. **Confirmation the temporary rule is deleted** (Phase 3, step 3).
-5. **Any label or behaviour that differed from this document** — that is worth recording, both for
-   the evidence and because it means this procedure needs correcting.
-
-I will write it into the board as G11/G12 evidence. Codex then verifies it and presents the merge
-decision for PR #26.
+I write it into the board as G11/G12 evidence. Codex verifies and presents the merge decision.
 
 ---
 
@@ -266,13 +271,15 @@ Stated here because the evidence should not be read as more than it is, and G13 
 
 **Does:** closes the demonstrated single-source vector, where one client could generate unlimited
 distinct cache keys against `/api/news` and force an expensive miss on each. Combined with the
-query-delete transform and the origin guards, a single IP is now bounded to 100 requests per minute
-per region.
+query-delete transform and the origin guards, a single IP is bounded to 100 requests per minute per
+region. Because the firewall runs ahead of routing, cache and compute, a refused request costs no
+Function invocation and no upstream fan-out.
 
-**Does not:** defend against a distributed attack. Vercel's counters are **per region**, so an
-attacker spread across regions gets that allowance in each one, and one spread across many IPs is
-not bounded by an IP-keyed rule at all. No load testing was performed, so the severity reduction is
-reasoned rather than measured.
+**Does not:** defend against a distributed attack. Counters are **per region** — Vercel's own note:
+*"traffic matching a given rate limit key in multiple regions can exceed the limit you configure for
+any single region"* — so an attacker spread across regions gets the allowance in each, and one
+spread across many IPs is not bounded by an IP-keyed rule at all. No load testing was performed, so
+the severity reduction is reasoned rather than measured.
 
-That is a real and useful bound on the vector that was actually demonstrated. It is not a claim of
-general DDoS protection, and the evidence should not be written up as one.
+That is a real bound on the vector actually demonstrated. It is not general DDoS protection and the
+evidence should not be written up as such.
