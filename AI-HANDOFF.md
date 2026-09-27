@@ -482,6 +482,106 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-27 — END OF NIGHT PAUSE
+
+Stopping here for the night at the owner's call. **Nothing is mid-flight and nothing is left in a
+broken state.** Working tree clean, everything pushed.
+
+#### Exact state
+
+```
+branch        claude/g1-abuse-bounding
+head          b439870
+PR #26        OPEN | MERGEABLE | CLEAN | Vercel checks passing
+production    pacific-watch.vercel.app/api/news -> 200, serving normally
+WAF           ONE rule live: the final 100-per-60, path-only, IP key, 429 enforcing
+              (Hobby allows exactly one rate-limit rule per project)
+temp rule     the earlier mis-scoped rule is OFF; a correctly shaped replacement was
+              built by Vercel's rule builder but deliberately NOT published, because
+              publishing it would be a second rate-limit rule and is impossible on Hobby
+suites        npm test 306, test:dom 288, test:mutation 78 of 78, last run at 54e9248;
+              every code file byte-identical to 54e9248 since
+```
+
+**No dashboard change is pending or half-applied.** The project is in its intended steady state:
+final rule live, production protected at 100-per-60, preview unthrottled.
+
+#### Where G1 actually stands
+
+Code, tests and preview smoke are done and Codex's final read-only review returned no findings.
+**G11 is credible** on the final-rule record but Codex wants the Phase 0 capture from the rerun as
+the authoritative version, because the provisional transcription on the board is my reading of a
+screenshot and a misreading of that same UI is what caused the incident.
+
+**G12 is open and is the only thing blocking the merge.** The accidental production observation is
+real behavioural evidence and is explicitly *not* accepted as G12: it misses the preview-hostname
+condition and proves nothing about the corrected grouping.
+
+#### The one thing to do first on resume
+
+**Do not start by editing the WAF rule.** Start by resolving who gathers the preview evidence,
+because it determines the whole shape of the run:
+
+The preview is deployment-protected — both preview API paths return `302` to the Vercel login wall
+for anyone without the bypass header, measured rather than assumed. Codex has a browser session and
+can therefore verify **production** unaided, but **cannot reach the preview**, which is exactly where
+G12 needs the `429`s.
+
+Three options are with the owner, undecided:
+
+1. Leave it: Codex verifies production; preview evidence comes from the owner's browser and Claude's
+   bypass-header run.
+2. **Recommended.** Temporarily disable Deployment Protection on the preview for the test window so
+   Codex observes the `429`s first-hand. Strongest available G12 evidence, since it removes Claude
+   from the evidence chain on the item Codex is most skeptical of. Costs a few minutes of publicly
+   readable preview — news headlines only — and is a project settings change, so owner-only.
+3. A Vercel share link for the protected deployment. Flagged as plausible, **not confirmed** — check
+   the dashboard before relying on it.
+
+#### Then, and only then, revision 3
+
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) is current and carries Codex's
+four safeguards. The sequence in one line each: capture the final rule first; edit that single rule
+into the preview-only 5-per-60 using the `Is any of` shape; publish; seven production requests all
+`200` or stop; wait 65s untouched; burst both preview paths recording status, `x-vercel-cache` and
+`x-vercel-id`; capture the Firewall live-traffic event attributing the `429`s to the rule; restore
+the single rule to 100-per-60; publish; capture it; wait 65s; verify fourteen `200`s across both
+hostnames.
+
+**Production has no rate limit while the test rule is in place.** Unavoidable on Hobby with one rule.
+Keep the window to minutes.
+
+**If no rule-generated `429` appears** after both the bypass run and a browser retry: restore, verify,
+stop, and report **G12 failed**. It is not to be downgraded to a platform limitation.
+
+#### Open, not lost
+
+**Hazard classifier false positives — pre-existing, not blocking.** Live preview data during an
+active hurricane shows roughly 7 of 30 items in the hazard representation are not Hawaii hazards:
+`erupt` matching "gun sale **erupted** in gunfire", `emergency` matching "Honolulu **Emergency**
+Medical Services" on a stabbing, `warning` matching "**warning** sign for GOP", `swell` matching
+"HI-5 fund **swells**", `closed` matching a DMV closure, plus two mainland weather stories that
+matched legitimately.
+
+`HAZARD_RE` at `api/news.js:35` is **byte-identical to `main`** — verified, not assumed — so #26
+neither introduced nor worsened this; the old `?hazard=1` behaved the same way. Recorded here rather
+than acted on: it would change code Codex has certified clean, and it needs its own claim. Codex was
+asked whether to log it in the Review Queue now or raise it after #26 merges; **undecided**.
+
+#### Deliberately not done, and not to be started without a claim
+
+Stage 2 and Stage 3 of Q007/Q008. Any change to `HAZARD_RE`. Any merge of #26. Any WAF or Vercel
+settings change by an agent.
+
+#### Resume in this order
+
+1. Owner decides the preview-access question above.
+2. Owner runs revision 3 end to end; Claude captures the bypass-header side in parallel if still
+   needed; Codex verifies production first-hand at the gate and after the restore.
+3. Claude writes the evidence into the board as G11/G12.
+4. Codex verifies and presents the merge decision for #26.
+5. After merge: decide the hazard-classifier finding, then Stage 2 under a separate claim.
+
 ### 2026-09-27 — G12 rerun required; procedure revision 3 and a platform constraint
 
 Codex ruled that the accidental production run **does not satisfy G12**: it misses the explicit
