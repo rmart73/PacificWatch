@@ -397,7 +397,7 @@ const mutations = [
   /* The whole point of G1: surplus input must not reach fan-out. Removing the canonical check
      lets any query string through to five upstream fetches, restoring the unbounded vector. */
   { name: 'non-canonical input allowed to reach upstream fan-out',
-    from: "  if (qIndex !== -1 && qIndex !== String(req.url).length - 1) {",
+    from: "  if (String(req.url || '').indexOf('?') !== -1) {",
     to:   "  if (false) {",
     expect: ['refused ?zzz=1 with 400', 'and attempted no upstream request'],
     suite: 'news', target: 'api' },
@@ -465,7 +465,39 @@ const mutations = [
     from: "  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');",
     to:   "  res.setHeader('Cache-Control', 'public');",
     expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
-    suite: 'news', target: 'api' }
+    suite: 'news', target: 'api' },
+
+  /* G02: the client must emit only the two canonical URLs. Restoring the parameterized request
+     puts a caller-selected limit back on the wire, which was part of the unbounded key space. */
+  { name: 'parameterized client request restored',
+    from: "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    const res = await fetch(path);",
+    to:   "    const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';\n    const res = await fetch('/api/news' + q);",
+    expect: ['no News URL carries a query string', 'every News URL is exactly one of the two canonical paths'],
+    suite: 'dom' },
+
+  /* G08: the per-feed abort is what stops one hung outlet from holding a Function open. */
+  { name: 'per-feed abort timeout lengthened',
+    from: "  const timer = setTimeout(() => ctrl.abort(), 8000);",
+    to:   "  const timer = setTimeout(() => ctrl.abort(), 30000);",
+    expect: ['each feed arms a timer of exactly 8000 ms'], suite: 'news', target: 'api' },
+
+  /* G08: and the timer must be cleared, or a completed request leaves one pending. */
+  { name: 'abort timer never cleared',
+    from: "  } finally {\n    clearTimeout(timer);\n  }",
+    to:   "  } finally {\n  }",
+    expect: ['and every timer was cleared afterwards'], suite: 'news', target: 'api' },
+
+  /* A cacheable 405 occupies a cache entry of its own, which is the shape G1 closes. */
+  { name: '405 made cacheable',
+    from: "    res.setHeader('Allow', 'GET, OPTIONS');\n    res.setHeader('Cache-Control', 'no-store');",
+    to:   "    res.setHeader('Allow', 'GET, OPTIONS');",
+    expect: ['and is not cacheable'], suite: 'news', target: 'api' },
+
+  /* Finding 3: a bare '?' is no longer an accepted shape. */
+  { name: 'bare trailing ? allowed through again',
+    from: "  if (String(req.url || '').indexOf('?') !== -1) {",
+    to:   "  if (String(req.url || '').indexOf('?') !== -1 && String(req.url).indexOf('?') !== String(req.url).length - 1) {",
+    expect: ['refused ? with 400'], suite: 'news', target: 'api' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));

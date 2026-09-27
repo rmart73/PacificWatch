@@ -1,79 +1,27 @@
 {
   "routes": [
-    {
-      "src": "^/api/news$",
-      "continue": true,
-      "transforms": [
-        {
-          "type": "request.query",
-          "op": "delete",
-          "target": {
-            "key": {
-              "pre": ""
-            }
-          }
-        }
-      ]
-    },
-    {
-      "src": "^/api/news/hazard$",
-      "continue": true,
-      "transforms": [
-        {
-          "type": "request.query",
-          "op": "delete",
-          "target": {
-            "key": {
-              "pre": ""
-            }
-          }
-        }
-      ]
-    }
+    { "src": "^/api/news$",        "continue": true, "transforms": [ { "type": "request.query", "op": "delete", "target": { "key": { "pre": "" } } } ] },
+    { "src": "^/api/news/hazard$", "continue": true, "transforms": [ { "type": "request.query", "op": "delete", "target": { "key": { "pre": "" } } } ] }
   ],
   "rewrites": [
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/index.html",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        },
-        {
-          "key": "Pragma",
-          "value": "no-cache"
-        },
-        {
-          "key": "Expires",
-          "value": "0"
-        }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma",        "value": "no-cache" },
+        { "key": "Expires",       "value": "0" }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), payment=(), usb=()"
-        },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), payment=(), usb=()" },
         {
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://volcanoes.usgs.gov; frame-src https://embed.ventusky.com; connect-src 'self' https://api.weather.gov https://api.tidesandcurrents.noaa.gov https://earthquake.usgs.gov https://www.fema.gov https://api.anthropic.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"

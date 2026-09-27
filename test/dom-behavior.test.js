@@ -963,6 +963,40 @@ function has(label, sel, needle, expected) {
     txt('#stat-tide').indexOf('2.1') !== -1, true);
   rawTide = null;
 
+  /* ======================================================================================
+     G02 — the browser emits ONLY the two canonical URLs.
+
+     A caller-selected item count was part of the unbounded cache key space G1 closed, so the
+     client must send no query string at all. Toggling is the live path: setNewsFilter() calls
+     fetchNews(), so a stray parameter would reappear on a real user action rather than on load.
+     Repeated toggles are used because the failure mode to fear is a shape that appears on the
+     SECOND switch, not the first.
+     ====================================================================================== */
+  console.log('\n29. G02 — the client uses only the two canonical, query-free News URLs:');
+  w.fetch = makeFetch(null);
+  fetchLog.length = 0;
+
+  await w.setNewsFilter('all');      await settle();
+  await w.setNewsFilter('hazard');   await settle();
+  await w.setNewsFilter('all');      await settle();
+  await w.setNewsFilter('hazard');   await settle();
+
+  const newsCalls = fetchLog.filter(u => u.indexOf('/api/news') !== -1);
+  check('repeated toggles issued several News requests', newsCalls.length >= 4, true);
+  check('every News URL is exactly one of the two canonical paths',
+    newsCalls.every(u => u === '/api/news' || u === '/api/news/hazard'), true);
+  check('no News URL carries a query string',
+    newsCalls.some(u => u.indexOf('?') !== -1), false);
+  check('no caller-selected limit is ever sent',
+    newsCalls.some(u => u.indexOf('limit') !== -1), false);
+  check('hazard selection travels in the path, not a parameter',
+    newsCalls.some(u => u.indexOf('hazard=') !== -1), false);
+  check('both representations were actually exercised',
+    newsCalls.indexOf('/api/news') !== -1 && newsCalls.indexOf('/api/news/hazard') !== -1, true);
+  /* Any third shape at all — a trailing slash, a bare '?', a stray parameter — is a failure. */
+  const shapes = Array.from(new Set(newsCalls));
+  check('no third request shape exists', shapes.length, 2);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);

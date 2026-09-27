@@ -147,7 +147,9 @@ async function main() {
   bulk = false;
 
   console.log('\nG04 — non-canonical input reaching the handler does ZERO upstream work:');
-  for (const q of ['?zzz=1', '?limit=99', '?hazard=1', '?limit=30&limit=31', '?a=1&b=2', '?%20=1']) {
+  /* A bare '?' with nothing after it is included deliberately: it was allowed as
+     harmless-and-equivalent in an earlier version, and the exception is gone. */
+  for (const q of ['?zzz=1', '?limit=99', '?hazard=1', '?limit=30&limit=31', '?a=1&b=2', '?%20=1', '?']) {
     o = await call('/api/news' + q, 'GET', false);
     check('refused ' + q + ' with 400', o.code, 400);
     check('  and attempted no upstream request', upstream, 0);
@@ -166,6 +168,8 @@ async function main() {
     check(m + ' is refused 405', o.code, 405);
     check('  with an Allow header', o.headers['Allow'], 'GET, OPTIONS');
     check('  and zero upstream attempts', upstream, 0);
+    /* A cacheable refusal would occupy a cache entry of its own, which is the shape G1 closes. */
+    check('  and is not cacheable', o.headers['Cache-Control'], 'no-store');
   }
 
   console.log('\nG07 — partial feed failure stays honest:');
@@ -193,6 +197,50 @@ async function main() {
     lastHeaders['User-Agent'], UA_EXPECTED);
   check('and it is not a bare Mozilla/5.0, which the outlet 403s',
     lastHeaders['User-Agent'] === 'Mozilla/5.0', false);
+
+  console.log('\nG08 — the eight-second abort path:');
+  /* Controlled timers rather than real ones: the point is that each upstream request is armed
+     with an abort at exactly 8000 ms, that expiry really aborts an in-flight request, and that
+     the timer is cleared afterwards. A test that merely waited would prove none of it. */
+  const realSetTimeout = global.setTimeout, realClearTimeout = global.clearTimeout;
+  const timers = [];
+  let nextTimerId = 1;
+  global.setTimeout = (fn, delay) => { const id = nextTimerId++; timers.push({ id, delay, fn, cleared: false }); return id; };
+  global.clearTimeout = (id) => { const t = timers.find(x => x.id === id); if (t) t.cleared = true; };
+
+  const signals = [];
+  global.fetch = (url, opts) => {
+    signals.push(opts && opts.signal);
+    /* Never settles on its own: only an abort can end it, which is what makes the timer the
+       thing under test. */
+    return new Promise((_resolve, reject) => {
+      const s = opts.signal;
+      s.addEventListener('abort', () => {
+        const e = new Error('aborted'); e.name = 'AbortError'; reject(e);
+      });
+    });
+  };
+
+  const abortRes = mockRes();
+  const pending = serve({ url: '/api/news', method: 'GET', headers: {} }, abortRes, false);
+  check('every upstream request carries an abort signal',
+    signals.length === 5 && signals.every(s => s && typeof s.aborted === 'boolean'), true);
+  check('none has aborted before the timer fires', signals.every(s => s.aborted === false), true);
+  /* 8000 ms is asserted as a literal. The figure is the project's documented per-feed timeout,
+     not something derived from the module under test. */
+  check('each feed arms a timer of exactly 8000 ms',
+    timers.filter(x => x.delay === 8000).length, 5);
+  check('and arms exactly one timer per feed', timers.length, 5);
+
+  timers.forEach(x => x.fn());          /* expiry */
+  const abortOut = await pending;
+  check('expiry actually aborts the in-flight requests', signals.every(s => s.aborted === true), true);
+  check('and every feed is reported as failed', abortRes._out.body.errors.length, 5);
+  check('and the response is the honest 502, not an empty success', abortRes._out.code, 502);
+  check('and every timer was cleared afterwards', timers.every(x => x.cleared), true);
+
+  global.setTimeout = realSetTimeout;
+  global.clearTimeout = realClearTimeout;
 
   console.log('\nG09 — successful responses keep the origin cache policy:');
   o = await call('/api/news', 'GET', false);

@@ -31,7 +31,7 @@ directly against production in this session.
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
-| G1 abuse/cost bounding contract | [PR #25](https://github.com/rmart73/PacificWatch/pull/25) open; documentation/design only | Claude reviews the contract read-only; no implementation until it is accepted and merged |
+| G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 
 ### Active claims
 
@@ -308,8 +308,9 @@ Codex retains design/acceptance ownership; Claude retains implementation ownersh
 implementation stays a separate claimed, reviewable PR.
 
 **What is next:** observation stage 1 is merged and production verified in #24. The owner approved
-the sequence **G1 → Stage 2 → Stage 3**. Codex is drafting the G1 abuse-bounding contract now;
-Claude implements only after that contract is reviewed, accepted and merged. Stage 2 then wires the
+the sequence **G1 → Stage 2 → Stage 3**. The G1 contract is drafted, reviewed, merged as #25 in
+`fcaf55a` and authoritative at G01–G18; **G1 implementation is in review as PR #26**, with the WAF
+publication outstanding and owner-only. Stage 2 then wires the
 observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
 satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
@@ -337,12 +338,18 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; code complete — all suites green, 71/71 mutations caught, G03 and G17 proven on preview | Codex reviews code and evidence; **the owner publishes the WAF rule — G1 does not close without it** |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; **round one reviewed, all five findings corrected** — 306/288 assertions, 76/76 mutations caught, G03 and G17 proven on preview | Codex re-reviews; **the owner publishes the WAF rule — G1 does not close without it** |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `22686bb`**, merged through #24 and serving production. Claims and handoffs for
+**`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
-No application implementation is currently in flight; the active G1 work is a contract only.
+
+**An application implementation IS in flight: PR #26 changes `api/news.js`, `vercel.json` and
+`index.html`.** An earlier version of this paragraph said `main` was `22686bb` and that the active
+G1 work was a contract only. Both were true when written — before #25 merged and before the
+implementation was claimed — and neither was corrected as the work moved. That is the same
+current-state drift the board keeps re-learning: a line describing "right now" is wrong the moment
+the thing it describes moves, and nothing updates it unless someone is looking.
 
 ## Outstanding Verification and Decisions
 
@@ -465,6 +472,90 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-27 — PR #26 round one: five findings corrected
+
+Codex reviewed the implementation, called the shape sound, and returned five concrete issues. All
+five are corrected. **None of them were cosmetic, and two were mine ignoring a working agreement
+rather than getting something wrong.**
+
+#### Finding 1 — G02 had no client coverage
+
+The contract requires the browser to emit only the two canonical URLs, and nothing tested it. The
+API suite proved the *server* refuses a query string; no assertion proved the *client* never sends
+one. Those are different claims, and only the second is G02.
+
+DOM section 29 now toggles the filter four times through `setNewsFilter()` — the live path, which
+calls `fetchNews()` — and asserts every News URL is exactly `/api/news` or `/api/news/hazard`, that
+no URL carries `?`, `limit` or `hazard=`, that both representations were actually exercised, and
+that **exactly two distinct shapes** exist. Repeated toggles because the failure to fear is a shape
+that appears on the second switch rather than the first. A trailing slash or a stray parameter fails
+the shape count even if every other assertion passes.
+
+#### Finding 2 — the G08 abort path was asserted in a comment, not a test
+
+An 8000 ms per-feed timeout is what stops one hung outlet from holding a Function open and billing
+for it. It had no test. Added with controlled timers — `setTimeout`/`clearTimeout`/`fetch` stubbed —
+asserting the timer is armed at exactly 8000 ms and that **every armed timer is cleared afterwards**.
+Two mutations now cover it: lengthening the timeout, and never clearing it.
+
+#### Finding 3 — a bare trailing `?` was allowed through
+
+The guard exempted `/api/news?` as harmless-and-equivalent. It is not worth the exception: the
+public contract says query-free, direct invocation is the surface this layer defends, and an
+exception is one more shape a reader has to reason about. Every `?` is now refused — 400, `no-store`,
+no echo, zero upstream. Verified: `/api/news?` returns 400.
+
+#### Finding 4 — five documentation statements contradicted the code
+
+Each was true when written and none was updated as the work moved: `main` recorded at `22686bb`,
+"no application implementation is currently in flight", #25 shown open, Codex shown still drafting
+the contract, and `?limit=30` still advertised in the API header comment. All five are gone,
+verified by grep.
+
+**This is the same current-state drift the board keeps re-learning.** A line describing "right now"
+is wrong the moment the thing it describes moves, and nothing updates it unless someone looks. The
+corrected paragraph now says so in place, rather than reading as though it had always been right.
+
+#### Finding 5 — I reformatted two files I had no business reformatting
+
+`JSON.stringify(…, null, 2)` rewrote `package.json` and `vercel.json` wholesale, burying a one-line
+and a four-line change in ~90 lines of churn and **destroying the hand alignment in both**. The
+working agreement says not to reformat untouched configuration; I did, and it made the diff Codex
+had to review dishonest about its own size.
+
+Restored by hand. Against `main`:
+
+```
+package.json   1 line changed   (the new test script)
+vercel.json    4 lines added    (the query-delete transform on both paths)
+```
+
+The lesson is narrow and worth keeping: **a formatter is not an editing tool.** Reading a config,
+mutating an object and writing it back is a whole-file rewrite wearing the costume of a small edit.
+
+#### One defect this round introduced, caught by the harness
+
+Collapsing the guard for finding 3 removed the `qIndex` variable an existing mutation anchored on,
+and that case came back **ANCHOR LOST** — counted, but asserting nothing. Repaired to the current
+line. Worth recording because a lost anchor is worse than a MISS: a MISS tells you the test is weak,
+a lost anchor is silently dead while still inflating the denominator. **Fixing a guard can disarm the
+mutation that was guarding it.**
+
+#### Verification
+
+`npm test` **306** (150 + 35 + 37 + 84), `npm run test:dom` **288**, `npm run test:mutation`
+**76 of 76 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS. Five mutations were added with the
+fixes: parameterized client restored, timeout lengthened, timer never cleared, 405 made cacheable,
+bare `?` allowed through again.
+
+No re-measurement on preview was required: every correction is origin-side or test-side, and the
+G03/G17 matrix in the entry below was already gathered after the guards landed.
+
+#### Unchanged
+
+G11 and G12 remain open and owner-only. No agent has touched Vercel project settings, published the
+WAF rule, or accepted its pricing acknowledgement. **G1 does not close when #26 merges.**
+
 ### 2026-09-27 — G1 implementation: code complete, WAF outstanding
 
 Code, tests and preview evidence are done. **G1 is not closed**: G11 and G12 require the WAF rule to
@@ -479,9 +570,17 @@ Delete-then-set was therefore required. It failed anyway — the sentinel never 
 on two independent cold-MISS measurements (`af59ebf`, `0497c89`), both returning the all-headlines
 body on the hazard path.
 
-Three delivery mechanisms failed in total — a `request.query set`, a `dest` querystring, and the
-delete-then-set header — all for one reason: **the query-delete transform removes every key,
-including the one routing had just supplied.**
+Three delivery mechanisms failed in total. **Two of them share one cause, and the third does not —
+an earlier version of this entry wrongly attributed all three to it.**
+
+The two QUERY mechanisms, `request.query set` and the `dest` querystring, are explained: the
+query-delete transform removes every key, including the one routing had just supplied.
+
+The HEADER failure is not explained by that, and cannot be: a `request.query` transform cannot
+remove a request header — they are different transform types — and the configuration used separate
+delete and set operations on the header. **What is established is only what was measured:** with
+delete-then-set configured, the sentinel did not reach the handler on two cold-MISS measurements.
+The precise cause is unresolved, and saying otherwise made a tidy story out of an open question.
 
 **Design 2, a second thin entrypoint, passed both criteria on the first attempt.** The representation
 is decided by which file the platform routes to, so there is no internal signal and the anti-forgery
@@ -549,6 +648,9 @@ gathered. It is moot for forgery, since Design 2 has nothing to forge.
 `npm test` **290** (150 + 35 + 37 + 68), `npm run test:dom` **281**, `npm run test:mutation`
 **71 of 71 caught** with no MISSED, ANCHOR LOST or AMBIGUOUS, and the pure suites pass in an empty
 directory with nothing installed.
+
+**Superseded by the round-one entry above: 306 / 288 / 76 of 76.** These are the numbers the review
+was conducted against and are left as they stood.
 
 The API suite counts **upstream attempts**, not just status codes: the property G1 cares about is how
 much upstream work a caller can cause, and a refusal that still fetched five feeds would pass a

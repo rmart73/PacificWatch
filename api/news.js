@@ -10,9 +10,14 @@
  * No dependencies — the RSS parsing is deliberately minimal regex extraction so
  * the project stays install-free.
  *
- * Query params:
- *   ?limit=30    max items returned (default 30, max 100)
- *   ?hazard=1    only items matching HAZARD_RE
+ * Two canonical, QUERY-FREE representations:
+ *   /api/news         all headlines, fixed at 30
+ *   /api/news/hazard  hazard-only, fixed at 30, filtered over the whole pool before the cap
+ *
+ * There are no query parameters. The former ?limit and ?hazard were part of an unbounded cache
+ * key space: any query string produced a distinct CDN identity, and every miss fanned out to
+ * five upstream feeds. Routing now deletes every query key before cache lookup, and this handler
+ * refuses any that still arrive. See G1-ABUSE-BOUNDING-CONTRACT.md.
  */
 
 const FEEDS = [
@@ -105,10 +110,17 @@ async function fetchFeed(feed) {
    request. There is no internal header and no query parameter carrying it, so there is nothing
    for a caller to forge — which is why this design needs no anti-forgery gate at all.
 
-   Three earlier attempts to carry the representation through routing all failed on admissible
+   Three earlier attempts to carry the representation through routing failed on admissible
    evidence: a request.query `set`, a `dest` querystring, and a delete-then-set internal header.
-   The cause in each case was that the query-delete transform removes every key, including the
-   one routing had just supplied. */
+
+   The two QUERY mechanisms are explained: the query-delete transform removes every key, including
+   the one routing had just supplied.
+
+   The HEADER failure is NOT explained by that, and an earlier version of this comment wrongly said
+   it was. A request.query transform cannot remove a request header — they are different transform
+   types — and the configuration deleted and set the header in separate operations. What is
+   established is only what was measured: with delete-then-set configured, the sentinel did not
+   reach the handler on two cold-MISS measurements. The precise cause is unresolved. */
 async function serve(req, res, hazardOnly) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -139,8 +151,11 @@ async function serve(req, res, hazardOnly) {
      no-store so a refusal can never occupy a cache entry of its own. Echoing the input would
      hand an attacker a reflection surface, and caching refusals would re-create the unbounded
      key space this whole change exists to close. */
-  const qIndex = String(req.url || '').indexOf('?');
-  if (qIndex !== -1 && qIndex !== String(req.url).length - 1) {
+  /* Every '?' is refused, including a bare trailing one with no key after it. An earlier version
+     allowed that case as harmless-and-equivalent; it is not worth the exception. The public
+     contract says query-free, direct invocation is precisely the surface this layer defends, and
+     an exception is one more shape a reader has to reason about. */
+  if (String(req.url || '').indexOf('?') !== -1) {
     res.setHeader('Cache-Control', 'no-store');
     res.status(400).json({ error: 'this endpoint takes no query parameters' });
     return;
