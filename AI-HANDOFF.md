@@ -338,7 +338,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; **round one reviewed, all five findings corrected** — 306/288 assertions, 76/76 mutations caught, G03 and G17 proven on preview | Codex re-reviews; **the owner publishes the WAF rule — G1 does not close without it** |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; **rounds one and two corrected** — 306/288 assertions, 78/78 mutations caught, final-head preview smoke passed on `54e9248` | Codex re-reviews; **the owner publishes the WAF rule — G1 does not close without it** |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -472,6 +472,99 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-27 — PR #26 round two: two corrections and a final-head smoke
+
+Codex re-reviewed `dd2fb75`, closed all five round-one findings, and returned two corrections plus
+an evidence request. All three are done. Head is `54e9248`.
+
+#### Correction 1 — the new G02 test could still hide a third path
+
+The section I added to satisfy round one filtered `fetchLog` to URLs already containing
+`/api/news` before asserting anything. **That is the exact hole the section exists to close:** a
+stray request to `/api/headlines` would be removed by the filter before the shape count could see
+it, so the client could be talking to a third endpoint with every assertion passing. It also
+counted `>= 4`, which admitted extra requests a second way.
+
+Now asserted against the complete log — exactly four requests, every entry one of the two canonical
+paths, both paths present, exactly two distinct shapes. Codex asked for the filtered assertion to be
+replaced rather than supplemented, and it was.
+
+**Exact counting is sound here, not merely convenient**, and the reason is worth recording because it
+is what makes `=== 4` safe rather than brittle: the log is cleared immediately above,
+`setNewsFilter()` issues exactly one fetch through `fetchNews()`, and the shortest polling interval in
+the page is 30s against four 60ms settles. Nothing else can enter the log. If that ever stops being
+true the test fails loudly, which is the wanted behaviour rather than a hazard.
+
+#### Correction 2 — the tally said 16 and the block held 15
+
+Codex counted correctly and I had overstated by one. There were two ways to fix it and the cheap one
+was wrong: the missing case was **real**. The API suite has always asserted the 400 refusal does not
+echo the offending input, and **nothing proved that assertion could fail.** A reflection surface on an
+endpoint reachable without authentication is a security property, so the case was added rather than
+the number quietly reduced.
+
+A second case went in with it. Tightening G02 introduced an exact request count and a whole-log shape
+count that no mutation could break — the same decorative-assertion problem the reflection case had
+just exposed, reintroduced by my own fix. The new case is the third-endpoint scenario itself, which is
+the concrete form of what Codex described.
+
+**The G1 block is now 17 — 15 API, 2 client.** Total 78.
+
+#### Two errors of mine on the way, both caught by running it
+
+- **`expect` is a conjunction.** The harness requires *every* listed label to fail
+  (`caught.length === m.expect.length`). I added `'four toggles issued exactly four requests in
+  total'` to the parameterized-client case, which that mutation does not break — four toggles still
+  issue four requests, they just carry query strings — so a previously caught case reported
+  **MISSED**. Scoped back to the two labels it genuinely breaks.
+- **A `\n` escape became a real newline** passing through a shell heredoc into a template literal,
+  leaving `mutation-check.js` unparseable. Rebuilt with the sequence constructed rather than typed.
+  The same edit had also split a comment from the case it documented; both repaired.
+
+#### Final-head preview smoke — deployment `GPo4MMbU7LS39NLquFEkiiz82ch3`, commit `54e9248`
+
+Codex asked for a compact re-smoke against the corrected head rather than continued reliance on
+`c2213b2`. Host `pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app`.
+
+**The alias was verified to serve this head before the smoke ran**, because a branch alias pointing at
+a stale deployment would invalidate everything below. The served `index.html` differs from
+`HEAD:index.html` by exactly one line — Vercel's injected feedback script — and that line carries
+`data-deployment-id="dpl_GPo4MMbU7LS39NLquFEkiiz82ch3"`, matching the GitHub deployment status for
+`54e9248`.
+
+```
+== /api/news ==
+warm attempt 1            200 MISS   age=0  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+warm attempt 2            200 HIT    age=2  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+fresh arbitrary variant   200 HIT    age=2  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+== /api/news/hazard ==
+warm attempt 1            200 MISS   age=0  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+warm attempt 2            200 HIT    age=2  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+fresh arbitrary variant   200 HIT    age=2  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+== distinctness ==        different updated, different bodies
+ALL PASSED (9 assertions)
+```
+
+Each variant key was generated per-run and had never been requested before, so a `HIT` on it is
+convergence rather than a replay of an earlier probe. **Cache state is printed on every line**, which
+is the standing correction to the measurement error recorded further below: a warm `HIT` returns a
+stored body without invoking the Function, so a result read without its cache column is not evidence
+about the handler.
+
+Round two changed **no production code** — only `test/dom-behavior.test.js` and
+`test/mutation-check.js` — so the served artifacts are byte-identical to `dd2fb75`. The smoke is still
+reported against `54e9248` because that is the head Codex will merge.
+
+#### Verification
+
+`npm test` **306** (150 + 35 + 37 + 84), `npm run test:dom` **288** (unchanged: seven checks before,
+seven after), `npm run test:mutation` **78 of 78 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS.
+
+#### Unchanged
+
+G11 and G12 remain open and owner-only. No agent has touched Vercel project settings, published the
+WAF rule, or accepted its pricing acknowledgement. **G1 does not close when #26 merges.**
+
 ### 2026-09-27 — PR #26 round one: five findings corrected
 
 Codex reviewed the implementation, called the shape sound, and returned five concrete issues. All
@@ -544,7 +637,8 @@ mutation that was guarding it.**
 #### Verification
 
 `npm test` **306** (150 + 35 + 37 + 84), `npm run test:dom` **288**, `npm run test:mutation`
-**76 of 76 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS. Five mutations were added with the
+**76 of 76 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS. *(Round two raised this to 78 of 78;
+see the entry above.)* Five mutations were added with the
 fixes: parameterized client restored, timeout lengthened, timer never cleared, 405 made cacheable,
 bare `?` allowed through again.
 
@@ -649,8 +743,8 @@ gathered. It is moot for forgery, since Design 2 has nothing to forge.
 **71 of 71 caught** with no MISSED, ANCHOR LOST or AMBIGUOUS, and the pure suites pass in an empty
 directory with nothing installed.
 
-**Superseded by the round-one entry above: 306 / 288 / 76 of 76.** These are the numbers the review
-was conducted against and are left as they stood.
+**Superseded — current numbers are in the round-two entry above: 306 / 288 / 78 of 78.** The figures
+in this entry are the ones its own review was conducted against and are left as they stood.
 
 The API suite counts **upstream attempts**, not just status codes: the property G1 cares about is how
 much upstream work a caller can cause, and a refusal that still fetched five feeds would pass a
