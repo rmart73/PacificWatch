@@ -15,6 +15,13 @@
         },
         {
           "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "x-pacific-watch-news-representation"
+          }
+        },
+        {
+          "type": "request.headers",
           "op": "set",
           "target": {
             "key": "x-pacific-watch-news-representation"
