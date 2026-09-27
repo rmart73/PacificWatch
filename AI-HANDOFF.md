@@ -337,7 +337,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | Claimed above; in progress on `claude/g1-abuse-bounding` | Claude implements and gathers preview evidence; owner publishes the WAF rule; Codex reviews |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; code complete — all suites green, 71/71 mutations caught, G03 and G17 proven on preview | Codex reviews code and evidence; **the owner publishes the WAF rule — G1 does not close without it** |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `22686bb`**, merged through #24 and serving production. Claims and handoffs for
@@ -464,6 +464,126 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-27 — G1 implementation: code complete, WAF outstanding
+
+Code, tests and preview evidence are done. **G1 is not closed**: G11 and G12 require the WAF rule to
+be published from the Vercel dashboard, which only the owner can do.
+
+#### The design changed twice, both times forced by measurement
+
+**Design 1, an edge-selected representation header, was tried and abandoned.** Codex approved it with
+a mandatory hardening: the reference states `set` "sets the key and value **if missing**", so a bare
+set would leave a caller-supplied header in place and the representation would be forgeable.
+Delete-then-set was therefore required. It failed anyway — the sentinel never reached the handler,
+on two independent cold-MISS measurements (`af59ebf`, `0497c89`), both returning the all-headlines
+body on the hazard path.
+
+Three delivery mechanisms failed in total — a `request.query set`, a `dest` querystring, and the
+delete-then-set header — all for one reason: **the query-delete transform removes every key,
+including the one routing had just supplied.**
+
+**Design 2, a second thin entrypoint, passed both criteria on the first attempt.** The representation
+is decided by which file the platform routes to, so there is no internal signal and the anti-forgery
+question disappears rather than being solved.
+
+#### The escape hatch Codex caught, measured rather than accepted in principle
+
+The first working transform used `ninc: ["__canonical_none__"]`, which by construction **exempts that
+key from deletion**. Measured live before it shipped:
+
+```
+?zz9=1                    HIT   updated 23:17:09.600Z   <- ordinary key converges
+?__canonical_none__=1     MISS  updated 23:17:09.633Z   <- sentinel survives, own cache identity
+```
+
+It ran the Function and took its own entry — worse than the original G1 vector, because it would
+have shipped behind evidence showing convergence. Replaced with `pre: ""`, which matches every key
+and exempts nothing. The probe commit `c82d543` is retained as superseded history and doubles as a
+positive control: a matrix that only ever shows HITs cannot distinguish "converged" from "measuring
+nothing".
+
+#### Final preview evidence — deployment `HYs5HoJysDhMuB8CrsXnAJtWH9WV`, commit `c2213b2`
+
+Measured **after** the method and canonical-request guards landed, because those postdated the
+earlier run and a query string now returns `400` at the origin where the matrix had recorded a
+normalised `HIT`. A guard added to reinforce G03 could have broken it. It did not — the transform
+strips the query before the origin sees it, so the canonical check only ever defends direct
+invocation.
+
+```
+ALL-HEADLINES  /api/news          MISS then HIT, updated 00:36:28.057Z, n=30 hz=12 nonhz=18
+  ?__canonical_none__=1           HIT  same updated   <- the closed hole
+  duplicate sentinel keys         HIT  same updated
+  multiple unrelated keys         HIT  same updated
+  duplicate ordinary key          HIT  same updated
+  empty key                       HIT  same updated
+  percent-encoded key             HIT  same updated
+  ?limit=99  (legacy)             HIT  same updated
+  ?hazard=1  (legacy)             HIT  same updated   <- does NOT yield a hazard body
+HAZARD         /api/news/hazard   MISS then HIT, updated 00:36:43.082Z, n=30 hz=30 nonhz=0
+  ?__canonical_none__=1           HIT  same updated
+  multiple unrelated keys         HIT  same updated
+  ?hazard=0                       HIT  same updated   <- caller cannot override
+DISTINCTNESS                      different updated, different bodies
+G17 VALIDITY GATE                 VALID — 18 non-hazard items present
+```
+
+Both baselines are cold MISSes with fresh, distinct `updated` values, so these are genuine Function
+executions rather than cached bodies.
+
+#### A measurement error of mine, struck from the record
+
+An earlier anti-forgery matrix was reported as passing. **It was invalid.** Request headers are not
+part of the CDN cache key, so once a path is warm every request returns the stored body without
+invoking the Function. I read those bodies as handler output; they were `HIT`s at age ~137s. The
+harness had printed cache state on every line throughout — I stopped reading that column once the
+convergence numbers looked right.
+
+Codex's proposed remedy, `Pragma: no-cache` to force revalidation, **does not work on this preview**:
+every non-baseline case still returned `HIT`. Recorded because it shapes how G12 evidence must be
+gathered. It is moot for forgery, since Design 2 has nothing to forge.
+
+#### Verification
+
+`npm test` **290** (150 + 35 + 37 + 68), `npm run test:dom` **281**, `npm run test:mutation`
+**71 of 71 caught** with no MISSED, ANCHOR LOST or AMBIGUOUS, and the pure suites pass in an empty
+directory with nothing installed.
+
+The API suite counts **upstream attempts**, not just status codes: the property G1 cares about is how
+much upstream work a caller can cause, and a refusal that still fetched five feeds would pass a
+status assertion while defeating the point.
+
+**Three mutation MISSES found defects in the tests, not the code.** The second is the one worth
+remembering: fixtures produced ten items against a thirty-item cap, so filtering before or after the
+cap was identical — **the single behaviour that most justifies two representations had no fixture
+able to exercise it.** A bulk fixture now demonstrates it: sixty items with every hazard item older
+than every ordinary one, so the newest thirty contain zero hazard items while the hazard
+representation still returns all thirty. That is what a browser filtering a capped list could never
+reproduce, and it is now a measurement rather than an argument in a comment.
+
+#### Outstanding — owner only
+
+G11 and G12 need the rule published and the pricing acknowledgement accepted. Claude has not touched
+Vercel project settings and will not.
+
+```
+paths   exactly /api/news and /api/news/hazard
+key     IP
+window  fixed, 60 seconds
+limit   100        (final, production)
+action  429 / rate limit, enforcing, not log-only
+test    temporary 5 per 60 seconds, PREVIEW HOSTNAME ONLY, then restored
+```
+
+Per-region counting is a documented limitation: this closes the demonstrated single-source
+arbitrary-key vector and establishes a per-IP, per-region bound. It is not a distributed-attack
+claim.
+
+**For whoever gathers G12 evidence:** preview Deployment Retention is enabled, so the deployment
+identifiers above will eventually 404 for anyone re-checking. The inline response records carry the
+substance.
+
 
 ### 2026-09-26 — G1 contract review: three findings addressed
 
