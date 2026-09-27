@@ -472,7 +472,18 @@ const mutations = [
   { name: 'parameterized client request restored',
     from: "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    const res = await fetch(path);",
     to:   "    const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';\n    const res = await fetch('/api/news' + q);",
-    expect: ['no News URL carries a query string', 'every News URL is exactly one of the two canonical paths'],
+    expect: ['no request carries a query string', 'every request in the whole log is one of the two canonical paths'],
+    suite: 'dom' },
+
+  /* Codex's finding 1 in concrete form: a request to an unrelated endpoint. The old filtered
+     assertions could not see this at all -- the filter dropped it before anything counted --
+     which is why the section now asserts against the complete log. */
+  { name: 'client issues an extra request to a third endpoint',
+    from: "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    const res = await fetch(path);",
+    to:   "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    await fetch('/api/headlines');\n    const res = await fetch(path);",
+    expect: ['four toggles issued exactly four requests in total',
+             'every request in the whole log is one of the two canonical paths',
+             'the whole log contains exactly two distinct shapes'],
     suite: 'dom' },
 
   /* G08: the per-feed abort is what stops one hung outlet from holding a Function open. */
@@ -497,7 +508,17 @@ const mutations = [
   { name: 'bare trailing ? allowed through again',
     from: "  if (String(req.url || '').indexOf('?') !== -1) {",
     to:   "  if (String(req.url || '').indexOf('?') !== -1 && String(req.url).indexOf('?') !== String(req.url).length - 1) {",
-    expect: ['refused ? with 400'], suite: 'news', target: 'api' }
+    expect: ['refused ? with 400'], suite: 'news', target: 'api' },
+
+  /* The refusal is deliberately opaque. Echoing the offending input hands a caller a
+     reflection surface on an endpoint reachable without authentication, and the suite has
+     always asserted it does not — but nothing proved that assertion could fail, which is
+     how a decorative test survives review. It is load-bearing as of this case. */
+  { name: 'refusal echoes the offending input back to the caller',
+    from: "    res.status(400).json({ error: 'this endpoint takes no query parameters' });",
+    to:   "    res.status(400).json({ error: 'this endpoint takes no query parameters', url: req.url });",
+    expect: ['the refusal does not echo the offending input'],
+    suite: 'news', target: 'api' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));

@@ -981,21 +981,30 @@ function has(label, sel, needle, expected) {
   await w.setNewsFilter('all');      await settle();
   await w.setNewsFilter('hazard');   await settle();
 
-  const newsCalls = fetchLog.filter(u => u.indexOf('/api/news') !== -1);
-  check('repeated toggles issued several News requests', newsCalls.length >= 4, true);
-  check('every News URL is exactly one of the two canonical paths',
-    newsCalls.every(u => u === '/api/news' || u === '/api/news/hazard'), true);
-  check('no News URL carries a query string',
-    newsCalls.some(u => u.indexOf('?') !== -1), false);
+  /* Asserted against the COMPLETE log, never a '/api/news'-filtered view of it.
+     Filtering first defeats the assertion: a stray request to '/api/headlines' would be
+     removed by the filter before the shape count ever saw it, so the client could be talking
+     to a third endpoint while every check below passed. The earlier version of this section
+     filtered, and counted '>= 4', which admitted extra requests twice over.
+
+     Exact counting is sound here, not merely convenient: the log is cleared immediately above,
+     setNewsFilter() issues exactly one fetch through fetchNews(), and the shortest polling
+     interval in the page is 30s against four 60ms settles — so nothing else can enter the log.
+     If that ever stops being true this fails loudly, which is the point. */
+  check('four toggles issued exactly four requests in total', fetchLog.length, 4);
+  check('every request in the whole log is one of the two canonical paths',
+    fetchLog.every(u => u === '/api/news' || u === '/api/news/hazard'), true);
+  check('no request carries a query string',
+    fetchLog.some(u => u.indexOf('?') !== -1), false);
   check('no caller-selected limit is ever sent',
-    newsCalls.some(u => u.indexOf('limit') !== -1), false);
+    fetchLog.some(u => u.indexOf('limit') !== -1), false);
   check('hazard selection travels in the path, not a parameter',
-    newsCalls.some(u => u.indexOf('hazard=') !== -1), false);
+    fetchLog.some(u => u.indexOf('hazard=') !== -1), false);
   check('both representations were actually exercised',
-    newsCalls.indexOf('/api/news') !== -1 && newsCalls.indexOf('/api/news/hazard') !== -1, true);
-  /* Any third shape at all — a trailing slash, a bare '?', a stray parameter — is a failure. */
-  const shapes = Array.from(new Set(newsCalls));
-  check('no third request shape exists', shapes.length, 2);
+    fetchLog.indexOf('/api/news') !== -1 && fetchLog.indexOf('/api/news/hazard') !== -1, true);
+  /* A trailing slash, a bare '?', a stray parameter, or another endpoint entirely. */
+  check('the whole log contains exactly two distinct shapes',
+    Array.from(new Set(fetchLog)).length, 2);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
