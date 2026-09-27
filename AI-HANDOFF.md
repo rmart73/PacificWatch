@@ -42,6 +42,16 @@ at `fcaf55a`, with `git log` and content equality verified first.
 
 Governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md), **G01–G18**.
 
+**Claim extended 2026-09-27, ahead of the work:** one document,
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md), written at Codex's request after
+its final code review came back clean. It is the owner's step-by-step for G11/G12 — the preview-only
+rate-limit test, the evidence to capture, the reset, and the final production rule.
+
+**It is a procedure, not an execution.** Publishing the rule, accepting the metered-pricing
+acknowledgement and running the test are owner-only actions. No agent has touched Vercel project
+settings and none will. This commit and the document add no application, configuration or test
+change: the files Codex reviewed at `54e9248` stay byte-identical.
+
 **Scope — what this changes**
 
 1. **`api/news.js`** — two canonical representations replacing the free-form `limit`/`hazard`
