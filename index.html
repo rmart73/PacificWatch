@@ -2223,8 +2223,11 @@ async function fetchNews() {
   if (!container) return;
   if (!S.cache.news) container.innerHTML = `<div class="news-item"><div class="skeleton" style="width:90px;height:10px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
   try {
-    const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';
-    const res = await fetch('/api/news' + q);
+    /* Two canonical, query-free URLs. The item count is fixed by the representation, so the
+       browser no longer asks for one -- a caller-selected limit was part of the unbounded cache
+       key space G1 closed. Hazard selection is a path, not a parameter. */
+    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';
+    const res = await fetch(path);
     if (res.status === 404) throw new Error('NO_API');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();

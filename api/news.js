@@ -115,7 +115,36 @@ async function serve(req, res, hazardOnly) {
   /* Cache at the edge so the outlets aren't hit on every page load. */
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
 
+  /* A preflight is not a read. It answers from here and touches no outlet. */
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
+  /* Anything but GET is refused before any upstream work, and the refusal is not cached.
+     Declared with Allow so the refusal is actionable rather than merely a wall. */
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(405).json({ error: 'method not allowed' });
+    return;
+  }
+
+  /* CANONICAL REQUEST CHECK — the second layer of the bound, and the one that survives if the
+     edge transform is ever removed or misconfigured.
+
+     The public surface is two query-free paths. Routing strips every query key before the CDN
+     chooses a key, so a well-routed request arrives here with none. Anything that still carries
+     a query string reached application code by another route, and is refused BEFORE
+     FEEDS.map(fetchFeed) so it performs not even one upstream request.
+
+     The refusal is deliberately opaque: a fixed message, no echo of the offending input, and
+     no-store so a refusal can never occupy a cache entry of its own. Echoing the input would
+     hand an attacker a reflection surface, and caching refusals would re-create the unbounded
+     key space this whole change exists to close. */
+  const qIndex = String(req.url || '').indexOf('?');
+  if (qIndex !== -1 && qIndex !== String(req.url).length - 1) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(400).json({ error: 'this endpoint takes no query parameters' });
+    return;
+  }
 
   /* Fixed by the representation, never by the caller. */
   const limit = 30;
