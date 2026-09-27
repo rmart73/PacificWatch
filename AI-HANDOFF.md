@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) open; **rounds one and two corrected** — 306/288 assertions, 78/78 mutations caught, final-head preview smoke passed on `54e9248` | Codex re-reviews; **the owner publishes the WAF rule — G1 does not close without it** |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **Blocked on G11/G12 only.** The owner runs [G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md); Codex then verifies the WAF evidence and presents the merge decision |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,54 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-27 — code review clean; G11/G12 procedure handed to the owner
+
+Codex's final read-only review of #26 returned **no code, test, documentation or evidence findings**.
+It confirmed the complete-log G02 assertions and both new mutations are load-bearing, and accepted
+that the `54e9248` smoke applies to `ea6e496` because only `AI-HANDOFF.md` changed afterward. PR #26
+is `MERGEABLE/CLEAN` with both Vercel checks passing.
+
+**#26 is not merged and is not to be merged yet.** G11 and G12 are the only outstanding acceptance
+items, and they are external actions.
+
+#### What was added
+
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) — the owner's step-by-step:
+the temporary preview-only 5-per-60 test, the evidence to capture, the reset, and the final
+production 100-per-60 rule, each mapped to what G11/G12/G13 actually require.
+
+**No application, configuration or test file changed.** `api/news.js`, `api/news/hazard.js`,
+`index.html`, `vercel.json`, `package.json` and everything under `test/` are byte-identical to
+`54e9248`, verified by object hash, so Codex's clean review still stands on the code. The two commits
+since are the claim and this document.
+
+#### The part of that document most worth reading twice
+
+A rate-limit rule carrying **only path conditions applies to every hostname on the project,
+including production.** The 5-per-60 test rule therefore needs a hostname condition AND-ed with the
+path group, or it throttles real users to five requests a minute — during hurricane season, on the
+card people open the site for. The document leads with that, says not to skip it, and says to stop
+rather than save a rule whose shape cannot be confirmed.
+
+The final rule deliberately has **no** hostname condition, because G11 requires it to cover both
+representations wherever served.
+
+#### One thing the test will settle that no agent has measured
+
+`/api/news` is CDN-cached, so most burst requests never reach the Function. If `429`s appear anyway,
+the firewall counts **requests at the edge** rather than invocations — the stronger result, and the
+one G1 needs, since the demonstrated vector was cheap cache-missing traffic. If cached requests
+instead sail through, that is a real limitation of this defense.
+
+**The procedure explicitly says not to assume the first outcome** and to record the statuses
+actually observed. It would be easy to write this up as a success either way, which is exactly why
+it is called out before the evidence is gathered rather than after.
+
+#### Still owner-only
+
+Publishing the rule, accepting the metered-pricing acknowledgement and generating the test traffic.
+No agent has touched Vercel project settings and none will.
 
 ### 2026-09-27 — PR #26 round two: two corrections and a final-head smoke
 
