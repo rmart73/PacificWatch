@@ -50,6 +50,26 @@ function feedXml(i) {
     '</channel></rss>';
 }
 
+/* BULK fixture: 60 items across five feeds, with every hazard item older than every ordinary
+   one. Filtering over the whole pool yields 30 hazard items; filtering after a newest-30 cap
+   would yield none of them. The difference is the entire justification for a separate hazard
+   representation, so it must be exercised by a fixture that overflows the cap. */
+let bulk = false;
+function bulkFeedXml(i) {
+  let out = '<rss><channel>';
+  for (let k = 0; k < 6; k++) {          /* 6 ordinary, newest */
+    const t = new Date(Date.UTC(2026, 8, 26, 20, i * 6 + k)).toUTCString();
+    out += '<item><title>Community notice ' + i + '-' + k + '</title><link>https://example.test/n' +
+           i + k + '</link><description>d</description><pubDate>' + t + '</pubDate></item>';
+  }
+  for (let k = 0; k < 6; k++) {          /* 6 hazard, oldest */
+    const t = new Date(Date.UTC(2026, 8, 26, 2, i * 6 + k)).toUTCString();
+    out += '<item><title>Flood warning ' + i + '-' + k + '</title><link>https://example.test/f' +
+           i + k + '</link><description>d</description><pubDate>' + t + '</pubDate></item>';
+  }
+  return out + '</channel></rss>';
+}
+
 let upstream = 0;          // every attempted upstream request
 let lastHeaders = null;    // headers of the most recent upstream request
 let failPattern = null;    // substring: matching feeds reject
@@ -64,7 +84,8 @@ function installFetch() {
     if (failAll) return Promise.reject(new Error('forced failure'));
     if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
     const idx = Math.max(0, upstream - 1);
-    return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(feedXml(idx % 5)) });
+    const xml = bulk ? bulkFeedXml(idx % 5) : feedXml(idx % 5);
+    return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(xml) });
   };
 }
 
@@ -110,6 +131,21 @@ async function main() {
   check('the hazard items are exactly the ones a reader would pick',
     o.body.items.map(i => i.title).sort().join('|'), HAZARD_TITLES.slice().sort().join('|'));
 
+  console.log('\nG01 — the 30-item cap binds, and hazard filters the POOL not the capped list:');
+  bulk = true;
+  o = await call('/api/news', 'GET', false);
+  check('all-headlines caps at exactly 30 of the 60 available', o.body.items.length, 30);
+  /* Independently established: the newest 30 of this fixture are all ordinary notices, because
+     every hazard item was given an earlier timestamp. */
+  check('and the newest 30 contain no hazard items', o.body.items.filter(i => i.hazard).length, 0);
+  o = await call('/api/news/hazard', 'GET', true);
+  check('hazard still finds all 30 of its items despite them being outside the newest 30',
+    o.body.items.length, 30);
+  check('and every one is hazard-flagged', o.body.items.every(i => i.hazard), true);
+  check('which the browser could NOT derive by filtering the capped all-headlines list',
+    0 < o.body.items.length, true);
+  bulk = false;
+
   console.log('\nG04 — non-canonical input reaching the handler does ZERO upstream work:');
   for (const q of ['?zzz=1', '?limit=99', '?hazard=1', '?limit=30&limit=31', '?a=1&b=2', '?%20=1']) {
     o = await call('/api/news' + q, 'GET', false);
@@ -140,6 +176,7 @@ async function main() {
   check('and the failure is reported', o.body.errors.length, 1);
   check('and names the source', typeof o.body.errors[0].source, 'string');
   check('and the response is still 200', o.code, 200);
+  check('one failure does not become a 502', o.code === 502, false);
 
   failAll = true;
   o = await call('/api/news', 'GET', false);

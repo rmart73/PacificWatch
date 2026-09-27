@@ -409,10 +409,13 @@ const mutations = [
     expect: ['and is not cacheable'], suite: 'news', target: 'api' },
 
   /* Caller-selected item counts were part of the original unbounded key space. */
-  { name: 'caller-controlled limit restored',
+  /* The previous version of this case mutated the limit source, which the canonical-request
+     guard already makes unobservable -- it reported MISSED, correctly. The cap VALUE is the
+     behaviour worth trusting, and the bulk fixture overflows it. */
+  { name: 'the 30-item cap widened',
     from: "  const limit = 30;",
-    to:   "  const limit = Math.min(parseInt(new URL(req.url,'http://x').searchParams.get('limit'),10) || 30, 100);",
-    expect: ['refused ?limit=99 with 400'], suite: 'news', target: 'api' },
+    to:   "  const limit = 100;",
+    expect: ['all-headlines caps at exactly 30 of the 60 available'], suite: 'news', target: 'api' },
 
   /* Without the method guard, a POST does five upstream fetches. */
   { name: 'method guard removed',
@@ -438,13 +441,18 @@ const mutations = [
   { name: 'hazard filtered after the cap instead of over the whole pool',
     from: "  if (hazardOnly) items = items.filter(it => it.hazard);\n  items.sort((a, b) => b.ts - a.ts);\n  items = items.slice(0, limit)",
     to:   "  items.sort((a, b) => b.ts - a.ts);\n  items = items.slice(0, limit);\n  if (hazardOnly) items = items.filter(it => it.hazard);\n  items = items.slice(0, limit)",
-    expect: ['hazard returns only hazard items'], suite: 'news', target: 'api' },
+    expect: ['hazard still finds all 30 of its items despite them being outside the newest 30'],
+    suite: 'news', target: 'api' },
 
-  /* Partial-feed honesty: one failing outlet must not fail the whole response. */
+  /* Partial-feed honesty: one failing outlet must not fail the whole response. The previous
+     version of this case replaced allSettled with a construction that THREW, and a crash prints
+     no FAIL line, so the harness recorded MISSED. Mutating the failure threshold instead is
+     observable: one failure becomes a 502. */
   { name: 'a single failing feed made fatal',
-    from: "  const settled = await Promise.allSettled(FEEDS.map(fetchFeed));",
-    to:   "  const settled = (await Promise.all(FEEDS.map(f => fetchFeed(f).then(v => ({status:'fulfilled',value:v}))))); ",
-    expect: ['a single failing outlet still returns the others'], suite: 'news', target: 'api' },
+    from: "  if (!items.length && errors.length === FEEDS.length) {",
+    to:   "  if (errors.length > 0) {",
+    expect: ['and the response is still 200', 'one failure does not become a 502'],
+    suite: 'news', target: 'api' },
 
   /* Star-Advertiser 403s a bare UA. Trimming it silently removes one outlet. */
   { name: 'browser user agent trimmed to a bare Mozilla/5.0',
