@@ -1,36 +1,6 @@
 {
   "routes": [
     {
-      "src": "^/api/news/hazard$",
-      "dest": "/api/news",
-      "transforms": [
-        {
-          "type": "request.query",
-          "op": "delete",
-          "target": {
-            "key": {
-              "pre": ""
-            }
-          }
-        },
-        {
-          "type": "request.headers",
-          "op": "delete",
-          "target": {
-            "key": "x-pacific-watch-news-representation"
-          }
-        },
-        {
-          "type": "request.headers",
-          "op": "set",
-          "target": {
-            "key": "x-pacific-watch-news-representation"
-          },
-          "args": "hazard"
-        }
-      ]
-    },
-    {
       "src": "^/api/news$",
       "continue": true,
       "transforms": [
@@ -42,12 +12,20 @@
               "pre": ""
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "src": "^/api/news/hazard$",
+      "continue": true,
+      "transforms": [
         {
-          "type": "request.headers",
+          "type": "request.query",
           "op": "delete",
           "target": {
-            "key": "x-pacific-watch-news-representation"
+            "key": {
+              "pre": ""
+            }
           }
         }
       ]
