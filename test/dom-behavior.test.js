@@ -18,6 +18,13 @@ let quakeFeatures = null;   // when set, overrides the default USGS payload
 let windOverrideMph = null; // when set, every observation answers with this reading
 let gustOnly = false;       // when true, the observation reports a gust but no sustained wind
 let rawObs = null;          // when set, used verbatim as the observation properties
+/* NOAA CO-OPS sends local station time, no zone, which the app reads as HST. Fixtures build it
+   relative to now so they cannot rot: a hardcoded date was harmless while no render path read the
+   measurement clock, and became a days-old observation the moment Stage 2 wired it in. */
+function hstStamp(minutesAgo) {
+  const HST = 10 * 60 * 60 * 1000;
+  return new Date(Date.now() - minutesAgo * 60000 - HST).toISOString().slice(0, 16).replace('T', ' ');
+}
 let rawTide = null;         // when set, used verbatim as the CO-OPS data row (v and t)
 
 /* NWS reports wind in km/h and precipitation in mm, each with its unitCode. Fixtures are
@@ -53,7 +60,7 @@ function body(url) {
     return { properties: { windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
                            timestamp: new Date(Date.now() - 4 * MIN).toISOString() } };
   }
-  if (u.includes('tidesandcurrents')) return { data: [rawTide || { v: '1.7' }] };
+  if (u.includes('tidesandcurrents')) return { data: [rawTide || { v: '1.7', t: hstStamp(3) }] };
   if (u.includes('earthquake.usgs.gov')) return { features: quakeFeatures || [] };
   if (u.includes('fema.gov')) return { DisasterDeclarationsSummaries: [] };
   if (u.includes('/api/news')) return { items: newsItems || [], errors: [] };
@@ -937,16 +944,18 @@ function has(label, sel, needle, expected) {
 
   console.log('\n28. The same guard on the tide card:');
   w.eval('S.cache = {}');
-  /* NOAA sends local station time with no zone; the app reads it as HST. Two readings six
-     minutes apart in HST wall time, the later one fetched first. */
-  rawTide = { v: '1.800', t: '2026-09-25 20:54' };
+  /* Two readings in HST wall time, the later one fetched first. Relative to now so the guard is
+     what is being tested rather than the age: a fixed date would be withdrawn as expired and the
+     card would be empty for reasons that have nothing to do with T11. */
+  const tideT1 = hstStamp(5);
+  rawTide = { v: '1.800', t: tideT1 };
   await w.fetchTides();
   await settle();
   check('the first tide reading renders', txt('#stat-tide').indexOf('1.8') !== -1, true);
   check('and its NOAA observation time is retained',
-    w.eval('S.cache.noaaTides.data.t'), '2026-09-25 20:54');
+    w.eval('S.cache.noaaTides.data.t'), tideT1);
 
-  rawTide = { v: '0.300', t: '2026-09-25 20:24' };   /* thirty minutes EARLIER */
+  rawTide = { v: '0.300', t: hstStamp(35) };   /* thirty minutes EARLIER */
   await w.fetchTides();
   await settle();
   check('the older tide observation does not reach the card',
@@ -954,9 +963,9 @@ function has(label, sel, needle, expected) {
   check('the newer tide height is still displayed',
     txt('#stat-tide').indexOf('1.8') !== -1, true);
   check('and the cache kept the newer observation time',
-    w.eval('S.cache.noaaTides.data.t'), '2026-09-25 20:54');
+    w.eval('S.cache.noaaTides.data.t'), tideT1);
 
-  rawTide = { v: '2.100', t: '2026-09-25 21:00' };   /* genuinely later */
+  rawTide = { v: '2.100', t: hstStamp(2) };   /* genuinely later */
   await w.fetchTides();
   await settle();
   check('a newer tide observation still replaces the card',
@@ -1005,6 +1014,270 @@ function has(label, sel, needle, expected) {
   /* A trailing slash, a bare '?', a stray parameter, or another endpoint entirely. */
   check('the whole log contains exactly two distinct shapes',
     Array.from(new Set(fetchLog)).length, 2);
+
+  /* ======================================================================================
+     STAGE 2 — the observation clock reaches the cards.
+
+     Stage 1 built the helpers and deliberately wired none of them. Everything below asserts the
+     wiring: what the dot means, when a reading is withdrawn, and that the two clocks are reported
+     separately. The clock is injected rather than faked globally, so each case states the exact
+     instant it is asking about.
+     ====================================================================================== */
+  const isoAgo = min => new Date(Date.now() - min * MIN).toISOString();
+  const dotOf  = sel => ($(sel) || {}).className;
+  const seedWeather = async (props) => {
+    w.eval('delete S.cache.nwsWeather');
+    rawObs = props; await w.fetchWeather(); await settle();
+  };
+  const seedTide = async (row) => {
+    w.eval('delete S.cache.noaaTides');
+    rawTide = row; await w.fetchTides(); await settle();
+  };
+
+  console.log('\n30. T01 — wind magnitude never changes the observation dot:');
+  for (const mph of [0, 22, 40]) {
+    await seedWeather({ windSpeed: wind(mph), windGust: wind(null),
+                        precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+    check('  ' + mph + ' mph reads verified, not escalated', dotOf('#dot-wind'), 's-dot ok');
+  }
+  /* The removed thresholds were 20 and 35 mph. A 40 mph reading is the case that used to pulse. */
+  check('no observation dot carries the retired warn/alert classes',
+    /s-dot (warn|alert)/.test(d.querySelector('.stat-grid') ? d.querySelector('.stat-grid').innerHTML : d.body.innerHTML), false);
+
+  console.log('\n31. T02 — the gust-only form keeps its label and the same semantics:');
+  await seedWeather({ windSpeed: wind(null), windGust: wind(40),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  check('gust-only still states that sustained is unavailable',
+    txt('#stat-wind-note').indexOf('Gust, sustained N/A') !== -1, true);
+  check('and is verified on the same terms as a sustained reading', dotOf('#dot-wind'), 's-dot ok');
+
+  console.log('\n32. T03 — rain magnitude never changes the dot; missing rain is not zero:');
+  for (const mm of [0, 0.254, 25.4]) {
+    await seedWeather({ windSpeed: wind(12), windGust: wind(null),
+                        precipitationLastHour: rain(mm), timestamp: isoAgo(4) });
+    check('  ' + mm + ' mm reads verified', dotOf('#dot-rain'), 's-dot ok');
+  }
+  await seedWeather({ windSpeed: wind(12), windGust: wind(null),
+                      precipitationLastHour: rain(null), timestamp: isoAgo(4) });
+  check('null rain reads Not reported', txt('#stat-rain-note').indexOf('Not reported') !== -1, true);
+  check('and is not verified', dotOf('#dot-rain'), 's-dot unknown');
+  /* Caught in the live T16 capture: the card said "Not reported" and the state map said it
+     again, four fields apart in the same line. */
+  check('  and says it once, not twice',
+    txt('#stat-rain-note').split('Not reported').length - 1, 1);
+  check('  while still carrying the observation time and verification age',
+    /obs .*HST.*verified/.test(txt('#stat-rain-note')), true);
+
+  console.log('\n33. T13 — one missing field does not unverify the other:');
+  check('usable wind stays verified while rain is missing', dotOf('#dot-wind'), 's-dot ok');
+  await seedWeather({ windSpeed: wind(null), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  check('and the inverse is symmetric: rain verified', dotOf('#dot-rain'), 's-dot ok');
+  check('  with wind reading Not reported', txt('#stat-wind-note').indexOf('Not reported') !== -1, true);
+  check('  and wind not verified', dotOf('#dot-wind'), 's-dot unknown');
+
+  console.log('\n34. T04 — a fresh fetch of an old measurement is not a fresh measurement:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(74) });
+  check('inside the 75-minute window it is current', dotOf('#dot-wind'), 's-dot ok');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(77) });
+  check('past it the reading is visibly stale', dotOf('#dot-wind'), 's-dot unknown');
+  check('  despite a seconds-old successful fetch',
+    w.eval('sourceState("nwsWeather")'), 'current');
+  check('  and the card says so in words', txt('#stat-wind-note').indexOf('Observation stale') !== -1, true);
+
+  console.log('\n35. T05 — past retention the reading is withdrawn, fetch success notwithstanding:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(181) });
+  check('the value is gone, not merely dimmed', txt('#stat-wind').indexOf('18') !== -1, false);
+  check('  while the fetch itself still reports current',
+    w.eval('sourceState("nwsWeather")'), 'current');
+
+  console.log('\n36. T07 — a timestamp that cannot be placed in time never earns a dot:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: null });
+  check('missing observation time is not verified', dotOf('#dot-wind'), 's-dot unknown');
+  check('  and never borrows the fetch clock',
+    txt('#stat-wind-note').indexOf('obs time unknown') !== -1, true);
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: 'not a timestamp' });
+  check('unparseable observation time is not verified', dotOf('#dot-wind'), 's-dot unknown');
+  /* Beyond the five-minute skew allowance: a reading we cannot place is not a reading. */
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5),
+                      timestamp: new Date(Date.now() + 20 * MIN).toISOString() });
+  check('future-skewed observation is not verified', dotOf('#dot-wind'), 's-dot unknown');
+
+  console.log('\n37. T06 — tide retains NOAA t, renders it in HST, and ages on its own clock:');
+  const tideFresh = hstStamp(17);
+  await seedTide({ v: '1.700', t: tideFresh });
+  check('inside the 18-minute window it is current', dotOf('#dot-tide'), 's-dot ok');
+  check('  and the observation time is rendered in HST',
+    /obs .*HST/.test(txt('#stat-tide-note')), true);
+  check('  with the raw NOAA stamp retained', w.eval('S.cache.noaaTides.data.t'), tideFresh);
+  await seedTide({ v: '1.700', t: hstStamp(20) });
+  check('past it the tide reading is stale', dotOf('#dot-tide'), 's-dot unknown');
+  await seedTide({ v: '1.700', t: hstStamp(61) });
+  check('past 60 minutes the tide reading is withdrawn',
+    txt('#stat-tide').indexOf('1.7') !== -1, false);
+
+  console.log('\n38. T08 — retained data is held only while BOTH retentions permit:');
+  await seedWeather({ windSpeed: wind(23), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  const keptObserved = w.eval('S.cache.nwsWeather.observedAt');
+  w.fetch = makeFetch('observations');            /* refresh now fails */
+  await w.fetchWeather(); await settle();
+  check('the retained value is still shown', txt('#stat-wind').indexOf('23') !== -1, true);
+  check('  the measurement clock did not move to the failed attempt',
+    w.eval('S.cache.nwsWeather.observedAt'), keptObserved);
+  check('  and the copy carries the verification age as well as the observation',
+    txt('#stat-wind-note').indexOf('verified') !== -1, true);
+  w.fetch = makeFetch(null);
+
+  console.log('\n39. T09 — the age tick moves the cards without fetching:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  const beforeSuccess  = w.eval('S.sourceHealth.nwsWeather.lastSuccess');
+  const beforeObserved = w.eval('S.cache.nwsWeather.observedAt');
+  const beforeFetches  = fetchCount;
+  /* Corrupt the rendered dot, then let the tick repair it from cache alone. */
+  $('#dot-wind').className = 's-dot ok-CORRUPTED';
+  w.ageTick();
+  await settle();
+  check('the tick re-rendered the card from cache', dotOf('#dot-wind'), 's-dot ok');
+  check('  issuing no request', fetchCount, beforeFetches);
+  check('  leaving lastSuccess untouched',
+    w.eval('S.sourceHealth.nwsWeather.lastSuccess'), beforeSuccess);
+  check('  and leaving the measurement clock untouched',
+    w.eval('S.cache.nwsWeather.observedAt'), beforeObserved);
+  /* The boundary itself: the same cached reading, read at a later instant. */
+  w.renderWeatherCard(Date.now() + 80 * MIN);
+  check('crossing the staleness boundary withdraws the dot', dotOf('#dot-wind'), 's-dot unknown');
+  w.renderWeatherCard();
+
+  console.log('\n40. T15 / T17 — words for every state, and no retired classes anywhere:');
+  check('the source rows report a state in words',
+    /Current|Checking|Stale|Unavailable|Not reported|Observation/.test(txt('#source-health-list')), true);
+  check('Source details shows the fetch age separately',
+    txt('#source-health-list').indexOf('checked') !== -1, true);
+  check('  and the observation age separately',
+    txt('#source-health-list').indexOf('obs ') !== -1, true);
+  check('no rendered dot uses the retired warn class',
+    d.body.innerHTML.indexOf('s-dot warn') !== -1, false);
+  check('no rendered dot uses the retired alert class',
+    d.body.innerHTML.indexOf('s-dot alert') !== -1, false);
+  /* A plain measurement must never generate advisory language; that is NWS's authority. */
+  check('a 40 mph reading produces no warning language in the card',
+    /warning|advisory|severe/i.test(txt('#stat-wind-note')), false);
+
+  console.log('\n41. T13 — good clocks do not vouch for data that is not there:');
+  await seedWeather({ windSpeed: wind(null), windGust: wind(null),
+                      precipitationLastHour: rain(null), timestamp: isoAgo(2) });
+  check('a reading with every value missing does not report Current',
+    txt('#source-health-list').indexOf('Not reported') !== -1, true);
+  await seedWeather({ windSpeed: wind(14), windGust: wind(null),
+                      precipitationLastHour: rain(null), timestamp: isoAgo(2) });
+  check('  while one usable value is enough to report Current',
+    txt('#source-health-list').indexOf('Not reported') !== -1, false);
+  rawObs = null; rawTide = null;
+
+  console.log('\n42. Navigation re-evaluates the cards, not only the alert surfaces:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  check('the card is verified before navigating', dotOf('#dot-wind'), 's-dot ok');
+  /* Corrupt the rendered dot, then navigate. A view opened after sitting on another one must
+     re-evaluate from memory rather than wait up to a minute for the age tick. */
+  $('#dot-wind').className = 's-dot NAVIGATION-DID-NOT-RERENDER';
+  w.switchView('alerts');
+  await settle();
+  w.switchView('overview');
+  await settle();
+  check('navigating re-rendered the observation cards', dotOf('#dot-wind'), 's-dot ok');
+
+  console.log('\n43. An island switch in flight reads as Checking, never Unavailable:');
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  /* Hold the next observation response so the switch is genuinely mid-flight. */
+  holdPattern = 'observations';
+  w.eval('S.island = "maui"');
+  w.renderIslandScopedChecking();
+  w.fetchWeather();
+  await settle();
+  check('the card says Checking after the switch',
+    txt('#stat-wind-note').indexOf('Checking') !== -1 || txt('#stat-wind').indexOf('Checking') !== -1
+      || txt('#stat-wind-note').indexOf('heck') !== -1, true);
+  /* THE REGRESSION: a tick here previously found no island-matching entry but healthy fetch
+     metadata from the PREVIOUS island, concluded unavailable, and overwrote Checking. */
+  w.ageTick();
+  await settle();
+  check('a tick mid-switch does not overwrite it with unavailable',
+    txt('#stat-wind-note').indexOf('unavailable') !== -1, false);
+  check('  and the previous island\'s reading is not shown under the new one',
+    txt('#stat-wind').indexOf('18') !== -1, false);
+  if (releaseHeld) releaseHeld();
+  holdPattern = null;
+  await settle();
+  w.eval('S.island = "statewide"');
+
+  console.log('\n44. A future observation never renders a negative age:');
+  w.eval('S.cache = {}');
+  /* Inside the five-minute skew allowance: ordinary clock disagreement, treated as age zero. */
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
+                      timestamp: new Date(Date.now() + 2 * MIN).toISOString() });
+  check('a slightly-ahead source clock is still verified', dotOf('#dot-wind'), 's-dot ok');
+  check('  and renders no negative age', /-\d+ (sec|min|hr)/.test(txt('#stat-wind-note')), false);
+  /* Beyond the allowance: undatable, and no age is offered at all. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
+                      timestamp: new Date(Date.now() + 90 * MIN).toISOString() });
+  check('a far-future observation is not verified', dotOf('#dot-wind'), 's-dot unknown');
+  check('  says the time is unusable',
+    txt('#stat-wind-note').indexOf('Observation time unusable') !== -1, true);
+  check('  and offers no age beside it', /-\d+ (sec|min|hr)/.test(txt('#stat-wind-note')), false);
+  check('  nor a confident zero',
+    txt('#stat-wind-note').indexOf('(0 sec ago)') !== -1, false);
+  /* The card suppressed the age and Source details did not, so the same reading was undatable
+     in one place and "0 sec ago" in the other, four inches apart on the same screen. */
+  check('  and Source details offers no age for it either',
+    /obs 0 sec ago/.test(txt('#source-health-list')), false);
+  check('  while still naming the state there',
+    txt('#source-health-list').indexOf('Observation time unusable') !== -1, true);
+  /* A datable reading must still show its age in the row, or the fix above would be a deletion. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(30) });
+  check('  and a datable reading still shows its observation age in the row',
+    /obs \d+ min ago/.test(txt('#source-health-list')), true);
+
+  console.log('\n45. T08 — BOTH retentions, each expiring independently:');
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(23), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  const t08At = w.eval('S.cache.nwsWeather.observedAt');
+  /* Measurement is young; the FETCH retention (30 min) is what lapses here. */
+  w.renderWeatherCard(Date.now() + 31 * MIN);
+  check('fetch retention expired, measurement still young: withdrawn',
+    txt('#stat-wind').indexOf('23') !== -1, false);
+  w.renderWeatherCard();
+  check('  and the same reading returns when read at the present instant',
+    txt('#stat-wind').indexOf('23') !== -1, true);
+  /* The converse: a failed refresh, with the measurement past ITS retention. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(23), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(181) });
+  /* Captured from THIS fixture, immediately before the failed refresh. An earlier version of
+     this assertion compared against a value from the previous, unrelated fixture and passed
+     because the two differed — which proves nothing about whether the clock moved. */
+  const expiredAt = w.eval('S.cache.nwsWeather.observedAt');
+  w.fetch = makeFetch('observations');
+  await w.fetchWeather(); await settle();
+  check('failed refresh with the measurement expired: withdrawn',
+    txt('#stat-wind').indexOf('23') !== -1, false);
+  w.fetch = makeFetch(null);
+  check('  and the measurement clock is exactly where it was',
+    w.eval('S.cache.nwsWeather.observedAt'), expiredAt);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();

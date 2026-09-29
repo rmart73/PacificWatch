@@ -35,9 +35,81 @@ per request — not a relayed report.
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
-| G1 closeout record | [#27](https://github.com/rmart73/PacificWatch/pull/27) open; documentation only | Codex reviews. Records the #26 production verification and carries the hazard-classifier finding into the Review Queue |
+| G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
+| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, T15 layout verified by the owner, and Claude's durable-document review finding corrected** | Ready for the owner's merge decision |
 
 ### Active claims
+
+**Q007/Q008 Stage 2 — T17 durable-document reconciliation — ChatGPT Codex,
+`claude/observation-stage2`.**
+Claimed 2026-09-28 after the read-only implementation re-review at `5517b09`, under the owner's
+authorization of the reserved Stage 2 documentation sub-scope. Claude is paused; this does not
+transfer implementation ownership.
+
+Scope is documentation only: reconcile the retired observation-dot severity classes and the
+remaining `.hazard-pulse` reduced-motion substitute in `AGENTS.md`; add the four mutation-testing
+lessons carried by the Stage 2 Review Queue; record this sub-scope and its result in
+`AI-HANDOFF.md`; and correct the duplicated next-action wording introduced in the final handover.
+No `index.html`, test, API, configuration, dependency, Stage 3, classifier or unrelated board
+cleanup change is in scope.
+
+**Q007/Q008 Stage 2 — wiring the observation clock into the cards — Claude Code,
+`claude/observation-stage2`.**
+Claimed 2026-09-28 before editing, in its own commit ahead of the work, on the owner's explicit
+authorization relayed through Codex. Branched from `main` at `56fa1d5`.
+
+Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md),
+**T01–T11 and T13–T17 as applicable to Stage 2.** T12 is Stage 3 and is excluded.
+
+**Scope — what this changes**
+
+1. **Weather and tide cards consume the Stage 1 helpers.** `observationVerified()` and the state
+   helpers exist and are tested since #24, but the cards still decide their own presentation. The
+   dots and copy become functions of the observation state rather than of fetch success.
+2. **Source details separates the two clocks.** `renderSourceHealth()` currently shows one combined
+   state plus a `lastSuccess` age, so a fresh fetch of a stale measurement reads as healthy. Fetch
+   health and observation age become separately visible.
+3. **NOAA `t` is retained and rendered.** The raw stamp is already captured at
+   `observedAtFromNoaaLst(latest.t)`; Stage 2 renders it in HST rather than discarding it.
+4. **Magnitude-driven dots removed.** Three assignments, all in `index.html`:
+   `dotWind` at **1846** (`windMph>35?'alert':windMph>20?'warn'`), the gust-only form at **1850**,
+   and `dotRain` at **1866** (`>0.5?'alert':>0?'warn'`). A measurement's size is not a statement
+   about whether it was verified, which is the whole point of T01 and T03.
+5. **Dead CSS removed.** `.s-dot.warn` (line 151) and `.s-dot.alert` (line 152) once the consumers
+   are gone, plus the dot-specific reduced-motion rule at **397** and the comment at **393–394**
+   that explains it. **`.hazard-pulse` keeps its static ring substitute** — it is a separate
+   consumer and reduced-motion users still need the second channel.
+6. **Tests** for the T-items above, including the age-tick, island-race, retained-data,
+   partial-weather and hostile/malformed fixtures the contract names, plus mutation cases.
+7. **#27's self-close absorbed**, since a board PR cannot record its own merge: close the
+   `claude/g1-closeout` claim, replace it under Active Branches, and update its Review Queue row.
+
+**A scope item that does not exist, reported rather than silently dropped**
+
+The authorization names *"wind/rain/tide magnitude-driven `warn`/`alert` dot assignments."* **The
+tide dot has no magnitude thresholds.** `renderTide()` at **1941** already assigns
+`stale ? 'unknown' : 'ok'`, and `renderTideUnavailable()` at **1950** assigns `unknown`. So for tide
+there is nothing of that kind to remove — what Stage 2 changes there is the *input*, from a
+fetch-derived `stale` flag to the observation state. Recorded so the closeout is not later read as
+having removed something that was never present.
+
+**Out of scope, explicitly**
+
+Stage 3 earthquake behaviour and T12. `HAZARD_RE` and the hazard-classifier finding. The
+closed-claims cleanup. The remote-branch convention decision. No API, `vercel.json`, WAF or
+dependency change.
+
+**Reserved for Codex on this same branch — Claude does not touch `AGENTS.md`**
+
+The T17 reconciliation in `AGENTS.md` and the three mutation-testing lessons now recorded in the
+Stage 2 Review Queue row are **Codex's documentation sub-scope**, claimed separately after the
+implementation is reviewed. I will not edit that file. When implementation and tests are ready I
+**pause and hand the branch over** rather than continuing into the documentation.
+
+**T16 requires evidence before merge:** a timestamped raw-response-versus-rendered-output record for
+weather and tide, covering source fields, units, observation time, an independently established
+expectation and the actual display. That is gathered against the preview, not asserted from tests.
+
 
 **G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
 Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
@@ -254,10 +326,10 @@ implementation stays a separate claimed, reviewable PR.
 the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `fcaf55a` and is authoritative
 at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
-the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is next** and
-wires the
-observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
-satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
+the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is in review as
+[#28](https://github.com/rmart73/PacificWatch/pull/28)**: the observation helpers now reach the cards
+and Source details, the magnitude-driven dot classes are gone, and `AGENTS.md` is reserved for
+Codex's T17 sub-scope on that branch. **Stage 3 is next** and aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
@@ -271,7 +343,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/g1-closeout | **Documentation only.** Records the #26 production verification, closes G1, and carries the pre-existing hazard-classifier finding into the Review Queue |
+| Claude | claude/observation-stage2 | Q007/Q008 Stage 2: the observation clock reaches the weather and tide cards and Source details; magnitude-driven dot classes removed. `AGENTS.md` is untouched and reserved for Codex's T17 sub-scope on this same branch |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -281,22 +353,24 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stages 2 and 3 | Not started; owner-approved, and G1 is now closed so the sequence gate is lifted. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock | Claim separately. Codex places the three T17 lessons in `AGENTS.md` during Stage 2 |
+| Q007/Q008 stage 2 | **Ready to merge as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation review clean; T16 captured against the deployed preview; T15 layout verified by the owner at 320/390px and desktop; T17 durable-document reconciliation and all four mutation-testing lessons placed in `AGENTS.md`; Claude's documentation review finding corrected | Owner decides merge |
+| Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. Aligns the earthquake card and satisfies T12 | Claim separately after Stage 2 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `9e2cfec`**, merged through #26 and serving production. Claims and handoffs for
+**`main` is at `56fa1d5`**, merged through #27 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The G1 implementation merged in #26 and is verified
-in production; the only open PR is [#27](https://github.com/rmart73/PacificWatch/pull/27), which is
-documentation only. Stage 2 and Stage 3 are approved but unclaimed and unstarted.
+**An application implementation IS in flight: [#28](https://github.com/rmart73/PacificWatch/pull/28)
+changes `index.html` and the test suites.** Stage 3 is approved but unclaimed and unstarted.
 
-This paragraph has now been wrong twice and corrected twice — it once said `main` was `22686bb` with
-G1 a contract only, then said an implementation was in flight as #26. Each was true when written and
+This paragraph has now been wrong three times and corrected three times — `main` as `22686bb` with G1
+a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
+into a round where #28 was open, written by a closeout that **claimed to absorb #27's self-close and
+did not perform it**. Each was true when written and
 neither was updated as the work moved. **The closeout that merged #26 initially repeated the
 mistake:** the new entry was written while this section and seven others still described the
 pre-merge state, and Codex caught all eight. A line describing "right now" is wrong the moment the
@@ -422,6 +496,216 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — Claude documentation review finding corrected; #28 ready for owner decision
+
+Claude found one count mismatch in Codex's reserved `AGENTS.md` change: the theming section still
+said **three** accessibility constraints after the reduced-motion rule became a fourth top-level
+item. The heading now says **four**. A blank line also separates the WCAG summary from that final
+bullet so it renders as the section conclusion rather than part of the reduced-motion constraint.
+
+Claude independently reran the suites at Codex's documentation head: `npm test` **306**,
+`test:dom` **354**, and `test:mutation` **95 of 95**, with zero `ANCHOR LOST` and zero `AMBIGUOUS`.
+It also verified by object hash that application, test, API and configuration files remained
+byte-identical to the reviewed implementation at `5517b09`. No implementation file changed in this
+correction. PR #28 returns to the owner for the merge decision after Vercel settles.
+
+### 2026-09-28 — Codex implementation re-review clean; reserved T17 documentation complete
+
+Codex's final read-only implementation re-review found no remaining code or test issue at `5517b09`.
+The T15 layout result is owner evidence: Source details passed at 320px, 390px and desktop with no
+overlap, clipping or horizontal scroll. T16 remains the deployed-preview raw-versus-rendered record
+below. Claude-reported verification at that handoff was `npm test` **306**, `test:dom` **354** and
+`test:mutation` **95 of 95**, with zero `ANCHOR LOST` and zero `AMBIGUOUS`; Codex's shell has no
+Node/npm, so those counts were reviewed but not independently rerun.
+
+Codex then claimed the reserved documentation sub-scope before editing. `AGENTS.md` now:
+
+1. replaces the obsolete load-bearing triangle row with the two-state observation-dot rule;
+2. retires the dot-specific F004 prose while preserving `.hazard-pulse`'s reduced-motion ring;
+3. records the setter-line, constant-free extraction and explicit callback-arity lessons; and
+4. requires a passing mutation run to have zero `ANCHOR LOST`/`AMBIGUOUS`, with render-path
+   mutations revalidated after their target moves.
+
+No application, test, API, configuration or dependency file changed in Codex's sub-scope. Claude
+reviews this durable-document diff; the owner retains the merge decision.
+
+### 2026-09-28 — T15 layout verified by the owner; Stage 2 evidence complete
+
+**The owner inspected the preview at 320px, 390px and desktop.** This was the one gate no agent
+could close: Claude cannot measure layout, and Codex cannot authenticate to the protected preview.
+
+#### Result — passes at all three widths
+
+```
+320px    rows wrap cleanly. Source names break to two lines ("NWS" / "Observations");
+         the meta chips wrap so the two ages sit on one line and the state badge below.
+         No overlap, no clipping, no horizontal scroll.
+390px    same structure, less wrapping. NWS Alerts, USGS, FEMA and News fit on one line.
+desktop  every row on a single line, meta right-aligned, footer copy renders in full.
+```
+
+The `.src-meta` change made for this round — permitting wrap and compression where three chips
+previously refused to shrink — is what produces the clean two-line wrap at 320px rather than an
+overflow. **That is now a verification rather than the defensive guess it was when written.**
+
+#### The capture also demonstrated the round-one gap closing, live
+
+`NWS Observations` rendered a hollow dot and **NOT REPORTED** while `checked` read minutes and `obs`
+read an hour. That looked wrong enough to check against the source, and it is correct: PHNL was
+publishing `null` for `windSpeed`, `windGust` **and** `precipitationLastHour` at the time, verified
+directly against `api.weather.gov` while the screenshots were on screen.
+
+**Before this round that row would have read `Current`.** `renderSourceHealth()` passed a hardcoded
+`true` for value usability, so good clocks vouched for data that was not there. That gap was found
+only because a mutation came back `MISSED` and turned out to be inert — and here it is, firing
+correctly against a real station reporting nothing.
+
+It is also a good argument for the dot being about verification rather than magnitude: the station
+is reachable, recent and answering, and still has nothing to report. One state could not have said
+both.
+
+#### Stage 2 evidence status
+
+```
+T01-T11, T13, T14, T17   covered by suites and mutations
+T15                      layout verified by the owner at 320/390/desktop   DONE
+T16                      raw-vs-rendered record against the deployed preview   DONE
+T12                      Stage 3, excluded
+```
+
+`npm test` **306** · `npm run test:dom` **354** · `npm run test:mutation` **95 of 95 caught**, zero
+`ANCHOR LOST`, zero `AMBIGUOUS`.
+
+**Nothing is outstanding from the owner.** `AGENTS.md` remains untouched and reserved for Codex.
+
+
+### 2026-09-28 — Stage 2 implementation complete; paused for Codex
+
+**Implementation and tests are done and the branch is handed over.** `AGENTS.md` is untouched, as
+reserved. Claude stops here and does not continue into the documentation sub-scope.
+
+#### What the cards do now
+
+`combinedObservationState()` decides what the weather and tide cards present. The dot is a statement
+about **verification**, never magnitude — the three magnitude-driven assignments are gone, along with
+`.s-dot.warn`, `.s-dot.alert` and the dot half of the reduced-motion rule. `.hazard-pulse` keeps its
+static ring substitute: separate consumer, and reduced-motion users still need that second channel.
+
+**Withdrawal is read from the cache rather than passed in.** Both fetch paths already rendered the
+reading the cache accepted rather than the response that arrived, so the cache was the only honest
+source for the verdict too — and reading it there gave `ageTick()` a render path needing no response
+at all. The old shape could not offer that, because the state arrived as a boolean argument from
+whichever fetch happened to be running. **The age tick now moves the cards**, so an observation
+crossing its boundary while the page sits idle stops claiming to be verified.
+
+#### T16 — raw response versus rendered output, against the deployed preview
+
+Captured `2026-09-29T05:55:47Z` (Sep 28, 07:55 PM HST) from
+`pacific-watch-git-claude-observation-stage2-saa-s16.vercel.app`, driving the **deployed** page
+against the **real** upstream APIs. Expectations are computed in the harness from constants written
+out independently, so a conversion bug in the app cannot also define what correct means.
+
+```
+WEATHER   api.weather.gov/stations/PHNL/observations/latest
+  raw     windSpeed {unitCode:'wmoUnit:km_h-1', value:18.36}
+          windGust {value:null}   precipitationLastHour {unitCode:'wmoUnit:mm', value:null}
+          timestamp '2026-09-29T04:53:00+00:00'
+  expect  18.36 km/h x 0.621371 = 11 mph · rain Not reported · observed 06:53 PM HST, 63 min
+          verified? yes, inside the 75 min window
+  actual  #stat-wind       11 mph
+          #stat-wind-note  HNL Intl · Honolulu reference for statewide
+                           · obs Sep 28, 06:53 PM HST (1 hr ago) · Current
+          #dot-wind        s-dot ok
+          #stat-rain       —
+          #stat-rain-note  Not reported · HNL Intl · … · obs … (1 hr ago) · verified 0 sec ago
+          #dot-rain        s-dot unknown
+
+TIDE      tidesandcurrents.noaa.gov … station=1612340, datum=MLLW, time_zone=lst_ldt
+  raw     v '0.942'   t '2026-09-28 19:42'   (HST wall time, no zone)
+  expect  0.9 ft MLLW · observed 07:42 PM HST, 14 min · verified? yes, inside the 18 min window
+  actual  #stat-tide       0.9 ft
+          #stat-tide-note  ft MLLW · HNL Harbor · Honolulu reference for statewide
+                           · obs Sep 28, 07:42 PM HST (14 min ago) · Current
+          #dot-tide        s-dot ok
+
+SOURCE DETAILS — the two clocks, separately
+  NWS Alerts          checked 0 sec ago                    Current
+  NWS Observations    checked 0 sec ago   obs 1 hr ago     Current
+  NOAA Tides          checked 0 sec ago   obs 14 min ago   Current
+  USGS Earthquakes    checked 0 sec ago                    Current
+  FEMA Declarations   checked 0 sec ago                    Current
+```
+
+**The NWS Observations row is the clearest single piece of evidence that Stage 2 works.** Before it,
+that row showed `checked 0 sec ago` and nothing else — a fresh fetch of an hour-old measurement
+reading as healthy. Both clocks are now on screen and they visibly disagree. Sources with no
+measurement clock show only the fetch age; inventing an observation age for them would be the same
+false precision in reverse.
+
+NOAA `t` is retained and rendered in HST, which closes the half of T06 that was previously discarded
+at the fetch boundary.
+
+#### Two harness artifacts in that capture, neither an application defect
+
+`window.scrollTo` is unimplemented in jsdom, and Node's `fetch` refuses the relative
+`/api/news/hazard` URL, so News reads Unavailable in the record. Both are properties of driving a
+browser page from Node, and neither touches weather or tide. Stated rather than trimmed out of the
+capture.
+
+#### One defect the live capture found that no test had
+
+The rain note read `Not reported · HNL Intl · … · Not reported · verified 0 sec ago` — the card
+announced the missing value, and the state map announced it again four fields later in the same
+line. Fixed, with an assertion that it is said once and a mutation that makes it stutter again.
+
+**This is the argument for T16 existing.** Every suite was green across that stutter, because no
+assertion was looking at the sentence as a reader would.
+
+#### Three disarmed mutations, repaired
+
+The first full run reported three `ANCHOR LOST` — the gust-only label and the two
+"renders the response instead of the accepted reading" cases — all pre-existing cases whose targets
+Stage 2 moved. Each still describes a real defect, so each was repaired rather than dropped. **This
+is the second time in this project that fixing a code path disarmed the mutation guarding it**, and
+it is worth treating as a standing post-change check rather than a surprise.
+
+A fourth came back `MISSED` and was the useful one. It mutated the per-card `valueUsable` argument,
+but the missing-value branches hardcode `'s-dot unknown'`, so that argument never reached a dot and
+the mutation changed nothing. Hunting for where `valueUsable` *is* load-bearing turned up a real
+gap: `renderSourceHealth()` passed a hardcoded `true`, so a reading whose every value was missing
+would report `Current` on the strength of its clocks alone. `observationValueUsable()` now reports
+on the reading, with assertions either side and the mutation retargeted there.
+
+#### Test fixtures changed where Stage 2 changed behaviour
+
+Stated plainly because changing an existing assertion deserves more scrutiny than adding one:
+
+- The tide fixtures pinned `2026-09-25`. Harmless while nothing read the measurement clock, and a
+  three-day-old observation the moment Stage 2 did. Now built relative to now.
+- The default tide fixture carried **no NOAA `t` at all** — modelling a response CO-OPS does not
+  send, while asserting it earned a verified dot. It now carries one, and T07 covers the missing
+  case directly.
+- Two assertions recomputed `hstStamp()` at assertion time. It has minute resolution, so a minute
+  boundary between seeding and asserting made them fail intermittently; they passed earlier **by
+  luck**. Pinned, and the suite now runs clean three times consecutively.
+- One extraction pattern in the pure suite pinned `relAge`'s exact parameter list, so adding the
+  injectable clock broke **extraction** rather than failing an assertion — the suite crashed instead
+  of reporting. Made parameter-tolerant. That is the same lesson T17 already records for constants,
+  arriving through a different door.
+
+#### Verification
+
+`npm test` **306** · `npm run test:dom` **336** · `npm run test:mutation` **89 of 89 caught**, no
+MISSED, no ANCHOR LOST, no AMBIGUOUS.
+
+#### Reserved for Codex on this branch
+
+`AGENTS.md` is untouched. The T17 reconciliation and the three mutation-testing lessons are Codex's
+documentation sub-scope, claimed separately. A fourth candidate lesson emerged here and is offered
+rather than placed: **a change to a render path can disarm the mutation that guards it, so a
+post-change `ANCHOR LOST` check belongs beside the count.**
+
 
 ### 2026-09-28 — #26 MERGED and verified in production; G1 closed
 

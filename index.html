@@ -143,13 +143,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 /* F001: "unknown" is a hollow ring, not just a different hue. Freshness and verification
    state must not be carried by colour alone — see PHASE1-SOURCE-HEALTH.md. */
 /* F004: each state differs in SHAPE, not only hue — a user confirmed hue is not readable
-   at this size without leaning in. Circle = verified, ring = unverified, triangle = caution.
-   Alert is a larger triangle so warn and alert stay separable without relying on the pulse,
-   which disappears under prefers-reduced-motion. */
+   at this size without leaning in. Circle = verified, ring = unverified. The caution and
+   alert triangles are gone: they encoded MAGNITUDE on a dot that reports VERIFICATION, so a
+   strong-but-well-measured reading was drawn as a warning. Severity belongs to NWS alerts,
+   which carry an authority this dot does not. Every state also carries words, so shape is a
+   second channel rather than the only one. */
 .s-dot.unknown{background:transparent;box-shadow:inset 0 0 0 1.5px var(--unknown)}
 .s-dot.ok{background:var(--ok)}
-.s-dot.warn{background:var(--warn);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
-.s-dot.alert{background:var(--alert);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:9px;height:9px;animation:pulse 1.6s infinite}
 .stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .stat-unit{font-size:11px;font-weight:400;color:var(--ink3)}
 .stat-note{font-size:9px;color:var(--ink4);margin-top:3px;line-height:1.3}
@@ -383,18 +383,22 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .src-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid var(--rule)}
 .src-row:last-child{border-bottom:none}
 .src-name{font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
-.src-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+/* Three chips now — checked age, observation age, state — where there were two. Refusing to
+   shrink or wrap put them at risk of overflowing a 320px viewport, so the row may wrap and the
+   meta block may compress; the name column already carries min-width:0 to yield first. */
+.src-meta{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .src-age{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
 /* Health chips deliberately avoid the hazard palette: a stale feed is not an advisory.
    States differ by fill vs outline as well as tone, never by hue alone. */
 .src-state{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid transparent;background:var(--b-unknown-bg);color:var(--b-unknown-fg)}
 .src-state-current{background:var(--b-ok-bg);color:var(--b-ok-fg)}
 .src-state-unavailable{background:transparent;border-color:var(--unknown);color:var(--ink3)}
-/* Motion is a second channel for .s-dot.alert and .hazard-pulse, so it cannot simply be
-   removed for reduced-motion users — a static ring substitutes for the pulse. */
+/* Motion is a second channel for .hazard-pulse, so it cannot simply be removed for
+   reduced-motion users — a static ring substitutes for the pulse. The .s-dot.alert half of this
+   rule went with the observation dots: nothing pulses there any more, because the dot reports
+   verification rather than severity. */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-  .s-dot.alert{box-shadow:0 0 0 2px var(--b-alert-bg)}
   .hazard-pulse{box-shadow:0 0 0 3px rgba(255,255,255,.28)}
 }
 .stale-note{display:flex;align-items:center;gap:7px;padding:9px 16px;font-size:10.5px;color:var(--ink3);background:var(--surf);border-bottom:1px solid var(--rule)}
@@ -902,7 +906,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
             <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
           </div>
           <div id="source-health-list"></div>
-          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data, read from the fetches themselves. Freshness thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows two different things, because they answer different questions. <strong>Checked</strong> is when we last reached the source. <strong>Obs</strong> is when the measurement itself was taken, shown for weather and tides, which report a point in time; other feeds have no measurement clock and show only the check. A recent check of an old measurement is not a recent measurement. Thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
         </div>
 
         <div class="settings-card">
@@ -1226,8 +1230,12 @@ function switchView(v) {
     el.classList.toggle('active', el.dataset.view === v);
   });
   /* Navigation re-evaluates freshness and expiry from memory. A view opened after sitting
-     on another one must not present state that has since lapsed. No fetch is issued. */
+     on another one must not present state that has since lapsed. No fetch is issued.
+     The observation cards age on their own clock, so they are re-evaluated here too: a card
+     can cross a staleness boundary while its view is hidden, and waiting for the minute timer
+     would show a stale reading as verified for up to a minute after the view opens. */
   if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
+  if (typeof renderObservationCards === 'function') renderObservationCards();
 }
 
 function toggleCollapse(id, btn) {
@@ -1826,31 +1834,73 @@ function toInches(m) {
   return v == null ? null : v;
 }
 
-function renderWeather(p, label, stale) {
-  /* The moment the station observed, which is not the moment we fetched it. Labelling the
-     fetch as the observation would overstate how current the reading is. */
-  const obsMs = p && p.timestamp ? new Date(p.timestamp).getTime() : NaN;
-  const obsAt = isNaN(obsMs) ? '' : ' · obs ' + fmtTime(new Date(obsMs));
-  const suffix = obsAt + (stale ? ' · verified ' + verifiedAge('nwsWeather') : '');
+/* The dot is a statement about VERIFICATION, never about magnitude. A 40 mph wind and a 2 mph
+   wind are equally verified if both were measured recently; presenting the strong one as 'alert'
+   made the dot mean two incompatible things at once and put warning language on a plain reading.
+   Severity belongs to NWS alerts, which have an authority this card does not. */
+function observationDot(state) { return 's-dot ' + (observationVerified(state) ? 'ok' : 'unknown'); }
+
+/* Every state gets words, so the dot is never the only channel — T15. */
+const OBS_STATE_TEXT = {
+  current:                'Current',
+  checking:               'Checking',
+  'fetch-stale':          'Last check failed',
+  'observation-stale':    'Observation stale',
+  'observation-expired':  'Observation expired',
+  'observation-unusable': 'Observation time unusable',
+  'value-unusable':       'Not reported',
+  unavailable:            'Unavailable',
+  loading:                'Checking',
+  stale:                  'Stale',
+  'not-applicable':       'Current'
+};
+function obsStateText(state) { return OBS_STATE_TEXT[state] || 'Unavailable'; }
+
+/* Both ages, because they answer different questions and one has repeatedly been mistaken for
+   the other: when the measurement was taken, and when we last reached the source. T08. */
+function observationSuffix(key, state, now) {
+  const entry = observationEntry(key);
+  const at = entry && entry.observedAt != null && isFinite(entry.observedAt) ? entry.observedAt : null;
+  /* Beyond the skew allowance the timestamp is not a point in time we can place, so no age is
+     offered at all — "0 sec ago" beside "Observation time unusable" would be a confident-looking
+     number attached to a reading we have just said we cannot date. */
+  const obs = at == null
+    ? ' · obs time unknown'
+    : state === 'observation-unusable'
+      ? ' · obs ' + fmtTime(new Date(at))
+      : ' · obs ' + fmtTime(new Date(at)) + ' (' + relAge(at, now) + ')';
+  const verified = state === 'current' ? '' : ' · verified ' + verifiedAge(key, now);
+  /* A missing value is already announced by the card itself — "Not reported · HNL Intl · …".
+     Repeating it from the state map read as a stutter in the live T16 capture, so the suffix
+     carries the clocks and lets the card keep the one statement it already makes. */
+  const named = state === 'value-unusable' ? '' : ' · ' + obsStateText(state);
+  return obs + named + verified;
+}
+
+function renderWeather(p, label, now) {
   const windEl = document.getElementById('stat-wind');
   const windNote = document.getElementById('stat-wind-note');
   const dotWind = document.getElementById('dot-wind');
   const windMph = toMph(p.windSpeed);
   const gustMph = toMph(p.windGust);
-  /* Stale data keeps its value but loses its verified dot: Phase 0 says the dot means a
-     current verified reading exists, and an old observation is not one. */
+  /* Each card asks about its OWN value. T13: usable wind with null rain leaves the wind card
+     verified while rain reads "Not reported" — one missing field does not unverify the other. */
+  const windState = combinedObservationState('nwsWeather', now, windMph != null || gustMph != null);
+  const rainState = combinedObservationState('nwsWeather', now, toInches(p.precipitationLastHour) != null);
+  const windSuffix = observationSuffix('nwsWeather', windState, now);
+  const rainSuffix = observationSuffix('nwsWeather', rainState, now);
   if (windEl) {
     if (windMph != null) {
       windEl.innerHTML = `${windMph}<span class="stat-unit"> mph</span>`;
-      if (windNote) windNote.textContent = `${gustMph?'G'+gustMph+'mph · ':''}${label}${suffix}`;
-      if (dotWind) dotWind.className = 's-dot ' + (stale ? 'unknown' : (windMph>35?'alert':windMph>20?'warn':'ok'));
+      if (windNote) windNote.textContent = `${gustMph?'G'+gustMph+'mph · ':''}${label}${windSuffix}`;
+      if (dotWind) dotWind.className = observationDot(windState);
     } else if (gustMph != null) {
       windEl.innerHTML = `${gustMph}<span class="stat-unit"> mph</span>`;
-      if (windNote) windNote.textContent = `Gust, sustained N/A · ${label}${suffix}`;
-      if (dotWind) dotWind.className = 's-dot ' + (stale ? 'unknown' : (gustMph>35?'alert':gustMph>20?'warn':'ok'));
+      if (windNote) windNote.textContent = `Gust, sustained N/A · ${label}${windSuffix}`;
+      if (dotWind) dotWind.className = observationDot(windState);
     } else {
       windEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
-      if (windNote) windNote.textContent = `Not reported · ${label}${suffix}`;
+      if (windNote) windNote.textContent = `Not reported · ${label}${windSuffix}`;
       if (dotWind) dotWind.className = 's-dot unknown';
     }
   }
@@ -1862,12 +1912,12 @@ function renderWeather(p, label, stale) {
     if (rainInches != null) {
       const rainIn = rainInches.toFixed(2);
       rainEl.innerHTML = `${rainIn}<span class="stat-unit">"</span>`;
-      if (rainNote) rainNote.textContent = `1-hr · ${label}${suffix}`;
-      if (dotRain) dotRain.className = 's-dot ' + (stale ? 'unknown' : (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok'));
+      if (rainNote) rainNote.textContent = `1-hr · ${label}${rainSuffix}`;
+      if (dotRain) dotRain.className = observationDot(rainState);
     } else {
       // A null observation is missing data, not a measured zero. Never backfilled from cache.
       rainEl.innerHTML = '<span style="font-size:13px;opacity:.4">—</span>';
-      if (rainNote) rainNote.textContent = `Not reported · ${label}${suffix}`;
+      if (rainNote) rainNote.textContent = `Not reported · ${label}${rainSuffix}`;
       if (dotRain) dotRain.className = 's-dot unknown';
     }
   }
@@ -1886,6 +1936,43 @@ function renderWeatherUnavailable() {
   const dr = document.getElementById('dot-rain'), dw = document.getElementById('dot-wind');
   if (dr) dr.className = 's-dot unknown';
   if (dw) dw.className = 's-dot unknown';
+}
+
+/* WITHDRAWAL, and why it is read from the cache rather than passed in.
+   Both the success and failure paths already render the reading the CACHE accepted rather than
+   the response that arrived, so the cache is the only honest source for the verdict too. Reading
+   it here also gives ageTick() a render path that needs no response at all — T09 — which the
+   previous design could not offer, because the state arrived as a boolean argument from whichever
+   fetch happened to be running. */
+function renderWeatherCard(now) {
+  const entry = observationEntry('nwsWeather');
+  const state = combinedObservationState('nwsWeather', now, true);
+  if (!entry || !entry.data) {
+    /* Nothing measured yet. During the first check leave the loading copy alone rather than
+       flashing "unavailable" at a source that has not answered yet. */
+    if (state !== 'checking') renderWeatherUnavailable();
+    return;
+  }
+  /* Past measurement retention the reading is withdrawn even when the endpoint is answering
+     perfectly — T05. A successful fetch cannot revive an observation that is simply too old. */
+  if (state === 'observation-expired' || state === 'unavailable') { renderWeatherUnavailable(); return; }
+  renderWeather(entry.data.p, entry.data.label, now);
+}
+
+function renderTideCard(now) {
+  const entry = observationEntry('noaaTides');
+  const state = combinedObservationState('noaaTides', now, true);
+  if (!entry || !entry.data) {
+    if (state !== 'checking') renderTideUnavailable();
+    return;
+  }
+  if (state === 'observation-expired' || state === 'unavailable') { renderTideUnavailable(); return; }
+  renderTide(entry.data.ft, entry.data.name, now);
+}
+
+function renderObservationCards(now) {
+  renderWeatherCard(now);
+  renderTideCard(now);
 }
 
 async function fetchWeather() {
@@ -1908,13 +1995,13 @@ async function fetchWeather() {
        with the cache until some later render happened to correct it. */
     const kept = sourceOk('nwsWeather', { p: data.properties, label: stationLabel(sta) }, token,
                           { at: observedAtFromIso(obsRaw), raw: obsRaw });
-    if (kept) renderWeather(kept.data.p, kept.data.label, false);
+    if (kept) renderWeatherCard();
   } catch(e) {
     if (!requestIsCurrent(token)) return;   // do not fail the current island for an old request
     sourceFail('nwsWeather', e.message);
-    const cached = usableCache('nwsWeather');
-    if (cached) renderWeather(cached.p, cached.label, true);
-    else renderWeatherUnavailable();
+    /* The renderer decides whether retained data may still be shown, applying BOTH retentions.
+       usableCache() answered only the fetch half of that question. */
+    renderWeatherCard();
     console.warn('Weather fetch failed:', e.message);
   }
 }
@@ -1931,14 +2018,19 @@ function tideLabel(sta) {
   return sta.ref ? sta.name + " · " + sta.ref : sta.name;
 }
 
-function renderTide(ft, name, stale) {
+/* Tide never had magnitude thresholds — its dot was already binary. What changes here is the
+   INPUT: the verdict was derived from a fetch-derived `stale` flag, so a fresh fetch of an old
+   measurement earned a verified dot. It now comes from the combined observation state, so a
+   stale, missing, invalid, future-skewed or unusable tide observation cannot read as verified. */
+function renderTide(ft, name, now) {
   const tideEl = document.getElementById('stat-tide');
   const tideNote = document.getElementById('stat-tide-note');
   const dotTide = document.getElementById('dot-tide');
+  const state = combinedObservationState('noaaTides', now, ft != null && isFinite(parseFloat(ft)));
   if (tideEl) tideEl.innerHTML = `${ft}<span class="stat-unit"> ft</span>`;
   /* A tide height is meaningless without its datum: NOAA returns feet relative to MLLW. */
-  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name + (stale ? ' · verified ' + verifiedAge('noaaTides') : '');
-  if (dotTide) dotTide.className = 's-dot ' + (stale ? 'unknown' : 'ok');
+  if (tideNote) tideNote.textContent = 'ft MLLW · ' + name + observationSuffix('noaaTides', state, now);
+  if (dotTide) dotTide.className = observationDot(state);
 }
 
 function renderTideUnavailable() {
@@ -1972,13 +2064,11 @@ async function fetchTides() {
     /* As in fetchWeather: render the reading the cache accepted, not the one that arrived. */
     const kept = sourceOk('noaaTides', { ft: ft, name: tideLabel(sta), t: typeof latest.t === 'string' ? latest.t : null }, token,
                           { at: observedAtFromNoaaLst(latest.t), raw: latest.t });
-    if (kept) renderTide(kept.data.ft, kept.data.name, false);
+    if (kept) renderTideCard();
   } catch(e) {
     if (!requestIsCurrent(token)) return;
     sourceFail('noaaTides', e.message);
-    const cached = usableCache('noaaTides');
-    if (cached) renderTide(cached.ft, cached.name, true);
-    else renderTideUnavailable();
+    renderTideCard();
     console.warn('Tide fetch failed:', e.message);
   }
 }
@@ -2396,7 +2486,7 @@ function combinedObservationState(key, now, valueUsable) {
   const entry = observationEntry(key);
   /* No reading for the SELECTED island: still checking if nothing has been attempted, otherwise
      there is nothing to present. An entry belonging to another island is not a fallback. */
-  if (!entry) return fetchState === 'loading' ? 'checking' : 'unavailable';
+  if (!entry) return (fetchState === 'loading' || requestPending(key)) ? 'checking' : 'unavailable';
   /* A reading exists but a fresh request is outstanding and has never completed: report checking
      rather than presenting the older reading as though it had been verified for this selection. */
   if (fetchState === 'loading') return 'checking';
@@ -2435,7 +2525,24 @@ function beginRequest(key) {
   const h = S.sourceHealth[key];
   if (!h) return null;
   h.generation = (h.generation || 0) + 1;
+  /* Remember that THIS generation is outstanding, and the island it was started under.
+     Without it, a tick landing between an island switch and its response finds no
+     island-matching cache entry but perfectly healthy fetch metadata from the PREVIOUS
+     island, concludes 'unavailable', and overwrites "Checking …" with "unavailable" for a
+     source that is answering normally. */
+  h.pendingGeneration = h.generation;
+  h.pendingIsland = S.island;
   return { key: key, generation: h.generation, island: S.island };
+}
+
+/* Is a request for the CURRENTLY selected island still outstanding? A pending generation left
+   behind by a superseded request does not count: beginRequest has already moved the generation
+   on, so only the newest request can be pending. */
+function requestPending(key) {
+  const h = S.sourceHealth[key];
+  if (!h || h.pendingGeneration == null) return false;
+  if (h.pendingGeneration !== h.generation) return false;
+  return !ISLAND_SCOPED[key] || h.pendingIsland === S.island;
 }
 
 /* A completion is current only if it is the newest request for that source AND was started
@@ -2454,6 +2561,7 @@ function sourceOk(key, data, token, observed) {
   if (!h) return;
   const now = Date.now();
   h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
+  h.pendingGeneration = null;   /* settled */
   /* Stamp the island the request STARTED under, never the one selected when it landed. */
   if (data !== undefined) {
     const island = token ? token.island : S.island;
@@ -2491,6 +2599,7 @@ function sourceFail(key, err) {
   const h = S.sourceHealth[key];
   if (!h) return;
   h.lastAttempt = Date.now();
+  h.pendingGeneration = null;   /* settled, unsuccessfully */
   h.consecutiveFailures++;
   h.lastError = err ? String(err) : 'unknown error';
   renderSourceHealth();
@@ -2519,9 +2628,12 @@ function usableCache(key) {
   return e.data;
 }
 
-function relAge(ts) {
+function relAge(ts, now) {
   if (!ts) return 'never';
-  const secs = Math.round((Date.now() - ts) / 1000);
+  /* A source clock slightly ahead of ours is ordinary disagreement, and observationState()
+     already treats it as age zero. Rendering the same reading as "-120 sec ago" contradicted
+     the state it sat beside, so the floor here matches the semantics there. */
+  const secs = Math.max(0, Math.round(((now == null ? Date.now() : now) - ts) / 1000));
   if (secs < 60) return secs + ' sec ago';
   const mins = Math.round(secs / 60);
   if (mins < 60) return mins + ' min ago';
@@ -2530,9 +2642,9 @@ function relAge(ts) {
   return Math.round(hrs / 24) + ' days ago';
 }
 
-function verifiedAge(key) {
+function verifiedAge(key, now) {
   const h = S.sourceHealth[key];
-  return h && h.lastSuccess ? relAge(h.lastSuccess) : 'never';
+  return h && h.lastSuccess ? relAge(h.lastSuccess, now) : 'never';
 }
 
 /* User-facing copy stays calm and factual. Raw exception text goes to console.warn only. */
@@ -2547,16 +2659,48 @@ function staleNote(key) {
   return '<div class="stale-note"><span class="s-dot unknown"></span>' + esc(label) + '</div>';
 }
 
+/* T13 — the source row reports on a READING, so a row whose every value is missing must not read
+   Current on the strength of its clocks alone. renderSourceHealth() passed a hardcoded true here,
+   which is the same false confidence the combined state exists to prevent, one level up: good
+   timestamps vouching for data that is not there. */
+function observationValueUsable(key) {
+  const entry = observationEntry(key);
+  if (!entry || !entry.data) return false;
+  if (key === 'nwsWeather') {
+    const p = entry.data.p || {};
+    return toMph(p.windSpeed) != null || toMph(p.windGust) != null
+        || toInches(p.precipitationLastHour) != null;
+  }
+  if (key === 'noaaTides') return entry.data.ft != null && isFinite(parseFloat(entry.data.ft));
+  return true;   /* sources with no measurement clock never reach the valueUsable branch */
+}
+
 function renderSourceHealth() {
   const list = document.getElementById('source-health-list');
   if (list) {
+    /* Two clocks, shown separately. One combined state let a fresh fetch of an old measurement
+       read as healthy: "Checked 12 sec ago" is true and says nothing about whether the reading it
+       returned was recent. Sources with no measurement clock show only the fetch age, because
+       inventing an observation age for them would be the same false precision in reverse. */
     list.innerHTML = Object.keys(S.sourceHealth).map(k => {
       const h = S.sourceHealth[k];
-      const st = sourceState(k);
-      return '<div class="src-row"><div class="src-name"><span class="s-dot ' + (st === 'current' ? 'ok' : 'unknown') + '"></span>'
-           + esc(h.label) + '</div><div class="src-meta"><span class="src-age">'
+      const st = combinedObservationState(k, null, observationValueUsable(k));
+      const entry = observationEntry(k);
+      const measured = !!OBSERVATION_LIMITS[k];
+      /* The same rule the cards apply: a reading we cannot place in time gets no age. Calling
+         relAge() unconditionally rendered "obs 0 sec ago" beside "Observation time unusable" for a
+         future-skewed stamp — a confident number on a reading the badge has just disowned. The
+         badge carries the fact, so the chip is dropped rather than made to repeat it. */
+      const obsAge = !measured || st === 'observation-unusable' ? ''
+        : '<span class="src-age src-obs-age">obs '
+          + esc(entry && entry.observedAt != null && isFinite(entry.observedAt)
+                  ? relAge(entry.observedAt) : 'unknown')
+          + '</span>';
+      return '<div class="src-row"><div class="src-name"><span class="' + observationDot(st) + '"></span>'
+           + esc(h.label) + '</div><div class="src-meta"><span class="src-age">checked '
            + esc(h.lastSuccess ? relAge(h.lastSuccess) : 'never') + '</span>'
-           + '<span class="src-state src-state-' + st + '">' + esc(SRC_STATE_TEXT[st]) + '</span></div></div>';
+           + obsAge
+           + '<span class="src-state src-state-' + esc(st) + '">' + esc(obsStateText(st)) + '</span></div></div>';
     }).join('');
   }
   const stamp = document.getElementById('src-last-refresh');
@@ -2657,6 +2801,10 @@ let ageTickTimer = null;
 function ageTick() {
   renderAlertSurfaces();
   renderSourceHealth();
+  /* The cards age too. Without this an observation crossed its staleness boundary while the page
+     sat idle and the dot kept claiming it was verified until the next fetch happened to land.
+     Renders from cache only: no request is issued and no health field is touched. */
+  renderObservationCards();
 }
 function startAgeTick() {
   if (ageTickTimer !== null) return;   /* one timer and one listener, however often called */
