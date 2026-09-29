@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; G11 and G12 evidence gathered, all phases passed, protection restored | **Blocked on one item:** the historical Firewall traffic capture filtered to the custom rule, IP redacted. Codex then renders the merge recommendation |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; **G11, G12 and G13 complete** — enforcement attributed to the rule from the platform log, protection restored, nothing further owed by the owner | **Codex renders the merge recommendation for #26** |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,71 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — rule attribution captured; G11 and G12 evidence complete
+
+The historical Firewall traffic view closes the last gap. **Filtered to the custom rule by selecting
+it from the rule drop-down** — confirmed by the owner, so this is a rule filter and not a free-text
+search — scoped to the minute containing the burst:
+
+```
+filter          Final Rule   (selected from the rule drop-down)
+window          5:15pm - 5:16pm HST, 2026-09-28
+
+Allowed         -            Denied  -     Challenged  -     Logged  -
+Rate Limited    20
+
+Top Request Paths
+  /api/news            15
+  /api/news/hazard      8
+
+Custom Rules    1 active
+```
+
+IP column redacted; it carries the owner's residential address and this board is public.
+
+#### Why this settles more than attribution
+
+Codex asked for the rate-limited requests tied to the rule. The `Top Request Paths` panel does that
+**and** independently confirms G11's scope requirement: under the rule filter, **only the two
+canonical paths appear.** No third path matched. That is the same property the improvised root-path
+probe established live, now corroborated from the platform's own log rather than from Claude's
+measurements.
+
+The earlier aggregate is superseded. `Rate Limited 6` over *Past Day* was captured seconds after the
+burst, before events had aggregated; the filtered view reports 20 in a single minute. **The later
+figure is the trustworthy one, and the discrepancy is dashboard lag rather than a contradiction.**
+
+A smaller arithmetic note, recorded rather than smoothed: the path panel totals 23 requests against
+20 rate-limited in the same window. The likely reading is that the path panel counts every request
+matching the rule while the legend counts only refusals, but that is an inference about the
+dashboard rather than something measured, and nothing in G11 or G12 turns on the difference.
+
+#### Provenance, stated for the record
+
+Every item below is **owner and Claude evidence.** Codex observed none of the enforcement firsthand
+— see the correction entry — and independently verified only the steady state afterwards. The
+attribution capture comes from the platform's log rather than from either agent, which is what makes
+it usable despite that.
+
+#### G11 and G12 — complete
+
+```
+G11  final rule record, captured before the edit and again after       DONE
+     covers only the two representations, IP key, 60s, 100, 429
+     corroborated by Top Request Paths showing no third path
+
+G12  enforcement observed at 5-per-60 on the preview hostname          DONE
+     both canonical paths refused; hazard path gave 5 x 200 then 429
+     cache=STALE requests consumed the limit; 429s carry no cache header
+     attributed to the named rule via the platform log
+     restored to and recorded at 100-per-60                            DONE
+     recovery 14 of 14, protection restored and confirmed 302          DONE
+
+G13  per-region counting stated, no distributed-attack claim           DONE
+```
+
+**Nothing further is owed by the owner.** The merge decision for #26 is Codex's.
 
 ### 2026-09-28 — correction: Codex did not observe the 429s firsthand
 
