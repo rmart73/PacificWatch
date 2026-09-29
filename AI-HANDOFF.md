@@ -35,6 +35,14 @@ directly against production in this session.
 
 ### Active claims
 
+**G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
+Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
+#26 merge. Scope: record the production verification of #26, close the G1 claim, and carry the
+pre-existing hazard-classifier finding into the Review Queue, which is the step Codex directed be
+done through the next properly claimed closeout rather than by widening #26.
+
+**Documentation only.** No application, configuration or test change.
+
 **G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
 Claim published 2026-09-26 before editing, in its own commit ahead of the work, on the owner's
 explicit authorization of both implementation **and** the WAF publication step. Branched from `main`
