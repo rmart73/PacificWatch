@@ -40,6 +40,19 @@ per request — not a relayed report.
 
 ### Active claims
 
+**Q007/Q008 Stage 2 — T17 durable-document reconciliation — ChatGPT Codex,
+`claude/observation-stage2`.**
+Claimed 2026-09-28 after the read-only implementation re-review at `5517b09`, under the owner's
+authorization of the reserved Stage 2 documentation sub-scope. Claude is paused; this does not
+transfer implementation ownership.
+
+Scope is documentation only: reconcile the retired observation-dot severity classes and the
+remaining `.hazard-pulse` reduced-motion substitute in `AGENTS.md`; add the four mutation-testing
+lessons carried by the Stage 2 Review Queue; record this sub-scope and its result in
+`AI-HANDOFF.md`; and correct the duplicated next-action wording introduced in the final handover.
+No `index.html`, test, API, configuration, dependency, Stage 3, classifier or unrelated board
+cleanup change is in scope.
+
 **Q007/Q008 Stage 2 — wiring the observation clock into the cards — Claude Code,
 `claude/observation-stage2`.**
 Claimed 2026-09-28 before editing, in its own commit ahead of the work, on the owner's explicit
