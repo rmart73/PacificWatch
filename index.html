@@ -143,9 +143,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 /* F001: "unknown" is a hollow ring, not just a different hue. Freshness and verification
    state must not be carried by colour alone — see PHASE1-SOURCE-HEALTH.md. */
 /* F004: each state differs in SHAPE, not only hue — a user confirmed hue is not readable
-   at this size without leaning in. Circle = verified, ring = unverified, triangle = caution.
-   Alert is a larger triangle so warn and alert stay separable without relying on the pulse,
-   which disappears under prefers-reduced-motion. */
+   at this size without leaning in. Circle = verified, ring = unverified. The caution and
+   alert triangles are gone: they encoded MAGNITUDE on a dot that reports VERIFICATION, so a
+   strong-but-well-measured reading was drawn as a warning. Severity belongs to NWS alerts,
+   which carry an authority this dot does not. Every state also carries words, so shape is a
+   second channel rather than the only one. */
 .s-dot.unknown{background:transparent;box-shadow:inset 0 0 0 1.5px var(--unknown)}
 .s-dot.ok{background:var(--ok)}
 .stat-val{font-size:20px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
@@ -381,7 +383,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .src-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid var(--rule)}
 .src-row:last-child{border-bottom:none}
 .src-name{font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
-.src-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+/* Three chips now — checked age, observation age, state — where there were two. Refusing to
+   shrink or wrap put them at risk of overflowing a 320px viewport, so the row may wrap and the
+   meta block may compress; the name column already carries min-width:0 to yield first. */
+.src-meta{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .src-age{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
 /* Health chips deliberately avoid the hazard palette: a stale feed is not an advisory.
    States differ by fill vs outline as well as tone, never by hue alone. */
@@ -901,7 +906,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
             <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
           </div>
           <div id="source-health-list"></div>
-          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows when each feed last returned data, read from the fetches themselves. Freshness thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows two different things, because they answer different questions. <strong>Checked</strong> is when we last reached the source. <strong>Obs</strong> is when the measurement itself was taken, shown for weather and tides, which report a point in time; other feeds have no measurement clock and show only the check. A recent check of an old measurement is not a recent measurement. Thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
         </div>
 
         <div class="settings-card">
@@ -1225,8 +1230,12 @@ function switchView(v) {
     el.classList.toggle('active', el.dataset.view === v);
   });
   /* Navigation re-evaluates freshness and expiry from memory. A view opened after sitting
-     on another one must not present state that has since lapsed. No fetch is issued. */
+     on another one must not present state that has since lapsed. No fetch is issued.
+     The observation cards age on their own clock, so they are re-evaluated here too: a card
+     can cross a staleness boundary while its view is hidden, and waiting for the minute timer
+     would show a stale reading as verified for up to a minute after the view opens. */
   if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
+  if (typeof renderObservationCards === 'function') renderObservationCards();
 }
 
 function toggleCollapse(id, btn) {
@@ -1852,9 +1861,14 @@ function obsStateText(state) { return OBS_STATE_TEXT[state] || 'Unavailable'; }
 function observationSuffix(key, state, now) {
   const entry = observationEntry(key);
   const at = entry && entry.observedAt != null && isFinite(entry.observedAt) ? entry.observedAt : null;
+  /* Beyond the skew allowance the timestamp is not a point in time we can place, so no age is
+     offered at all — "0 sec ago" beside "Observation time unusable" would be a confident-looking
+     number attached to a reading we have just said we cannot date. */
   const obs = at == null
     ? ' · obs time unknown'
-    : ' · obs ' + fmtTime(new Date(at)) + ' (' + relAge(at, now) + ')';
+    : state === 'observation-unusable'
+      ? ' · obs ' + fmtTime(new Date(at))
+      : ' · obs ' + fmtTime(new Date(at)) + ' (' + relAge(at, now) + ')';
   const verified = state === 'current' ? '' : ' · verified ' + verifiedAge(key, now);
   /* A missing value is already announced by the card itself — "Not reported · HNL Intl · …".
      Repeating it from the state map read as a stutter in the live T16 capture, so the suffix
@@ -2472,7 +2486,7 @@ function combinedObservationState(key, now, valueUsable) {
   const entry = observationEntry(key);
   /* No reading for the SELECTED island: still checking if nothing has been attempted, otherwise
      there is nothing to present. An entry belonging to another island is not a fallback. */
-  if (!entry) return fetchState === 'loading' ? 'checking' : 'unavailable';
+  if (!entry) return (fetchState === 'loading' || requestPending(key)) ? 'checking' : 'unavailable';
   /* A reading exists but a fresh request is outstanding and has never completed: report checking
      rather than presenting the older reading as though it had been verified for this selection. */
   if (fetchState === 'loading') return 'checking';
@@ -2511,7 +2525,24 @@ function beginRequest(key) {
   const h = S.sourceHealth[key];
   if (!h) return null;
   h.generation = (h.generation || 0) + 1;
+  /* Remember that THIS generation is outstanding, and the island it was started under.
+     Without it, a tick landing between an island switch and its response finds no
+     island-matching cache entry but perfectly healthy fetch metadata from the PREVIOUS
+     island, concludes 'unavailable', and overwrites "Checking …" with "unavailable" for a
+     source that is answering normally. */
+  h.pendingGeneration = h.generation;
+  h.pendingIsland = S.island;
   return { key: key, generation: h.generation, island: S.island };
+}
+
+/* Is a request for the CURRENTLY selected island still outstanding? A pending generation left
+   behind by a superseded request does not count: beginRequest has already moved the generation
+   on, so only the newest request can be pending. */
+function requestPending(key) {
+  const h = S.sourceHealth[key];
+  if (!h || h.pendingGeneration == null) return false;
+  if (h.pendingGeneration !== h.generation) return false;
+  return !ISLAND_SCOPED[key] || h.pendingIsland === S.island;
 }
 
 /* A completion is current only if it is the newest request for that source AND was started
@@ -2530,6 +2561,7 @@ function sourceOk(key, data, token, observed) {
   if (!h) return;
   const now = Date.now();
   h.lastAttempt = now; h.lastSuccess = now; h.lastError = null; h.consecutiveFailures = 0;
+  h.pendingGeneration = null;   /* settled */
   /* Stamp the island the request STARTED under, never the one selected when it landed. */
   if (data !== undefined) {
     const island = token ? token.island : S.island;
@@ -2567,6 +2599,7 @@ function sourceFail(key, err) {
   const h = S.sourceHealth[key];
   if (!h) return;
   h.lastAttempt = Date.now();
+  h.pendingGeneration = null;   /* settled, unsuccessfully */
   h.consecutiveFailures++;
   h.lastError = err ? String(err) : 'unknown error';
   renderSourceHealth();
@@ -2597,7 +2630,10 @@ function usableCache(key) {
 
 function relAge(ts, now) {
   if (!ts) return 'never';
-  const secs = Math.round(((now == null ? Date.now() : now) - ts) / 1000);
+  /* A source clock slightly ahead of ours is ordinary disagreement, and observationState()
+     already treats it as age zero. Rendering the same reading as "-120 sec ago" contradicted
+     the state it sat beside, so the floor here matches the semantics there. */
+  const secs = Math.max(0, Math.round(((now == null ? Date.now() : now) - ts) / 1000));
   if (secs < 60) return secs + ' sec ago';
   const mins = Math.round(secs / 60);
   if (mins < 60) return mins + ' min ago';

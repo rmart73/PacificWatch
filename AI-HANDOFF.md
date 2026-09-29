@@ -35,7 +35,8 @@ per request — not a relayed report.
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
-| G1 closeout record | [#27](https://github.com/rmart73/PacificWatch/pull/27) open; documentation only | Codex reviews. Records the #26 production verification and carries the hazard-classifier finding into the Review Queue |
+| G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
+| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured, round-one review returned six findings now addressed | Codex re-reviews the implementation, then claims the reserved `AGENTS.md` sub-scope on the same branch |
 
 ### Active claims
 
@@ -312,10 +313,10 @@ implementation stays a separate claimed, reviewable PR.
 the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `fcaf55a` and is authoritative
 at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
-the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is next** and
-wires the
-observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
-satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
+the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is in review as
+[#28](https://github.com/rmart73/PacificWatch/pull/28)**: the observation helpers now reach the cards
+and Source details, the magnitude-driven dot classes are gone, and `AGENTS.md` is reserved for
+Codex's T17 sub-scope on that branch. **Stage 3 is next** and aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
@@ -329,7 +330,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/g1-closeout | **Documentation only.** Records the #26 production verification, closes G1, and carries the pre-existing hazard-classifier finding into the Review Queue |
+| Claude | claude/observation-stage2 | Q007/Q008 Stage 2: the observation clock reaches the weather and tide cards and Source details; magnitude-driven dot classes removed. `AGENTS.md` is untouched and reserved for Codex's T17 sub-scope on this same branch |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -339,22 +340,24 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stages 2 and 3 | Not started; owner-approved, and G1 is now closed so the sequence gate is lifted. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock | Claim separately. Codex places the three T17 lessons in `AGENTS.md` during Stage 2 |
+| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation and tests complete; T16 evidence captured against the deployed preview. One evidence item remains open: T15's real-browser layout pass, which no agent can perform. | Codex re-reviews, then claims the `AGENTS.md` sub-scope |
+| Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock | Claim separately. Codex places the three T17 lessons in `AGENTS.md` during Stage 2 |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `9e2cfec`**, merged through #26 and serving production. Claims and handoffs for
+**`main` is at `56fa1d5`**, merged through #27 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The G1 implementation merged in #26 and is verified
-in production; the only open PR is [#27](https://github.com/rmart73/PacificWatch/pull/27), which is
-documentation only. Stage 2 and Stage 3 are approved but unclaimed and unstarted.
+**An application implementation IS in flight: [#28](https://github.com/rmart73/PacificWatch/pull/28)
+changes `index.html` and the test suites.** Stage 3 is approved but unclaimed and unstarted.
 
-This paragraph has now been wrong twice and corrected twice — it once said `main` was `22686bb` with
-G1 a contract only, then said an implementation was in flight as #26. Each was true when written and
+This paragraph has now been wrong three times and corrected three times — `main` as `22686bb` with G1
+a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
+into a round where #28 was open, written by a closeout that **claimed to absorb #27's self-close and
+did not perform it**. Each was true when written and
 neither was updated as the work moved. **The closeout that merged #26 initially repeated the
 mistake:** the new entry was written while this section and seven others still described the
 pre-merge state, and Codex caught all eight. A line describing "right now" is wrong the moment the

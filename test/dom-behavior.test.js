@@ -1182,6 +1182,87 @@ function has(label, sel, needle, expected) {
     txt('#source-health-list').indexOf('Not reported') !== -1, false);
   rawObs = null; rawTide = null;
 
+  console.log('\n42. Navigation re-evaluates the cards, not only the alert surfaces:');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  check('the card is verified before navigating', dotOf('#dot-wind'), 's-dot ok');
+  /* Corrupt the rendered dot, then navigate. A view opened after sitting on another one must
+     re-evaluate from memory rather than wait up to a minute for the age tick. */
+  $('#dot-wind').className = 's-dot NAVIGATION-DID-NOT-RERENDER';
+  w.switchView('alerts');
+  await settle();
+  w.switchView('overview');
+  await settle();
+  check('navigating re-rendered the observation cards', dotOf('#dot-wind'), 's-dot ok');
+
+  console.log('\n43. An island switch in flight reads as Checking, never Unavailable:');
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  /* Hold the next observation response so the switch is genuinely mid-flight. */
+  holdPattern = 'observations';
+  w.eval('S.island = "maui"');
+  w.renderIslandScopedChecking();
+  w.fetchWeather();
+  await settle();
+  check('the card says Checking after the switch',
+    txt('#stat-wind-note').indexOf('Checking') !== -1 || txt('#stat-wind').indexOf('Checking') !== -1
+      || txt('#stat-wind-note').indexOf('heck') !== -1, true);
+  /* THE REGRESSION: a tick here previously found no island-matching entry but healthy fetch
+     metadata from the PREVIOUS island, concluded unavailable, and overwrote Checking. */
+  w.ageTick();
+  await settle();
+  check('a tick mid-switch does not overwrite it with unavailable',
+    txt('#stat-wind-note').indexOf('unavailable') !== -1, false);
+  check('  and the previous island\'s reading is not shown under the new one',
+    txt('#stat-wind').indexOf('18') !== -1, false);
+  if (releaseHeld) releaseHeld();
+  holdPattern = null;
+  await settle();
+  w.eval('S.island = "statewide"');
+
+  console.log('\n44. A future observation never renders a negative age:');
+  w.eval('S.cache = {}');
+  /* Inside the five-minute skew allowance: ordinary clock disagreement, treated as age zero. */
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
+                      timestamp: new Date(Date.now() + 2 * MIN).toISOString() });
+  check('a slightly-ahead source clock is still verified', dotOf('#dot-wind'), 's-dot ok');
+  check('  and renders no negative age', /-\d+ (sec|min|hr)/.test(txt('#stat-wind-note')), false);
+  /* Beyond the allowance: undatable, and no age is offered at all. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null), precipitationLastHour: rain(2.5),
+                      timestamp: new Date(Date.now() + 90 * MIN).toISOString() });
+  check('a far-future observation is not verified', dotOf('#dot-wind'), 's-dot unknown');
+  check('  says the time is unusable',
+    txt('#stat-wind-note').indexOf('Observation time unusable') !== -1, true);
+  check('  and offers no age beside it', /-\d+ (sec|min|hr)/.test(txt('#stat-wind-note')), false);
+  check('  nor a confident zero',
+    txt('#stat-wind-note').indexOf('(0 sec ago)') !== -1, false);
+
+  console.log('\n45. T08 — BOTH retentions, each expiring independently:');
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(23), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(4) });
+  const t08At = w.eval('S.cache.nwsWeather.observedAt');
+  /* Measurement is young; the FETCH retention (30 min) is what lapses here. */
+  w.renderWeatherCard(Date.now() + 31 * MIN);
+  check('fetch retention expired, measurement still young: withdrawn',
+    txt('#stat-wind').indexOf('23') !== -1, false);
+  w.renderWeatherCard();
+  check('  and the same reading returns when read at the present instant',
+    txt('#stat-wind').indexOf('23') !== -1, true);
+  /* The converse: a failed refresh, with the measurement past ITS retention. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(23), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(181) });
+  w.fetch = makeFetch('observations');
+  await w.fetchWeather(); await settle();
+  check('failed refresh with the measurement expired: withdrawn',
+    txt('#stat-wind').indexOf('23') !== -1, false);
+  w.fetch = makeFetch(null);
+  check('  and the measurement clock never moved to the failed attempt',
+    w.eval('S.cache.nwsWeather ? 1 : 0') === 1 ? w.eval('S.cache.nwsWeather.observedAt') !== t08At : true, true);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);

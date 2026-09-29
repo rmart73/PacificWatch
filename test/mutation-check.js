@@ -517,6 +517,27 @@ const mutations = [
     to:   "  const named = ' · ' + obsStateText(state);",
     expect: ['and says it once, not twice'], suite: 'dom' },
 
+  { name: 'navigation stops re-rendering the observation cards',
+    from: "  if (typeof renderObservationCards === 'function') renderObservationCards();",
+    to:   "",
+    expect: ['navigating re-rendered the observation cards'], suite: 'dom' },
+
+  { name: 'an in-flight island switch reads as unavailable again',
+    from: "  if (!entry) return (fetchState === 'loading' || requestPending(key)) ? 'checking' : 'unavailable';",
+    to:   "  if (!entry) return fetchState === 'loading' ? 'checking' : 'unavailable';",
+    expect: ['a tick mid-switch does not overwrite it with unavailable'], suite: 'dom' },
+
+  { name: 'a future observation renders a negative age again',
+    from: "  const secs = Math.max(0, Math.round(((now == null ? Date.now() : now) - ts) / 1000));",
+    to:   "  const secs = Math.round(((now == null ? Date.now() : now) - ts) / 1000);",
+    expect: ['and renders no negative age'], suite: 'dom' },
+
+  /* Codex's finding: the expired-observation mutation covered only half of the withdrawal. */
+  { name: 'the fetch-retention withdrawal branch removed',
+    from: "  if (state === 'observation-expired' || state === 'unavailable') { renderWeatherUnavailable(); return; }",
+    to:   "  if (state === 'observation-expired') { renderWeatherUnavailable(); return; }",
+    expect: ['fetch retention expired, measurement still young: withdrawn'], suite: 'dom' },
+
   { name: 'the source row vouches for data that is not there',
     from: "      const st = combinedObservationState(k, null, observationValueUsable(k));",
     to:   "      const st = combinedObservationState(k, null, true);",
