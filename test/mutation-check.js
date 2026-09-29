@@ -23,9 +23,16 @@ const SUITES = {
   contrast: path.join(__dirname, 'contrast.test.js'),
   /* The pure health suite owns the Q007/Q008 observation clock, which has no DOM surface in
      stage 1 — its assertions would be unmutated otherwise. */
-  health: path.join(__dirname, 'phase1-source-health.test.js')
+  health: path.join(__dirname, 'phase1-source-health.test.js'),
+  /* The News API suite owns G1. Its subject is api/news.js, not index.html, which is why cases
+     naming it must also set target: 'api'. */
+  news: path.join(__dirname, 'news-api.test.js')
 };
 const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+/* G1 mutations act on the serverless handler rather than the page. A case selects its subject
+   with target: 'api'; everything else defaults to the page as before. */
+const apiSrc = fs.readFileSync(path.join(ROOT, 'api', 'news.js'), 'utf8').replace(/\r\n/g, '\n');
+const SUBJECT = { html: { src: src, ext: '.html' }, api: { src: apiSrc, ext: '.js' } };
 
 const mutations = [
   { name: 'island filter dropped from nwsEligible',
@@ -383,13 +390,143 @@ const mutations = [
   { name: 'calendar validation made too strict, rejecting real leap days',
     from: "  const back = new Date(Date.UTC(y, mo - 1, d));\n  return back.getUTCFullYear() === y && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d;",
     to:   "  return mo === 2 ? d <= 28 : true;",
-    expect: ['isRealCalendarDate: 2024-02-29 does'], suite: 'health' }
+    expect: ['isRealCalendarDate: 2024-02-29 does'], suite: 'health' },
+
+  /* ---- G1 abuse and cost bounding. Subject is api/news.js, so each case sets target: 'api'. ---- */
+
+  /* The whole point of G1: surplus input must not reach fan-out. Removing the canonical check
+     lets any query string through to five upstream fetches, restoring the unbounded vector. */
+  { name: 'non-canonical input allowed to reach upstream fan-out',
+    from: "  if (String(req.url || '').indexOf('?') !== -1) {",
+    to:   "  if (false) {",
+    expect: ['refused ?zzz=1 with 400', 'and attempted no upstream request'],
+    suite: 'news', target: 'api' },
+
+  /* A refusal that is cacheable re-creates the unbounded key space it exists to close. */
+  { name: 'refusals made cacheable',
+    from: "    res.setHeader('Cache-Control', 'no-store');\n    res.status(400).json({ error: 'this endpoint takes no query parameters' });",
+    to:   "    res.status(400).json({ error: 'this endpoint takes no query parameters' });",
+    expect: ['and is not cacheable'], suite: 'news', target: 'api' },
+
+  /* Caller-selected item counts were part of the original unbounded key space. */
+  /* The previous version of this case mutated the limit source, which the canonical-request
+     guard already makes unobservable -- it reported MISSED, correctly. The cap VALUE is the
+     behaviour worth trusting, and the bulk fixture overflows it. */
+  { name: 'the 30-item cap widened',
+    from: "  const limit = 30;",
+    to:   "  const limit = 100;",
+    expect: ['all-headlines caps at exactly 30 of the 60 available'], suite: 'news', target: 'api' },
+
+  /* Without the method guard, a POST does five upstream fetches. */
+  { name: 'method guard removed',
+    from: "  if (req.method !== 'GET') {",
+    to:   "  if (false) {",
+    expect: ['POST is refused 405'], suite: 'news', target: 'api' },
+
+  /* The Allow header is what makes a 405 actionable rather than a wall. */
+  { name: 'Allow header dropped from 405',
+    from: "    res.setHeader('Allow', 'GET, OPTIONS');",
+    to:   "    res.setHeader('X-Nothing', 'GET, OPTIONS');",
+    expect: ['with an Allow header'], suite: 'news', target: 'api' },
+
+  /* Representation selection: the hazard path must filter, and must filter the whole pool. */
+  { name: 'hazard selection bypassed, so both paths return all headlines',
+    from: "  if (hazardOnly) items = items.filter(it => it.hazard);",
+    to:   "  if (false) items = items.filter(it => it.hazard);",
+    expect: ['hazard returns only hazard items', 'no non-hazard item leaks into the hazard representation'],
+    suite: 'news', target: 'api' },
+
+  /* Filtering AFTER the cap would silently drop qualifying items that fell outside the mixed
+     cap -- the reason the two representations are not redundant. */
+  { name: 'hazard filtered after the cap instead of over the whole pool',
+    from: "  if (hazardOnly) items = items.filter(it => it.hazard);\n  items.sort((a, b) => b.ts - a.ts);\n  items = items.slice(0, limit)",
+    to:   "  items.sort((a, b) => b.ts - a.ts);\n  items = items.slice(0, limit);\n  if (hazardOnly) items = items.filter(it => it.hazard);\n  items = items.slice(0, limit)",
+    expect: ['hazard still finds all 30 of its items despite them being outside the newest 30'],
+    suite: 'news', target: 'api' },
+
+  /* Partial-feed honesty: one failing outlet must not fail the whole response. The previous
+     version of this case replaced allSettled with a construction that THREW, and a crash prints
+     no FAIL line, so the harness recorded MISSED. Mutating the failure threshold instead is
+     observable: one failure becomes a 502. */
+  { name: 'a single failing feed made fatal',
+    from: "  if (!items.length && errors.length === FEEDS.length) {",
+    to:   "  if (errors.length > 0) {",
+    expect: ['and the response is still 200', 'one failure does not become a 502'],
+    suite: 'news', target: 'api' },
+
+  /* Star-Advertiser 403s a bare UA. Trimming it silently removes one outlet. */
+  { name: 'browser user agent trimmed to a bare Mozilla/5.0',
+    from: "const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';",
+    to:   "const UA = 'Mozilla/5.0';",
+    expect: ['every upstream request carries the complete browser UA'], suite: 'news', target: 'api' },
+
+  /* The origin cache policy is what makes one miss serve everyone for five minutes. */
+  { name: 'origin edge caching weakened',
+    from: "  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');",
+    to:   "  res.setHeader('Cache-Control', 'public');",
+    expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
+    suite: 'news', target: 'api' },
+
+  /* G02: the client must emit only the two canonical URLs. Restoring the parameterized request
+     puts a caller-selected limit back on the wire, which was part of the unbounded key space. */
+  { name: 'parameterized client request restored',
+    from: "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    const res = await fetch(path);",
+    to:   "    const q = S.newsFilter === 'hazard' ? '?limit=30&hazard=1' : '?limit=30';\n    const res = await fetch('/api/news' + q);",
+    expect: ['no request carries a query string', 'every request in the whole log is one of the two canonical paths'],
+    suite: 'dom' },
+
+  /* Codex's finding 1 in concrete form: a request to an unrelated endpoint. The old filtered
+     assertions could not see this at all -- the filter dropped it before anything counted --
+     which is why the section now asserts against the complete log. */
+  { name: 'client issues an extra request to a third endpoint',
+    from: "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    const res = await fetch(path);",
+    to:   "    const path = S.newsFilter === 'hazard' ? '/api/news/hazard' : '/api/news';\n    await fetch('/api/headlines');\n    const res = await fetch(path);",
+    expect: ['four toggles issued exactly four requests in total',
+             'every request in the whole log is one of the two canonical paths',
+             'the whole log contains exactly two distinct shapes'],
+    suite: 'dom' },
+
+  /* G08: the per-feed abort is what stops one hung outlet from holding a Function open. */
+  { name: 'per-feed abort timeout lengthened',
+    from: "  const timer = setTimeout(() => ctrl.abort(), 8000);",
+    to:   "  const timer = setTimeout(() => ctrl.abort(), 30000);",
+    expect: ['each feed arms a timer of exactly 8000 ms'], suite: 'news', target: 'api' },
+
+  /* G08: and the timer must be cleared, or a completed request leaves one pending. */
+  { name: 'abort timer never cleared',
+    from: "  } finally {\n    clearTimeout(timer);\n  }",
+    to:   "  } finally {\n  }",
+    expect: ['and every timer was cleared afterwards'], suite: 'news', target: 'api' },
+
+  /* A cacheable 405 occupies a cache entry of its own, which is the shape G1 closes. */
+  { name: '405 made cacheable',
+    from: "    res.setHeader('Allow', 'GET, OPTIONS');\n    res.setHeader('Cache-Control', 'no-store');",
+    to:   "    res.setHeader('Allow', 'GET, OPTIONS');",
+    expect: ['and is not cacheable'], suite: 'news', target: 'api' },
+
+  /* Finding 3: a bare '?' is no longer an accepted shape. */
+  { name: 'bare trailing ? allowed through again',
+    from: "  if (String(req.url || '').indexOf('?') !== -1) {",
+    to:   "  if (String(req.url || '').indexOf('?') !== -1 && String(req.url).indexOf('?') !== String(req.url).length - 1) {",
+    expect: ['refused ? with 400'], suite: 'news', target: 'api' },
+
+  /* The refusal is deliberately opaque. Echoing the offending input hands a caller a
+     reflection surface on an endpoint reachable without authentication, and the suite has
+     always asserted it does not — but nothing proved that assertion could fail, which is
+     how a decorative test survives review. It is load-bearing as of this case. */
+  { name: 'refusal echoes the offending input back to the caller',
+    from: "    res.status(400).json({ error: 'this endpoint takes no query parameters' });",
+    to:   "    res.status(400).json({ error: 'this endpoint takes no query parameters', url: req.url });",
+    expect: ['the refusal does not echo the offending input'],
+    suite: 'news', target: 'api' }
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
 let missed = 0;
 
 mutations.forEach((m, i) => {
+  const subject = SUBJECT[m.target || 'html'];
+  const src = subject.src;                 /* shadows the page source for this case only */
   if (!src.includes(m.from)) {
     console.log('  ANCHOR LOST  ' + m.name + '\n               the code it mutates has moved; update this case');
     missed++;
@@ -403,7 +540,7 @@ mutations.forEach((m, i) => {
     missed++;
     return;
   }
-  const file = path.join(dir, 'mutant' + i + '.html');
+  const file = path.join(dir, 'mutant' + i + subject.ext);
   fs.writeFileSync(file, src.replace(m.from, m.to));
   const suite = SUITES[m.suite || 'dom'];
   let out = '';

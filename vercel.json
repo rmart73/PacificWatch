@@ -1,4 +1,8 @@
 {
+  "routes": [
+    { "src": "^/api/news$",        "continue": true, "transforms": [ { "type": "request.query", "op": "delete", "target": { "key": { "pre": "" } } } ] },
+    { "src": "^/api/news/hazard$", "continue": true, "transforms": [ { "type": "request.query", "op": "delete", "target": { "key": { "pre": "" } } } ] }
+  ],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],

@@ -10,9 +10,14 @@
  * No dependencies — the RSS parsing is deliberately minimal regex extraction so
  * the project stays install-free.
  *
- * Query params:
- *   ?limit=30    max items returned (default 30, max 100)
- *   ?hazard=1    only items matching HAZARD_RE
+ * Two canonical, QUERY-FREE representations:
+ *   /api/news         all headlines, fixed at 30
+ *   /api/news/hazard  hazard-only, fixed at 30, filtered over the whole pool before the cap
+ *
+ * There are no query parameters. The former ?limit and ?hazard were part of an unbounded cache
+ * key space: any query string produced a distinct CDN identity, and every miss fanned out to
+ * five upstream feeds. Routing now deletes every query key before cache lookup, and this handler
+ * refuses any that still arrive. See G1-ABUSE-BOUNDING-CONTRACT.md.
  */
 
 const FEEDS = [
@@ -100,17 +105,64 @@ async function fetchFeed(feed) {
   }
 }
 
-module.exports = async (req, res) => {
+/* THE SHARED IMPLEMENTATION.
+   The representation is decided by WHICH FILE the platform routed to, not by anything in the
+   request. There is no internal header and no query parameter carrying it, so there is nothing
+   for a caller to forge — which is why this design needs no anti-forgery gate at all.
+
+   Three earlier attempts to carry the representation through routing failed on admissible
+   evidence: a request.query `set`, a `dest` querystring, and a delete-then-set internal header.
+
+   The two QUERY mechanisms are explained: the query-delete transform removes every key, including
+   the one routing had just supplied.
+
+   The HEADER failure is NOT explained by that, and an earlier version of this comment wrongly said
+   it was. A request.query transform cannot remove a request header — they are different transform
+   types — and the configuration deleted and set the header in separate operations. What is
+   established is only what was measured: with delete-then-set configured, the sentinel did not
+   reach the handler on two cold-MISS measurements. The precise cause is unresolved. */
+async function serve(req, res, hazardOnly) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   /* Cache at the edge so the outlets aren't hit on every page load. */
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
 
+  /* A preflight is not a read. It answers from here and touches no outlet. */
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
-  const url = new URL(req.url, 'http://localhost');
-  const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 30, 100);
-  const hazardOnly = url.searchParams.get('hazard') === '1';
+  /* Anything but GET is refused before any upstream work, and the refusal is not cached.
+     Declared with Allow so the refusal is actionable rather than merely a wall. */
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(405).json({ error: 'method not allowed' });
+    return;
+  }
+
+  /* CANONICAL REQUEST CHECK — the second layer of the bound, and the one that survives if the
+     edge transform is ever removed or misconfigured.
+
+     The public surface is two query-free paths. Routing strips every query key before the CDN
+     chooses a key, so a well-routed request arrives here with none. Anything that still carries
+     a query string reached application code by another route, and is refused BEFORE
+     FEEDS.map(fetchFeed) so it performs not even one upstream request.
+
+     The refusal is deliberately opaque: a fixed message, no echo of the offending input, and
+     no-store so a refusal can never occupy a cache entry of its own. Echoing the input would
+     hand an attacker a reflection surface, and caching refusals would re-create the unbounded
+     key space this whole change exists to close. */
+  /* Every '?' is refused, including a bare trailing one with no key after it. An earlier version
+     allowed that case as harmless-and-equivalent; it is not worth the exception. The public
+     contract says query-free, direct invocation is precisely the surface this layer defends, and
+     an exception is one more shape a reader has to reason about. */
+  if (String(req.url || '').indexOf('?') !== -1) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(400).json({ error: 'this endpoint takes no query parameters' });
+    return;
+  }
+
+  /* Fixed by the representation, never by the caller. */
+  const limit = 30;
 
   const settled = await Promise.allSettled(FEEDS.map(fetchFeed));
 
@@ -146,4 +198,9 @@ module.exports = async (req, res) => {
     items,
     errors
   });
-};
+}
+
+/* Default entrypoint: /api/news — all headlines.
+   The hazard entrypoint lives at api/news/hazard.js and calls the same serve(). */
+module.exports = (req, res) => serve(req, res, false);
+module.exports.serve = serve;

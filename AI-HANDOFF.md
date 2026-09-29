@@ -31,14 +31,95 @@ directly against production in this session.
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
-| G1 abuse/cost bounding contract | [PR #25](https://github.com/rmart73/PacificWatch/pull/25) open; documentation/design only | Claude reviews the contract read-only; no implementation until it is accepted and merged |
+| G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 
 ### Active claims
 
-**G1 abuse/cost bounding contract — ChatGPT Codex,
-`codex/g1-abuse-bounding-contract`.** Owner-authorized 2026-09-26 under the approved sequence
-**G1 → observation Stage 2 → Stage 3**. Documentation and design only. This claim absorbs the
-current-board closeout that #24 could not record about its own merge.
+**G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
+Claim published 2026-09-26 before editing, in its own commit ahead of the work, on the owner's
+explicit authorization of both implementation **and** the WAF publication step. Branched from `main`
+at `fcaf55a`, with `git log` and content equality verified first.
+
+Governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md), **G01–G18**.
+
+**Claim extended 2026-09-27, ahead of the work:** one document,
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md), written at Codex's request after
+its final code review came back clean. It is the owner's step-by-step for G11/G12 — the preview-only
+rate-limit test, the evidence to capture, the reset, and the final production rule.
+
+**It is a procedure, not an execution.** Publishing the rule, accepting the metered-pricing
+acknowledgement and running the test are owner-only actions. No agent has touched Vercel project
+settings and none will. This commit and the document add no application, configuration or test
+change: the files Codex reviewed at `54e9248` stay byte-identical.
+
+**Scope — what this changes**
+
+1. **`api/news.js`** — two canonical representations replacing the free-form `limit`/`hazard`
+   parameters: all headlines and hazard-only, each fixed at 30. Non-canonical input is rejected
+   **before** `FEEDS.map(fetchFeed)` so it performs zero upstream requests, with `no-store` on
+   rejections and no echo of raw input. Method handling gains `405` with `Allow`; `OPTIONS` keeps
+   doing no upstream work.
+2. **`vercel.json`** — the routing that makes `/api/news/hazard` resolve to the shared Function,
+   plus the request-query transform intended to normalise the cache identity. Neither exists today:
+   `api/` contains only `news.js`, so `/api/news/hazard` is currently a 404.
+3. **`index.html`** — the single client fetch site at `fetchNews()`, currently building
+   `'?limit=30&hazard=1'` / `'?limit=30'`. It moves to the two canonical URLs and sends no query
+   string. `setNewsFilter()` calls `fetchNews()`, so the toggle is the live path G02 exercises.
+4. **Tests** — `test/` gains fetch-counter and handler coverage for the canonical representations,
+   zero-fan-out rejection, method handling, partial-feed behaviour, the full Star-Advertiser user
+   agent and the eight-second abort, plus mutation cases for each. Affected files:
+   `test/mutation-check.js` and a home for API-level assertions; the existing three suites are
+   updated only where the client change touches them.
+
+**The WAF action — owner-executed, named here per G16**
+
+The rule Claude will specify and record, and which **only the owner publishes**: exact paths
+`/api/news` and `/api/news/hazard`, IP counting key, fixed 60-second window, final limit **100**,
+enforcing **429**. The controlled test publishes a temporary **5 per 60 seconds** scoped to the
+preview hostname only, then restores the final production rule.
+
+**Claude will not touch Vercel project settings, publish any rule, or accept the pricing
+acknowledgement.** The owner has authorised the action; executing it is still theirs. Code and
+preview evidence land before any production merge, and G1 stays open until the final WAF state is
+verified.
+
+**Out of scope, explicitly:** no CORS change — per Decision 4 it earns no G1 credit and any change
+belongs to G3. No observation Stage 2 or 3 work. No new runtime dependency, datastore or in-process
+limiter. No change to the feed list, parser, decoding, dedupe, sort or hazard keyword model beyond
+what the contract requires. Nothing in `AGENTS.md` except the two deferred T17 items below.
+
+**Stop condition, per Decision 2:** if preview evidence shows the query transform does not normalise
+the cache identity, **implementation stops for a contract amendment and an owner decision.** The
+failure is not relabelled "unbounded but cheap" — handler rejection bounds upstream fan-out and WAF
+bounds one IP in one region, but the CDN/Function key space would remain unbounded.
+
+**Closeout absorbed into this claim** — five items, since a board PR cannot record its own merge:
+
+1. Codex's contract claim closed under Active claims (below).
+2. Its merged branch replaced under Active Branches.
+3. The two Review Queue rows for the contract and for blocked implementation updated.
+4. `G1-ABUSE-BOUNDING-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
+   authoritative — the third contract to merge while still calling itself a proposal.
+5. **The deferred T17 guidance carried here** rather than lost between branches: anchor a mutation
+   case on the line that *sets* a value rather than the line that renders it; never pin a constant's
+   value in an extraction regex, or mutating the constant breaks extraction instead of failing an
+   assertion; and adding even an optional parameter changes behaviour at every bare-reference
+   callback site, as `.map(sourceState)` did. These remain Codex's to place in `AGENTS.md` under
+   T17 during Stage 2; recorded here so they survive the branch.
+
+**Also noted, not claimed:** the merged `codex/g1-abuse-bounding-contract` branch was deleted on the
+remote, which contradicts the AGENTS line that omitting a merged branch from the active list "does
+not imply remote branch deletion." Either the convention changed and that line is stale, or the
+deletion was unintended. It cost the usual squash content-equality check, which succeeded only
+because the head commit survived locally from a pre-prune fetch. Flagged for the owner and Codex; no
+edit made.
+
+**Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
+`codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
+verified, application, API, configuration, dependencies and tests byte-identical to `22686bb`. The
+contract it produced is authoritative and governs this implementation.)* Owner-authorized 2026-09-26
+under the approved sequence **G1 → observation Stage 2 → Stage 3**. Documentation and design only.
+This claim absorbed the current-board closeout that #24 could not record about its own merge.
 
 Draft governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Claude holds with
 nothing claimed and reviews the contract read-only when the PR opens.
@@ -237,8 +318,9 @@ Codex retains design/acceptance ownership; Claude retains implementation ownersh
 implementation stays a separate claimed, reviewable PR.
 
 **What is next:** observation stage 1 is merged and production verified in #24. The owner approved
-the sequence **G1 → Stage 2 → Stage 3**. Codex is drafting the G1 abuse-bounding contract now;
-Claude implements only after that contract is reviewed, accepted and merged. Stage 2 then wires the
+the sequence **G1 → Stage 2 → Stage 3**. The G1 contract is drafted, reviewed, merged as #25 in
+`fcaf55a` and authoritative at G01–G18; **G1 implementation is in review as PR #26**, with the WAF
+publication outstanding and owner-only. Stage 2 then wires the
 observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
 satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
@@ -254,7 +336,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/g1-abuse-bounding-contract | G1 acceptance contract and #24 board closeout; documentation/design only |
+| Claude | claude/g1-abuse-bounding | G1 abuse and cost bounding implementation: two canonical News representations, zero-fan-out rejection, routing and cache normalisation, client fetch site, tests. Specifies the WAF rule; the owner publishes it |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -263,15 +345,21 @@ Merged branches are omitted from this active list; this does not imply remote br
 | PR / work | Review state | Next action |
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
-| G1 abuse/cost bounding contract | PR #25 open; owner-authorized; documentation/design only | Claude reviews read-only; implementation remains blocked |
+| G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | Blocked on the contract above | Claude claims separately only after the contract merges |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **accepted by Codex — G11, G12 and G13 complete**, code review clean, `MERGEABLE/CLEAN` | **Awaiting the owner's explicit merge permission.** A merge to `main` is a production deploy; no agent merges without it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `22686bb`**, merged through #24 and serving production. Claims and handoffs for
+**`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
-No application implementation is currently in flight; the active G1 work is a contract only.
+
+**An application implementation IS in flight: PR #26 changes `api/news.js`, `vercel.json` and
+`index.html`.** An earlier version of this paragraph said `main` was `22686bb` and that the active
+G1 work was a contract only. Both were true when written — before #25 merged and before the
+implementation was claimed — and neither was corrected as the work moved. That is the same
+current-state drift the board keeps re-learning: a line describing "right now" is wrong the moment
+the thing it describes moves, and nothing updates it unless someone is looking.
 
 ## Outstanding Verification and Decisions
 
@@ -393,6 +481,1087 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — Codex accepts G11/G12/G13; #26 awaits the owner's merge decision
+
+Final review complete. The filtered platform record closed the attribution gap, and Codex confirms
+the board correctly distinguishes owner/Claude enforcement evidence from its own independent
+steady-state verification. **G11, G12 and G13 accepted. No agent merges without the owner's explicit
+permission.**
+
+#### Scope ruling carried forward
+
+**#26 is not to be widened for the hazard-classifier issue.** It is pre-existing — `HAZARD_RE` is
+byte-identical to `main` — and goes into the Review Queue through the next properly claimed board
+closeout *after* #26 merges. Stage 2 and Stage 3 remain separately claimed work.
+
+#### What merging actually changes in production
+
+Recorded before the decision rather than after it, because this is the first production deploy of
+the G1 work:
+
+- `/api/news/hazard` begins to exist. It currently returns `404` in production.
+- `/api/news` stops accepting caller-selected parameters at the handler — but **legacy URLs keep
+  working**, because the query-delete transform strips every key at the edge before the Function
+  sees it. This was measured on preview: `?limit=99` and `?hazard=1` both returned `200` with the
+  canonical body.
+- One transient effect worth naming: a browser that already has the **old** page open in memory will
+  keep requesting `?hazard=1` until it reloads, and since the transform deletes that key, its hazard
+  toggle will show all headlines rather than hazard-only. It self-corrects on reload, and
+  `index.html` is served `no-store`, so the next load gets the new client.
+- The existing 100-per-60 WAF rule covers both paths already, since it is path-keyed with no
+  hostname condition. `/api/news/hazard` falls under it the moment it exists.
+
+#### Verification owed immediately after any merge
+
+```
+production /api/news          200, count 30, hazard and non-hazard both present
+production /api/news/hazard   200, count 30, hazard only          (currently 404)
+production /api/news?limit=30 200, canonical body                 (legacy caller)
+production site              loads, news card populates
+```
+
+### 2026-09-28 — rule attribution captured; G11 and G12 evidence complete
+
+The historical Firewall traffic view closes the last gap. **Filtered to the custom rule by selecting
+it from the rule drop-down** — confirmed by the owner, so this is a rule filter and not a free-text
+search — scoped to the minute containing the burst:
+
+```
+filter          Final Rule   (selected from the rule drop-down)
+window          5:15pm - 5:16pm HST, 2026-09-28
+
+Allowed         -            Denied  -     Challenged  -     Logged  -
+Rate Limited    20
+
+Top Request Paths
+  /api/news            15
+  /api/news/hazard      8
+
+Custom Rules    1 active
+```
+
+IP column redacted; it carries the owner's residential address and this board is public.
+
+#### Why this settles more than attribution
+
+Codex asked for the rate-limited requests tied to the rule. The `Top Request Paths` panel does that
+**and** independently confirms G11's scope requirement: under the rule filter, **only the two
+canonical paths appear.** No third path matched. That is the same property the improvised root-path
+probe established live, now corroborated from the platform's own log rather than from Claude's
+measurements.
+
+The earlier aggregate is superseded. `Rate Limited 6` over *Past Day* was captured seconds after the
+burst, before events had aggregated; the filtered view reports 20 in a single minute. **The later
+figure is the trustworthy one, and the discrepancy is dashboard lag rather than a contradiction.**
+
+A smaller arithmetic note, recorded rather than smoothed: the path panel totals 23 requests against
+20 rate-limited in the same window. The likely reading is that the path panel counts every request
+matching the rule while the legend counts only refusals, but that is an inference about the
+dashboard rather than something measured, and nothing in G11 or G12 turns on the difference.
+
+#### Provenance, stated for the record
+
+Every item below is **owner and Claude evidence.** Codex observed none of the enforcement firsthand
+— see the correction entry — and independently verified only the steady state afterwards. The
+attribution capture comes from the platform's log rather than from either agent, which is what makes
+it usable despite that.
+
+#### G11 and G12 — complete
+
+```
+G11  final rule record, captured before the edit and again after       DONE
+     covers only the two representations, IP key, 60s, 100, 429
+     corroborated by Top Request Paths showing no third path
+
+G12  enforcement observed at 5-per-60 on the preview hostname          DONE
+     both canonical paths refused; hazard path gave 5 x 200 then 429
+     cache=STALE requests consumed the limit; 429s carry no cache header
+     attributed to the named rule via the platform log
+     restored to and recorded at 100-per-60                            DONE
+     recovery 14 of 14, protection restored and confirmed 302          DONE
+
+G13  per-region counting stated, no distributed-attack claim           DONE
+```
+
+**Nothing further is owed by the owner.** The merge decision for #26 is Codex's.
+
+### 2026-09-28 — correction: Codex did not observe the 429s firsthand
+
+**The G12 response record is owner/Claude evidence, not Codex-independent evidence.** Codex flagged
+this and is right.
+
+#### What actually happened, stated plainly
+
+During the run Claude wrote *"Signalling it to start"* and *"All three of Codex's preconditions now
+hold"* — **but there is no channel by which Claude signals Codex.** The only relay is the owner
+pasting messages between the two agents, and during a fast-moving live window with dashboard work in
+hand, that did not happen. Codex received the messages afterwards.
+
+So the whole point of opening Deployment Protection — that the reviewer would see the `429`s
+directly, removing Claude from the evidence chain on the one item Codex could not verify — **was not
+achieved.** The preview was opened for a benefit that the design could not actually deliver, because
+the design assumed a live signal that does not exist.
+
+**This was Claude describing a coordination step as done when it had not been done.** Not a
+measurement error this time — a claim about process, made in the present tense, that the
+architecture never supported.
+
+#### What Codex did verify independently, and it is worth crediting
+
+Steady state after the run, from its own browser: production `/api/news` `200` five of five; both
+preview API paths `302`; #26 `MERGEABLE/CLEAN` with Vercel checks passing; head `1cfdd94` clean and
+synchronized; application, configuration and test files byte-identical to `54e9248`. That is genuine
+independent verification of the **final state** — just not of the enforcement event.
+
+#### The attribution gap Codex will not waive
+
+`Rate Limited 6` and `Custom Rules: 1 active` are aggregates. They show that rate limiting occurred
+and that one custom rule existed; they do not tie the specific `429`s to that specific rule. The
+reasoning *"it is the only rate-limit rule, therefore it produced them"* is an inference, and the
+evidence standard here has been measurement over inference throughout.
+
+**Needed:** the historical Firewall traffic view filtered to the exact custom rule, showing the rule
+name or ID alongside the rate-limited requests with paths and timestamps. The log is historical, so
+no rerun is required.
+
+#### The test window, for locating it in the log
+
+Derived from the `x-vercel-id` values captured on both sides — all six landmarks fall inside 108
+seconds:
+
+```
+2026-09-28 17:15:05 HST   owner browser, /api/news, 429
+2026-09-28 17:15:44 HST   Claude burst, /api/news, 8 x 429
+2026-09-28 17:15:45 HST   owner browser, /api/news/hazard, 429
+2026-09-28 17:16:52 HST   Claude burst, /api/news/hazard, 5 x 200 then 3 x 429
+
+window  17:15:05 -> 17:16:53 HST   (03:15:05 -> 03:16:53 UTC, 2026-09-29)
+```
+
+**Redact the IP column before that capture leaves the dashboard** — it carries the owner's
+residential address and this board is public.
+
+#### Lesson for the working agreement
+
+A coordination plan that depends on a live signal between agents **cannot be relied upon**: the relay
+is a human pasting messages, and it is slowest exactly when the window is live and the owner is
+busiest. Future evidence designs should either be asynchronous — the reviewer works from a durable
+log after the fact, as it now must — or the owner should be told explicitly that a relay is required
+at a specific moment, before the window opens rather than during it.
+
+### 2026-09-28 — G11 and G12 EVIDENCE: the rerun completed, all phases passed
+
+The full sequence ran end to end in one sitting and every gate passed. **Production was never
+throttled at any point, verified twice during the run rather than assumed.** Deployment Protection
+is restored and confirmed; the final 100-per-60 rule is live.
+
+#### G11 — the final rule, as restored and published
+
+```
+Name          Final Rule
+Rule ID       rule_final_rule_XfLFC2
+Description   Rate limit API news endpoints to 100 requests per minute per IP
+If            Request Path  Is any of  2 Request Paths: /api/news, /api/news/hazard
+AND
+Rate Limit    Fixed Window | 60 seconds | 100 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+Covers only the two news representations, no hostname condition, so it applies wherever they are
+served. This is the Phase 0 baseline restored exactly, captured from the dashboard before the edit
+and again after — **not** the provisional transcription recorded on the 27th, which this supersedes.
+
+#### G12 — the temporary rule, as published for the test
+
+```
+If            Hostname      Equals     pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+And           Request Path  Is any of  2 Request Paths: /api/news, /api/news/hazard
+AND
+Rate Limit    Fixed Window | 60 seconds | 5 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+#### G12 — controlled response record
+
+All traffic unauthenticated, **no bypass header anywhere**, as revision 5 requires. Every request
+served from region `pdx1`, so no off-by-one below has a regional explanation available or needs one.
+
+**This record is owner and Claude evidence. Codex did not observe these `429`s** — see the correction
+entry above. Rule attribution is pending the historical Firewall capture.
+
+**Production gate — 7 of 7 `200`, run twice** (once against the malformed first attempt, once
+against the correct rule). Production was never matched.
+
+**Scope check — preview root `/`, 8 of 8 `200`.** Against the first published attempt the same probe
+returned `429` at request 3. That before/after pair is what distinguishes *the rule fires* from *the
+rule fires on the right things*.
+
+**Burst, `/api/news/hazard` — the textbook result:**
+
+```
+req 1   200  cache=STALE   pdx1::iad1::vx4jf-1790651812072-af0cc71f55e6
+req 2   200  cache=STALE   pdx1::iad1::ssgkf-1790651812381-78d357242795
+req 3   200  cache=STALE   pdx1::iad1::688qk-1790651812656-11ee5a69b39d
+req 4   200  cache=STALE   pdx1::iad1::gd8b7-1790651812919-7b7d793a6913
+req 5   200  cache=STALE   pdx1::iad1::ll47f-1790651813169-b193eab86c18
+req 6   429  cache=-       pdx1::d5vs2-1790651813450-b1c695f67acb
+req 7   429  cache=-       pdx1::lcwhv-1790651813722-988b62a52034
+req 8   429  cache=-       pdx1::shrpr-1790651813985-a12d0c177783
+```
+
+Exactly five, then refusal.
+
+**Burst, `/api/news` — 8 of 8 `429` from request 1**, because the shared-IP allowance had already
+been consumed. See the correction below; the path is still demonstrated as enforced.
+
+**Owner's browser, both paths** — Vercel's *"This site is rate limited / 429 TOO MANY REQUESTS"*
+page, with `pdx1::mr1hk-1790651705670-69263f80af8b` on `/api/news` and
+`pdx1::vbdg2-1790651745607-0ec3b5e3bab3` on `/api/news/hazard`.
+
+**Firewall traffic panel:** `Rate Limited 6`, `Custom Rules: 1 active`. Top IPs showed one
+Charter-ASN address accounting for 24 requests — **address redacted here deliberately: it is the
+owner's residential IP and this board is a public repository** — plus two Amazon-ASN addresses with
+one request each.
+
+**Recovery — 14 of 14 `200`** (seven preview, seven production) after a full 65-second wait.
+Requests 6 and 7 on the preview would have been `429` under the 5-per-60 rule, so this confirms the
+restore is published and live rather than merely between windows.
+
+**Protection restored — `302` on both preview paths**, then production `5 of 5` `200`.
+
+#### What the run settled that no agent had measured
+
+**The firewall counts requests at the edge, not Function invocations.** Requests 1-5 on the hazard
+path were served `cache=STALE` — from the CDN, without the Function running — and **still consumed
+the limit**. The `429`s carry no cache header at all.
+
+This was the open question flagged before the evidence was gathered, with the explicit warning not
+to assume the favourable outcome. It came back favourable on a clean, correctly-scoped run, and it
+is the result G1 needs: the demonstrated vector was cheap cache-missing traffic, and a defence that
+only counted Function invocations would not have bounded it. It also matches Vercel's documented
+[request pipeline](https://vercel.com/docs/how-vercel-cdn-works) — *"Blocked requests never reach
+the routing or caching layers."*
+
+#### Two corrections owed
+
+**1. "Three independent budgets" was wrong.** The procedure claimed the owner, Codex and Claude each
+held a separate 5-per-60 allowance because the limit is IP-keyed. Codex does. **The owner and Claude
+do not** — Claude Code runs on the owner's machine, so both leave from one public IP. The run proved
+it: the owner's browser burst consumed the allowance and Claude's `/api/news` burst was over the
+limit from request 1, with the traffic panel showing a single address at 24 requests. Corrected in
+the procedure, with the instruction to take one path each or separate the bursts.
+
+**2. The root-path probe is now a required step.** It was improvised mid-run and turned out to be
+the only check that distinguishes a correctly scoped rule from one matching the whole hostname.
+Added to the procedure as the Phase 1 scope check, ahead of the production gate.
+
+#### Three rule attempts, recorded because the failures are instructive
+
+1. **Hostname OR path** — Vercel ORs sibling condition *groups*. Published and measured: preview `/`
+   returned `429` at request 3, so the rule matched the entire preview hostname. Production
+   unaffected, verified at the time.
+2. **`Equals` with a comma-joined string** `/api/news,/api/news/hazard` — no request path is ever
+   literally that, so the condition could never match. Combined with the `OR` above, the rule
+   reduced to "hostname = preview" alone.
+3. **`Is any of` with two entries, AND-ed with the hostname in one group** — correct, and the shape
+   Vercel's own rule builder produces. The owner could not flip the `OR` because it separates
+   groups, not conditions; rebuilding through the rule builder was what fixed it.
+
+**The lesson is the same one this board keeps paying for:** a rule that looks right in a screenshot
+is not a rule that behaves right, and the only thing that told them apart was a probe against a path
+the rule was supposed to ignore.
+
+#### Outstanding
+
+The Firewall live-traffic capture filtered to the custom rule — the log is historical, so the owner
+can capture it at leisure. **Redact the IP column before it leaves the dashboard.**
+
+### 2026-09-28 — revision 5 cleared; waiting on the owner's uninterrupted window
+
+Codex's static safety review of revision 5 passed with no remaining procedure findings. **G12 is
+ready to execute and has not been executed.** Final 100-per-60 rule live, Deployment Protection on,
+#26 unmerged — all three re-verified by measurement after the correction, not assumed.
+
+#### The gate is now the owner's availability, not the documentation
+
+Phases 0b through 4b must run in one sitting, because between them the preview is public **and**
+production is unprotected by the rate limit. That is roughly 15-20 minutes and should not be started
+and walked away from. Nothing else blocks G12.
+
+#### Codex will not act until all three preconditions are confirmed
+
+1. unauthenticated preview returns `200`;
+2. the correctly scoped preview-only 5-per-60 rule is published;
+3. the owner is present and ready to complete restoration and protection closure in the same sitting.
+
+#### Claude's side is staged in advance
+
+A harness is prepared so the exposure window stays short: discrete steps for the precondition check,
+the production gate, the two-path burst, the recovery check and the protection-closed check, each
+exiting non-zero on failure so a bad result cannot be read as a good one in the moment.
+
+**It carries no bypass header anywhere, deliberately.** Revision 5 removed that fallback: during this
+run the preview is open, so an authentication response means Phase 0b failed and the test stops.
+Reaching for a bypass header would manufacture exactly the second-hand evidence the arrangement
+exists to eliminate.
+
+Validated against current state before use, which is the point of running it early: the
+precondition check **correctly failed** while protection is still on, the protection-closed check
+passed, and the production gate passed seven of seven. A check that cannot fail is not a check.
+
+Every request in that validation was served from `pdx1`. Single-region traffic means an off-by-one
+in the changeover is unlikely to have a regional explanation available — which is a reason to record
+`x-vercel-id` per request, not a reason to expect one.
+
+### 2026-09-28 — revision 5: two execution-order defects, both mine, caught before execution
+
+Codex blocked execution of revision 4 and was right to. **Nothing was run, no dashboard change was
+made, and neither piece of external state was touched.** Verified after the correction: the preview
+still returns `302` unauthenticated and production still returns seven `200`s.
+
+#### Defect 1 — stale cross-references
+
+Inserting Phase 0b and Phase 3b shifted the phase numbering and I did not update the references
+pointing at them. Three lines still said "restore per Phase 4" and "verify recovery per Phase 5"
+when they meant Phase 3 and Phase 4. Confirmed against the file at the exact lines Codex cited.
+
+#### Defect 2 — an impossible order, and the worse half underneath it
+
+Revision 4 placed **Phase 3b (restore protection, verify unauthenticated `302`)** immediately before
+**Phase 4 (seven unauthenticated preview requests returning `200`)**. Those cannot both hold. I
+appended a phase without re-reading what followed it.
+
+The more serious half is what Codex saw underneath: **every failure path restored only the rate
+limit.** Each `stop and report` branch would have left Deployment Protection off and the preview
+publicly readable — turning one failed acceptance item into an open deployment.
+
+That is the same class of error as the original incident: a step correct in isolation, wrong in
+composition, and reviewed by its own author without tracing what it touched. Twice now the guard
+rail has been the second reader rather than the writer.
+
+#### Revision 5
+
+Phase order is now **0 → 0b → 1 → 2 → 3 → 4 → 4b → 5**, with protection restored *after* the
+recovery check that requires the preview to be open.
+
+A single **Restoration** block is now cited by every failure path and runs in one order: restore the
+rule (Phase 3), verify recovery (Phase 4, protection still off), restore protection (Phase 4b,
+confirm `302`). Only then stop and report. Both the Phase 1 gate failure and the fail-closed branch
+point at it.
+
+The Phase 2 fallback offering a bypass header or an authenticated browser is **removed**. Under this
+revision an authentication response means Phase 0b failed, not that a workaround is wanted — and a
+run that needs a bypass header or the owner login produces exactly the second-hand evidence this
+arrangement exists to avoid.
+
+Added: **Phase 0b through 4b run in one sitting.** Between those points the preview is public *and*
+production is unprotected by the rate limit. Neither state should outlive the session that created
+it.
+
+The hand-back list was also reordered to chronological — it listed the protection restore before the
+recovery check, the same reversal in miniature.
+
+#### Signal conditions
+
+Codex is signalled only when all three hold: unauthenticated preview access confirmed `200`; the
+correctly scoped 5-per-60 rule published; and the owner ready to complete test, restore, recovery and
+protection closure in one sitting. Until then the final rule stays live and protection stays on.
+
+### 2026-09-28 — resumed; preview-access decision taken, procedure at revision 4
+
+State verified against the pause record before anything else, because an overnight gap is exactly
+when a "right now" line goes stale: head `0230824` local and remote, clean tree, #26
+`MERGEABLE/CLEAN`, production `7 of 7` `200`, both preview representations correct and distinct
+(`count=30` with 11 hazard / 19 non-hazard; `count=30` with 30 / 0), preview still `302` without the
+bypass header. Nothing drifted.
+
+The preview alias now serves `dpl_Aix7ndnseeXMAb7hX2DHF1znKWwL` rather than the deployment smoked on
+the 27th — the documentation-only commits triggered rebuilds. Code files remain byte-identical, so
+behaviour is unchanged, and the **current** deployment id will be recorded with the G12 evidence
+rather than the stale one.
+
+#### Decision: Deployment Protection comes off for the test window
+
+The owner chose to open the preview so **Codex observes the `429`s first-hand**. This is the right
+trade: the preview `429` is the single item Codex cannot verify for itself, and the whole reason G12
+exists is that a rule which is configured but not enforcing looks identical to one that works.
+Having the reviewer see it directly removes Claude from the evidence chain at precisely the point
+where that matters most.
+
+Cost, stated rather than waved past: the preview is publicly readable for those minutes. It serves
+Hawaii news headlines and nothing else, and the two API shapes are already visible in the open PR.
+**Phase 3b restores protection and is mandatory, with a `302` check to prove it took effect.**
+
+#### A property that makes three observers cheap
+
+The limit is keyed on **IP address**, so the owner, Codex and Claude each hold an independent
+5-per-60 budget. Three observers do not compete for one allowance and need no timing coordination
+beyond each waiting out their own clean window. Per-region counting still applies, so `x-vercel-id`
+is recorded on every request.
+
+#### Revision 4
+
+Phase 0b (open the preview, verify unauthenticated `200`) and Phase 3b (close it again, verify `302`)
+are inserted around the existing sequence. Order matters and is deliberate: protection comes off
+**before** the rule is edited, because if it cannot be removed there is no reason to touch the rate
+limit at all.
+
+
+### 2026-09-27 — END OF NIGHT PAUSE
+
+Stopping here for the night at the owner's call. **Nothing is mid-flight and nothing is left in a
+broken state.** Working tree clean, everything pushed.
+
+#### Exact state
+
+```
+branch        claude/g1-abuse-bounding
+head          b439870
+PR #26        OPEN | MERGEABLE | CLEAN | Vercel checks passing
+production    pacific-watch.vercel.app/api/news -> 200, serving normally
+WAF           ONE rule live: the final 100-per-60, path-only, IP key, 429 enforcing
+              (Hobby allows exactly one rate-limit rule per project)
+temp rule     the earlier mis-scoped rule is OFF; a correctly shaped replacement was
+              built by Vercel's rule builder but deliberately NOT published, because
+              publishing it would be a second rate-limit rule and is impossible on Hobby
+suites        npm test 306, test:dom 288, test:mutation 78 of 78, last run at 54e9248;
+              every code file byte-identical to 54e9248 since
+```
+
+**No dashboard change is pending or half-applied.** The project is in its intended steady state:
+final rule live, production protected at 100-per-60, preview unthrottled.
+
+#### Where G1 actually stands
+
+Code, tests and preview smoke are done and Codex's final read-only review returned no findings.
+**G11 is credible** on the final-rule record but Codex wants the Phase 0 capture from the rerun as
+the authoritative version, because the provisional transcription on the board is my reading of a
+screenshot and a misreading of that same UI is what caused the incident.
+
+**G12 is open and is the only thing blocking the merge.** The accidental production observation is
+real behavioural evidence and is explicitly *not* accepted as G12: it misses the preview-hostname
+condition and proves nothing about the corrected grouping.
+
+#### The one thing to do first on resume
+
+**Do not start by editing the WAF rule.** Start by resolving who gathers the preview evidence,
+because it determines the whole shape of the run:
+
+The preview is deployment-protected — both preview API paths return `302` to the Vercel login wall
+for anyone without the bypass header, measured rather than assumed. Codex has a browser session and
+can therefore verify **production** unaided, but **cannot reach the preview**, which is exactly where
+G12 needs the `429`s.
+
+Three options are with the owner, undecided:
+
+1. Leave it: Codex verifies production; preview evidence comes from the owner's browser and Claude's
+   bypass-header run.
+2. **Recommended.** Temporarily disable Deployment Protection on the preview for the test window so
+   Codex observes the `429`s first-hand. Strongest available G12 evidence, since it removes Claude
+   from the evidence chain on the item Codex is most skeptical of. Costs a few minutes of publicly
+   readable preview — news headlines only — and is a project settings change, so owner-only.
+3. A Vercel share link for the protected deployment. Flagged as plausible, **not confirmed** — check
+   the dashboard before relying on it.
+
+#### Then, and only then, revision 3
+
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) is current and carries Codex's
+four safeguards. The sequence in one line each: capture the final rule first; edit that single rule
+into the preview-only 5-per-60 using the `Is any of` shape; publish; seven production requests all
+`200` or stop; wait 65s untouched; burst both preview paths recording status, `x-vercel-cache` and
+`x-vercel-id`; capture the Firewall live-traffic event attributing the `429`s to the rule; restore
+the single rule to 100-per-60; publish; capture it; wait 65s; verify fourteen `200`s across both
+hostnames.
+
+**Production has no rate limit while the test rule is in place.** Unavoidable on Hobby with one rule.
+Keep the window to minutes.
+
+**If no rule-generated `429` appears** after both the bypass run and a browser retry: restore, verify,
+stop, and report **G12 failed**. It is not to be downgraded to a platform limitation.
+
+#### Open, not lost
+
+**Hazard classifier false positives — pre-existing, not blocking.** Live preview data during an
+active hurricane shows roughly 7 of 30 items in the hazard representation are not Hawaii hazards:
+`erupt` matching "gun sale **erupted** in gunfire", `emergency` matching "Honolulu **Emergency**
+Medical Services" on a stabbing, `warning` matching "**warning** sign for GOP", `swell` matching
+"HI-5 fund **swells**", `closed` matching a DMV closure, plus two mainland weather stories that
+matched legitimately.
+
+`HAZARD_RE` at `api/news.js:35` is **byte-identical to `main`** — verified, not assumed — so #26
+neither introduced nor worsened this; the old `?hazard=1` behaved the same way. Recorded here rather
+than acted on: it would change code Codex has certified clean, and it needs its own claim. Codex was
+asked whether to log it in the Review Queue now or raise it after #26 merges; **undecided**.
+
+#### Deliberately not done, and not to be started without a claim
+
+Stage 2 and Stage 3 of Q007/Q008. Any change to `HAZARD_RE`. Any merge of #26. Any WAF or Vercel
+settings change by an agent.
+
+#### Resume in this order
+
+1. Owner decides the preview-access question above.
+2. Owner runs revision 3 end to end; Claude captures the bypass-header side in parallel if still
+   needed; Codex verifies production first-hand at the gate and after the restore.
+3. Claude writes the evidence into the board as G11/G12.
+4. Codex verifies and presents the merge decision for #26.
+5. After merge: decide the hazard-classifier finding, then Stage 2 under a separate claim.
+
+### 2026-09-27 — G12 rerun required; procedure revision 3 and a platform constraint
+
+Codex ruled that the accidental production run **does not satisfy G12**: it misses the explicit
+preview-hostname condition and proves nothing about the corrected grouping. The behavioural finding
+is kept, G12 stays open, #26 stays unmerged. That is the right call — the evidence was real but it
+was not the test the contract asks for.
+
+#### A platform constraint that invalidated the original sequence
+
+**Hobby allows exactly one WAF rate-limit rule per project.** Verified directly against
+[Vercel's rate-limiting docs](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)
+rather than taken on report:
+
+> | Number of rules | **1 per project** | 40 per project | 1000 per project |
+
+with the note that the Hobby figure applies to rate-limit rules specifically, and that Hobby allows
+up to three total custom firewall rules.
+
+The final 100-per-60 rule occupies that single slot, so **revision 1's instruction to add a second,
+temporary rate-limit rule was impossible on this plan** — and it was already superseded by the
+grouping incident before anyone reached that wall.
+
+The rerun therefore **edits the one rule in place** and edits it back. Two consequences recorded
+rather than glossed: production has **no rate limit for the duration of the test**, which is
+unavoidable here and is why the window must be minutes; and the final rule's configuration must be
+captured **before** editing, because the thing being overwritten is both the restore target and the
+G11 evidence.
+
+#### The rule shape, settled
+
+Vercel's own rule builder produced the form that removes the ambiguity entirely:
+
+```
+If   Hostname      Equals     pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+And  Request Path  Is any of  /api/news, /api/news/hazard
+```
+
+`Is any of` carries both paths in **one** condition row, so there are no OR'd sibling cards and no
+grouping question to get wrong. The owner was right to push back on my reading of the card layout —
+I was inferring structure from a screenshot. What the measurement established was never the layout,
+only that `/api/news` matched production; this shape makes the layout irrelevant.
+
+#### G11 — final rule, transcribed for acceptance
+
+Codex asked for the actual final-rule record rather than a description. As displayed in the
+dashboard before any rerun edit:
+
+```
+Name          Final Rule
+Rule ID       rule_final_rule_XfLFC2
+Description   (empty)
+If            Request Path   Equals   /api/news
+   OR
+If            Request Path   Equals   /api/news/hazard
+   AND
+Rate Limit    Fixed Window | 60 seconds | 100 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+**This transcription is read from a screenshot and is the author's reading of it, not an API dump.**
+Given that a prior misreading of this same UI is what caused the incident, Codex should treat the
+Phase 0 capture in the rerun as the authoritative G11 record and this as provisional.
+
+For reference, the temporary rule as it stood during the incident:
+
+```
+Rule ID       rule_temp_test_rule_oYltUL
+If            Request Path   Equals   /api/news              <- no hostname row
+   OR
+If            Request Path   Equals   /api/news/hazard
+   And        Hostname       Equals   pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+   AND
+Rate Limit    Fixed Window | 60 seconds | 5 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+#### Procedure revision 3 — the four safeguards
+
+1. **Fail closed.** If the preview run produces no rule-generated `429`, the procedure now requires
+   restoring the rule, verifying recovery, stopping, and **reporting G12 failed**. It says in terms
+   not to write it up as a platform limitation or as "configured correctly but unobservable". A rate
+   limit that cannot be seen firing is the exact thing G12 exists to catch.
+2. **Clean window and region evidence.** A mandatory 65-second untouched wait before the burst, and
+   per-request capture of status, `x-vercel-cache` **and** `x-vercel-id`. An off-by-one in the
+   changeover may not be attributed to regions without IDs demonstrating it — which retroactively
+   disqualifies the "tripped at request 4" reading from the incident as anything but a partially
+   consumed window.
+3. **Both paths, plus rule attribution.** At least one `429` on each canonical path, and a captured
+   Firewall live-traffic event showing the rate-limited requests grouped under that custom rule.
+   A `429` in a response log does not prove which component produced it.
+4. **Bypass and platform usability.** A bypass-header run that does not trigger must be retried
+   through the authenticated browser before failure is declared. Both loops are now labelled Bash
+   and given Windows PowerShell / `curl.exe` equivalents.
+
+#### The no-compute claim now has a citation
+
+Vercel's [request pipeline](https://vercel.com/docs/how-vercel-cdn-works) runs the Firewall layer
+ahead of routing, caching and compute, and states plainly: **"Blocked requests never reach the
+routing or caching layers."** So a WAF-generated `429` costs no Function invocation and no upstream
+fan-out. That was previously an inference from my own measurements; it is now a documented platform
+property, and the incident observation — `cache=HIT` responses still consuming the limit, `429`s
+carrying no cache header — is consistent with it rather than the sole basis for it.
+
+#### Attribution
+
+The **"no user impact"** finding is the **owner's statement**: Pacific Watch has not been broadcast,
+so the only traffic during the incident was the owner's and mine. It is recorded as the owner's
+account, not as an independent verification. **The production throttling remains recorded as an
+incident regardless.**
+
+#### State
+
+G11 credible, pending the Phase 0 capture for final acceptance. **G12 open.** #26 unmerged. No
+dashboard change is to be made until the owner works from revision 3.
+
+### 2026-09-27 — the temp WAF rule matched production; G12 data captured by accident
+
+**The 5-per-60 test rule throttled production `/api/news`.** It was caught within minutes, production
+is recovered and verified, and **no user was affected** — the owner confirms Pacific Watch has not
+been broadcast, so the only traffic was the owner's and mine. A configuration defect with no user
+impact, not an outage. Recorded at full length anyway, because the guard rail that failed is the one
+this procedure was built around.
+
+#### What broke
+
+Vercel AND-s conditions **inside** a condition card and OR-s the cards. The rule was built as:
+
+```
+(Path = /api/news)                                  <- no hostname row: matches EVERY hostname
+   OR
+(Path = /api/news/hazard AND Hostname = preview)    <- the guard applied only here
+```
+
+So the hostname guard covered the hazard path and left plain `/api/news` matching production. The
+correct shape repeats the hostname row inside **both** cards.
+
+#### Whose error this is
+
+**Mine, at the step that was supposed to catch exactly this.** The first version of
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) led with the warning that a
+path-only rule reaches production, and then said to add *a* hostname condition without saying it
+must be attached to each path clause. The owner built it, sent a screenshot, and **I read that
+screenshot and confirmed it was correct.** It was not. The owner then acted on my confirmation.
+
+Writing the warning and then failing to apply it while reviewing the very artifact it was about is
+the part worth keeping. The document was not wrong about the risk; it was useless about the
+mechanism, and the review that should have compensated repeated the same assumption.
+
+It also means production was throttled during the **first** test run, not only the second. The
+"production healthy, 6 of 6 `200`" check recorded earlier ran *after* the rule had been disabled,
+which is precisely why it looked clean.
+
+#### Measured, during and after
+
+```
+production /api/news, rule live      req 1-3  200  cache=HIT
+                                     req 4-9  429  cache=(empty)
+production /api/news, rule off       req 1-7  200        (after a full 60s window reset)
+production /                         200                 (the site itself was never affected)
+production /api/news/hazard          404                 (correct: #26 is unmerged)
+```
+
+The trip at request 4 rather than 6 is the owner's own browser requests already counted against the
+same 60-second window.
+
+#### The accident answered the open question
+
+The board asked, before any of this, whether the firewall counts **requests at the edge** or only
+Function invocations — `/api/news` is CDN-cached, so most burst traffic never reaches the handler.
+
+**It counts requests.** Requests 1-3 were served `cache=HIT` and still consumed the limit, and the
+`429`s carry no cache header at all, meaning they are refused at the edge before cache is consulted.
+That is the stronger of the two outcomes and the one G1 needs, since the demonstrated vector was
+cheap cache-missing traffic.
+
+**This is a real G12 observation gathered the wrong way.** It is a controlled response record at
+5-per-60 with per-request statuses, but against production rather than the preview hostname G12
+specifies. It is recorded as evidence of *behaviour* and explicitly not offered as the clean
+preview-only run. Codex decides whether it satisfies G12; the recommendation is to re-run it
+properly, which also tests the corrected rule shape.
+
+#### Corrections made to the procedure
+
+1. The grouping is now shown as a WRONG/RIGHT block, with the instruction to repeat the hostname row
+   **in every card** and to read each card back separately before saving.
+2. A **mandatory production check before generating any test traffic**: seven requests to production
+   `/api/news`, all of which must be `200`. Seven is above the temporary limit of five, so a
+   mis-scoped rule reveals itself there instead of on the preview.
+3. Recovery is now verified on **both** hostnames and only after a full 60-second wait, so an
+   open rate-limit window is not mistaken for a rule that is still live.
+4. The reset step now says why deleting beats disabling, using this incident as the reason.
+
+#### State
+
+Temp rule **off and verified off**. Final 100-per-60 rule is live and correct — both paths, no
+hostname condition, IP key, 429 — and production serves normally under it. **G11 evidence stands.**
+G12 is pending the owner's decision on a clean re-run.
+
+### 2026-09-27 — code review clean; G11/G12 procedure handed to the owner
+
+Codex's final read-only review of #26 returned **no code, test, documentation or evidence findings**.
+It confirmed the complete-log G02 assertions and both new mutations are load-bearing, and accepted
+that the `54e9248` smoke applies to `ea6e496` because only `AI-HANDOFF.md` changed afterward. PR #26
+is `MERGEABLE/CLEAN` with both Vercel checks passing.
+
+**#26 is not merged and is not to be merged yet.** G11 and G12 are the only outstanding acceptance
+items, and they are external actions.
+
+#### What was added
+
+[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) — the owner's step-by-step:
+the temporary preview-only 5-per-60 test, the evidence to capture, the reset, and the final
+production 100-per-60 rule, each mapped to what G11/G12/G13 actually require.
+
+**No application, configuration or test file changed.** `api/news.js`, `api/news/hazard.js`,
+`index.html`, `vercel.json`, `package.json` and everything under `test/` are byte-identical to
+`54e9248`, verified by object hash, so Codex's clean review still stands on the code. The two commits
+since are the claim and this document.
+
+#### The part of that document most worth reading twice
+
+A rate-limit rule carrying **only path conditions applies to every hostname on the project,
+including production.** The 5-per-60 test rule therefore needs a hostname condition AND-ed with the
+path group, or it throttles real users to five requests a minute — during hurricane season, on the
+card people open the site for. The document leads with that, says not to skip it, and says to stop
+rather than save a rule whose shape cannot be confirmed.
+
+The final rule deliberately has **no** hostname condition, because G11 requires it to cover both
+representations wherever served.
+
+#### One thing the test will settle that no agent has measured
+
+`/api/news` is CDN-cached, so most burst requests never reach the Function. If `429`s appear anyway,
+the firewall counts **requests at the edge** rather than invocations — the stronger result, and the
+one G1 needs, since the demonstrated vector was cheap cache-missing traffic. If cached requests
+instead sail through, that is a real limitation of this defense.
+
+**The procedure explicitly says not to assume the first outcome** and to record the statuses
+actually observed. It would be easy to write this up as a success either way, which is exactly why
+it is called out before the evidence is gathered rather than after.
+
+#### Still owner-only
+
+Publishing the rule, accepting the metered-pricing acknowledgement and generating the test traffic.
+No agent has touched Vercel project settings and none will.
+
+### 2026-09-27 — PR #26 round two: two corrections and a final-head smoke
+
+Codex re-reviewed `dd2fb75`, closed all five round-one findings, and returned two corrections plus
+an evidence request. All three are done. Head is `54e9248`.
+
+#### Correction 1 — the new G02 test could still hide a third path
+
+The section I added to satisfy round one filtered `fetchLog` to URLs already containing
+`/api/news` before asserting anything. **That is the exact hole the section exists to close:** a
+stray request to `/api/headlines` would be removed by the filter before the shape count could see
+it, so the client could be talking to a third endpoint with every assertion passing. It also
+counted `>= 4`, which admitted extra requests a second way.
+
+Now asserted against the complete log — exactly four requests, every entry one of the two canonical
+paths, both paths present, exactly two distinct shapes. Codex asked for the filtered assertion to be
+replaced rather than supplemented, and it was.
+
+**Exact counting is sound here, not merely convenient**, and the reason is worth recording because it
+is what makes `=== 4` safe rather than brittle: the log is cleared immediately above,
+`setNewsFilter()` issues exactly one fetch through `fetchNews()`, and the shortest polling interval in
+the page is 30s against four 60ms settles. Nothing else can enter the log. If that ever stops being
+true the test fails loudly, which is the wanted behaviour rather than a hazard.
+
+#### Correction 2 — the tally said 16 and the block held 15
+
+Codex counted correctly and I had overstated by one. There were two ways to fix it and the cheap one
+was wrong: the missing case was **real**. The API suite has always asserted the 400 refusal does not
+echo the offending input, and **nothing proved that assertion could fail.** A reflection surface on an
+endpoint reachable without authentication is a security property, so the case was added rather than
+the number quietly reduced.
+
+A second case went in with it. Tightening G02 introduced an exact request count and a whole-log shape
+count that no mutation could break — the same decorative-assertion problem the reflection case had
+just exposed, reintroduced by my own fix. The new case is the third-endpoint scenario itself, which is
+the concrete form of what Codex described.
+
+**The G1 block is now 17 — 15 API, 2 client.** Total 78.
+
+#### Two errors of mine on the way, both caught by running it
+
+- **`expect` is a conjunction.** The harness requires *every* listed label to fail
+  (`caught.length === m.expect.length`). I added `'four toggles issued exactly four requests in
+  total'` to the parameterized-client case, which that mutation does not break — four toggles still
+  issue four requests, they just carry query strings — so a previously caught case reported
+  **MISSED**. Scoped back to the two labels it genuinely breaks.
+- **A `\n` escape became a real newline** passing through a shell heredoc into a template literal,
+  leaving `mutation-check.js` unparseable. Rebuilt with the sequence constructed rather than typed.
+  The same edit had also split a comment from the case it documented; both repaired.
+
+#### Final-head preview smoke — deployment `GPo4MMbU7LS39NLquFEkiiz82ch3`, commit `54e9248`
+
+Codex asked for a compact re-smoke against the corrected head rather than continued reliance on
+`c2213b2`. Host `pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app`.
+
+**The alias was verified to serve this head before the smoke ran**, because a branch alias pointing at
+a stale deployment would invalidate everything below. The served `index.html` differs from
+`HEAD:index.html` by exactly one line — Vercel's injected feedback script — and that line carries
+`data-deployment-id="dpl_GPo4MMbU7LS39NLquFEkiiz82ch3"`, matching the GitHub deployment status for
+`54e9248`.
+
+```
+== /api/news ==
+warm attempt 1            200 MISS   age=0  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+warm attempt 2            200 HIT    age=2  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+fresh arbitrary variant   200 HIT    age=2  n=30 hz=14 nonhz=16  2026-09-27T02:09:22.177Z
+== /api/news/hazard ==
+warm attempt 1            200 MISS   age=0  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+warm attempt 2            200 HIT    age=2  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+fresh arbitrary variant   200 HIT    age=2  n=30 hz=30 nonhz=0   2026-09-27T02:09:25.477Z
+== distinctness ==        different updated, different bodies
+ALL PASSED (9 assertions)
+```
+
+Each variant key was generated per-run and had never been requested before, so a `HIT` on it is
+convergence rather than a replay of an earlier probe. **Cache state is printed on every line**, which
+is the standing correction to the measurement error recorded further below: a warm `HIT` returns a
+stored body without invoking the Function, so a result read without its cache column is not evidence
+about the handler.
+
+Round two changed **no production code** — only `test/dom-behavior.test.js` and
+`test/mutation-check.js` — so the served artifacts are byte-identical to `dd2fb75`. The smoke is still
+reported against `54e9248` because that is the head Codex will merge.
+
+#### Verification
+
+`npm test` **306** (150 + 35 + 37 + 84), `npm run test:dom` **288** (unchanged: seven checks before,
+seven after), `npm run test:mutation` **78 of 78 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS.
+
+#### Unchanged
+
+G11 and G12 remain open and owner-only. No agent has touched Vercel project settings, published the
+WAF rule, or accepted its pricing acknowledgement. **G1 does not close when #26 merges.**
+
+### 2026-09-27 — PR #26 round one: five findings corrected
+
+Codex reviewed the implementation, called the shape sound, and returned five concrete issues. All
+five are corrected. **None of them were cosmetic, and two were mine ignoring a working agreement
+rather than getting something wrong.**
+
+#### Finding 1 — G02 had no client coverage
+
+The contract requires the browser to emit only the two canonical URLs, and nothing tested it. The
+API suite proved the *server* refuses a query string; no assertion proved the *client* never sends
+one. Those are different claims, and only the second is G02.
+
+DOM section 29 now toggles the filter four times through `setNewsFilter()` — the live path, which
+calls `fetchNews()` — and asserts every News URL is exactly `/api/news` or `/api/news/hazard`, that
+no URL carries `?`, `limit` or `hazard=`, that both representations were actually exercised, and
+that **exactly two distinct shapes** exist. Repeated toggles because the failure to fear is a shape
+that appears on the second switch rather than the first. A trailing slash or a stray parameter fails
+the shape count even if every other assertion passes.
+
+#### Finding 2 — the G08 abort path was asserted in a comment, not a test
+
+An 8000 ms per-feed timeout is what stops one hung outlet from holding a Function open and billing
+for it. It had no test. Added with controlled timers — `setTimeout`/`clearTimeout`/`fetch` stubbed —
+asserting the timer is armed at exactly 8000 ms and that **every armed timer is cleared afterwards**.
+Two mutations now cover it: lengthening the timeout, and never clearing it.
+
+#### Finding 3 — a bare trailing `?` was allowed through
+
+The guard exempted `/api/news?` as harmless-and-equivalent. It is not worth the exception: the
+public contract says query-free, direct invocation is the surface this layer defends, and an
+exception is one more shape a reader has to reason about. Every `?` is now refused — 400, `no-store`,
+no echo, zero upstream. Verified: `/api/news?` returns 400.
+
+#### Finding 4 — five documentation statements contradicted the code
+
+Each was true when written and none was updated as the work moved: `main` recorded at `22686bb`,
+"no application implementation is currently in flight", #25 shown open, Codex shown still drafting
+the contract, and `?limit=30` still advertised in the API header comment. All five are gone,
+verified by grep.
+
+**This is the same current-state drift the board keeps re-learning.** A line describing "right now"
+is wrong the moment the thing it describes moves, and nothing updates it unless someone looks. The
+corrected paragraph now says so in place, rather than reading as though it had always been right.
+
+#### Finding 5 — I reformatted two files I had no business reformatting
+
+`JSON.stringify(…, null, 2)` rewrote `package.json` and `vercel.json` wholesale, burying a one-line
+and a four-line change in ~90 lines of churn and **destroying the hand alignment in both**. The
+working agreement says not to reformat untouched configuration; I did, and it made the diff Codex
+had to review dishonest about its own size.
+
+Restored by hand. Against `main`:
+
+```
+package.json   1 line changed   (the new test script)
+vercel.json    4 lines added    (the query-delete transform on both paths)
+```
+
+The lesson is narrow and worth keeping: **a formatter is not an editing tool.** Reading a config,
+mutating an object and writing it back is a whole-file rewrite wearing the costume of a small edit.
+
+#### One defect this round introduced, caught by the harness
+
+Collapsing the guard for finding 3 removed the `qIndex` variable an existing mutation anchored on,
+and that case came back **ANCHOR LOST** — counted, but asserting nothing. Repaired to the current
+line. Worth recording because a lost anchor is worse than a MISS: a MISS tells you the test is weak,
+a lost anchor is silently dead while still inflating the denominator. **Fixing a guard can disarm the
+mutation that was guarding it.**
+
+#### Verification
+
+`npm test` **306** (150 + 35 + 37 + 84), `npm run test:dom` **288**, `npm run test:mutation`
+**76 of 76 caught** — no MISSED, no ANCHOR LOST, no AMBIGUOUS. *(Round two raised this to 78 of 78;
+see the entry above.)* Five mutations were added with the
+fixes: parameterized client restored, timeout lengthened, timer never cleared, 405 made cacheable,
+bare `?` allowed through again.
+
+No re-measurement on preview was required: every correction is origin-side or test-side, and the
+G03/G17 matrix in the entry below was already gathered after the guards landed.
+
+#### Unchanged
+
+G11 and G12 remain open and owner-only. No agent has touched Vercel project settings, published the
+WAF rule, or accepted its pricing acknowledgement. **G1 does not close when #26 merges.**
+
+### 2026-09-27 — G1 implementation: code complete, WAF outstanding
+
+Code, tests and preview evidence are done. **G1 is not closed**: G11 and G12 require the WAF rule to
+be published from the Vercel dashboard, which only the owner can do.
+
+#### The design changed twice, both times forced by measurement
+
+**Design 1, an edge-selected representation header, was tried and abandoned.** Codex approved it with
+a mandatory hardening: the reference states `set` "sets the key and value **if missing**", so a bare
+set would leave a caller-supplied header in place and the representation would be forgeable.
+Delete-then-set was therefore required. It failed anyway — the sentinel never reached the handler,
+on two independent cold-MISS measurements (`af59ebf`, `0497c89`), both returning the all-headlines
+body on the hazard path.
+
+Three delivery mechanisms failed in total. **Two of them share one cause, and the third does not —
+an earlier version of this entry wrongly attributed all three to it.**
+
+The two QUERY mechanisms, `request.query set` and the `dest` querystring, are explained: the
+query-delete transform removes every key, including the one routing had just supplied.
+
+The HEADER failure is not explained by that, and cannot be: a `request.query` transform cannot
+remove a request header — they are different transform types — and the configuration used separate
+delete and set operations on the header. **What is established is only what was measured:** with
+delete-then-set configured, the sentinel did not reach the handler on two cold-MISS measurements.
+The precise cause is unresolved, and saying otherwise made a tidy story out of an open question.
+
+**Design 2, a second thin entrypoint, passed both criteria on the first attempt.** The representation
+is decided by which file the platform routes to, so there is no internal signal and the anti-forgery
+question disappears rather than being solved.
+
+#### The escape hatch Codex caught, measured rather than accepted in principle
+
+The first working transform used `ninc: ["__canonical_none__"]`, which by construction **exempts that
+key from deletion**. Measured live before it shipped:
+
+```
+?zz9=1                    HIT   updated 23:17:09.600Z   <- ordinary key converges
+?__canonical_none__=1     MISS  updated 23:17:09.633Z   <- sentinel survives, own cache identity
+```
+
+It ran the Function and took its own entry — worse than the original G1 vector, because it would
+have shipped behind evidence showing convergence. Replaced with `pre: ""`, which matches every key
+and exempts nothing. The probe commit `c82d543` is retained as superseded history and doubles as a
+positive control: a matrix that only ever shows HITs cannot distinguish "converged" from "measuring
+nothing".
+
+#### Final preview evidence — deployment `HYs5HoJysDhMuB8CrsXnAJtWH9WV`, commit `c2213b2`
+
+Measured **after** the method and canonical-request guards landed, because those postdated the
+earlier run and a query string now returns `400` at the origin where the matrix had recorded a
+normalised `HIT`. A guard added to reinforce G03 could have broken it. It did not — the transform
+strips the query before the origin sees it, so the canonical check only ever defends direct
+invocation.
+
+```
+ALL-HEADLINES  /api/news          MISS then HIT, updated 00:36:28.057Z, n=30 hz=12 nonhz=18
+  ?__canonical_none__=1           HIT  same updated   <- the closed hole
+  duplicate sentinel keys         HIT  same updated
+  multiple unrelated keys         HIT  same updated
+  duplicate ordinary key          HIT  same updated
+  empty key                       HIT  same updated
+  percent-encoded key             HIT  same updated
+  ?limit=99  (legacy)             HIT  same updated
+  ?hazard=1  (legacy)             HIT  same updated   <- does NOT yield a hazard body
+HAZARD         /api/news/hazard   MISS then HIT, updated 00:36:43.082Z, n=30 hz=30 nonhz=0
+  ?__canonical_none__=1           HIT  same updated
+  multiple unrelated keys         HIT  same updated
+  ?hazard=0                       HIT  same updated   <- caller cannot override
+DISTINCTNESS                      different updated, different bodies
+G17 VALIDITY GATE                 VALID — 18 non-hazard items present
+```
+
+Both baselines are cold MISSes with fresh, distinct `updated` values, so these are genuine Function
+executions rather than cached bodies.
+
+#### A measurement error of mine, struck from the record
+
+An earlier anti-forgery matrix was reported as passing. **It was invalid.** Request headers are not
+part of the CDN cache key, so once a path is warm every request returns the stored body without
+invoking the Function. I read those bodies as handler output; they were `HIT`s at age ~137s. The
+harness had printed cache state on every line throughout — I stopped reading that column once the
+convergence numbers looked right.
+
+Codex's proposed remedy, `Pragma: no-cache` to force revalidation, **does not work on this preview**:
+every non-baseline case still returned `HIT`. Recorded because it shapes how G12 evidence must be
+gathered. It is moot for forgery, since Design 2 has nothing to forge.
+
+#### Verification
+
+`npm test` **290** (150 + 35 + 37 + 68), `npm run test:dom` **281**, `npm run test:mutation`
+**71 of 71 caught** with no MISSED, ANCHOR LOST or AMBIGUOUS, and the pure suites pass in an empty
+directory with nothing installed.
+
+**Superseded — current numbers are in the round-two entry above: 306 / 288 / 78 of 78.** The figures
+in this entry are the ones its own review was conducted against and are left as they stood.
+
+The API suite counts **upstream attempts**, not just status codes: the property G1 cares about is how
+much upstream work a caller can cause, and a refusal that still fetched five feeds would pass a
+status assertion while defeating the point.
+
+**Three mutation MISSES found defects in the tests, not the code.** The second is the one worth
+remembering: fixtures produced ten items against a thirty-item cap, so filtering before or after the
+cap was identical — **the single behaviour that most justifies two representations had no fixture
+able to exercise it.** A bulk fixture now demonstrates it: sixty items with every hazard item older
+than every ordinary one, so the newest thirty contain zero hazard items while the hazard
+representation still returns all thirty. That is what a browser filtering a capped list could never
+reproduce, and it is now a measurement rather than an argument in a comment.
+
+#### Outstanding — owner only
+
+G11 and G12 need the rule published and the pricing acknowledgement accepted. Claude has not touched
+Vercel project settings and will not.
+
+```
+paths   exactly /api/news and /api/news/hazard
+key     IP
+window  fixed, 60 seconds
+limit   100        (final, production)
+action  429 / rate limit, enforcing, not log-only
+test    temporary 5 per 60 seconds, PREVIEW HOSTNAME ONLY, then restored
+```
+
+Per-region counting is a documented limitation: this closes the demonstrated single-source
+arbitrary-key vector and establishes a per-IP, per-region bound. It is not a distributed-attack
+claim.
+
+**For whoever gathers G12 evidence:** preview Deployment Retention is enabled, so the deployment
+identifiers above will eventually 404 for anyone re-checking. The inline response records carry the
+substance.
+
 
 ### 2026-09-26 — G1 contract review: three findings addressed
 

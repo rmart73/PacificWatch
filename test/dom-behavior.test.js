@@ -963,6 +963,49 @@ function has(label, sel, needle, expected) {
     txt('#stat-tide').indexOf('2.1') !== -1, true);
   rawTide = null;
 
+  /* ======================================================================================
+     G02 — the browser emits ONLY the two canonical URLs.
+
+     A caller-selected item count was part of the unbounded cache key space G1 closed, so the
+     client must send no query string at all. Toggling is the live path: setNewsFilter() calls
+     fetchNews(), so a stray parameter would reappear on a real user action rather than on load.
+     Repeated toggles are used because the failure mode to fear is a shape that appears on the
+     SECOND switch, not the first.
+     ====================================================================================== */
+  console.log('\n29. G02 — the client uses only the two canonical, query-free News URLs:');
+  w.fetch = makeFetch(null);
+  fetchLog.length = 0;
+
+  await w.setNewsFilter('all');      await settle();
+  await w.setNewsFilter('hazard');   await settle();
+  await w.setNewsFilter('all');      await settle();
+  await w.setNewsFilter('hazard');   await settle();
+
+  /* Asserted against the COMPLETE log, never a '/api/news'-filtered view of it.
+     Filtering first defeats the assertion: a stray request to '/api/headlines' would be
+     removed by the filter before the shape count ever saw it, so the client could be talking
+     to a third endpoint while every check below passed. The earlier version of this section
+     filtered, and counted '>= 4', which admitted extra requests twice over.
+
+     Exact counting is sound here, not merely convenient: the log is cleared immediately above,
+     setNewsFilter() issues exactly one fetch through fetchNews(), and the shortest polling
+     interval in the page is 30s against four 60ms settles — so nothing else can enter the log.
+     If that ever stops being true this fails loudly, which is the point. */
+  check('four toggles issued exactly four requests in total', fetchLog.length, 4);
+  check('every request in the whole log is one of the two canonical paths',
+    fetchLog.every(u => u === '/api/news' || u === '/api/news/hazard'), true);
+  check('no request carries a query string',
+    fetchLog.some(u => u.indexOf('?') !== -1), false);
+  check('no caller-selected limit is ever sent',
+    fetchLog.some(u => u.indexOf('limit') !== -1), false);
+  check('hazard selection travels in the path, not a parameter',
+    fetchLog.some(u => u.indexOf('hazard=') !== -1), false);
+  check('both representations were actually exercised',
+    fetchLog.indexOf('/api/news') !== -1 && fetchLog.indexOf('/api/news/hazard') !== -1, true);
+  /* A trailing slash, a bare '?', a stray parameter, or another endpoint entirely. */
+  check('the whole log contains exactly two distinct shapes',
+    Array.from(new Set(fetchLog)).length, 2);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
