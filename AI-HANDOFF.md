@@ -36,7 +36,7 @@ per request — not a relayed report.
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **Round one: five of six findings corrected; T15's real-browser layout pass is outstanding and is an owner gate** — no agent can measure layout, and Codex cannot authenticate to the protected preview | Owner inspects at 320/390px and desktop; Codex re-reviews the implementation, then claims the reserved `AGENTS.md` sub-scope on the same branch |
+| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, and T15 layout verified by the owner at 320/390px and desktop** | Codex re-reviews, then claims the reserved `AGENTS.md` sub-scope the implementation, then claims the reserved `AGENTS.md` sub-scope on the same branch |
 
 ### Active claims
 
@@ -340,7 +340,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation and tests complete; T16 evidence captured against the deployed preview. One evidence item remains open: T15's real-browser layout pass, which no agent can perform. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock, plus a fourth accepted in Codex's folded form: a caught-count is insufficient without zero `ANCHOR LOST`/`AMBIGUOUS`, and changed render paths require revalidating the mutations anchored there | Codex re-reviews, then claims the reserved `AGENTS.md` sub-scope on this branch and places all four lessons |
+| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation and tests complete; T16 evidence captured against the deployed preview. All evidence complete: T16 raw-vs-rendered against the deployed preview, and T15 layout verified by the owner at 320/390px and desktop. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock, plus a fourth accepted in Codex's folded form: a caught-count is insufficient without zero `ANCHOR LOST`/`AMBIGUOUS`, and changed render paths require revalidating the mutations anchored there | Codex re-reviews, then claims the reserved `AGENTS.md` sub-scope on this branch and places all four lessons |
 | Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. Aligns the earthquake card and satisfies T12 | Claim separately after Stage 2 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
@@ -483,6 +483,56 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — T15 layout verified by the owner; Stage 2 evidence complete
+
+**The owner inspected the preview at 320px, 390px and desktop.** This was the one gate no agent
+could close: Claude cannot measure layout, and Codex cannot authenticate to the protected preview.
+
+#### Result — passes at all three widths
+
+```
+320px    rows wrap cleanly. Source names break to two lines ("NWS" / "Observations");
+         the meta chips wrap so the two ages sit on one line and the state badge below.
+         No overlap, no clipping, no horizontal scroll.
+390px    same structure, less wrapping. NWS Alerts, USGS, FEMA and News fit on one line.
+desktop  every row on a single line, meta right-aligned, footer copy renders in full.
+```
+
+The `.src-meta` change made for this round — permitting wrap and compression where three chips
+previously refused to shrink — is what produces the clean two-line wrap at 320px rather than an
+overflow. **That is now a verification rather than the defensive guess it was when written.**
+
+#### The capture also demonstrated the round-one gap closing, live
+
+`NWS Observations` rendered a hollow dot and **NOT REPORTED** while `checked` read minutes and `obs`
+read an hour. That looked wrong enough to check against the source, and it is correct: PHNL was
+publishing `null` for `windSpeed`, `windGust` **and** `precipitationLastHour` at the time, verified
+directly against `api.weather.gov` while the screenshots were on screen.
+
+**Before this round that row would have read `Current`.** `renderSourceHealth()` passed a hardcoded
+`true` for value usability, so good clocks vouched for data that was not there. That gap was found
+only because a mutation came back `MISSED` and turned out to be inert — and here it is, firing
+correctly against a real station reporting nothing.
+
+It is also a good argument for the dot being about verification rather than magnitude: the station
+is reachable, recent and answering, and still has nothing to report. One state could not have said
+both.
+
+#### Stage 2 evidence status
+
+```
+T01-T11, T13, T14, T17   covered by suites and mutations
+T15                      layout verified by the owner at 320/390/desktop   DONE
+T16                      raw-vs-rendered record against the deployed preview   DONE
+T12                      Stage 3, excluded
+```
+
+`npm test` **306** · `npm run test:dom` **354** · `npm run test:mutation` **95 of 95 caught**, zero
+`ANCHOR LOST`, zero `AMBIGUOUS`.
+
+**Nothing is outstanding from the owner.** `AGENTS.md` remains untouched and reserved for Codex.
+
 
 ### 2026-09-28 — Stage 2 implementation complete; paused for Codex
 
