@@ -481,6 +481,133 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-28 — Stage 2 implementation complete; paused for Codex
+
+**Implementation and tests are done and the branch is handed over.** `AGENTS.md` is untouched, as
+reserved. Claude stops here and does not continue into the documentation sub-scope.
+
+#### What the cards do now
+
+`combinedObservationState()` decides what the weather and tide cards present. The dot is a statement
+about **verification**, never magnitude — the three magnitude-driven assignments are gone, along with
+`.s-dot.warn`, `.s-dot.alert` and the dot half of the reduced-motion rule. `.hazard-pulse` keeps its
+static ring substitute: separate consumer, and reduced-motion users still need that second channel.
+
+**Withdrawal is read from the cache rather than passed in.** Both fetch paths already rendered the
+reading the cache accepted rather than the response that arrived, so the cache was the only honest
+source for the verdict too — and reading it there gave `ageTick()` a render path needing no response
+at all. The old shape could not offer that, because the state arrived as a boolean argument from
+whichever fetch happened to be running. **The age tick now moves the cards**, so an observation
+crossing its boundary while the page sits idle stops claiming to be verified.
+
+#### T16 — raw response versus rendered output, against the deployed preview
+
+Captured `2026-09-29T05:55:47Z` (Sep 28, 07:55 PM HST) from
+`pacific-watch-git-claude-observation-stage2-saa-s16.vercel.app`, driving the **deployed** page
+against the **real** upstream APIs. Expectations are computed in the harness from constants written
+out independently, so a conversion bug in the app cannot also define what correct means.
+
+```
+WEATHER   api.weather.gov/stations/PHNL/observations/latest
+  raw     windSpeed {unitCode:'wmoUnit:km_h-1', value:18.36}
+          windGust {value:null}   precipitationLastHour {unitCode:'wmoUnit:mm', value:null}
+          timestamp '2026-09-29T04:53:00+00:00'
+  expect  18.36 km/h x 0.621371 = 11 mph · rain Not reported · observed 06:53 PM HST, 63 min
+          verified? yes, inside the 75 min window
+  actual  #stat-wind       11 mph
+          #stat-wind-note  HNL Intl · Honolulu reference for statewide
+                           · obs Sep 28, 06:53 PM HST (1 hr ago) · Current
+          #dot-wind        s-dot ok
+          #stat-rain       —
+          #stat-rain-note  Not reported · HNL Intl · … · obs … (1 hr ago) · verified 0 sec ago
+          #dot-rain        s-dot unknown
+
+TIDE      tidesandcurrents.noaa.gov … station=1612340, datum=MLLW, time_zone=lst_ldt
+  raw     v '0.942'   t '2026-09-28 19:42'   (HST wall time, no zone)
+  expect  0.9 ft MLLW · observed 07:42 PM HST, 14 min · verified? yes, inside the 18 min window
+  actual  #stat-tide       0.9 ft
+          #stat-tide-note  ft MLLW · HNL Harbor · Honolulu reference for statewide
+                           · obs Sep 28, 07:42 PM HST (14 min ago) · Current
+          #dot-tide        s-dot ok
+
+SOURCE DETAILS — the two clocks, separately
+  NWS Alerts          checked 0 sec ago                    Current
+  NWS Observations    checked 0 sec ago   obs 1 hr ago     Current
+  NOAA Tides          checked 0 sec ago   obs 14 min ago   Current
+  USGS Earthquakes    checked 0 sec ago                    Current
+  FEMA Declarations   checked 0 sec ago                    Current
+```
+
+**The NWS Observations row is the clearest single piece of evidence that Stage 2 works.** Before it,
+that row showed `checked 0 sec ago` and nothing else — a fresh fetch of an hour-old measurement
+reading as healthy. Both clocks are now on screen and they visibly disagree. Sources with no
+measurement clock show only the fetch age; inventing an observation age for them would be the same
+false precision in reverse.
+
+NOAA `t` is retained and rendered in HST, which closes the half of T06 that was previously discarded
+at the fetch boundary.
+
+#### Two harness artifacts in that capture, neither an application defect
+
+`window.scrollTo` is unimplemented in jsdom, and Node's `fetch` refuses the relative
+`/api/news/hazard` URL, so News reads Unavailable in the record. Both are properties of driving a
+browser page from Node, and neither touches weather or tide. Stated rather than trimmed out of the
+capture.
+
+#### One defect the live capture found that no test had
+
+The rain note read `Not reported · HNL Intl · … · Not reported · verified 0 sec ago` — the card
+announced the missing value, and the state map announced it again four fields later in the same
+line. Fixed, with an assertion that it is said once and a mutation that makes it stutter again.
+
+**This is the argument for T16 existing.** Every suite was green across that stutter, because no
+assertion was looking at the sentence as a reader would.
+
+#### Three disarmed mutations, repaired
+
+The first full run reported three `ANCHOR LOST` — the gust-only label and the two
+"renders the response instead of the accepted reading" cases — all pre-existing cases whose targets
+Stage 2 moved. Each still describes a real defect, so each was repaired rather than dropped. **This
+is the second time in this project that fixing a code path disarmed the mutation guarding it**, and
+it is worth treating as a standing post-change check rather than a surprise.
+
+A fourth came back `MISSED` and was the useful one. It mutated the per-card `valueUsable` argument,
+but the missing-value branches hardcode `'s-dot unknown'`, so that argument never reached a dot and
+the mutation changed nothing. Hunting for where `valueUsable` *is* load-bearing turned up a real
+gap: `renderSourceHealth()` passed a hardcoded `true`, so a reading whose every value was missing
+would report `Current` on the strength of its clocks alone. `observationValueUsable()` now reports
+on the reading, with assertions either side and the mutation retargeted there.
+
+#### Test fixtures changed where Stage 2 changed behaviour
+
+Stated plainly because changing an existing assertion deserves more scrutiny than adding one:
+
+- The tide fixtures pinned `2026-09-25`. Harmless while nothing read the measurement clock, and a
+  three-day-old observation the moment Stage 2 did. Now built relative to now.
+- The default tide fixture carried **no NOAA `t` at all** — modelling a response CO-OPS does not
+  send, while asserting it earned a verified dot. It now carries one, and T07 covers the missing
+  case directly.
+- Two assertions recomputed `hstStamp()` at assertion time. It has minute resolution, so a minute
+  boundary between seeding and asserting made them fail intermittently; they passed earlier **by
+  luck**. Pinned, and the suite now runs clean three times consecutively.
+- One extraction pattern in the pure suite pinned `relAge`'s exact parameter list, so adding the
+  injectable clock broke **extraction** rather than failing an assertion — the suite crashed instead
+  of reporting. Made parameter-tolerant. That is the same lesson T17 already records for constants,
+  arriving through a different door.
+
+#### Verification
+
+`npm test` **306** · `npm run test:dom` **336** · `npm run test:mutation` **89 of 89 caught**, no
+MISSED, no ANCHOR LOST, no AMBIGUOUS.
+
+#### Reserved for Codex on this branch
+
+`AGENTS.md` is untouched. The T17 reconciliation and the three mutation-testing lessons are Codex's
+documentation sub-scope, claimed separately. A fourth candidate lesson emerged here and is offered
+rather than placed: **a change to a render path can disarm the mutation that guards it, so a
+post-change `ANCHOR LOST` check belongs beside the count.**
+
+
 ### 2026-09-28 — #26 MERGED and verified in production; G1 closed
 
 Merged on the owner's explicit permission, squashed as `9e2cfec` per the repository's convention.
