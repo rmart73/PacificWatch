@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; **G11 and G12 evidence gathered — all phases passed, production never throttled, protection restored** | Codex verifies the WAF evidence and presents the merge decision for #26 |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; G11 and G12 evidence gathered, all phases passed, protection restored | **Blocked on one item:** the historical Firewall traffic capture filtered to the custom rule, IP redacted. Codex then renders the merge recommendation |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -482,6 +482,70 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-28 — correction: Codex did not observe the 429s firsthand
+
+**The G12 response record is owner/Claude evidence, not Codex-independent evidence.** Codex flagged
+this and is right.
+
+#### What actually happened, stated plainly
+
+During the run Claude wrote *"Signalling it to start"* and *"All three of Codex's preconditions now
+hold"* — **but there is no channel by which Claude signals Codex.** The only relay is the owner
+pasting messages between the two agents, and during a fast-moving live window with dashboard work in
+hand, that did not happen. Codex received the messages afterwards.
+
+So the whole point of opening Deployment Protection — that the reviewer would see the `429`s
+directly, removing Claude from the evidence chain on the one item Codex could not verify — **was not
+achieved.** The preview was opened for a benefit that the design could not actually deliver, because
+the design assumed a live signal that does not exist.
+
+**This was Claude describing a coordination step as done when it had not been done.** Not a
+measurement error this time — a claim about process, made in the present tense, that the
+architecture never supported.
+
+#### What Codex did verify independently, and it is worth crediting
+
+Steady state after the run, from its own browser: production `/api/news` `200` five of five; both
+preview API paths `302`; #26 `MERGEABLE/CLEAN` with Vercel checks passing; head `1cfdd94` clean and
+synchronized; application, configuration and test files byte-identical to `54e9248`. That is genuine
+independent verification of the **final state** — just not of the enforcement event.
+
+#### The attribution gap Codex will not waive
+
+`Rate Limited 6` and `Custom Rules: 1 active` are aggregates. They show that rate limiting occurred
+and that one custom rule existed; they do not tie the specific `429`s to that specific rule. The
+reasoning *"it is the only rate-limit rule, therefore it produced them"* is an inference, and the
+evidence standard here has been measurement over inference throughout.
+
+**Needed:** the historical Firewall traffic view filtered to the exact custom rule, showing the rule
+name or ID alongside the rate-limited requests with paths and timestamps. The log is historical, so
+no rerun is required.
+
+#### The test window, for locating it in the log
+
+Derived from the `x-vercel-id` values captured on both sides — all six landmarks fall inside 108
+seconds:
+
+```
+2026-09-28 17:15:05 HST   owner browser, /api/news, 429
+2026-09-28 17:15:44 HST   Claude burst, /api/news, 8 x 429
+2026-09-28 17:15:45 HST   owner browser, /api/news/hazard, 429
+2026-09-28 17:16:52 HST   Claude burst, /api/news/hazard, 5 x 200 then 3 x 429
+
+window  17:15:05 -> 17:16:53 HST   (03:15:05 -> 03:16:53 UTC, 2026-09-29)
+```
+
+**Redact the IP column before that capture leaves the dashboard** — it carries the owner's
+residential address and this board is public.
+
+#### Lesson for the working agreement
+
+A coordination plan that depends on a live signal between agents **cannot be relied upon**: the relay
+is a human pasting messages, and it is slowest exactly when the window is live and the owner is
+busiest. Future evidence designs should either be asynchronous — the reviewer works from a durable
+log after the fact, as it now must — or the owner should be told explicitly that a relay is required
+at a specific moment, before the window opens rather than during it.
+
 ### 2026-09-28 — G11 and G12 EVIDENCE: the rerun completed, all phases passed
 
 The full sequence ran end to end in one sitting and every gate passed. **Production was never
@@ -518,6 +582,9 @@ Then          Too Many Requests (429)
 
 All traffic unauthenticated, **no bypass header anywhere**, as revision 5 requires. Every request
 served from region `pdx1`, so no off-by-one below has a regional explanation available or needs one.
+
+**This record is owner and Claude evidence. Codex did not observe these `429`s** — see the correction
+entry above. Rule attribution is pending the historical Firewall capture.
 
 **Production gate — 7 of 7 `200`, run twice** (once against the malformed first attempt, once
 against the correct rule). Production was never matched.
