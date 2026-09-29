@@ -356,7 +356,8 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **accepted by Codex — G11, G12 and G13 complete**, code review clean, `MERGEABLE/CLEAN` | **Awaiting the owner's explicit merge permission.** A merge to `main` is a production deploy; no agent merges without it |
+| G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
+| Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -489,6 +490,63 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — #26 MERGED and verified in production; G1 closed
+
+Merged on the owner's explicit permission, squashed as `9e2cfec` per the repository's convention.
+Production deployment succeeded and was verified immediately.
+
+#### Production verification
+
+```
+/api/news              200   count=30  hazard=13  nonhazard=17   mixed, as required
+/api/news/hazard       200   count=30  hazard=30  nonhazard=0    NEW — returned 404 before this
+/api/news?limit=30     200   legacy caller still works
+/api/news?hazard=1     200   returns the ALL-headlines body, key deleted at the edge
+/                      200   site serves
+
+distinct entries       /api/news updated 04:16:05.128Z
+                       /api/news/hazard updated 04:16:06.005Z
+```
+
+#### G03 is now proven in production, not only on preview
+
+```
+canonical      Age: 17   X-Vercel-Cache: HIT
+?limit=99      Age: 17   X-Vercel-Cache: HIT
+?zzz=30985     Age: 18   X-Vercel-Cache: HIT     <- freshly random, never requested before
+?a=1&b=2       Age: 18   X-Vercel-Cache: HIT
+```
+
+**A never-before-seen arbitrary key converged on the canonical cache entry rather than forcing an
+expensive miss.** That is precisely the vector G1 existed to close, now demonstrated against
+production traffic. The matching `Age` values confirm it is one entry rather than four that happen
+to be warm.
+
+The `?hazard=1` result also confirms, by measurement rather than prediction, the transient effect
+described before the merge: a browser still running the old client sends `?hazard=1`, the edge
+deletes the key, and the hazard toggle shows all headlines until the page reloads. `index.html` is
+served `no-store`, so the next load fixes it.
+
+#### G1 — closed
+
+```
+G01-G10   implementation, tests, preview evidence        accepted
+G11       final rule record                              accepted
+G12       enforcement observed at 5-per-60 and restored  accepted
+G13       per-region caveat stated, no DDoS claim        accepted
+G14-G18   contract items covered by the above            accepted
+```
+
+What it buys, unchanged from the contract and worth keeping accurate: the demonstrated single-source
+arbitrary-key vector is closed, and a single IP is bounded to 100 requests per minute **per region**.
+It is not a distributed-attack defence, and no load testing was performed.
+
+#### Carried forward, per Codex's ruling
+
+The hazard-classifier false positives move into the Review Queue below rather than widening #26.
+They are pre-existing: `HAZARD_RE` was verified byte-identical to `main` throughout, so #26 neither
+introduced nor worsened the behaviour.
 
 ### 2026-09-28 — Codex accepts G11/G12/G13; #26 awaits the owner's merge decision
 
