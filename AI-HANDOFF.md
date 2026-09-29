@@ -38,6 +38,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
+| Overnight checkpoint after Stage 2 | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only | Leave unmerged overnight; review and merge only with owner permission on resume |
 
 ### Active claims
 
@@ -283,7 +284,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/night-pause-2026-09-28 | Documentation-only checkpoint after #28 merged and production verification completed; no implementation work |
+| Codex | codex/night-pause-2026-09-28 | [#29](https://github.com/rmart73/PacificWatch/pull/29), documentation-only checkpoint after #28 merged and production verification completed; no implementation work |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -294,6 +295,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
+| Overnight checkpoint after Stage 2 | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only | Review on resume; owner decides merge |
 | Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after the overnight pause; claim separately before editing |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
