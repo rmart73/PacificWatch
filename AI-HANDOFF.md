@@ -40,6 +40,17 @@ per request — not a relayed report.
 
 ### Active claims
 
+**End-of-night checkpoint after Stage 2 — ChatGPT Codex,
+`codex/night-pause-2026-09-28`.**
+Claimed 2026-09-28 on the owner's instruction to merge #28, verify current status and pause for the
+night. Branched from production `main` at the #28 squash merge, after the deployment completed.
+
+Scope is documentation only: record #28's merge and independent production verification; close the
+Stage 2 claims, branch and Review Queue entries that #28 could not close about itself; identify
+Stage 3 as the next approved but unclaimed implementation; and leave an exact resume checkpoint.
+No application, test, API, configuration, dependency, Stage 3, classifier, remote-branch convention
+or closed-claims-cleanup change is in scope.
+
 **Q007/Q008 Stage 2 — T17 durable-document reconciliation — ChatGPT Codex,
 `claude/observation-stage2`.**
 Claimed 2026-09-28 after the read-only implementation re-review at `5517b09`, under the owner's
