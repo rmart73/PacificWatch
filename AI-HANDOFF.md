@@ -39,6 +39,64 @@ per request — not a relayed report.
 
 ### Active claims
 
+**Q007/Q008 Stage 2 — wiring the observation clock into the cards — Claude Code,
+`claude/observation-stage2`.**
+Claimed 2026-09-28 before editing, in its own commit ahead of the work, on the owner's explicit
+authorization relayed through Codex. Branched from `main` at `56fa1d5`.
+
+Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md),
+**T01–T11 and T13–T17 as applicable to Stage 2.** T12 is Stage 3 and is excluded.
+
+**Scope — what this changes**
+
+1. **Weather and tide cards consume the Stage 1 helpers.** `observationVerified()` and the state
+   helpers exist and are tested since #24, but the cards still decide their own presentation. The
+   dots and copy become functions of the observation state rather than of fetch success.
+2. **Source details separates the two clocks.** `renderSourceHealth()` currently shows one combined
+   state plus a `lastSuccess` age, so a fresh fetch of a stale measurement reads as healthy. Fetch
+   health and observation age become separately visible.
+3. **NOAA `t` is retained and rendered.** The raw stamp is already captured at
+   `observedAtFromNoaaLst(latest.t)`; Stage 2 renders it in HST rather than discarding it.
+4. **Magnitude-driven dots removed.** Three assignments, all in `index.html`:
+   `dotWind` at **1846** (`windMph>35?'alert':windMph>20?'warn'`), the gust-only form at **1850**,
+   and `dotRain` at **1866** (`>0.5?'alert':>0?'warn'`). A measurement's size is not a statement
+   about whether it was verified, which is the whole point of T01 and T03.
+5. **Dead CSS removed.** `.s-dot.warn` (line 151) and `.s-dot.alert` (line 152) once the consumers
+   are gone, plus the dot-specific reduced-motion rule at **397** and the comment at **393–394**
+   that explains it. **`.hazard-pulse` keeps its static ring substitute** — it is a separate
+   consumer and reduced-motion users still need the second channel.
+6. **Tests** for the T-items above, including the age-tick, island-race, retained-data,
+   partial-weather and hostile/malformed fixtures the contract names, plus mutation cases.
+7. **#27's self-close absorbed**, since a board PR cannot record its own merge: close the
+   `claude/g1-closeout` claim, replace it under Active Branches, and update its Review Queue row.
+
+**A scope item that does not exist, reported rather than silently dropped**
+
+The authorization names *"wind/rain/tide magnitude-driven `warn`/`alert` dot assignments."* **The
+tide dot has no magnitude thresholds.** `renderTide()` at **1941** already assigns
+`stale ? 'unknown' : 'ok'`, and `renderTideUnavailable()` at **1950** assigns `unknown`. So for tide
+there is nothing of that kind to remove — what Stage 2 changes there is the *input*, from a
+fetch-derived `stale` flag to the observation state. Recorded so the closeout is not later read as
+having removed something that was never present.
+
+**Out of scope, explicitly**
+
+Stage 3 earthquake behaviour and T12. `HAZARD_RE` and the hazard-classifier finding. The
+closed-claims cleanup. The remote-branch convention decision. No API, `vercel.json`, WAF or
+dependency change.
+
+**Reserved for Codex on this same branch — Claude does not touch `AGENTS.md`**
+
+The T17 reconciliation in `AGENTS.md` and the three mutation-testing lessons now recorded in the
+Stage 2 Review Queue row are **Codex's documentation sub-scope**, claimed separately after the
+implementation is reviewed. I will not edit that file. When implementation and tests are ready I
+**pause and hand the branch over** rather than continuing into the documentation.
+
+**T16 requires evidence before merge:** a timestamped raw-response-versus-rendered-output record for
+weather and tide, covering source fields, units, observation time, an independently established
+expectation and the actual display. That is gathered against the preview, not asserted from tests.
+
+
 **G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
 Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
 #26 merge. Scope: record the production verification of #26, close the G1 claim, and carry the
