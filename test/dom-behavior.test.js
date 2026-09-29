@@ -947,12 +947,13 @@ function has(label, sel, needle, expected) {
   /* Two readings in HST wall time, the later one fetched first. Relative to now so the guard is
      what is being tested rather than the age: a fixed date would be withdrawn as expired and the
      card would be empty for reasons that have nothing to do with T11. */
-  rawTide = { v: '1.800', t: hstStamp(5) };
+  const tideT1 = hstStamp(5);
+  rawTide = { v: '1.800', t: tideT1 };
   await w.fetchTides();
   await settle();
   check('the first tide reading renders', txt('#stat-tide').indexOf('1.8') !== -1, true);
   check('and its NOAA observation time is retained',
-    w.eval('S.cache.noaaTides.data.t'), hstStamp(5));
+    w.eval('S.cache.noaaTides.data.t'), tideT1);
 
   rawTide = { v: '0.300', t: hstStamp(35) };   /* thirty minutes EARLIER */
   await w.fetchTides();
@@ -962,7 +963,7 @@ function has(label, sel, needle, expected) {
   check('the newer tide height is still displayed',
     txt('#stat-tide').indexOf('1.8') !== -1, true);
   check('and the cache kept the newer observation time',
-    w.eval('S.cache.noaaTides.data.t'), hstStamp(5));
+    w.eval('S.cache.noaaTides.data.t'), tideT1);
 
   rawTide = { v: '2.100', t: hstStamp(2) };   /* genuinely later */
   await w.fetchTides();
@@ -1060,6 +1061,12 @@ function has(label, sel, needle, expected) {
                       precipitationLastHour: rain(null), timestamp: isoAgo(4) });
   check('null rain reads Not reported', txt('#stat-rain-note').indexOf('Not reported') !== -1, true);
   check('and is not verified', dotOf('#dot-rain'), 's-dot unknown');
+  /* Caught in the live T16 capture: the card said "Not reported" and the state map said it
+     again, four fields apart in the same line. */
+  check('  and says it once, not twice',
+    txt('#stat-rain-note').split('Not reported').length - 1, 1);
+  check('  while still carrying the observation time and verification age',
+    /obs .*HST.*verified/.test(txt('#stat-rain-note')), true);
 
   console.log('\n33. T13 — one missing field does not unverify the other:');
   check('usable wind stays verified while rain is missing', dotOf('#dot-wind'), 's-dot ok');
@@ -1103,11 +1110,12 @@ function has(label, sel, needle, expected) {
   check('future-skewed observation is not verified', dotOf('#dot-wind'), 's-dot unknown');
 
   console.log('\n37. T06 — tide retains NOAA t, renders it in HST, and ages on its own clock:');
-  await seedTide({ v: '1.700', t: hstStamp(17) });
+  const tideFresh = hstStamp(17);
+  await seedTide({ v: '1.700', t: tideFresh });
   check('inside the 18-minute window it is current', dotOf('#dot-tide'), 's-dot ok');
   check('  and the observation time is rendered in HST',
     /obs .*HST/.test(txt('#stat-tide-note')), true);
-  check('  with the raw NOAA stamp retained', w.eval('S.cache.noaaTides.data.t'), hstStamp(17));
+  check('  with the raw NOAA stamp retained', w.eval('S.cache.noaaTides.data.t'), tideFresh);
   await seedTide({ v: '1.700', t: hstStamp(20) });
   check('past it the tide reading is stale', dotOf('#dot-tide'), 's-dot unknown');
   await seedTide({ v: '1.700', t: hstStamp(61) });

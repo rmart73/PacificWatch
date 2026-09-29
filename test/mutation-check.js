@@ -512,6 +512,11 @@ const mutations = [
 
   /* T13: one shared verdict for both cards lets a missing field unverify a good reading, or
      worse, lets a good reading verify a missing one. */
+  { name: 'the missing-value note stutters again',
+    from: "  const named = state === 'value-unusable' ? '' : ' · ' + obsStateText(state);",
+    to:   "  const named = ' · ' + obsStateText(state);",
+    expect: ['and says it once, not twice'], suite: 'dom' },
+
   { name: 'the source row vouches for data that is not there',
     from: "      const st = combinedObservationState(k, null, observationValueUsable(k));",
     to:   "      const st = combinedObservationState(k, null, true);",

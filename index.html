@@ -1856,7 +1856,11 @@ function observationSuffix(key, state, now) {
     ? ' · obs time unknown'
     : ' · obs ' + fmtTime(new Date(at)) + ' (' + relAge(at, now) + ')';
   const verified = state === 'current' ? '' : ' · verified ' + verifiedAge(key, now);
-  return obs + ' · ' + obsStateText(state) + verified;
+  /* A missing value is already announced by the card itself — "Not reported · HNL Intl · …".
+     Repeating it from the state map read as a stutter in the live T16 capture, so the suffix
+     carries the clocks and lets the card keep the one statement it already makes. */
+  const named = state === 'value-unusable' ? '' : ' · ' + obsStateText(state);
+  return obs + named + verified;
 }
 
 function renderWeather(p, label, now) {
