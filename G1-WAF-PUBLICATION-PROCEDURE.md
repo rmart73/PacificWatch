@@ -138,10 +138,18 @@ it, and neither is safe to leave running while attention moves elsewhere.
 > already visible in the open PR. The exposure is proportionate, but it is real, so **keep the window
 > to minutes** and treat Phase 4b as mandatory rather than tidy-up.
 
-**A property that makes this cheap:** the rate limit is keyed on **IP address**, so the owner, Codex
-and Claude each get their **own** 5-requests-per-60-seconds budget. Three observers do not compete
-for one allowance and do not need to coordinate timing — beyond each waiting out their own clean
-window. Per-region counting still applies, so record `x-vercel-id` on every request.
+**Budgets are per source IP, which is not the same as per observer.** Claude Code runs **on the
+owner's machine**, so the owner's browser and Claude's `curl` leave from one public IP and share a
+single 5-per-60 allowance. Codex, running elsewhere, has its own.
+
+An earlier revision claimed three independent budgets. The 2026-09-28 run disproved it: the owner's
+browser burst consumed the shared allowance, so Claude's first request to `/api/news` was already
+over the limit and returned `429` from request 1. The Firewall traffic panel confirmed it — a single
+ASN address accounting for 24 requests.
+
+**So the owner and Claude must not burst the same path at the same time.** Take one path each, or
+separate the bursts by a clean window. Per-region counting still applies, so record `x-vercel-id` on
+every request.
 
 ---
 
@@ -164,6 +172,26 @@ window. Per-region counting still applies, so record `x-vercel-id` on every requ
 
 4. **Save, then Review Changes → Publish.** The rule is not live until Publish completes.
 5. **Screenshot the published test rule.** Evidence item 1.
+
+### Phase 1 scope check — prove the rule matches ONLY the two paths
+
+G11 requires the rule to cover *only* the two news representations. A rule that fires is not the same
+as a rule that fires on the right things, and the difference is invisible in a burst against the API
+paths alone.
+
+Burst the preview **root** path, which the rule must never match:
+
+```bash
+for i in $(seq 1 8); do
+  curl -s -o /dev/null -w "preview / req $i -> HTTP %{http_code}\n" \
+    "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/"
+done
+```
+
+**All eight must be `200`.** A `429` here means the rule is over-broad and matching the whole
+hostname — which is exactly what happened on the first published attempt on 2026-09-28, where `/`
+returned `429` at request 3. Correct the rule before continuing; the burst evidence would otherwise
+be attributed to a rule that does not meet G11.
 
 ### Phase 1 gate — prove production is untouched
 

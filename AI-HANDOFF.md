@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean** — 306/288 assertions, 78/78 mutations caught, final-head smoke on `54e9248`, `MERGEABLE/CLEAN` | **G12 open — rerun required.** The accidental production run does not satisfy G12. Owner works from [G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md) revision 3; Codex then verifies and presents the merge decision |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; **G11 and G12 evidence gathered — all phases passed, production never throttled, protection restored** | Codex verifies the WAF evidence and presents the merge decision for #26 |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,130 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — G11 and G12 EVIDENCE: the rerun completed, all phases passed
+
+The full sequence ran end to end in one sitting and every gate passed. **Production was never
+throttled at any point, verified twice during the run rather than assumed.** Deployment Protection
+is restored and confirmed; the final 100-per-60 rule is live.
+
+#### G11 — the final rule, as restored and published
+
+```
+Name          Final Rule
+Rule ID       rule_final_rule_XfLFC2
+Description   Rate limit API news endpoints to 100 requests per minute per IP
+If            Request Path  Is any of  2 Request Paths: /api/news, /api/news/hazard
+AND
+Rate Limit    Fixed Window | 60 seconds | 100 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+Covers only the two news representations, no hostname condition, so it applies wherever they are
+served. This is the Phase 0 baseline restored exactly, captured from the dashboard before the edit
+and again after — **not** the provisional transcription recorded on the 27th, which this supersedes.
+
+#### G12 — the temporary rule, as published for the test
+
+```
+If            Hostname      Equals     pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app
+And           Request Path  Is any of  2 Request Paths: /api/news, /api/news/hazard
+AND
+Rate Limit    Fixed Window | 60 seconds | 5 requests | 1 Keys: IP Address
+Then          Too Many Requests (429)
+```
+
+#### G12 — controlled response record
+
+All traffic unauthenticated, **no bypass header anywhere**, as revision 5 requires. Every request
+served from region `pdx1`, so no off-by-one below has a regional explanation available or needs one.
+
+**Production gate — 7 of 7 `200`, run twice** (once against the malformed first attempt, once
+against the correct rule). Production was never matched.
+
+**Scope check — preview root `/`, 8 of 8 `200`.** Against the first published attempt the same probe
+returned `429` at request 3. That before/after pair is what distinguishes *the rule fires* from *the
+rule fires on the right things*.
+
+**Burst, `/api/news/hazard` — the textbook result:**
+
+```
+req 1   200  cache=STALE   pdx1::iad1::vx4jf-1790651812072-af0cc71f55e6
+req 2   200  cache=STALE   pdx1::iad1::ssgkf-1790651812381-78d357242795
+req 3   200  cache=STALE   pdx1::iad1::688qk-1790651812656-11ee5a69b39d
+req 4   200  cache=STALE   pdx1::iad1::gd8b7-1790651812919-7b7d793a6913
+req 5   200  cache=STALE   pdx1::iad1::ll47f-1790651813169-b193eab86c18
+req 6   429  cache=-       pdx1::d5vs2-1790651813450-b1c695f67acb
+req 7   429  cache=-       pdx1::lcwhv-1790651813722-988b62a52034
+req 8   429  cache=-       pdx1::shrpr-1790651813985-a12d0c177783
+```
+
+Exactly five, then refusal.
+
+**Burst, `/api/news` — 8 of 8 `429` from request 1**, because the shared-IP allowance had already
+been consumed. See the correction below; the path is still demonstrated as enforced.
+
+**Owner's browser, both paths** — Vercel's *"This site is rate limited / 429 TOO MANY REQUESTS"*
+page, with `pdx1::mr1hk-1790651705670-69263f80af8b` on `/api/news` and
+`pdx1::vbdg2-1790651745607-0ec3b5e3bab3` on `/api/news/hazard`.
+
+**Firewall traffic panel:** `Rate Limited 6`, `Custom Rules: 1 active`. Top IPs showed one
+Charter-ASN address accounting for 24 requests — **address redacted here deliberately: it is the
+owner's residential IP and this board is a public repository** — plus two Amazon-ASN addresses with
+one request each.
+
+**Recovery — 14 of 14 `200`** (seven preview, seven production) after a full 65-second wait.
+Requests 6 and 7 on the preview would have been `429` under the 5-per-60 rule, so this confirms the
+restore is published and live rather than merely between windows.
+
+**Protection restored — `302` on both preview paths**, then production `5 of 5` `200`.
+
+#### What the run settled that no agent had measured
+
+**The firewall counts requests at the edge, not Function invocations.** Requests 1-5 on the hazard
+path were served `cache=STALE` — from the CDN, without the Function running — and **still consumed
+the limit**. The `429`s carry no cache header at all.
+
+This was the open question flagged before the evidence was gathered, with the explicit warning not
+to assume the favourable outcome. It came back favourable on a clean, correctly-scoped run, and it
+is the result G1 needs: the demonstrated vector was cheap cache-missing traffic, and a defence that
+only counted Function invocations would not have bounded it. It also matches Vercel's documented
+[request pipeline](https://vercel.com/docs/how-vercel-cdn-works) — *"Blocked requests never reach
+the routing or caching layers."*
+
+#### Two corrections owed
+
+**1. "Three independent budgets" was wrong.** The procedure claimed the owner, Codex and Claude each
+held a separate 5-per-60 allowance because the limit is IP-keyed. Codex does. **The owner and Claude
+do not** — Claude Code runs on the owner's machine, so both leave from one public IP. The run proved
+it: the owner's browser burst consumed the allowance and Claude's `/api/news` burst was over the
+limit from request 1, with the traffic panel showing a single address at 24 requests. Corrected in
+the procedure, with the instruction to take one path each or separate the bursts.
+
+**2. The root-path probe is now a required step.** It was improvised mid-run and turned out to be
+the only check that distinguishes a correctly scoped rule from one matching the whole hostname.
+Added to the procedure as the Phase 1 scope check, ahead of the production gate.
+
+#### Three rule attempts, recorded because the failures are instructive
+
+1. **Hostname OR path** — Vercel ORs sibling condition *groups*. Published and measured: preview `/`
+   returned `429` at request 3, so the rule matched the entire preview hostname. Production
+   unaffected, verified at the time.
+2. **`Equals` with a comma-joined string** `/api/news,/api/news/hazard` — no request path is ever
+   literally that, so the condition could never match. Combined with the `OR` above, the rule
+   reduced to "hostname = preview" alone.
+3. **`Is any of` with two entries, AND-ed with the hostname in one group** — correct, and the shape
+   Vercel's own rule builder produces. The owner could not flip the `OR` because it separates
+   groups, not conditions; rebuilding through the rule builder was what fixed it.
+
+**The lesson is the same one this board keeps paying for:** a rule that looks right in a screenshot
+is not a rule that behaves right, and the only thing that told them apart was a probe against a path
+the rule was supposed to ignore.
+
+#### Outstanding
+
+The Firewall live-traffic capture filtered to the custom rule — the log is historical, so the owner
+can capture it at leisure. **Redact the IP column before it leaves the dashboard.**
 
 ### 2026-09-28 — revision 5 cleared; waiting on the owner's uninterrupted window
 
