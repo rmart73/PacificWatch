@@ -11,9 +11,15 @@ agent performs them, and no agent has touched Vercel project settings.
 **Revision 4.** Revision 1 produced a rule that throttled production — see the incident in
 [AI-HANDOFF.md](AI-HANDOFF.md). Revision 2 fixed the grouping guidance. Revision 3 added Codex's four
 safeguards and corrected a platform constraint that invalidated the original sequence. Revision 4
-adds the temporary removal of Deployment Protection, so that **Codex observes the `429`s
+added the temporary removal of Deployment Protection, so that **Codex observes the `429`s
 first-hand** rather than receiving them from Claude — the owner's decision, taken because the
 preview evidence is the item Codex has least ability to verify independently.
+
+**Revision 5** fixes two execution-order defects introduced by revision 4. Inserting Phase 0b and
+Phase 3b shifted the phases without updating the cross-references that pointed at them, and placed
+the restoration of Deployment Protection **before** a recovery check that requires the preview to
+still be open. Every restoration path now restores **both** pieces of external state — the rule and
+the protection — in an order where each step's precondition actually holds.
 
 ---
 
@@ -105,6 +111,10 @@ least able to verify independently, Deployment Protection comes off for the dura
 **Do this before editing the rule.** If protection cannot be removed, there is no point changing the
 rate limit.
 
+**Run Phase 0b through Phase 4b in one sitting.** Between those points the preview is public *and*
+production is unprotected by the rate limit. Neither state should outlive the session that created
+it, and neither is safe to leave running while attention moves elsewhere.
+
 1. Project **Settings → Deployment Protection**. Turn off the protection covering preview
    deployments (**Vercel Authentication**, or whichever control currently gates them).
 2. Save, and publish if prompted.
@@ -126,7 +136,7 @@ rate limit.
 > **While protection is off the preview is publicly readable.** It serves Hawaii news headlines and
 > nothing else — no credentials, no personal data, no unreleased content beyond the two API shapes
 > already visible in the open PR. The exposure is proportionate, but it is real, so **keep the window
-> to minutes** and treat Phase 3b as mandatory rather than tidy-up.
+> to minutes** and treat Phase 4b as mandatory rather than tidy-up.
 
 **A property that makes this cheap:** the rate limit is keyed on **IP address**, so the owner, Codex
 and Claude each get their **own** 5-requests-per-60-seconds budget. Three observers do not compete
@@ -179,8 +189,20 @@ done
 }
 ```
 
-**All seven must be `200`.** If any request returns `429`, **stop**: restore the rule per Phase 4,
-verify recovery, and report the grouping is still wrong. Do not continue to the burst.
+**All seven must be `200`.** If any request returns `429`, **stop** and run the full restoration
+below. Do not continue to the burst.
+
+> ### Restoration — every failure path runs this, in this order
+>
+> Two pieces of external state are changed by this procedure, and **both** must be put back. A
+> failure path that restores only the rate limit leaves the preview publicly readable.
+>
+> 1. **Restore the rule** — Phase 3. Final 100-per-60, path-only, published.
+> 2. **Verify recovery** — Phase 4, while protection is still off.
+> 3. **Restore Deployment Protection** — Phase 4b, and confirm an unauthenticated `302`.
+>
+> Only then stop and report. The order matters: Phase 4's preview check requires the preview to
+> still be open, so protection is restored **after** it, never before.
 
 ---
 
@@ -229,13 +251,17 @@ foreach ($path in '/api/news', '/api/news/hazard') {
 **Required: at least one `429` on _each_ of the two canonical paths.** One path is not sufficient —
 the rule claims to cover both representations.
 
-### If the preview is protection-gated
+### If the preview asks for authentication
 
-Preview deployments require authentication. If unauthenticated `curl` returns `401` on every line,
-or if a bypass-header run produces **no** `429`, that is **not** a failure yet: retry through the
-**authenticated browser** with DevTools open, capturing the status, `x-vercel-cache` and
-`x-vercel-id` columns from the Network tab. Only declare failure after the browser run also fails to
-trigger.
+**Stop. That means Phase 0b did not take effect.**
+
+A `302`, `401`, or any login redirect during this phase is not a condition to work around — under
+this revision it is a failed precondition. Do **not** reach for the bypass header or an authenticated
+browser session: the entire point of opening the preview is that **Codex observes the `429`s
+unauthenticated and first-hand**, and a run that needs Claude's bypass header or the owner's login
+produces exactly the second-hand evidence this arrangement exists to avoid.
+
+Go back to Phase 0b, make the unauthenticated `200` check pass, and only then run the burst.
 
 ### Rule attribution — proving the 429 came from the rule
 
@@ -252,12 +278,16 @@ documented property, not an inference from response timing.
 
 ### Fail closed
 
-**If the preview run produces no rule-generated `429`** — after both the bypass and browser
-attempts — then:
+**If the preview run produces no rule-generated `429`** — with preview access confirmed open and the
+rule confirmed published — then:
 
-1. Restore the rule per Phase 4 immediately.
-2. Verify recovery per Phase 5.
-3. **Stop, and report G12 as failed.**
+1. **Restore the rule** — Phase 3. Immediately.
+2. **Verify recovery** — Phase 4, while protection is still off.
+3. **Restore Deployment Protection** — Phase 4b, and confirm an unauthenticated `302`.
+4. **Stop, and report G12 as failed.**
+
+Steps 1 to 3 are not optional on the way to step 4. Reporting a failure while leaving the preview
+public would turn one failed acceptance item into an open deployment.
 
 Do **not** continue, and do **not** write it up as "a limitation of the platform" or "enforcement
 could not be observed but the rule is configured correctly." A rate limit that cannot be observed
@@ -280,9 +310,26 @@ Do this as soon as capture is complete, before writing anything up.
 
 ---
 
-## Phase 3b — close the preview again
+## Phase 4 — verify recovery on both hostnames
 
-**Mandatory, not tidy-up.** Restore Deployment Protection to the setting captured before Phase 0b.
+**Protection is still off at this point, and must be.** This check requires seven *unauthenticated*
+preview requests to succeed, which is impossible once protection is back on. Restoring protection
+before this step — as revision 4 mistakenly did — makes the required evidence unobtainable.
+
+**Wait a full 65 seconds first**, so an open rate-limit window is not mistaken for a rule that is
+still live.
+
+Then seven quick requests to **preview** `/api/news` and seven to **production**
+`https://pacific-watch.vercel.app/api/news`. **All fourteen must return `200`.** Codex can run both
+halves unauthenticated and should, since this confirms the throttle is genuinely gone rather than
+merely between windows.
+
+---
+
+## Phase 4b — close the preview again
+
+**Mandatory, not tidy-up, and only after Phase 4 has passed.** Restore Deployment Protection to the
+setting captured before Phase 0b.
 
 Verify it took effect — this must return `302` again with no bypass header:
 
@@ -295,16 +342,6 @@ A `200` here means the preview is still public. Fix it before doing anything els
 
 ---
 
-## Phase 4 — verify recovery on both hostnames
-
-**Wait a full 65 seconds first**, so an open rate-limit window is not mistaken for a rule that is
-still live.
-
-Then seven quick requests to **preview** `/api/news` and seven to **production**
-`https://pacific-watch.vercel.app/api/news`. **All fourteen must return `200`.**
-
----
-
 ## Phase 5 — hand back
 
 1. Final rule configuration from **Phase 0** — screenshot or exact field transcription.
@@ -314,8 +351,8 @@ Then seven quick requests to **preview** `/api/news` and seven to **production**
    (Phase 2).
 5. **Firewall live-traffic screenshot** attributing the `429`s to the custom rule (Phase 2).
 6. **Restored** final rule screenshot (Phase 3, step 3).
-7. **Protection restored**: the `302` check from Phase 3b.
-8. Recovery verification, both hostnames, fourteen `200`s (Phase 4).
+7. Recovery verification, both hostnames, fourteen `200`s (Phase 4).
+8. **Protection restored**: the `302` check from Phase 4b.
 9. Any label or behaviour that differed from this document.
 
 Codex's own observations are recorded separately as its evidence, not relayed through this list.

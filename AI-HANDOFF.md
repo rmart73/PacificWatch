@@ -482,6 +482,60 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-28 — revision 5: two execution-order defects, both mine, caught before execution
+
+Codex blocked execution of revision 4 and was right to. **Nothing was run, no dashboard change was
+made, and neither piece of external state was touched.** Verified after the correction: the preview
+still returns `302` unauthenticated and production still returns seven `200`s.
+
+#### Defect 1 — stale cross-references
+
+Inserting Phase 0b and Phase 3b shifted the phase numbering and I did not update the references
+pointing at them. Three lines still said "restore per Phase 4" and "verify recovery per Phase 5"
+when they meant Phase 3 and Phase 4. Confirmed against the file at the exact lines Codex cited.
+
+#### Defect 2 — an impossible order, and the worse half underneath it
+
+Revision 4 placed **Phase 3b (restore protection, verify unauthenticated `302`)** immediately before
+**Phase 4 (seven unauthenticated preview requests returning `200`)**. Those cannot both hold. I
+appended a phase without re-reading what followed it.
+
+The more serious half is what Codex saw underneath: **every failure path restored only the rate
+limit.** Each `stop and report` branch would have left Deployment Protection off and the preview
+publicly readable — turning one failed acceptance item into an open deployment.
+
+That is the same class of error as the original incident: a step correct in isolation, wrong in
+composition, and reviewed by its own author without tracing what it touched. Twice now the guard
+rail has been the second reader rather than the writer.
+
+#### Revision 5
+
+Phase order is now **0 → 0b → 1 → 2 → 3 → 4 → 4b → 5**, with protection restored *after* the
+recovery check that requires the preview to be open.
+
+A single **Restoration** block is now cited by every failure path and runs in one order: restore the
+rule (Phase 3), verify recovery (Phase 4, protection still off), restore protection (Phase 4b,
+confirm `302`). Only then stop and report. Both the Phase 1 gate failure and the fail-closed branch
+point at it.
+
+The Phase 2 fallback offering a bypass header or an authenticated browser is **removed**. Under this
+revision an authentication response means Phase 0b failed, not that a workaround is wanted — and a
+run that needs a bypass header or the owner login produces exactly the second-hand evidence this
+arrangement exists to avoid.
+
+Added: **Phase 0b through 4b run in one sitting.** Between those points the preview is public *and*
+production is unprotected by the rate limit. Neither state should outlive the session that created
+it.
+
+The hand-back list was also reordered to chronological — it listed the protection restore before the
+recovery check, the same reversal in miniature.
+
+#### Signal conditions
+
+Codex is signalled only when all three hold: unauthenticated preview access confirmed `200`; the
+correctly scoped 5-per-60 rule published; and the owner ready to complete test, restore, recovery and
+protection closure in one sitting. Until then the final rule stays live and protection stays on.
+
 ### 2026-09-28 — resumed; preview-access decision taken, procedure at revision 4
 
 State verified against the pause record before anything else, because an overnight gap is exactly
