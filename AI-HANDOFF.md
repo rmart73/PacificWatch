@@ -8,9 +8,11 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-26. PR state was checked through GitHub. Production observations below are
-attributed to the user-relayed Claude report, except the #21 deploy check, which was verified
-directly against production in this session.
+Updated 2026-09-28. PR state was checked through GitHub. Production observations below are
+attributed to the user-relayed Claude report, except the #21 deploy check and the **#26 closeout
+verification**, both verified directly against production. The #26 checks were unauthenticated HTTP
+against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
+per request — not a relayed report.
 
 | Work | State | Owner / next action |
 |---|---|---|
@@ -27,11 +29,13 @@ directly against production in this session.
 | #17 production record | #18 merged in 5249e53 | Closed |
 | Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
-| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains a launch blocker, its contract is now claimed, and one evidence item is open below |
+| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; **G1 is no longer a launch blocker — closed by #26** — and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
+| G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
+| G1 closeout record | [#27](https://github.com/rmart73/PacificWatch/pull/27) open; documentation only | Codex reviews. Records the #26 production verification and carries the hazard-classifier finding into the Review Queue |
 
 ### Active claims
 
@@ -43,7 +47,11 @@ done through the next properly claimed closeout rather than by widening #26.
 
 **Documentation only.** No application, configuration or test change.
 
-**G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
+**Closed: G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
+*(Merged as #26 in `9e2cfec` on the owner's explicit permission, and verified against production.
+G1 is closed at G01–G18. The scope, WAF specification and stop condition below are retained as the
+record of what was claimed and delivered; the T17 guidance further down is still owed to
+`AGENTS.md` and must survive this closure.)*
 Claim published 2026-09-26 before editing, in its own commit ahead of the work, on the owner's
 explicit authorization of both implementation **and** the WAF publication step. Branched from `main`
 at `fcaf55a`, with `git log` and content equality verified first.
@@ -326,9 +334,11 @@ Codex retains design/acceptance ownership; Claude retains implementation ownersh
 implementation stays a separate claimed, reviewable PR.
 
 **What is next:** observation stage 1 is merged and production verified in #24. The owner approved
-the sequence **G1 → Stage 2 → Stage 3**. The G1 contract is drafted, reviewed, merged as #25 in
-`fcaf55a` and authoritative at G01–G18; **G1 implementation is in review as PR #26**, with the WAF
-publication outstanding and owner-only. Stage 2 then wires the
+the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `fcaf55a` and is authoritative
+at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
+published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
+the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is next** and
+wires the
 observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
 satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
@@ -344,7 +354,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/g1-abuse-bounding | G1 abuse and cost bounding implementation: two canonical News representations, zero-fan-out rejection, routing and cache normalisation, client fetch site, tests. Specifies the WAF rule; the owner publishes it |
+| Claude | claude/g1-closeout | **Documentation only.** Records the #26 production verification, closes G1, and carries the pre-existing hazard-classifier finding into the Review Queue |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -360,15 +370,19 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
+**`main` is at `9e2cfec`**, merged through #26 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An application implementation IS in flight: PR #26 changes `api/news.js`, `vercel.json` and
-`index.html`.** An earlier version of this paragraph said `main` was `22686bb` and that the active
-G1 work was a contract only. Both were true when written — before #25 merged and before the
-implementation was claimed — and neither was corrected as the work moved. That is the same
-current-state drift the board keeps re-learning: a line describing "right now" is wrong the moment
-the thing it describes moves, and nothing updates it unless someone is looking.
+**No application implementation is in flight.** The G1 implementation merged in #26 and is verified
+in production; the only open PR is [#27](https://github.com/rmart73/PacificWatch/pull/27), which is
+documentation only. Stage 2 and Stage 3 are approved but unclaimed and unstarted.
+
+This paragraph has now been wrong twice and corrected twice — it once said `main` was `22686bb` with
+G1 a contract only, then said an implementation was in flight as #26. Each was true when written and
+neither was updated as the work moved. **The closeout that merged #26 initially repeated the
+mistake:** the new entry was written while this section and seven others still described the
+pre-merge state, and Codex caught all eight. A line describing "right now" is wrong the moment the
+thing it describes moves, and writing a correct entry elsewhere does not update it.
 
 ## Outstanding Verification and Decisions
 
