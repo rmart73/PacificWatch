@@ -36,7 +36,7 @@ per request — not a relayed report.
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, and T15 layout verified by the owner at 320/390px and desktop** | Codex re-reviews, then claims the reserved `AGENTS.md` sub-scope the implementation, then claims the reserved `AGENTS.md` sub-scope on the same branch |
+| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, and T15 layout verified by the owner at 320/390px and desktop** | Codex's implementation review and reserved `AGENTS.md` sub-scope are complete; Claude reviews the durable-document diff, then the owner decides merge |
 
 ### Active claims
 
@@ -353,7 +353,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation and tests complete; T16 evidence captured against the deployed preview. All evidence complete: T16 raw-vs-rendered against the deployed preview, and T15 layout verified by the owner at 320/390px and desktop. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock, plus a fourth accepted in Codex's folded form: a caught-count is insufficient without zero `ANCHOR LOST`/`AMBIGUOUS`, and changed render paths require revalidating the mutations anchored there | Codex re-reviews, then claims the reserved `AGENTS.md` sub-scope on this branch and places all four lessons |
+| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation review clean; T16 captured against the deployed preview; T15 layout verified by the owner at 320/390px and desktop; T17 durable-document reconciliation and all four mutation-testing lessons placed in `AGENTS.md` by Codex | Claude reviews the durable-document diff, then the owner decides merge |
 | Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. Aligns the earthquake card and satisfies T12 | Claim separately after Stage 2 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
@@ -496,6 +496,26 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — Codex implementation re-review clean; reserved T17 documentation complete
+
+Codex's final read-only implementation re-review found no remaining code or test issue at `5517b09`.
+The T15 layout result is owner evidence: Source details passed at 320px, 390px and desktop with no
+overlap, clipping or horizontal scroll. T16 remains the deployed-preview raw-versus-rendered record
+below. Claude-reported verification at that handoff was `npm test` **306**, `test:dom` **354** and
+`test:mutation` **95 of 95**, with zero `ANCHOR LOST` and zero `AMBIGUOUS`; Codex's shell has no
+Node/npm, so those counts were reviewed but not independently rerun.
+
+Codex then claimed the reserved documentation sub-scope before editing. `AGENTS.md` now:
+
+1. replaces the obsolete load-bearing triangle row with the two-state observation-dot rule;
+2. retires the dot-specific F004 prose while preserving `.hazard-pulse`'s reduced-motion ring;
+3. records the setter-line, constant-free extraction and explicit callback-arity lessons; and
+4. requires a passing mutation run to have zero `ANCHOR LOST`/`AMBIGUOUS`, with render-path
+   mutations revalidated after their target moves.
+
+No application, test, API, configuration or dependency file changed in Codex's sub-scope. Claude
+reviews this durable-document diff; the owner retains the merge decision.
 
 ### 2026-09-28 — T15 layout verified by the owner; Stage 2 evidence complete
 

@@ -102,7 +102,7 @@ Every one is deliberate, and the reasoning is in the section named after it.
 | `.hazard-banner.is-info` looks like a third duplicate of `.is-ok` | It means "active but nothing at hazard tier". Collapsing it into `is-ok` makes a live Tropical Cyclone Local Statement read as an all-clear | Architecture |
 | `.s-dot.unknown` uses `box-shadow:inset` on a transparent background rather than a `background` colour | It is a hollow ring on purpose. Collapsing it to a fill reverts verification state to colour-only encoding, which is the thing F001 was raised to fix — the grey and steel-blue dots are not reliably distinguishable at 6px | Theming |
 | `alertTier()` ignores CAP `severity` except for `Extreme` | Severity is `Severe` for both a Tropical Storm Warning and a Flood Watch, so a severity-first test renders a watch as a warning. That was a real defect, not a hypothetical | Alert severity model |
-| `.s-dot.warn` and `.s-dot.alert` use `clip-path` triangles rather than plain circles | Shape is the distinguishing channel; hue alone is not readable at this size. Reverting to circles restores colour-only encoding | Theming |
+| Observation dots have only `.ok` and `.unknown`; raw wind, rain or tide magnitude never creates a warning dot | The dot reports whether a usable, current observation was verified. Restoring `.s-dot.warn`/`.s-dot.alert` or magnitude thresholds makes an unauthoritative measurement look like an NWS warning | Status semantics |
 | `NEWS_SOURCES` duplicates outlet names that also live in `api/news.js` | They are compared directly, so they must match exactly. Before this was wired up, the Settings card listed NWS/NOAA, HIEMA and GDACS/RSOE/PDC — none of which produce headlines — so three of seven toggles could never have controlled anything | News headlines |
 | Island-scoped fetches call `beginRequest()` and check `requestIsCurrent()` before using their own response | A response can arrive after the user switches islands. Without the guard, `sourceOk()` stamped the cache with `S.island` at completion, filing one island's reading under another — a slow Maui observation rendered and cached as Kauaʻi's. Removing the check restores that bug silently | Architecture |
 | Every alert surface renders from `nwsSnapshot()` instead of filtering its own copy | The rail and banner filtered by selected island and the ticker did not, so an island view could scroll a product it refused to list. Reintroducing a local filter re-opens that drift | Architecture |
@@ -515,14 +515,18 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   grey are too close to separate reliably at 6px, so `.s-dot.unknown` is a hollow ring and
   `.src-state-unavailable` is outlined rather than filled — shape carries the distinction and
   hue only reinforces it. Any new status indicator must differ in more than colour.
-  Every dot state now differs in shape: `ok` is a circle, `unknown` a hollow ring, `warn` a
-  triangle, `alert` a larger triangle. `prefers-reduced-motion` is honoured, and because the
-  pulse is a real second channel for `alert`, a static ring substitutes for it rather than
-  the distinction simply disappearing (F004, closed).
-  **Accepted unverified, 2026-09-07:** the reduced-motion substitute has never been seen
-  rendered — it needs an OS setting change while an `alert` dot is on screen. The project
-  owner has accepted that gap rather than hold work for it. Do not re-raise it in review;
-  check it opportunistically if both conditions ever coincide during other work.
+  Observation dots now have only two states: `ok` is a filled circle and `unknown` a hollow
+  ring. The old `warn` and `alert` triangles were removed in observation-truthfulness Stage 2:
+  they encoded raw magnitude on a dot whose job is verification, making a strong but current
+  measurement look like an authoritative warning. Magnitude stays explicit in the card text;
+  severity belongs to NWS alert products.
+- `prefers-reduced-motion` still needs a substitute for `.hazard-pulse`, which belongs to the
+  separate NWS hazard banner rather than to observation dots. When animation is suppressed, its
+  static ring preserves the second channel instead of letting the distinction disappear. The
+  owner-accepted 2026-09-07 gap concerned seeing the retired `.s-dot.alert` substitute rendered;
+  that consumer and gap ended by removal, not by visual verification. The surviving
+  `.hazard-pulse` substitute has not been separately browser-observed, but Stage 2 did not open a
+  new acceptance gate for that pre-existing alert surface. Do not remove it as dead observation CSS.
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography
@@ -592,11 +596,11 @@ npm run test:mutation # checks that the DOM and contrast assertions can actually
 
 | Suite | Covers |
 |---|---|
-| `test/phase1-source-health.test.js` | health state machine, per-source thresholds, retention, stale-window withdrawal, island-scoped cache invalidation |
+| `test/phase1-source-health.test.js` | health state machine, per-source thresholds, retention, stale-window withdrawal, island-scoped cache invalidation, observation timestamp parsing and controlled-time combined-state boundaries |
 | `test/severity-model.test.js` | alert tiering, the Extreme override, urgency fallback, word-boundary matching, ordering |
-| `test/dom-behavior.test.js` | the degraded states, the critical-source rule, statement-only banner, news source filtering, the shared snapshot, the nine strip states, the age tick and its wiring, island-switch withdrawal, and check times derived from `lastSuccess` |
+| `test/dom-behavior.test.js` | the degraded states, the critical-source rule, statement-only banner, news source filtering, the shared snapshot, the nine strip states, the age tick and its wiring, island-switch withdrawal, observation-clock weather/tide cards and Source details, and check times derived from `lastSuccess` |
 | `test/contrast.test.js` | strip text at 4.5:1 in both themes, drift between the two dark blocks, severity still distinguishable, and the preconditions that make token arithmetic valid |
-| `test/mutation-check.js` | whether the assertions in the other two suites can fail at all |
+| `test/mutation-check.js` | whether the targeted pure, DOM, contrast and API assertions can fail at all |
 
 The first two **extract the functions straight out of `index.html`** with regexes rather than
 importing them — there is no module system to import from. That means a rename can break
@@ -695,6 +699,21 @@ with the case rather than the code:
   nothing either way. This is not hypothetical: a CSS anchor shared with `.sec-head` made a
   translucency case mutate the wrong rule, and the guard added afterwards immediately caught
   a second case that had been reporting `CAUGHT` while mutating the wrong theme block.
+
+Mutation anchors are part of the test and must move with the code they guard:
+
+- Anchor on the line that **sets** the value or behavior, not a later line that merely renders
+  it. Setter anchors are both closer to the defect and less likely to be displaced by ordinary
+  presentation changes.
+- Do not pin a constant's current value inside an extraction regex. Mutating that constant then
+  breaks extraction (`ANCHOR LOST`) instead of reaching the assertion that is supposed to fail.
+- Adding even an optional function parameter changes every bare-reference callback site. For
+  example, `.map(sourceState)` passed the array index as `sourceState`'s injected clock and made
+  every source look current. Use an explicit-arity wrapper such as `.map(k => sourceState(k))`.
+- A passing caught-count is insufficient unless the same run reports zero `ANCHOR LOST` and zero
+  `AMBIGUOUS`. After changing a render path, revalidate every mutation anchored in that path; a
+  behavior fix can otherwise disarm the mutation that was meant to protect it while leaving the
+  headline count looking plausible.
 
 The harness checks whether assertions can fail, so it has to hold itself to the same standard.
 
