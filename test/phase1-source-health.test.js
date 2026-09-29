@@ -27,7 +27,7 @@ const parts = [
   grab(/function sourceState\(key, now\) \{[\s\S]*?\n\}/, 'sourceState'),
   grab(/function isStale\(key\) \{[^}]*\}/, 'isStale'),
   grab(/function usableCache\(key\) \{[\s\S]*?\n\}/, 'usableCache'),
-  grab(/function relAge\(ts\) \{[\s\S]*?\n\}/, 'relAge'),
+  grab(/function relAge\([^)]*\) \{[\s\S]*?\n\}/, 'relAge'),
   /* Q007/Q008 observation clock — the second, independent clock. */
   grab(/const OBSERVATION_LIMITS = \{[\s\S]*?\n\};/, 'OBSERVATION_LIMITS'),
   grab(/const OBS_SKEW_MS = [^;]+;/, 'OBS_SKEW_MS'),

@@ -467,6 +467,68 @@ const mutations = [
     expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
     suite: 'news', target: 'api' },
 
+  /* ---- Q007/Q008 Stage 2: the observation clock reaching the cards ---- */
+
+  /* The defect Stage 2 exists to remove: magnitude deciding a dot that means verification. */
+  { name: 'wind magnitude thresholds restored on the dot',
+    from: "      if (dotWind) dotWind.className = observationDot(windState);\n    } else if (gustMph != null) {",
+    to:   "      if (dotWind) dotWind.className = 's-dot ' + (windMph>35?'alert':windMph>20?'warn':'ok');\n    } else if (gustMph != null) {",
+    expect: ['40 mph reads verified, not escalated'], suite: 'dom' },
+
+  { name: 'rain magnitude thresholds restored on the dot',
+    from: "      if (dotRain) dotRain.className = observationDot(rainState);",
+    to:   "      if (dotRain) dotRain.className = 's-dot ' + (parseFloat(rainIn)>0.5?'alert':parseFloat(rainIn)>0?'warn':'ok');",
+    expect: ['25.4 mm reads verified'], suite: 'dom' },
+
+  /* The dot must follow the COMBINED verdict. Reverting it to the fetch clock is the exact
+     defect the contract was written about: a fresh fetch of an old measurement reading as
+     verified. */
+  { name: 'the dot reverts to the fetch clock',
+    from: "function observationDot(state) { return 's-dot ' + (observationVerified(state) ? 'ok' : 'unknown'); }",
+    to:   "function observationDot(state) { return 's-dot ' + (state === 'unavailable' ? 'unknown' : 'ok'); }",
+    expect: ['past it the reading is visibly stale'], suite: 'dom' },
+
+  { name: 'tide dot reverts to the fetch clock',
+    from: "  const state = combinedObservationState('noaaTides', now, ft != null && isFinite(parseFloat(ft)));",
+    to:   "  const state = sourceState('noaaTides', now) === 'current' ? 'current' : 'unavailable';",
+    expect: ['past it the tide reading is stale'], suite: 'dom' },
+
+  /* T05/T06 withdrawal: a reading past measurement retention is gone, not merely undotted. */
+  { name: 'expired weather observations no longer withdrawn',
+    from: "  if (state === 'observation-expired' || state === 'unavailable') { renderWeatherUnavailable(); return; }",
+    to:   "  if (state === 'unavailable') { renderWeatherUnavailable(); return; }",
+    expect: ['the value is gone, not merely dimmed'], suite: 'dom' },
+
+  { name: 'expired tide observations no longer withdrawn',
+    from: "  if (state === 'observation-expired' || state === 'unavailable') { renderTideUnavailable(); return; }",
+    to:   "  if (state === 'unavailable') { renderTideUnavailable(); return; }",
+    expect: ['past 60 minutes the tide reading is withdrawn'], suite: 'dom' },
+
+  /* T09: without this the cards freeze at whatever the last fetch decided. */
+  { name: 'the age tick stops re-rendering the cards',
+    from: "  renderObservationCards();\n}\nfunction startAgeTick() {",
+    to:   "}\nfunction startAgeTick() {",
+    expect: ['the tick re-rendered the card from cache'], suite: 'dom' },
+
+  /* T13: one shared verdict for both cards lets a missing field unverify a good reading, or
+     worse, lets a good reading verify a missing one. */
+  { name: 'value usability no longer passed per card',
+    from: "  const rainState = combinedObservationState('nwsWeather', now, toInches(p.precipitationLastHour) != null);",
+    to:   "  const rainState = combinedObservationState('nwsWeather', now, true);",
+    expect: ['and is not verified'], suite: 'dom' },
+
+  /* T08: both ages, because one has repeatedly been mistaken for the other. */
+  { name: 'the verification age dropped from the card copy',
+    from: "  const verified = state === 'current' ? '' : ' · verified ' + verifiedAge(key, now);",
+    to:   "  const verified = '';",
+    expect: ['and the copy carries the verification age as well as the observation'], suite: 'dom' },
+
+  /* Source details must separate the clocks; a single state is what hid the problem. */
+  { name: 'Source details drops the observation age',
+    from: "      const obsAge = !measured ? ''",
+    to:   "      const obsAge = true ? '' : !measured ? ''",
+    expect: ['and the observation age separately'], suite: 'dom' },
+
   /* G02: the client must emit only the two canonical URLs. Restoring the parameterized request
      puts a caller-selected limit back on the wire, which was part of the unbounded key space. */
   { name: 'parameterized client request restored',
