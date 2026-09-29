@@ -506,7 +506,7 @@ A small script in `<head>` applies the saved theme *before first paint* — don'
 bottom or the page will flash the wrong theme on load. When adding new colors, define them as
 tokens in all three blocks rather than hardcoding hex in component CSS.
 
-**Three accessibility constraints to preserve when editing colors:**
+**Four accessibility constraints to preserve when editing colors:**
 - White text on `--warn` orange is only 2.6:1 — the amber hazard-banner state uses ink `#0a0507`
   text instead (7.9:1). Don't revert it to white.
 - "All clear" is steel blue, not green: the palette has no green. This also keeps the
@@ -527,6 +527,7 @@ tokens in all three blocks rather than hardcoding hex in component CSS.
   that consumer and gap ended by removal, not by visual verification. The surviving
   `.hazard-pulse` substitute has not been separately browser-observed, but Stage 2 did not open a
   new acceptance gate for that pre-existing alert surface. Do not remove it as dead observation CSS.
+
 All text pairings currently pass WCAG AA (4.5:1) in both light and dark mode.
 
 ## Typography

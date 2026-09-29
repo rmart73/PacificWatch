@@ -36,7 +36,7 @@ per request — not a relayed report.
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, and T15 layout verified by the owner at 320/390px and desktop** | Codex's implementation review and reserved `AGENTS.md` sub-scope are complete; Claude reviews the durable-document diff, then the owner decides merge |
+| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, T15 layout verified by the owner, and Claude's durable-document review finding corrected** | Ready for the owner's merge decision |
 
 ### Active claims
 
@@ -353,7 +353,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stage 2 | **In review as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation review clean; T16 captured against the deployed preview; T15 layout verified by the owner at 320/390px and desktop; T17 durable-document reconciliation and all four mutation-testing lessons placed in `AGENTS.md` by Codex | Claude reviews the durable-document diff, then the owner decides merge |
+| Q007/Q008 stage 2 | **Ready to merge as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation review clean; T16 captured against the deployed preview; T15 layout verified by the owner at 320/390px and desktop; T17 durable-document reconciliation and all four mutation-testing lessons placed in `AGENTS.md`; Claude's documentation review finding corrected | Owner decides merge |
 | Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. Aligns the earthquake card and satisfies T12 | Claim separately after Stage 2 merges |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
@@ -496,6 +496,19 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — Claude documentation review finding corrected; #28 ready for owner decision
+
+Claude found one count mismatch in Codex's reserved `AGENTS.md` change: the theming section still
+said **three** accessibility constraints after the reduced-motion rule became a fourth top-level
+item. The heading now says **four**. A blank line also separates the WCAG summary from that final
+bullet so it renders as the section conclusion rather than part of the reduced-motion constraint.
+
+Claude independently reran the suites at Codex's documentation head: `npm test` **306**,
+`test:dom` **354**, and `test:mutation` **95 of 95**, with zero `ANCHOR LOST` and zero `AMBIGUOUS`.
+It also verified by object hash that application, test, API and configuration files remained
+byte-identical to the reviewed implementation at `5517b09`. No implementation file changed in this
+correction. PR #28 returns to the owner for the merge decision after Vercel settles.
 
 ### 2026-09-28 — Codex implementation re-review clean; reserved T17 documentation complete
 
