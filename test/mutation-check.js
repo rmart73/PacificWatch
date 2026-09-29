@@ -153,8 +153,8 @@ const mutations = [
     expect: ['a first load says how many sources are still checking'] },
 
   { name: 'gust-only wind is presented as sustained wind',
-    from: "      if (windNote) windNote.textContent = `Gust, sustained N/A \u00b7 ${label}${suffix}`;",
-    to:   "      if (windNote) windNote.textContent = `${label}${suffix}`;",
+    from: "      if (windNote) windNote.textContent = `Gust, sustained N/A \u00b7 ${label}${windSuffix}`;",
+    to:   "      if (windNote) windNote.textContent = `${label}${windSuffix}`;",
     expect: ['a gust-only observation is labelled as such'] },
 
   { name: 'the view tabs go back to a hardcoded sticky offset',
@@ -357,13 +357,13 @@ const mutations = [
   /* The cache guard is only half of T11. These two put the refused reading back on screen, which
      is what the code did before: cache and card disagreed until some later render corrected it. */
   { name: 'fetchWeather renders the response instead of the accepted reading',
-    from: "    if (kept) renderWeather(kept.data.p, kept.data.label, false);",
-    to:   "    renderWeather(data.properties, stationLabel(sta), false);",
+    from: "    if (kept) renderWeatherCard();",
+    to:   "    renderWeather(data.properties, stationLabel(sta));",
     expect: ['the older observation does not reach the card'], suite: 'dom' },
 
   { name: 'fetchTides renders the response instead of the accepted reading',
-    from: "    if (kept) renderTide(kept.data.ft, kept.data.name, false);",
-    to:   "    renderTide(ft, tideLabel(sta), false);",
+    from: "    if (kept) renderTideCard();",
+    to:   "    renderTide(ft, tideLabel(sta));",
     expect: ['the older tide observation does not reach the card'], suite: 'dom' },
 
   /* If sourceOk stops reporting what it kept, the callers have nothing truthful to render. */
@@ -512,10 +512,10 @@ const mutations = [
 
   /* T13: one shared verdict for both cards lets a missing field unverify a good reading, or
      worse, lets a good reading verify a missing one. */
-  { name: 'value usability no longer passed per card',
-    from: "  const rainState = combinedObservationState('nwsWeather', now, toInches(p.precipitationLastHour) != null);",
-    to:   "  const rainState = combinedObservationState('nwsWeather', now, true);",
-    expect: ['and is not verified'], suite: 'dom' },
+  { name: 'the source row vouches for data that is not there',
+    from: "      const st = combinedObservationState(k, null, observationValueUsable(k));",
+    to:   "      const st = combinedObservationState(k, null, true);",
+    expect: ['a reading with every value missing does not report Current'], suite: 'dom' },
 
   /* T08: both ages, because one has repeatedly been mistaken for the other. */
   { name: 'the verification age dropped from the card copy',

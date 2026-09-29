@@ -2619,6 +2619,22 @@ function staleNote(key) {
   return '<div class="stale-note"><span class="s-dot unknown"></span>' + esc(label) + '</div>';
 }
 
+/* T13 — the source row reports on a READING, so a row whose every value is missing must not read
+   Current on the strength of its clocks alone. renderSourceHealth() passed a hardcoded true here,
+   which is the same false confidence the combined state exists to prevent, one level up: good
+   timestamps vouching for data that is not there. */
+function observationValueUsable(key) {
+  const entry = observationEntry(key);
+  if (!entry || !entry.data) return false;
+  if (key === 'nwsWeather') {
+    const p = entry.data.p || {};
+    return toMph(p.windSpeed) != null || toMph(p.windGust) != null
+        || toInches(p.precipitationLastHour) != null;
+  }
+  if (key === 'noaaTides') return entry.data.ft != null && isFinite(parseFloat(entry.data.ft));
+  return true;   /* sources with no measurement clock never reach the valueUsable branch */
+}
+
 function renderSourceHealth() {
   const list = document.getElementById('source-health-list');
   if (list) {
@@ -2628,7 +2644,7 @@ function renderSourceHealth() {
        inventing an observation age for them would be the same false precision in reverse. */
     list.innerHTML = Object.keys(S.sourceHealth).map(k => {
       const h = S.sourceHealth[k];
-      const st = combinedObservationState(k, null, true);
+      const st = combinedObservationState(k, null, observationValueUsable(k));
       const entry = observationEntry(k);
       const measured = !!OBSERVATION_LIMITS[k];
       const obsAge = !measured ? ''

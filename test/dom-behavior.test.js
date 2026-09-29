@@ -1162,6 +1162,16 @@ function has(label, sel, needle, expected) {
   /* A plain measurement must never generate advisory language; that is NWS's authority. */
   check('a 40 mph reading produces no warning language in the card',
     /warning|advisory|severe/i.test(txt('#stat-wind-note')), false);
+
+  console.log('\n41. T13 — good clocks do not vouch for data that is not there:');
+  await seedWeather({ windSpeed: wind(null), windGust: wind(null),
+                      precipitationLastHour: rain(null), timestamp: isoAgo(2) });
+  check('a reading with every value missing does not report Current',
+    txt('#source-health-list').indexOf('Not reported') !== -1, true);
+  await seedWeather({ windSpeed: wind(14), windGust: wind(null),
+                      precipitationLastHour: rain(null), timestamp: isoAgo(2) });
+  check('  while one usable value is enough to report Current',
+    txt('#source-health-list').indexOf('Not reported') !== -1, false);
   rawObs = null; rawTide = null;
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
