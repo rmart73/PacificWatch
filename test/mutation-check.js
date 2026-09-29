@@ -538,6 +538,17 @@ const mutations = [
     to:   "  if (state === 'observation-expired') { renderWeatherUnavailable(); return; }",
     expect: ['fetch retention expired, measurement still young: withdrawn'], suite: 'dom' },
 
+  { name: 'the source row dates an undatable reading again',
+    from: "      const obsAge = !measured || st === 'observation-unusable' ? ''",
+    to:   "      const obsAge = !measured ? ''",
+    expect: ['and Source details offers no age for it either'], suite: 'dom' },
+
+  /* Guards the assertion Codex caught: it must fail when the clock actually moves. */
+  { name: 'a failed refresh moves the measurement clock',
+    from: "  h.lastAttempt = Date.now();\n  h.pendingGeneration = null;   /* settled, unsuccessfully */",
+    to:   "  h.lastAttempt = Date.now();\n  h.pendingGeneration = null;\n  if (S.cache[key]) S.cache[key].observedAt = Date.now();",
+    expect: ['and the measurement clock is exactly where it was'], suite: 'dom' },
+
   { name: 'the source row vouches for data that is not there',
     from: "      const st = combinedObservationState(k, null, observationValueUsable(k));",
     to:   "      const st = combinedObservationState(k, null, true);",
@@ -551,7 +562,7 @@ const mutations = [
 
   /* Source details must separate the clocks; a single state is what hid the problem. */
   { name: 'Source details drops the observation age',
-    from: "      const obsAge = !measured ? ''",
+    from: "      const obsAge = !measured || st === 'observation-unusable' ? ''",
     to:   "      const obsAge = true ? '' : !measured ? ''",
     expect: ['and the observation age separately'], suite: 'dom' },
 

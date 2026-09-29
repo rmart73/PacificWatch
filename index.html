@@ -2687,7 +2687,11 @@ function renderSourceHealth() {
       const st = combinedObservationState(k, null, observationValueUsable(k));
       const entry = observationEntry(k);
       const measured = !!OBSERVATION_LIMITS[k];
-      const obsAge = !measured ? ''
+      /* The same rule the cards apply: a reading we cannot place in time gets no age. Calling
+         relAge() unconditionally rendered "obs 0 sec ago" beside "Observation time unusable" for a
+         future-skewed stamp — a confident number on a reading the badge has just disowned. The
+         badge carries the fact, so the chip is dropped rather than made to repeat it. */
+      const obsAge = !measured || st === 'observation-unusable' ? ''
         : '<span class="src-age src-obs-age">obs '
           + esc(entry && entry.observedAt != null && isFinite(entry.observedAt)
                   ? relAge(entry.observedAt) : 'unknown')

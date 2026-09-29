@@ -1238,6 +1238,18 @@ function has(label, sel, needle, expected) {
   check('  and offers no age beside it', /-\d+ (sec|min|hr)/.test(txt('#stat-wind-note')), false);
   check('  nor a confident zero',
     txt('#stat-wind-note').indexOf('(0 sec ago)') !== -1, false);
+  /* The card suppressed the age and Source details did not, so the same reading was undatable
+     in one place and "0 sec ago" in the other, four inches apart on the same screen. */
+  check('  and Source details offers no age for it either',
+    /obs 0 sec ago/.test(txt('#source-health-list')), false);
+  check('  while still naming the state there',
+    txt('#source-health-list').indexOf('Observation time unusable') !== -1, true);
+  /* A datable reading must still show its age in the row, or the fix above would be a deletion. */
+  w.eval('S.cache = {}');
+  await seedWeather({ windSpeed: wind(18), windGust: wind(null),
+                      precipitationLastHour: rain(2.5), timestamp: isoAgo(30) });
+  check('  and a datable reading still shows its observation age in the row',
+    /obs \d+ min ago/.test(txt('#source-health-list')), true);
 
   console.log('\n45. T08 — BOTH retentions, each expiring independently:');
   w.eval('S.cache = {}');
@@ -1255,13 +1267,17 @@ function has(label, sel, needle, expected) {
   w.eval('S.cache = {}');
   await seedWeather({ windSpeed: wind(23), windGust: wind(null),
                       precipitationLastHour: rain(2.5), timestamp: isoAgo(181) });
+  /* Captured from THIS fixture, immediately before the failed refresh. An earlier version of
+     this assertion compared against a value from the previous, unrelated fixture and passed
+     because the two differed — which proves nothing about whether the clock moved. */
+  const expiredAt = w.eval('S.cache.nwsWeather.observedAt');
   w.fetch = makeFetch('observations');
   await w.fetchWeather(); await settle();
   check('failed refresh with the measurement expired: withdrawn',
     txt('#stat-wind').indexOf('23') !== -1, false);
   w.fetch = makeFetch(null);
-  check('  and the measurement clock never moved to the failed attempt',
-    w.eval('S.cache.nwsWeather ? 1 : 0') === 1 ? w.eval('S.cache.nwsWeather.observedAt') !== t08At : true, true);
+  check('  and the measurement clock is exactly where it was',
+    w.eval('S.cache.nwsWeather.observedAt'), expiredAt);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
