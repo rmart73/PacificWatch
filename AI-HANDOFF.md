@@ -8,9 +8,11 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-26. PR state was checked through GitHub. Production observations below are
-attributed to the user-relayed Claude report, except the #21 deploy check, which was verified
-directly against production in this session.
+Updated 2026-09-28. PR state was checked through GitHub. Production observations below are
+attributed to the user-relayed Claude report, except the #21 deploy check and the **#26 closeout
+verification**, both verified directly against production. The #26 checks were unauthenticated HTTP
+against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
+per request — not a relayed report.
 
 | Work | State | Owner / next action |
 |---|---|---|
@@ -27,92 +29,23 @@ directly against production in this session.
 | #17 production record | #18 merged in 5249e53 | Closed |
 | Wind overstated 3.6x (unit defect) | #19 merged in 6e048fa; conversions read the declared `unitCode`, verified against the station METAR | Closed |
 | Testing rules for source-derived values | #20 merged in 3f5a885 | Closed |
-| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; G1 remains a launch blocker, its contract is now claimed, and one evidence item is open below |
+| Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; **G1 is no longer a launch blocker — closed by #26** — and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
+| G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
+| G1 closeout record | [#27](https://github.com/rmart73/PacificWatch/pull/27) open; documentation only | Codex reviews. Records the #26 production verification and carries the hazard-classifier finding into the Review Queue |
 
 ### Active claims
 
-**G1 abuse and cost bounding — implementation — Claude Code, `claude/g1-abuse-bounding`.**
-Claim published 2026-09-26 before editing, in its own commit ahead of the work, on the owner's
-explicit authorization of both implementation **and** the WAF publication step. Branched from `main`
-at `fcaf55a`, with `git log` and content equality verified first.
+**G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
+Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
+#26 merge. Scope: record the production verification of #26, close the G1 claim, and carry the
+pre-existing hazard-classifier finding into the Review Queue, which is the step Codex directed be
+done through the next properly claimed closeout rather than by widening #26.
 
-Governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md), **G01–G18**.
-
-**Claim extended 2026-09-27, ahead of the work:** one document,
-[G1-WAF-PUBLICATION-PROCEDURE.md](G1-WAF-PUBLICATION-PROCEDURE.md), written at Codex's request after
-its final code review came back clean. It is the owner's step-by-step for G11/G12 — the preview-only
-rate-limit test, the evidence to capture, the reset, and the final production rule.
-
-**It is a procedure, not an execution.** Publishing the rule, accepting the metered-pricing
-acknowledgement and running the test are owner-only actions. No agent has touched Vercel project
-settings and none will. This commit and the document add no application, configuration or test
-change: the files Codex reviewed at `54e9248` stay byte-identical.
-
-**Scope — what this changes**
-
-1. **`api/news.js`** — two canonical representations replacing the free-form `limit`/`hazard`
-   parameters: all headlines and hazard-only, each fixed at 30. Non-canonical input is rejected
-   **before** `FEEDS.map(fetchFeed)` so it performs zero upstream requests, with `no-store` on
-   rejections and no echo of raw input. Method handling gains `405` with `Allow`; `OPTIONS` keeps
-   doing no upstream work.
-2. **`vercel.json`** — the routing that makes `/api/news/hazard` resolve to the shared Function,
-   plus the request-query transform intended to normalise the cache identity. Neither exists today:
-   `api/` contains only `news.js`, so `/api/news/hazard` is currently a 404.
-3. **`index.html`** — the single client fetch site at `fetchNews()`, currently building
-   `'?limit=30&hazard=1'` / `'?limit=30'`. It moves to the two canonical URLs and sends no query
-   string. `setNewsFilter()` calls `fetchNews()`, so the toggle is the live path G02 exercises.
-4. **Tests** — `test/` gains fetch-counter and handler coverage for the canonical representations,
-   zero-fan-out rejection, method handling, partial-feed behaviour, the full Star-Advertiser user
-   agent and the eight-second abort, plus mutation cases for each. Affected files:
-   `test/mutation-check.js` and a home for API-level assertions; the existing three suites are
-   updated only where the client change touches them.
-
-**The WAF action — owner-executed, named here per G16**
-
-The rule Claude will specify and record, and which **only the owner publishes**: exact paths
-`/api/news` and `/api/news/hazard`, IP counting key, fixed 60-second window, final limit **100**,
-enforcing **429**. The controlled test publishes a temporary **5 per 60 seconds** scoped to the
-preview hostname only, then restores the final production rule.
-
-**Claude will not touch Vercel project settings, publish any rule, or accept the pricing
-acknowledgement.** The owner has authorised the action; executing it is still theirs. Code and
-preview evidence land before any production merge, and G1 stays open until the final WAF state is
-verified.
-
-**Out of scope, explicitly:** no CORS change — per Decision 4 it earns no G1 credit and any change
-belongs to G3. No observation Stage 2 or 3 work. No new runtime dependency, datastore or in-process
-limiter. No change to the feed list, parser, decoding, dedupe, sort or hazard keyword model beyond
-what the contract requires. Nothing in `AGENTS.md` except the two deferred T17 items below.
-
-**Stop condition, per Decision 2:** if preview evidence shows the query transform does not normalise
-the cache identity, **implementation stops for a contract amendment and an owner decision.** The
-failure is not relabelled "unbounded but cheap" — handler rejection bounds upstream fan-out and WAF
-bounds one IP in one region, but the CDN/Function key space would remain unbounded.
-
-**Closeout absorbed into this claim** — five items, since a board PR cannot record its own merge:
-
-1. Codex's contract claim closed under Active claims (below).
-2. Its merged branch replaced under Active Branches.
-3. The two Review Queue rows for the contract and for blocked implementation updated.
-4. `G1-ABUSE-BOUNDING-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
-   authoritative — the third contract to merge while still calling itself a proposal.
-5. **The deferred T17 guidance carried here** rather than lost between branches: anchor a mutation
-   case on the line that *sets* a value rather than the line that renders it; never pin a constant's
-   value in an extraction regex, or mutating the constant breaks extraction instead of failing an
-   assertion; and adding even an optional parameter changes behaviour at every bare-reference
-   callback site, as `.map(sourceState)` did. These remain Codex's to place in `AGENTS.md` under
-   T17 during Stage 2; recorded here so they survive the branch.
-
-**Also noted, not claimed:** the merged `codex/g1-abuse-bounding-contract` branch was deleted on the
-remote, which contradicts the AGENTS line that omitting a merged branch from the active list "does
-not imply remote branch deletion." Either the convention changed and that line is stale, or the
-deletion was unintended. It cost the usual squash content-equality check, which succeeded only
-because the head commit survived locally from a pre-prune fetch. Flagged for the owner and Codex; no
-edit made.
+**Documentation only.** No application, configuration or test change.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -318,9 +251,11 @@ Codex retains design/acceptance ownership; Claude retains implementation ownersh
 implementation stays a separate claimed, reviewable PR.
 
 **What is next:** observation stage 1 is merged and production verified in #24. The owner approved
-the sequence **G1 → Stage 2 → Stage 3**. The G1 contract is drafted, reviewed, merged as #25 in
-`fcaf55a` and authoritative at G01–G18; **G1 implementation is in review as PR #26**, with the WAF
-publication outstanding and owner-only. Stage 2 then wires the
+the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `fcaf55a` and is authoritative
+at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
+published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
+the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is next** and
+wires the
 observation helpers into the cards and Source details, removes the magnitude-driven dot classes and
 satisfies T17; Stage 3 aligns the earthquake card. Each implementation needs its own claim. Q010 is
 settled as an owner-accepted unverified gap and is not outstanding.
@@ -336,7 +271,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/g1-abuse-bounding | G1 abuse and cost bounding implementation: two canonical News representations, zero-fan-out rejection, routing and cache normalisation, client fetch site, tests. Specifies the WAF rule; the owner publishes it |
+| Claude | claude/g1-closeout | **Documentation only.** Records the #26 production verification, closes G1, and carries the pre-existing hazard-classifier finding into the Review Queue |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -346,20 +281,26 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
+| Q007/Q008 stages 2 and 3 | Not started; owner-approved, and G1 is now closed so the sequence gate is lifted. **Three mutation-testing lessons are owed to `AGENTS.md` T17 during Stage 2**, carried here from the closed G1 claim so they survive it: (a) anchor a mutation case on the line that *sets* a value, not the line that renders it; (b) never pin a constant's value inside an extraction regex, or mutating the constant breaks extraction instead of failing an assertion; (c) adding even an *optional* parameter changes behaviour at every bare-reference callback site — `.map(sourceState)` is the worked example, where the array index silently became the injected clock | Claim separately. Codex places the three T17 lessons in `AGENTS.md` during Stage 2 |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **accepted by Codex — G11, G12 and G13 complete**, code review clean, `MERGEABLE/CLEAN` | **Awaiting the owner's explicit merge permission.** A merge to `main` is a production deploy; no agent merges without it |
+| G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
+| Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
+| Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
+**`main` is at `9e2cfec`**, merged through #26 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An application implementation IS in flight: PR #26 changes `api/news.js`, `vercel.json` and
-`index.html`.** An earlier version of this paragraph said `main` was `22686bb` and that the active
-G1 work was a contract only. Both were true when written — before #25 merged and before the
-implementation was claimed — and neither was corrected as the work moved. That is the same
-current-state drift the board keeps re-learning: a line describing "right now" is wrong the moment
-the thing it describes moves, and nothing updates it unless someone is looking.
+**No application implementation is in flight.** The G1 implementation merged in #26 and is verified
+in production; the only open PR is [#27](https://github.com/rmart73/PacificWatch/pull/27), which is
+documentation only. Stage 2 and Stage 3 are approved but unclaimed and unstarted.
+
+This paragraph has now been wrong twice and corrected twice — it once said `main` was `22686bb` with
+G1 a contract only, then said an implementation was in flight as #26. Each was true when written and
+neither was updated as the work moved. **The closeout that merged #26 initially repeated the
+mistake:** the new entry was written while this section and seven others still described the
+pre-merge state, and Codex caught all eight. A line describing "right now" is wrong the moment the
+thing it describes moves, and writing a correct entry elsewhere does not update it.
 
 ## Outstanding Verification and Decisions
 
@@ -481,6 +422,63 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — #26 MERGED and verified in production; G1 closed
+
+Merged on the owner's explicit permission, squashed as `9e2cfec` per the repository's convention.
+Production deployment succeeded and was verified immediately.
+
+#### Production verification
+
+```
+/api/news              200   count=30  hazard=13  nonhazard=17   mixed, as required
+/api/news/hazard       200   count=30  hazard=30  nonhazard=0    NEW — returned 404 before this
+/api/news?limit=30     200   legacy caller still works
+/api/news?hazard=1     200   returns the ALL-headlines body, key deleted at the edge
+/                      200   site serves
+
+distinct entries       /api/news updated 04:16:05.128Z
+                       /api/news/hazard updated 04:16:06.005Z
+```
+
+#### G03 is now proven in production, not only on preview
+
+```
+canonical      Age: 17   X-Vercel-Cache: HIT
+?limit=99      Age: 17   X-Vercel-Cache: HIT
+?zzz=30985     Age: 18   X-Vercel-Cache: HIT     <- freshly random, never requested before
+?a=1&b=2       Age: 18   X-Vercel-Cache: HIT
+```
+
+**A never-before-seen arbitrary key converged on the canonical cache entry rather than forcing an
+expensive miss.** That is precisely the vector G1 existed to close, now demonstrated against
+production traffic. The matching `Age` values confirm it is one entry rather than four that happen
+to be warm.
+
+The `?hazard=1` result also confirms, by measurement rather than prediction, the transient effect
+described before the merge: a browser still running the old client sends `?hazard=1`, the edge
+deletes the key, and the hazard toggle shows all headlines until the page reloads. `index.html` is
+served `no-store`, so the next load fixes it.
+
+#### G1 — closed
+
+```
+G01-G10   implementation, tests, preview evidence        accepted
+G11       final rule record                              accepted
+G12       enforcement observed at 5-per-60 and restored  accepted
+G13       per-region caveat stated, no DDoS claim        accepted
+G14-G18   contract items covered by the above            accepted
+```
+
+What it buys, unchanged from the contract and worth keeping accurate: the demonstrated single-source
+arbitrary-key vector is closed, and a single IP is bounded to 100 requests per minute **per region**.
+It is not a distributed-attack defence, and no load testing was performed.
+
+#### Carried forward, per Codex's ruling
+
+The hazard-classifier false positives move into the Review Queue below rather than widening #26.
+They are pre-existing: `HAZARD_RE` was verified byte-identical to `main` throughout, so #26 neither
+introduced nor worsened the behaviour.
 
 ### 2026-09-28 — Codex accepts G11/G12/G13; #26 awaits the owner's merge decision
 
