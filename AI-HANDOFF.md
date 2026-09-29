@@ -348,7 +348,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stages 2 and 3 | Not started; owner-approved after G1 | Claim separately after G1 implementation |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
-| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **code review clean**; **G11, G12 and G13 complete** — enforcement attributed to the rule from the platform log, protection restored, nothing further owed by the owner | **Codex renders the merge recommendation for #26** |
+| G1 abuse/cost bounding implementation | [PR #26](https://github.com/rmart73/PacificWatch/pull/26) **accepted by Codex — G11, G12 and G13 complete**, code review clean, `MERGEABLE/CLEAN` | **Awaiting the owner's explicit merge permission.** A merge to `main` is a production deploy; no agent merges without it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `fcaf55a`**, merged through #25 and serving production. Claims and handoffs for
@@ -481,6 +481,45 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-09-28 — Codex accepts G11/G12/G13; #26 awaits the owner's merge decision
+
+Final review complete. The filtered platform record closed the attribution gap, and Codex confirms
+the board correctly distinguishes owner/Claude enforcement evidence from its own independent
+steady-state verification. **G11, G12 and G13 accepted. No agent merges without the owner's explicit
+permission.**
+
+#### Scope ruling carried forward
+
+**#26 is not to be widened for the hazard-classifier issue.** It is pre-existing — `HAZARD_RE` is
+byte-identical to `main` — and goes into the Review Queue through the next properly claimed board
+closeout *after* #26 merges. Stage 2 and Stage 3 remain separately claimed work.
+
+#### What merging actually changes in production
+
+Recorded before the decision rather than after it, because this is the first production deploy of
+the G1 work:
+
+- `/api/news/hazard` begins to exist. It currently returns `404` in production.
+- `/api/news` stops accepting caller-selected parameters at the handler — but **legacy URLs keep
+  working**, because the query-delete transform strips every key at the edge before the Function
+  sees it. This was measured on preview: `?limit=99` and `?hazard=1` both returned `200` with the
+  canonical body.
+- One transient effect worth naming: a browser that already has the **old** page open in memory will
+  keep requesting `?hazard=1` until it reloads, and since the transform deletes that key, its hazard
+  toggle will show all headlines rather than hazard-only. It self-corrects on reload, and
+  `index.html` is served `no-store`, so the next load gets the new client.
+- The existing 100-per-60 WAF rule covers both paths already, since it is path-keyed with no
+  hostname condition. `/api/news/hazard` falls under it the moment it exists.
+
+#### Verification owed immediately after any merge
+
+```
+production /api/news          200, count 30, hazard and non-hazard both present
+production /api/news/hazard   200, count 30, hazard only          (currently 404)
+production /api/news?limit=30 200, canonical body                 (legacy caller)
+production site              loads, news card populates
+```
 
 ### 2026-09-28 — rule attribution captured; G11 and G12 evidence complete
 
