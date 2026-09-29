@@ -482,6 +482,46 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-28 — resumed; preview-access decision taken, procedure at revision 4
+
+State verified against the pause record before anything else, because an overnight gap is exactly
+when a "right now" line goes stale: head `0230824` local and remote, clean tree, #26
+`MERGEABLE/CLEAN`, production `7 of 7` `200`, both preview representations correct and distinct
+(`count=30` with 11 hazard / 19 non-hazard; `count=30` with 30 / 0), preview still `302` without the
+bypass header. Nothing drifted.
+
+The preview alias now serves `dpl_Aix7ndnseeXMAb7hX2DHF1znKWwL` rather than the deployment smoked on
+the 27th — the documentation-only commits triggered rebuilds. Code files remain byte-identical, so
+behaviour is unchanged, and the **current** deployment id will be recorded with the G12 evidence
+rather than the stale one.
+
+#### Decision: Deployment Protection comes off for the test window
+
+The owner chose to open the preview so **Codex observes the `429`s first-hand**. This is the right
+trade: the preview `429` is the single item Codex cannot verify for itself, and the whole reason G12
+exists is that a rule which is configured but not enforcing looks identical to one that works.
+Having the reviewer see it directly removes Claude from the evidence chain at precisely the point
+where that matters most.
+
+Cost, stated rather than waved past: the preview is publicly readable for those minutes. It serves
+Hawaii news headlines and nothing else, and the two API shapes are already visible in the open PR.
+**Phase 3b restores protection and is mandatory, with a `302` check to prove it took effect.**
+
+#### A property that makes three observers cheap
+
+The limit is keyed on **IP address**, so the owner, Codex and Claude each hold an independent
+5-per-60 budget. Three observers do not compete for one allowance and need no timing coordination
+beyond each waiting out their own clean window. Per-region counting still applies, so `x-vercel-id`
+is recorded on every request.
+
+#### Revision 4
+
+Phase 0b (open the preview, verify unauthenticated `200`) and Phase 3b (close it again, verify `302`)
+are inserted around the existing sequence. Order matters and is deliberate: protection comes off
+**before** the rule is edited, because if it cannot be removed there is no reason to touch the rate
+limit at all.
+
+
 ### 2026-09-27 — END OF NIGHT PAUSE
 
 Stopping here for the night at the owner's call. **Nothing is mid-flight and nothing is left in a

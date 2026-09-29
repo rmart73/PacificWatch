@@ -8,10 +8,12 @@ complete and reviewed clean.
 acknowledgement, and generating test traffic are external actions with billing consequences. No
 agent performs them, and no agent has touched Vercel project settings.
 
-**Revision 3.** Revision 1 produced a rule that throttled production — see the incident in
-[AI-HANDOFF.md](AI-HANDOFF.md). Revision 2 fixed the grouping guidance. Revision 3 adds the
-safeguards from Codex's review and corrects a platform constraint that invalidated the original
-sequence.
+**Revision 4.** Revision 1 produced a rule that throttled production — see the incident in
+[AI-HANDOFF.md](AI-HANDOFF.md). Revision 2 fixed the grouping guidance. Revision 3 added Codex's four
+safeguards and corrected a platform constraint that invalidated the original sequence. Revision 4
+adds the temporary removal of Deployment Protection, so that **Codex observes the `429`s
+first-hand** rather than receiving them from Claude — the owner's decision, taken because the
+preview evidence is the item Codex has least ability to verify independently.
 
 ---
 
@@ -91,6 +93,45 @@ Before changing anything.
 1. Open the existing rate-limit rule and **screenshot it**, or transcribe every field exactly:
    name, rule ID, each condition row, the rate-limit algorithm, window, limit, keys, and the action.
 2. This is **G11 evidence** and the restore target. Do not proceed without it.
+
+---
+
+## Phase 0b — open the preview to Codex
+
+Codex cannot reach the preview: without the bypass header both preview API paths return `302` to the
+Vercel login wall, measured rather than assumed. Since the `429` observation is the evidence Codex is
+least able to verify independently, Deployment Protection comes off for the duration of the test.
+
+**Do this before editing the rule.** If protection cannot be removed, there is no point changing the
+rate limit.
+
+1. Project **Settings → Deployment Protection**. Turn off the protection covering preview
+   deployments (**Vercel Authentication**, or whichever control currently gates them).
+2. Save, and publish if prompted.
+3. **Verify it is actually open** — this must return `200` with **no** bypass header and no browser
+   login:
+
+   ```bash
+   curl -s -o /dev/null -w "preview unauthenticated -> HTTP %{http_code}\n" \
+     "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news"
+   ```
+
+   ```powershell
+   curl.exe -s -o NUL -w ('preview unauthenticated -> HTTP %{http_code}\n') `
+     "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news"
+   ```
+
+   A `302` means protection is still on and Codex is still blocked.
+
+> **While protection is off the preview is publicly readable.** It serves Hawaii news headlines and
+> nothing else — no credentials, no personal data, no unreleased content beyond the two API shapes
+> already visible in the open PR. The exposure is proportionate, but it is real, so **keep the window
+> to minutes** and treat Phase 3b as mandatory rather than tidy-up.
+
+**A property that makes this cheap:** the rate limit is keyed on **IP address**, so the owner, Codex
+and Claude each get their **own** 5-requests-per-60-seconds budget. Three observers do not compete
+for one allowance and do not need to coordinate timing — beyond each waiting out their own clean
+window. Per-region counting still applies, so record `x-vercel-id` on every request.
 
 ---
 
@@ -239,6 +280,21 @@ Do this as soon as capture is complete, before writing anything up.
 
 ---
 
+## Phase 3b — close the preview again
+
+**Mandatory, not tidy-up.** Restore Deployment Protection to the setting captured before Phase 0b.
+
+Verify it took effect — this must return `302` again with no bypass header:
+
+```bash
+curl -s -o /dev/null -w "preview unauthenticated -> HTTP %{http_code}\n" \
+  "https://pacific-watch-git-claude-g1-abuse-bounding-saa-s16.vercel.app/api/news"
+```
+
+A `200` here means the preview is still public. Fix it before doing anything else.
+
+---
+
 ## Phase 4 — verify recovery on both hostnames
 
 **Wait a full 65 seconds first**, so an open rate-limit window is not mistaken for a rule that is
@@ -258,8 +314,11 @@ Then seven quick requests to **preview** `/api/news` and seven to **production**
    (Phase 2).
 5. **Firewall live-traffic screenshot** attributing the `429`s to the custom rule (Phase 2).
 6. **Restored** final rule screenshot (Phase 3, step 3).
-7. Recovery verification, both hostnames, fourteen `200`s (Phase 4).
-8. Any label or behaviour that differed from this document.
+7. **Protection restored**: the `302` check from Phase 3b.
+8. Recovery verification, both hostnames, fourteen `200`s (Phase 4).
+9. Any label or behaviour that differed from this document.
+
+Codex's own observations are recorded separately as its evidence, not relayed through this list.
 
 I write it into the board as G11/G12 evidence. Codex verifies and presents the merge decision.
 
