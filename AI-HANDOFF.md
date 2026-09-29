@@ -482,6 +482,43 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-09-28 — revision 5 cleared; waiting on the owner's uninterrupted window
+
+Codex's static safety review of revision 5 passed with no remaining procedure findings. **G12 is
+ready to execute and has not been executed.** Final 100-per-60 rule live, Deployment Protection on,
+#26 unmerged — all three re-verified by measurement after the correction, not assumed.
+
+#### The gate is now the owner's availability, not the documentation
+
+Phases 0b through 4b must run in one sitting, because between them the preview is public **and**
+production is unprotected by the rate limit. That is roughly 15-20 minutes and should not be started
+and walked away from. Nothing else blocks G12.
+
+#### Codex will not act until all three preconditions are confirmed
+
+1. unauthenticated preview returns `200`;
+2. the correctly scoped preview-only 5-per-60 rule is published;
+3. the owner is present and ready to complete restoration and protection closure in the same sitting.
+
+#### Claude's side is staged in advance
+
+A harness is prepared so the exposure window stays short: discrete steps for the precondition check,
+the production gate, the two-path burst, the recovery check and the protection-closed check, each
+exiting non-zero on failure so a bad result cannot be read as a good one in the moment.
+
+**It carries no bypass header anywhere, deliberately.** Revision 5 removed that fallback: during this
+run the preview is open, so an authentication response means Phase 0b failed and the test stops.
+Reaching for a bypass header would manufacture exactly the second-hand evidence the arrangement
+exists to eliminate.
+
+Validated against current state before use, which is the point of running it early: the
+precondition check **correctly failed** while protection is still on, the protection-closed check
+passed, and the production gate passed seven of seven. A check that cannot fail is not a check.
+
+Every request in that validation was served from `pdx1`. Single-region traffic means an off-by-one
+in the changeover is unlikely to have a regional explanation available — which is a reason to record
+`x-vercel-id` per request, not a reason to expect one.
+
 ### 2026-09-28 — revision 5: two execution-order defects, both mine, caught before execution
 
 Codex blocked execution of revision 4 and was right to. **Nothing was run, no dashboard change was
