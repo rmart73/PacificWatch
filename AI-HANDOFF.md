@@ -38,21 +38,84 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
-| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed review corrected the missed #27 self-close and Claude's stale overnight-hold finding | Claude review complete; owner decides merge |
+| Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified, and content equality across the squash confirmed against branch head `ae3a410` | Closed |
+| Q007/Q008 stage 3 — earthquake alignment | Claimed on `claude/observation-stage3`; implementation not started at the time of this claim | Claude implements T12, then hands evidence to Codex for review |
 
 ### Active claims
 
-**End-of-night checkpoint after Stage 2 — ChatGPT Codex,
-`codex/night-pause-2026-09-28`.**
-Claimed 2026-09-28 on the owner's instruction to merge #28, verify current status and pause for the
-night. Branched from production `main` at the #28 squash merge, after the deployment completed.
-Resumed 2026-10-01 for the promised consistency review; no implementation work was started.
+**Q007/Q008 Stage 3 — earthquake observation-truthfulness alignment — Claude Code,
+`claude/observation-stage3`.**
+Claimed 2026-10-01 before editing any implementation file, in its own commit ahead of the work, on
+the owner's explicit authorization relayed through Codex. Branched from `main` at **`e39b772`**,
+with content equality across the #29 squash verified first: `AI-HANDOFF.md`, `AGENTS.md`,
+`index.html`, `vercel.json`, `package.json`, `api/news.js` and `api/news/hazard.js` are all
+byte-identical to branch head `ae3a410`.
 
-Scope is documentation only: record #28's merge and independent production verification; close the
-Stage 2 claims, branch and Review Queue entries that #28 could not close about itself; identify
-Stage 3 as the next approved but unclaimed implementation; and leave an exact resume checkpoint.
-No application, test, API, configuration, dependency, Stage 3, classifier, remote-branch convention
-or closed-claims-cleanup change is in scope.
+Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), **T12
+and the Earthquake section**. T01–T11 and T13–T17 closed in Stage 2 and are not reopened.
+
+**The asymmetry that shapes this stage.** The contract gives USGS *"existing fetch-health limits"*
+and existing 60-minute cache retention, and says an event's age *"remains visible as content age and
+does not make a successfully refreshed query stale."* So **USGS must stay out of**
+`OBSERVATION_LIMITS` — unlike weather and tide, an old earthquake is not an old reading. A month-old
+quake inside the 30-day window is a correct answer to a query that ran seconds ago. Stage 3 is
+therefore not "apply Stage 2 to the quake card"; three of its four rules are about something else.
+
+**Functions this changes, named before touching them**
+
+1. **`renderQuakeCard(quakes, stale)`** — `index.html` **1473**. Takes the combined state rather than
+   a fetch-derived boolean. Today the dot is `stale ? 'unknown' : 'ok'` on **both** branches, so a
+   **missing magnitude still earns a verified dot** at line **1498** — the contract requires
+   `unknown` there, because the primary metric is the thing that is absent.
+2. **`renderQuakes(quakes, stale)`** — **2100**. Passes the state through to the card and to the
+   Alerts list items at **2119**, which render event times with the same helper.
+3. **`timeAgo(ms)`** — **2091**. Measured, not assumed:
+
+   ```
+   undefined / NaN / "not a time"  ->  "NaNd ago"
+   null                            ->  "20728d ago"     (the Unix epoch)
+   Date.now() + 90 min             ->  "just now"
+   ```
+
+   The last is the one the contract names directly: a future or unusable event time must produce
+   `unknown`, and the app *"must not substitute the fetch time as the event time."* Rendering a
+   future event as **"just now"** is exactly that substitution, wearing a plausible number.
+4. **`renderQuakeCardUnavailable()`** — **1500**. Expected to need no change; named because it is the
+   fallback the new unusable-time path may route to, and silence about it would be an omission.
+5. **`renderObservationCards(now)`** — added in Stage 2. The quake card is extended into it so the
+   age tick and `switchView()` re-evaluate it from cache, as weather and tide already do. Its dot
+   follows fetch health, and fetch health ages.
+6. **`fetchEarthquakes()`** — **2124**. Call sites only, to route through the state-aware renderer.
+   `sourceOk('usgsEarthquakes', data.features, token)` keeps passing **no** `observed` argument,
+   deliberately: that is what keeps event age out of the freshness calculation.
+
+**Markup regions**
+
+- `index.html` **548–550** — `#dot-quake`, `#stat-quake`, `#stat-quake-note`.
+- `#earthquakes-container` — the Alerts list rendered by `renderQuakes()`.
+- **1627** — the `['stat-quake', 'stat-quake-note', 'dot-quake']` triple in
+  `renderIslandScopedChecking()`, read to confirm the island-switch path still holds; changed only
+  if the new states require it.
+
+**Test files**
+
+- `test/dom-behavior.test.js` — T12 fixtures: empty query verified; missing magnitude `unknown`;
+  event age not confused with query freshness; and the unusable and future event-time cases above.
+- `test/mutation-check.js` — a case per rule, so each assertion is demonstrably load-bearing.
+- `test/phase1-source-health.test.js` — **only if** a pure helper is extracted for event-time
+  usability. If the logic stays inside the render path, this file is untouched and the claim says
+  so rather than leaving it ambiguous.
+
+**Out of scope, explicitly**
+
+The hazard-classifier finding and `HAZARD_RE`. The remote-branch convention question. The
+closed-claims cleanup. `AGENTS.md`. Any API, `vercel.json`, WAF, dependency or Stage 1/2 change.
+Existing query-limit and radius disclosures stay exactly as they are — the contract says so, and
+they are the kind of correct, hard-won wording that invites casual rewriting.
+
+**Absorbed into this claim:** #29's self-close, since a board PR cannot record its own merge —
+Current Work, Active Branches, the Review Queue rows, the `main` pointer, and Codex's completed
+checkpoint claim, whose history remains in the Handoff Log.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -278,7 +341,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/night-pause-2026-09-28 | [#29](https://github.com/rmart73/PacificWatch/pull/29), documentation-only Stage 2 production checkpoint under resumed review; no implementation work |
+| Claude | claude/observation-stage3 | Q007/Q008 Stage 3: earthquake observation-truthfulness alignment under T12. Branched from `main` at `e39b772` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -289,15 +352,15 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
-| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed consistency review corrected the missed #27 self-close, and Claude's read-only review finding is corrected | Owner decides merge |
-| Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after #29 merges; claim separately before editing |
+| Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified | Closed |
+| Q007/Q008 stage 3 | **Claimed and in progress on `claude/observation-stage3`.** Earthquake alignment under T12 | Claude implements and gathers evidence; Codex reviews before merge |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `a2d032e`**, merged through #28 and serving production. Claims and handoffs for
+**`main` is at `e39b772`**, merged through #29 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application implementation is in flight.** The only active work is this documentation-only
