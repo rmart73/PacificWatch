@@ -10,7 +10,8 @@ That archive is historical evidence, not an active claim board.
 
 Updated 2026-10-01. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
-verification**, and the **#28 production verification**, which Codex performed directly. The #26 checks were unauthenticated HTTP
+verification**, the **#28 production verification**, and the **#31 documentation deploy**, which
+Codex performed directly. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -40,16 +41,31 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 followed in #30, so the contract is closed at T01–T17 |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified, and content equality across the squash confirmed against branch head `ae3a410` | Closed |
 | Q007/Q008 stage 3 — earthquake alignment | **#30 merged in `9a83c55`** and production verified: the served HTML is byte-identical to the merged blob, and a 174-minute-old real earthquake renders verified, which is the asymmetry working | **Closed. T12 complete, so T01–T17 are now closed** |
-| Stage 3 closeout record | Claimed on `claude/stage3-closeout`; documentation only | Codex reviews; the owner decides merge |
+| Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
+| Hazard-classifier acceptance contract | Claimed on `codex/hazard-classifier-contract`; documentation and design only | Codex writes the acceptance contract; Claude reviews read-only; owner decides merge |
 
 ### Active claims
 
-**Stage 3 closeout — Claude Code, `claude/stage3-closeout`.**
-Claimed 2026-10-02 before editing, in its own commit ahead of the work. Branched from `main` at the
-#30 squash merge. Scope: record the #30 production verification, close the Stage 3 claim, branch and
-Review Queue rows that a board PR cannot close about itself, and reconcile the current-state region.
+**Hazard-classifier acceptance contract — ChatGPT Codex,
+`codex/hazard-classifier-contract`.** Owner-authorized 2026-10-01 under the agreed
+design-first split. Claimed before editing, on a fresh branch from `main` at `565f686`.
 
-**Documentation only.** No application, API, configuration, dependency or test change.
+**Scope:**
+
+1. Absorb #31's self-close across Current Work, Active claims, Active Branches, Review Queue and the
+   `main` pointer before starting the new design work.
+2. Write `HAZARD-CLASSIFIER-CONTRACT.md`, defining what qualifies for the hazard representation;
+   the Hawaii-locality and actionability rules; exact-token versus substring behavior; treatment of
+   national wire copy; false-positive and true-positive fixtures; recall protections; and the local,
+   preview and live evidence required before implementation may merge.
+3. Preserve the two canonical News representations and the G1 cache/cost bound. The contract may
+   govern a later classifier implementation, but this claim changes no runtime behavior.
+
+**Out of scope:** no edit to `api/news.js`, `api/news/hazard.js`, `index.html`, `vercel.json`, tests,
+`package.json` or `AGENTS.md`; no feed, WAF or Vercel setting change; no classifier implementation;
+and no work on News `timeAgo()`, the remote-branch convention or closed-claims cleanup. Claude
+reviews the contract read-only. Implementation requires a separate owner-authorized Claude claim
+after this contract is reviewed and merged.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -275,7 +291,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/stage3-closeout | **Documentation only.** Records the #30 production verification and closes the Stage 3 rows that a board PR cannot close about itself |
+| Codex | codex/hazard-classifier-contract | **Documentation and design only.** Defines the hazard-classifier acceptance contract and absorbs #31's self-close |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -288,19 +304,20 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 3 | #30 merged in `9a83c55`; production verified, three review rounds closed | Closed; the observation-truthfulness contract is fully implemented at T01–T17 |
+| Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
-| Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
+| Hazard classifier false positives | **Contract claimed on `codex/hazard-classifier-contract`.** Roughly 7 of 30 items in the hazard representation during Nolo were not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `9a83c55`**, merged through #30 and serving production. Claims and handoffs for
+**`main` is at `565f686`**, merged through #31 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** Stage 3 merged in #30 and is verified in production;
-the only open work is this documentation-only closeout. **The observation-truthfulness contract is
-now fully implemented at T01–T17**, across stages 1, 2 and 3.
+**No application implementation is in flight.** The hazard-classifier acceptance contract is the
+only active work and is documentation/design only. Stage 3 merged in #30 and its closeout merged in
+#31; the observation-truthfulness contract is fully implemented at T01–T17 across stages 1, 2 and 3.
 
 This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
@@ -432,6 +449,56 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-01 — hazard-classifier acceptance contract drafted; implementation not started
+
+Owner authorized continuing with the user-visible hazard-classifier false positives next. Codex
+branched `codex/hazard-classifier-contract` from `main` at `565f686` and published the claim in
+`b6aba6a` before writing the contract. The claim also absorbs #31's self-close across the live board.
+
+[HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md) is proposed for Claude's read-only
+review. Its central decision is a two-gate classifier: decoded title+summary must carry both
+actionable hazard evidence and an explicit Hawaiʻi place, jurisdiction or authoritative local
+agency. Word-boundary cleanup alone is insufficient because the Nolo record included two genuine
+mainland hazards that still did not belong in a Hawaiʻi hazard representation.
+
+The contract turns the five lexical Nolo failures into required negative fixtures — `erupt` in
+gunfire, EMS, a political warning, a fund that swells and a routine DMV closure — alongside the two
+non-local weather stories. It also carries independent positive fixtures so precision cannot be
+improved by deleting real local hazards. Context-dependent terms are specified separately rather
+than hidden in another opaque regular expression.
+
+Acceptance H01-H18 preserves the two canonical News representations and every G1 bound; requires
+mutation coverage in both directions; and requires the old and new classifiers to be run over the
+same contemporaneous five-feed capture, with every changed label reviewed individually. A live
+percentage without its reviewed item list is not evidence. The full feed bodies are not committed.
+
+A read-only production sample was used only as a design sanity check, not as acceptance evidence.
+It confirmed why title-only review is insufficient: several locally meaningful items name the
+island or agency in the summary rather than the title, while current noise still includes remote
+weather, a routine police closure and EMS wording. H15/H16 therefore govern decoded title+summary
+and require review of every removal before implementation merges.
+
+Claude's first read-only review found a decisive circularity: the minimum place vocabulary was
+sized to a synthetic corpus authored beside it. The recorded Nolo evacuation for Olowalu Village,
+whose summary names Honoapiilani Highway and North Kihei, matched none of those anchors and would
+have been deleted despite being the most operationally important item in the evidence. The revised
+contract makes that real item a required positive, seeds locality from Nolo plus a five-feed capture
+spanning at least three publication dates, and makes every hazard-evidence/locality-false item a
+separate vocabulary-review record that cannot be banked as improved precision. H14 also now states
+the repository's actual condition: runtime `dependencies` remains **absent or empty**, so no one is
+invited to add an empty key.
+
+Claude's second read-only review found one unsafe anchor added by that correction: `Ocean View` is a
+real Kaʻū community but also generic property and tourism language. With legitimate hazard wording
+elsewhere in an article, decorative “ocean view” copy could falsely satisfy the locality gate. The
+bare phrase is removed from the minimum set, made a required negative collision, and may return only
+with a disambiguating Hawaiʻi qualifier plus positive and negative fixtures. This generalizes to
+any future place name that is also common English rather than treating one phrase as an exception.
+
+**No implementation has started.** `api/news.js`, both canonical routes, the client, tests,
+configuration, dependencies, WAF and production are untouched. Claude reviews read-only; only an
+accepted and merged contract plus a separate owner-authorized claim may start implementation.
 
 ### 2026-10-02 — #30 merged and production verified; the contract is complete
 
