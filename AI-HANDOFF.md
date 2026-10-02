@@ -43,6 +43,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**Stage 3 closeout — Claude Code, `claude/stage3-closeout`.**
+Claimed 2026-10-02 before editing, in its own commit ahead of the work. Branched from `main` at the
+#30 squash merge. Scope: record the #30 production verification, close the Stage 3 claim, branch and
+Review Queue rows that a board PR cannot close about itself, and reconcile the current-state region.
+
+**Documentation only.** No application, API, configuration, dependency or test change.
+
 **Q007/Q008 Stage 3 — earthquake observation-truthfulness alignment — Claude Code,
 `claude/observation-stage3`.**
 Claimed 2026-10-01 before editing any implementation file, in its own commit ahead of the work, on
