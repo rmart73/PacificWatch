@@ -10,7 +10,8 @@ That archive is historical evidence, not an active claim board.
 
 Updated 2026-10-01. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
-verification**, and the **#28 production verification**, which Codex performed directly. The #26 checks were unauthenticated HTTP
+verification**, the **#28 production verification**, and the **#31 documentation deploy**, which
+Codex performed directly. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -448,6 +449,39 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-01 — hazard-classifier acceptance contract drafted; implementation not started
+
+Owner authorized continuing with the user-visible hazard-classifier false positives next. Codex
+branched `codex/hazard-classifier-contract` from `main` at `565f686` and published the claim in
+`b6aba6a` before writing the contract. The claim also absorbs #31's self-close across the live board.
+
+[HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md) is proposed for Claude's read-only
+review. Its central decision is a two-gate classifier: decoded title+summary must carry both
+actionable hazard evidence and an explicit Hawaiʻi place, jurisdiction or authoritative local
+agency. Word-boundary cleanup alone is insufficient because the Nolo record included two genuine
+mainland hazards that still did not belong in a Hawaiʻi hazard representation.
+
+The contract turns the five lexical Nolo failures into required negative fixtures — `erupt` in
+gunfire, EMS, a political warning, a fund that swells and a routine DMV closure — alongside the two
+non-local weather stories. It also carries independent positive fixtures so precision cannot be
+improved by deleting real local hazards. Context-dependent terms are specified separately rather
+than hidden in another opaque regular expression.
+
+Acceptance H01-H18 preserves the two canonical News representations and every G1 bound; requires
+mutation coverage in both directions; and requires the old and new classifiers to be run over the
+same contemporaneous five-feed capture, with every changed label reviewed individually. A live
+percentage without its reviewed item list is not evidence. The full feed bodies are not committed.
+
+A read-only production sample was used only as a design sanity check, not as acceptance evidence.
+It confirmed why title-only review is insufficient: several locally meaningful items name the
+island or agency in the summary rather than the title, while current noise still includes remote
+weather, a routine police closure and EMS wording. H15/H16 therefore govern decoded title+summary
+and require review of every removal before implementation merges.
+
+**No implementation has started.** `api/news.js`, both canonical routes, the client, tests,
+configuration, dependencies, WAF and production are untouched. Claude reviews read-only; only an
+accepted and merged contract plus a separate owner-authorized claim may start implementation.
 
 ### 2026-10-02 — #30 merged and production verified; the contract is complete
 
