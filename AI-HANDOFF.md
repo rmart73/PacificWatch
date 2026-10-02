@@ -592,10 +592,31 @@ are stronger than before, not merely adjusted to agree.
 zero `ANCHOR LOST`, zero `AMBIGUOUS`. `index.html`, `vercel.json`, `package.json`, `AGENTS.md`,
 `api/news/hazard.js` and the DOM/contrast/severity suites are untouched.
 
+#### H17 — preview, both representations and their G1 cache identity
+
+Deployed preview, 9 of 9 assertions passed. Each arbitrary query key is generated per run, so a
+`HIT` on it is convergence rather than a replay.
+
+```
+/api/news          MISS then HIT   n=30  hazard=6   nonhazard=24   updated 08:19:26.623Z
+  fresh arbitrary variant   HIT, same updated
+/api/news/hazard   MISS then HIT   n=26  hazard=26  nonhazard=0    updated 08:19:29.328Z
+  fresh arbitrary variant   HIT, same updated
+distinctness       different updated, different bodies
+```
+
+**That pair is also a live H10 demonstration.** The hazard representation returns **26** items while
+the newest-30 mixed list contains only **6** hazard items. Filtering the capped list — which is what
+a browser could do for itself — would have yielded six. The difference is the entire justification
+for a separate representation, and the stricter classifier makes it larger rather than smaller.
+
+It returns 26 rather than 30, which is the contract working as written: *"prefer a smaller,
+defensible local set over filling thirty slots with remote or metaphorical matches."*
+
 #### Outstanding
 
-H17 preview evidence, and Codex's decision on the two blockers above. H18 production verification
-follows an owner-approved merge.
+Codex's decision on the two blockers above. H18 production verification follows an owner-approved
+merge.
 
 
 ### 2026-10-01 — hazard-classifier acceptance contract drafted; implementation not started
