@@ -47,6 +47,19 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**Hazard-classifier closeout — Claude Code, `claude/hz-closeout`.**
+Claimed 2026-10-02 before editing, in its own commit ahead of the work, on the owner's explicit
+authorization. Branched from `main` at `afff98b`.
+
+Scope: absorb #33's self-close across Current Work, Active claims, Active Branches, the Review
+Queue, the `main` pointer, the attribution header and the in-flight paragraph; record the H18
+production evidence and H10's live result; preserve the accepted historical Nolo false negatives
+with the reason the refreshed item now passes; and record the aftermath/consequence cluster as an
+unclaimed possible future contract amendment.
+
+**Documentation only.** No application, API, test, configuration, dependency, WAF or production
+settings change. The merged implementation branch is not touched.
+
 **Hazard-classifier implementation — Claude Code, `claude/hazard-classifier`.**
 Claimed 2026-10-02 before editing any implementation file, in its own commit ahead of the work, on
 the owner's explicit authorization. Branched from `main` at **`1b3c822`**.
