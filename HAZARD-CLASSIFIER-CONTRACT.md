@@ -74,7 +74,7 @@ The initial anchor set must cover at minimum:
 - the four county names and Honolulu;
 - common places already present in the contract and production evidence: Hilo, Kona, Puna,
   Kīlauea/Kilauea, Mauna Loa, Lahaina, Kahului, Līhuʻe/Lihue, Waikīkī/Waikiki,
-  Waiʻanae/Waianae, Poʻipū/Poipu, Pearl City, Ocean View and Kalaupapa;
+  Waiʻanae/Waianae, Poʻipū/Poipu, Pearl City and Kalaupapa;
 - the real feed locations that exposed the original vocabulary gap: Olowalu, Honoapiʻilani/
   Honoapiilani, Kīhei/Kihei, Waiawa, Waimānalo/Waimanalo and Kailua; and
 - authoritative local agencies or offices: HIEMA, Hawaiʻi Emergency Management, Hawaiʻi County
@@ -85,6 +85,13 @@ The anchor list is an explicit maintained vocabulary, not a substring expression
 `island`, a publisher name, feed URL, or the fact that an outlet is based in Hawaiʻi does not pass
 the gate. A later place may be added with a fixture and rationale; silently broadening locality is
 not permitted.
+
+A place name that is also common generic English is not safe as a bare anchor. It requires a
+disambiguating Hawaiʻi qualifier in the same record. **Ocean View is intentionally absent from the
+minimum set** for this reason: it may mean the Kaʻū community, but it is also routine property and
+tourism language. It may be added only as a qualified construction such as `Ocean View, Hawaii`,
+`Ocean View subdivision`, or `Ocean View` paired with Kaʻū/Big Island context, with negative
+fixtures proving that decorative “ocean view” copy does not pass.
 
 The list remains maintained rather than presumed complete. During implementation, every item with
 hazard evidence that fails only the locality gate is a **vocabulary-review item**, not a precision
@@ -161,6 +168,7 @@ Every implementation must keep these false, even when the text also contains a H
 8. “Maui nonprofit animal shelter expands capacity.”
 9. “Candidate takes Oʻahu by storm.”
 10. “A flood of donations reaches a Hilo food bank.”
+11. “Storm damage repairs begin at an ocean view resort.”
 
 The first seven encode the Nolo evidence: five lexical false positives and two legitimate but
 non-local weather stories. The remaining cases guard the rule rather than one observed headline.
@@ -200,7 +208,7 @@ fail if the implementation used publisher identity instead of the content.
 | H01 | One named, pure classifier is the only producer of the item-level `hazard` boolean. | Source search plus a mutation that bypasses the helper and is caught. |
 | H02 | Matching uses normalized decoded title+summary and word/phrase boundaries, without changing returned text. | Controlled fixtures for case, punctuation, hyphens, entities, diacritics, and longer-word collisions. |
 | H03 | Hawaiʻi relevance is mandatory and publisher/feed identity alone never satisfies it. | Same hazard wording with and without a Hawaiʻi anchor; a mutation removing the locality gate must fail. |
-| H04 | The maintained locality vocabulary meets the minimum set and is seeded from the Nolo evidence plus a real five-feed capture spanning at least three publication dates; bare `HI` and bare `island` fail. | Provenance ledger for captured anchors plus table-driven positive and negative locality fixtures independent of the implementation list. |
+| H04 | The maintained locality vocabulary meets the minimum set and is seeded from the Nolo evidence plus a real five-feed capture spanning at least three publication dates; bare `HI`, bare `island`, and ambiguous generic place phrases fail. | Provenance ledger for captured anchors plus table-driven positive and negative locality fixtures independent of the implementation list, including the bare `ocean view` collision. |
 | H05 | Direct and context-dependent hazard language follows the decision table. | Every required positive and negative passes; mutations restoring `erupt`, `swell`, `emergency`, `warning`, `closed`, or bare `outage` as substrings are caught. |
 | H06 | A remote hazard remains false unless the text states Hawaiʻi impact; remote origin plus Hawaiʻi impact may pass. | California/Texas negatives and the Japan-quake/Hawaiʻi-tsunami positive. |
 | H07 | Title and summary can supply complementary evidence. | Required positive 11, plus the inverse arrangement and summary-only cases. |

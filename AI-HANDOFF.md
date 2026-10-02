@@ -489,6 +489,13 @@ separate vocabulary-review record that cannot be banked as improved precision. H
 the repository's actual condition: runtime `dependencies` remains **absent or empty**, so no one is
 invited to add an empty key.
 
+Claude's second read-only review found one unsafe anchor added by that correction: `Ocean View` is a
+real Kaʻū community but also generic property and tourism language. With legitimate hazard wording
+elsewhere in an article, decorative “ocean view” copy could falsely satisfy the locality gate. The
+bare phrase is removed from the minimum set, made a required negative collision, and may return only
+with a disambiguating Hawaiʻi qualifier plus positive and negative fixtures. This generalizes to
+any future place name that is also common English rather than treating one phrase as an exception.
+
 **No implementation has started.** `api/news.js`, both canonical routes, the client, tests,
 configuration, dependencies, WAF and production are untouched. Claude reviews read-only; only an
 accepted and merged contract plus a separate owner-authorized claim may start implementation.
