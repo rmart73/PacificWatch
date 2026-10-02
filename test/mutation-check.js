@@ -467,6 +467,74 @@ const mutations = [
     expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
     suite: 'news', target: 'api' },
 
+  /* ---- Q007/Q008 Stage 3 / T12: the earthquake card ---- */
+
+  /* The defect T12 names first: a missing magnitude is the PRIMARY metric missing, so the dot
+     cannot stay verified however healthy the query was. */
+  { name: 'a missing magnitude earns a verified dot again',
+    from: "  if (dot) dot.className = (queryVerified && magUsable) ? 's-dot ok' : 's-dot unknown';",
+    to:   "  if (dot) dot.className = queryVerified ? 's-dot ok' : 's-dot unknown';",
+    expect: ['and the dot is NOT verified'], suite: 'dom' },
+
+  /* The asymmetry guard, in the opposite direction from every other card in the app: treating an
+     event's age as freshness would unverify a correct answer to a query that just succeeded. */
+  { name: 'event age treated as query freshness',
+    from: "  if (dot) dot.className = (queryVerified && magUsable) ? 's-dot ok' : 's-dot unknown';",
+    to:   "  if (dot) dot.className = (queryVerified && magUsable && (Date.now() - p.time) < 75 * MIN) ? 's-dot ok' : 's-dot unknown';",
+    expect: ['a 20-day-old event still carries a verified dot'], suite: 'dom' },
+
+  /* An unplaceable time rendered as a number is the whole reason this helper exists. */
+  { name: 'unusable event times accepted again',
+    from: "  if (typeof ms !== 'number' || !isFinite(ms)) return null;",
+    to:   "  if (false) return null;",
+    expect: ['undefined event time is not verified'], suite: 'dom' },
+
+  /* The deceptive case: a future event rendered as "just now" is the fetch clock wearing the
+     event's clothes. */
+  { name: 'future event times accepted again',
+    from: "  if (ms - base > OBS_SKEW_MS) return null;",
+    to:   "",
+    expect: ['a future event time is not verified'], suite: 'dom' },
+
+  /* A successful empty query is information, not an absence of it. */
+  { name: 'an empty query treated as unverified',
+    from: "    if (dot) dot.className = observationDot(state);",
+    to:   "    if (dot) dot.className = 's-dot unknown';",
+    expect: ['an empty result is verified, not treated as missing data'], suite: 'dom' },
+
+  /* The Alerts list and the card are the same data and must not disagree about it. */
+  { name: 'the Alerts list dates an unplaceable event again',
+    from: "    const when = quakeEventAge(p.time, now);",
+    to:   "    const when = timeAgo(p.time);",
+    expect: ['the Alerts list refuses it too'], suite: 'dom' },
+
+  /* Codex's finding: the dot and copy assertions passed while "M 4.0" was still on screen beside
+     an unknown-time note. The presentation matrix requires the value WITHHELD, so the mutation
+     that restores the leak has to be caught. */
+  { name: 'an unusable event time leaks the magnitude again',
+    from: "  if (age == null) {",
+    to:   "  if (false) {",
+    expect: ['and the magnitude is WITHHELD, not merely un-dotted'], suite: 'dom' },
+
+  /* The card and the Alerts list are the same data; renderQuakes() says so. Re-rendering only the
+     card let them disagree at exactly the boundaries that matter. */
+  { name: 'the tick re-renders only the card, leaving the Alerts list behind',
+    from: "  renderQuakes(entry.data, now);",
+    to:   "  renderQuakeCard(entry.data, now);",
+    expect: ['and the Alerts list, which it used to leave behind'], suite: 'dom' },
+
+  { name: 'past retention the Alerts list is left showing expired events',
+    from: "  if (state === 'unavailable') { renderQuakeSurfacesUnavailable(); return; }",
+    to:   "  if (state === 'unavailable') { renderQuakeCardUnavailable(); return; }",
+    expect: ['and the list is withdrawn with it'], suite: 'dom' },
+
+  /* quakeEventAge implements OBS_SKEW_MS independently of observationState, so only an explicit
+     boundary case can notice the comparison drifting. */
+  { name: 'the skew boundary excludes exact equality',
+    from: "  if (ms - base > OBS_SKEW_MS) return null;",
+    to:   "  if (ms - base >= OBS_SKEW_MS) return null;",
+    expect: ['exactly +5 minutes is INSIDE the allowance'], suite: 'dom' },
+
   /* ---- Q007/Q008 Stage 2: the observation clock reaching the cards ---- */
 
   /* The defect Stage 2 exists to remove: magnitude deciding a dot that means verification. */
