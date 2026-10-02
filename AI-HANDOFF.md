@@ -509,6 +509,91 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-01 — Stage 3 implementation complete; handed to Codex
+
+Implementation, tests and a live record are done. `AGENTS.md` untouched; `timeAgo()` byte-identical
+to `main`; `renderNews()` not touched.
+
+#### What the earthquake card does now
+
+The dot answers one question — **was a usable, current reading verified** — and the three ways the
+answer can be no are each handled.
+
+**A missing magnitude no longer keeps a verified dot.** It is the primary metric; the card showed
+`M unknown` and an `ok` dot at the same time. Place and event time still show, because they are
+real; the dot does not, because the thing being measured is absent.
+
+**An event time we cannot place is no longer dressed up as one.** `quakeEventAge()` returns `null`
+for a non-finite or far-future time and callers render `event time unknown`. What that replaced,
+measured before the change:
+
+```
+undefined / NaN / "not a time"  ->  "NaNd ago"
+null                            ->  "20728d ago"     (the Unix epoch)
+now + 90 min                    ->  "just now"
+```
+
+The last is the one the contract names: the app *"must not substitute the fetch time as the event
+time."* A future event reading **"just now"** is exactly that, and it is the dangerous form, because
+it looks like an answer rather than like a bug.
+
+**A successful empty query keeps its dot.** *"No M2.0+ events in range in 30 days"* is information,
+not an absence of it.
+
+#### The asymmetry, and why this stage is not "Stage 2 again"
+
+USGS stays **out** of `OBSERVATION_LIMITS`. The contract gives it *"existing fetch-health limits"*
+and says an event's age *"remains visible as content age and does not make a successfully refreshed
+query stale."* So `combinedObservationState()` returns the fetch state for USGS and ignores
+`valueUsable`; magnitude and event-time usability are combined explicitly in the renderer instead.
+
+**A mutation guards that direction specifically** — adding a 75-minute age test to the quake dot is
+caught — because it is the one place in this app where ageing a reading would be the wrong
+behaviour, and therefore the one place a future reader is most likely to "fix" correctly-working
+code.
+
+#### Live record — deployed preview, real USGS endpoint
+
+Captured `2026-10-02T05:11:12Z` from
+`pacific-watch-git-claude-observation-stage3-saa-s16.vercel.app`. Expectations computed in the
+harness, independently of the app.
+
+```
+RAW      10 events · latest mag 2.32 · time 1790910485460 (123 min ago)
+         place "9 km SW of Wai‘ōhinu, Hawaii"
+EXPECT   magnitude usable · event time placeable · verified, because the QUERY is fresh
+ACTUAL   #stat-quake       M 2.3
+         #stat-quake-note  9 km SW of Wai‘ōhinu, Hawaii · 2h ago
+                           · within 500 km of Hawaii · 10+ in range
+         #dot-quake        s-dot ok
+SOURCES  USGS Earthquakes   checked 0 sec ago   Current      (no obs age — no measurement clock)
+```
+
+**The live data demonstrated the asymmetry better than a fixture could.** The newest real earthquake
+was **123 minutes old** — past the 75-minute window that would make a *weather* observation stale —
+and it is correctly **verified**, because the query is fresh and the event's age is content. A card
+that copied Stage 2 would have been wrong on real data, on the first load.
+
+#### Scope held
+
+`timeAgo()` is **byte-identical to `main`**, verified by diff, and `renderNews()` is untouched. The
+shared helper has a third consumer, so the new validation is earthquake-local. **News carries the
+same latent defect** — `timeAgo(Date.parse(it.published))` renders `"NaNd ago"` for an unparseable
+`published` — and it is recorded in the Review Queue as its own unclaimed item rather than folded
+into a PR claimed for T12.
+
+The quake card joins `renderObservationCards()`, since its fetch health ages even without a
+measurement clock. Existing query-limit and radius disclosures are unchanged, as the contract
+requires.
+
+#### Verification
+
+`npm test` **306** · `npm run test:dom` **384** · `npm run test:mutation` **101 of 101 caught**, zero
+`ANCHOR LOST`, zero `AMBIGUOUS`. No anchors were disarmed this round despite rewriting both
+earthquake render paths — the post-change revalidation the fourth T17 lesson asks for was run and
+came back clean rather than being assumed.
+
+
 ### 2026-10-01 — resumed review found #27's claim still active in #29
 
 Codex resumed from the pause checkpoint read-only. `main` remained clean at `a2d032e`; PR #29 was
