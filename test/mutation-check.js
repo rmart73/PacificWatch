@@ -467,6 +467,47 @@ const mutations = [
     expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
     suite: 'news', target: 'api' },
 
+  /* ---- Q007/Q008 Stage 3 / T12: the earthquake card ---- */
+
+  /* The defect T12 names first: a missing magnitude is the PRIMARY metric missing, so the dot
+     cannot stay verified however healthy the query was. */
+  { name: 'a missing magnitude earns a verified dot again',
+    from: "  if (dot) dot.className = (queryVerified && magUsable && age != null) ? 's-dot ok' : 's-dot unknown';",
+    to:   "  if (dot) dot.className = queryVerified ? 's-dot ok' : 's-dot unknown';",
+    expect: ['and the dot is NOT verified'], suite: 'dom' },
+
+  /* The asymmetry guard, in the opposite direction from every other card in the app: treating an
+     event's age as freshness would unverify a correct answer to a query that just succeeded. */
+  { name: 'event age treated as query freshness',
+    from: "  if (dot) dot.className = (queryVerified && magUsable && age != null) ? 's-dot ok' : 's-dot unknown';",
+    to:   "  if (dot) dot.className = (queryVerified && magUsable && age != null && (Date.now() - p.time) < 75 * MIN) ? 's-dot ok' : 's-dot unknown';",
+    expect: ['a 20-day-old event still carries a verified dot'], suite: 'dom' },
+
+  /* An unplaceable time rendered as a number is the whole reason this helper exists. */
+  { name: 'unusable event times accepted again',
+    from: "  if (typeof ms !== 'number' || !isFinite(ms)) return null;",
+    to:   "  if (false) return null;",
+    expect: ['undefined event time is not verified'], suite: 'dom' },
+
+  /* The deceptive case: a future event rendered as "just now" is the fetch clock wearing the
+     event's clothes. */
+  { name: 'future event times accepted again',
+    from: "  if (ms - Date.now() > OBS_SKEW_MS) return null;",
+    to:   "",
+    expect: ['a future event time is not verified'], suite: 'dom' },
+
+  /* A successful empty query is information, not an absence of it. */
+  { name: 'an empty query treated as unverified',
+    from: "    if (dot) dot.className = observationDot(state);",
+    to:   "    if (dot) dot.className = 's-dot unknown';",
+    expect: ['an empty result is verified, not treated as missing data'], suite: 'dom' },
+
+  /* The Alerts list and the card are the same data and must not disagree about it. */
+  { name: 'the Alerts list dates an unplaceable event again',
+    from: "    const when = quakeEventAge(p.time);",
+    to:   "    const when = timeAgo(p.time);",
+    expect: ['the Alerts list refuses it too'], suite: 'dom' },
+
   /* ---- Q007/Q008 Stage 2: the observation clock reaching the cards ---- */
 
   /* The defect Stage 2 exists to remove: magnitude deciding a dot that means verification. */

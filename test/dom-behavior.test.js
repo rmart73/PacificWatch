@@ -1279,6 +1279,81 @@ function has(label, sel, needle, expected) {
   check('  and the measurement clock is exactly where it was',
     w.eval('S.cache.nwsWeather.observedAt'), expiredAt);
 
+  /* ======================================================================================
+     STAGE 3 / T12 — the earthquake card.
+
+     The asymmetry matters here: USGS has no measurement clock. An event's age is CONTENT, not
+     freshness, so a month-old quake inside the 30-day window is a correct answer to a query that
+     ran seconds ago. What must not be verified is a missing magnitude or an unplaceable time.
+     ====================================================================================== */
+  const seedQuakes = async (features) => {
+    w.eval('delete S.cache.usgsEarthquakes');
+    quakeFeatures = features;
+    await w.fetchEarthquakes();
+    await settle();
+  };
+
+  console.log('\n46. T12 — a successful empty query is a verified scoped statement:');
+  await seedQuakes([]);
+  check('an empty result is verified, not treated as missing data', dotOf('#dot-quake'), 's-dot ok');
+  check('  and says what was searched', txt('#stat-quake-note').indexOf('No M2.0+') !== -1, true);
+  check('  scoped to 30 days', txt('#stat-quake-note').indexOf('30 days') !== -1, true);
+  check('  the Alerts list agrees', txt('#earthquakes-container').indexOf('NO EVENTS') !== -1, true);
+
+  console.log('\n47. T12 — event age is content, not freshness:');
+  /* Twenty days old, inside the 30-day query window, fetched seconds ago. */
+  await seedQuakes([{ properties: { mag: 3.1, place: 'Old but real', time: Date.now() - 20 * 24 * 60 * MIN } }]);
+  check('a 20-day-old event still carries a verified dot', dotOf('#dot-quake'), 's-dot ok');
+  check('  because the QUERY is what was verified',
+    w.eval("sourceState('usgsEarthquakes')"), 'current');
+  check('  and the event age is shown as content', txt('#stat-quake-note').indexOf('20d ago') !== -1, true);
+
+  console.log('\n48. T12 — a missing magnitude is the primary metric missing:');
+  await seedQuakes([{ properties: { mag: null, place: 'Somewhere real', time: Date.now() - 5 * MIN } }]);
+  check('the value reads M unknown', txt('#stat-quake').indexOf('M unknown') !== -1, true);
+  check('  and the dot is NOT verified', dotOf('#dot-quake'), 's-dot unknown');
+  check('  while place is still shown', txt('#stat-quake-note').indexOf('Somewhere real') !== -1, true);
+  check('  and the event time is still shown', txt('#stat-quake-note').indexOf('5m ago') !== -1, true);
+
+  console.log('\n49. T12 — an event time we cannot place is never dressed up as one:');
+  /* Each of these rendered a plausible-looking string before Stage 3. */
+  const badTimes = [
+    ['undefined', undefined, 'NaNd ago'],
+    ['null',      null,      '20728d ago'],
+    ['NaN',       NaN,       'NaNd ago'],
+    ['a string',  'not a time', 'NaNd ago']
+  ];
+  for (const [label, t, oldOutput] of badTimes) {
+    await seedQuakes([{ properties: { mag: 4.0, place: 'Place', time: t } }]);
+    check('  ' + label + ' event time is not verified', dotOf('#dot-quake'), 's-dot unknown');
+    check('    and says the time is unknown',
+      txt('#stat-quake-note').indexOf('event time unknown') !== -1, true);
+    check('    rather than ' + JSON.stringify(oldOutput),
+      txt('#stat-quake-note').indexOf(oldOutput) !== -1, false);
+  }
+  /* The worst of them: a future event rendered as "just now" is the fetch clock wearing the
+     event's clothes, which is precisely what the contract forbids. */
+  await seedQuakes([{ properties: { mag: 4.0, place: 'Place', time: Date.now() + 90 * MIN } }]);
+  check('  a future event time is not verified', dotOf('#dot-quake'), 's-dot unknown');
+  check('    and is never rendered as "just now"',
+    txt('#stat-quake-note').indexOf('just now') !== -1, false);
+  check('    the Alerts list refuses it too',
+    txt('#earthquakes-container').indexOf('event time unknown') !== -1, true);
+  /* Inside the five-minute skew allowance is ordinary clock disagreement, not an unusable time. */
+  await seedQuakes([{ properties: { mag: 4.0, place: 'Place', time: Date.now() + 2 * MIN } }]);
+  check('  a slightly-ahead event clock is still verified', dotOf('#dot-quake'), 's-dot ok');
+
+  console.log('\n50. T12 — query failure withdraws the dot without inventing an event time:');
+  await seedQuakes([{ properties: { mag: 3.3, place: 'Before the failure', time: Date.now() - 10 * MIN } }]);
+  check('verified while the query is healthy', dotOf('#dot-quake'), 's-dot ok');
+  w.fetch = makeFetch('earthquake.usgs.gov');
+  await w.fetchEarthquakes(); await settle();
+  check('  a failed refresh drops the verified dot', dotOf('#dot-quake'), 's-dot unknown');
+  check('  and never substitutes the fetch time as the event time',
+    txt('#stat-quake-note').indexOf('just now') !== -1, false);
+  w.fetch = makeFetch(null);
+  quakeFeatures = null;
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
