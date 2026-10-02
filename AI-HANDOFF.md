@@ -8,10 +8,10 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-10-01. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-02. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
-verification**, the **#28 production verification**, and the **#31 documentation deploy**, which
-Codex performed directly. The #26 checks were unauthenticated HTTP
+verification**, the **#28 production verification**, the **#31 documentation deploy**, and the
+**#32 documentation deploy**, which Codex performed directly. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -359,9 +359,10 @@ Merged branches are omitted from this active list; this does not imply remote br
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **An application implementation IS in flight: [#33](https://github.com/rmart73/PacificWatch/pull/33)
-changes `api/news.js` and the News API tests.** The hazard-classifier acceptance contract was the
-only active work and is documentation/design only. Stage 3 merged in #30 and its closeout merged in
-#31; the observation-truthfulness contract is fully implemented at T01–T17 across stages 1, 2 and 3.
+changes `api/news.js` and the News API tests, and is the sole active implementation.** The
+hazard-classifier acceptance contract merged as #32 in `1b3c822` and is authoritative at H01–H18.
+Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
+implemented at T01–T17 across stages 1, 2 and 3.
 
 This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
