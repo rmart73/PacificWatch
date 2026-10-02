@@ -38,7 +38,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
-| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed review found and corrected the missed #27 self-close | Ready for Claude's read-only review, then the owner's merge decision |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed review corrected the missed #27 self-close and Claude's stale overnight-hold finding | Claude review complete; owner decides merge |
 
 ### Active claims
 
@@ -263,8 +263,9 @@ at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** 
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
 the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 merged as #28
 in `a2d032e` and is production verified. Stage 3 is next** and aligns the earthquake card under
-T12, but it is unclaimed and must not start during this overnight pause. Each implementation needs
-its own claim. Q010 is settled as an owner-accepted unverified gap and is not outstanding.
+T12, but it is unclaimed and requires a fresh claim plus the owner's authorization before any edit.
+Each implementation needs its own claim. Q010 is settled as an owner-accepted unverified gap and is
+not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -288,7 +289,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
-| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed consistency review corrected the missed #27 self-close | Claude reviews read-only; owner decides merge |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed consistency review corrected the missed #27 self-close, and Claude's read-only review finding is corrected | Owner decides merge |
 | Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after #29 merges; claim separately before editing |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
@@ -448,6 +449,11 @@ configuration, dependency or unrelated maintenance file changed.
 The current-state rows now describe resumed review rather than instructing the agents to remain
 paused overnight. Stage 3 remains unclaimed and unstarted until #29 is reviewed and merged with the
 owner's permission.
+
+Claude's subsequent read-only review found one remaining stale instruction in the live next-sequence
+paragraph: Stage 3 still said it must not start "during this overnight pause." The historical
+2026-09-28 sentence remains untouched; the live rule now states the durable gate — a fresh claim
+and the owner's authorization before any Stage 3 edit. Claude reported no further finding.
 
 ### 2026-09-28 — #28 merged and production verified; overnight pause
 
