@@ -46,26 +46,68 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Hazard-classifier acceptance contract — ChatGPT Codex,
-`codex/hazard-classifier-contract`.** Owner-authorized 2026-10-01 under the agreed
-design-first split. Claimed before editing, on a fresh branch from `main` at `565f686`.
+**Hazard-classifier implementation — Claude Code, `claude/hazard-classifier`.**
+Claimed 2026-10-02 before editing any implementation file, in its own commit ahead of the work, on
+the owner's explicit authorization. Branched from `main` at **`1b3c822`**.
 
-**Scope:**
+Governed by [HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md), **H01–H18**.
 
-1. Absorb #31's self-close across Current Work, Active claims, Active Branches, Review Queue and the
-   `main` pointer before starting the new design work.
-2. Write `HAZARD-CLASSIFIER-CONTRACT.md`, defining what qualifies for the hazard representation;
-   the Hawaii-locality and actionability rules; exact-token versus substring behavior; treatment of
-   national wire copy; false-positive and true-positive fixtures; recall protections; and the local,
-   preview and live evidence required before implementation may merge.
-3. Preserve the two canonical News representations and the G1 cache/cost bound. The contract may
-   govern a later classifier implementation, but this claim changes no runtime behavior.
+**What this changes, named before touching it**
 
-**Out of scope:** no edit to `api/news.js`, `api/news/hazard.js`, `index.html`, `vercel.json`, tests,
-`package.json` or `AGENTS.md`; no feed, WAF or Vercel setting change; no classifier implementation;
-and no work on News `timeAgo()`, the remote-branch convention or closed-claims cleanup. Claude
-reviews the contract read-only. Implementation requires a separate owner-authorized Claude claim
-after this contract is reviewed and merged.
+1. **A single named classifier in `api/news.js`.** Today the decision is one broad expression,
+   `HAZARD_RE` at **35**, evaluated at exactly one place: `hazard: HAZARD_RE.test(title + ' ' +
+   summary)` inside `parseFeed()`'s `items.push` at **87**. That call site stays the only producer
+   of the boolean (H01); what changes is what it calls.
+2. **Two maintained vocabularies**, separate and separately testable: a Hawaiʻi locality anchor set
+   and a hazard-evidence set with the contract's context-dependent groups. Both gates required.
+3. **`parseFeed()` integration only.** No change to `fetchFeed()`, the feed list, `decode()`,
+   `decodeEntities()`, `tag()`, deduplication, sorting, the cap, or `serve()`.
+4. **Tests** in `test/news-api.test.js`: the contract's 11 required negatives and 13 required
+   positives with labels written directly, plus the H02 boundary, H04 locality, H07 cross-field and
+   H08 empty-field cases.
+5. **Mutation cases** in `test/mutation-check.js` covering locality removal, boundary loosening,
+   each context-dependent family, a required-positive removal, and filter/helper divergence (H13).
+6. **Evidence**: the multi-day five-feed provenance capture (H04/H15), the change ledger and the
+   separate locality-only ledger (H15/H16), and preview verification of both representations and
+   their cache identity (H17).
+
+**Two things I know before starting, stated now rather than discovered in the ledger**
+
+**The evidence record is the truncated summary.** `parseFeed()` does
+`tag(b, 'description').slice(0, 240)` at **78**, and the classifier sees that same truncated text —
+which is correct per the contract, since it must classify *"the same decoded title and summary that
+the response returns"*. But it means **a locality anchor past 240 characters is invisible to the
+gate**, so an item can be genuinely local and fail on text the reader never sees either. Any such
+case goes in the locality-only ledger as a boundary artifact rather than being quietly counted as a
+remote item.
+
+**Normalization must not touch the decode order.** `decode()` deliberately decodes entities
+*before* stripping tags and repeats stripping until stable, because the reverse order turned
+encoded markup back into live markup. Hazard normalization happens **after** `decode()`, on its
+output, and adds no second HTML interpretation path (H02).
+
+**Baseline, measured before any change**
+
+The current classifier against the contract's corpus: **11 of 11 required negatives wrong, 0 of 13
+required positives wrong.** Every negative is load-bearing from the first commit and none passes
+trivially. More importantly it fixes where the risk sits: recall is already perfect, so **the only
+way this work can make the product worse is by losing real hazard coverage.** The locality-only
+ledger is therefore the primary acceptance artifact, not any precision figure.
+
+**Out of scope, explicitly**
+
+The two canonical representations, edge query normalization, zero-fan-out rejection, the WAF rule
+and every G01–G18 control. Feed list, parser internals, dedupe, sort, cap, response schema, cache
+policy, user agent, the eight-second abort. `index.html`, the News UI, `timeAgo()` invalid-input
+handling, `AGENTS.md`, Stage 3, the remote-branch convention question, and the closed-claims
+cleanup. No runtime dependency, no new route, no diagnostic endpoint.
+
+**Absorbed into this claim**
+
+#32's self-close, since a board PR cannot record its own merge. Also the status-line correction I
+raised at review: `HAZARD-CLASSIFIER-CONTRACT.md` merged still reading *"proposed for review"*,
+which made it the fourth contract to land while describing itself as unmerged. Codex suggested
+folding it into the next claimed board edit; this is that edit.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
