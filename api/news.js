@@ -31,8 +31,165 @@ const FEEDS = [
 /* Star-Advertiser 403s a bare "Mozilla/5.0", so send a realistic UA. */
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
-/* Outlet feeds carry national wire copy too; this flags the locally actionable ones. */
-const HAZARD_RE = /hurricane|tropical storm|tsunami|flood|flash flood|storm|evacuat|wildfire|brush fire|earthquake|erupt|volcan|lava|vog|high surf|swell|shelter|power outage|outage|emergency|warning|advisory|watch|closure|closed|landslide|rockfall/i;
+/* HAZARD CLASSIFICATION — see HAZARD-CLASSIFIER-CONTRACT.md, H01-H18.
+ *
+ * Two gates, both required: actionable hazard evidence AND explicit Hawai'i relevance.
+ *
+ * The predecessor was one broad alternation tested against title+summary. It could not tell
+ * "gunfire erupted" from a volcanic eruption, a fund that "swells" from ocean swells, Honolulu
+ * Emergency Medical Services from a declared emergency, or a Texas flood warning from a local
+ * one. During Hurricane Nolo roughly seven of thirty items in the hazard representation were
+ * noise. Measured against the contract corpus it got 11 of 11 required negatives wrong and 0 of
+ * 13 required positives wrong: perfect recall, no precision on the hard cases.
+ *
+ * These are deliberately explicit vocabularies rather than one clever expression, because the
+ * contract requires the accepted language to be reviewable against its decision table. A shorter
+ * regex would be harder to audit, not better.
+ */
+
+/* Matching happens on normalized text, never on the returned text, which is left exactly as the
+   response carries it. Runs on decode()'s OUTPUT -- decode() decodes entities before stripping
+   tags and repeats until stable, and nothing here may reorder or re-enter that. */
+function hazardNormalize(text) {
+  return String(text == null ? '' : text)
+    .normalize('NFKC')
+    /* 'okina and apostrophe variants collapse to one form so Hawai'i, Hawaii and Hawai`i match. */
+    .replace(/[\u02BB\u02BC\u2018\u2019']/g, "'")
+    .toLowerCase()
+    /* Punctuation and hyphens are separators, so "HI-5" cannot donate a locality token and
+       "Kailua-Kona" still yields both. Spaces are collapsed and the string is padded so every
+       lookup can test whole tokens. */
+    .replace(/[^a-z0-9']+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    /* A possessive is a grammatical suffix, not part of the name. Without this, "O'ahu's North
+       Shore" produced the token "o'ahu's" and the anchor "o'ahu" did not match -- a real
+       Hawai'i story failing the locality gate on an apostrophe. Internal 'okina are untouched,
+       so "hawai'i" survives; only a trailing 's is removed. */
+    .split(' ')
+    .map(t => t.replace(/'s$/, ''))
+    .join(' ');
+}
+
+/* Whole-token/phrase containment. Padding both sides means "vog" cannot match inside "vogue"
+   and "kona" cannot match inside "konark", without needing a regex per term. */
+function hasPhrase(norm, phrase) {
+  return (' ' + norm + ' ').indexOf(' ' + phrase + ' ') !== -1;
+}
+function hasAny(norm, phrases) {
+  for (const t of phrases) if (hasPhrase(norm, t)) return true;
+  return false;
+}
+
+/* LOCALITY VOCABULARY — H04.
+ * Seeded from three sources, per the contract: stable jurisdiction and agency names; the recorded
+ * Nolo operational cases; and real five-feed capture text. Provenance is recorded in the handoff.
+ * A place name that is also ordinary English is NOT safe bare -- "Ocean View" is deliberately
+ * absent and may return only as a qualified construction with its own fixtures. */
+const HAWAII_ANCHORS = [
+  /* state, islands, counties -- stable */
+  "hawai'i", 'hawaii', "o'ahu", 'oahu', 'maui', "kaua'i", 'kauai',
+  "moloka'i", 'molokai', "lana'i", 'lanai', "ni'ihau", 'niihau', 'big island',
+  'honolulu', 'maui county', 'hawaii county', 'kauai county', 'honolulu county',
+  /* "Hawaiian" is not a spelling variant of "Hawaii" to a whole-token matcher, and the feeds use
+     it constantly: "the Hawaiian Islands" in NWS forecast copy, "Hawaiian Electric" in every
+     outage story. Its absence dropped a hurricane-outage story from the capture. */
+  'hawaiian', 'hawaiian islands', 'hawaiian electric',
+  /* A Hawai'i place the authored list did not contain, found in the capture. */
+  'papahanaumokuakea',
+  /* commonly reported places -- contract plus capture */
+  'hilo', 'kona', 'kailua kona', 'puna', 'kilauea', 'mauna loa', 'mauna kea',
+  'lahaina', 'kahului', "lihu'e", 'lihue', 'waikiki', "wai'anae", 'waianae',
+  "po'ipu", 'poipu', 'pearl city', 'kalaupapa', 'wailuku', 'kaneohe', 'pahoa',
+  /* the real feed locations that exposed the original vocabulary gap */
+  'olowalu', "honoapi'ilani", 'honoapiilani', 'kihei', 'waiawa', 'waimanalo', 'kailua',
+  /* authoritative local agencies */
+  'hiema', "hawai'i emergency management", 'hawaii emergency management',
+  "hawai'i county civil defense", 'hawaii county civil defense',
+  'nws honolulu', 'central pacific hurricane center', 'cphc',
+  'usgs hvo', 'hvo', 'hawaiian volcano observatory'
+];
+
+/* DIRECT HAZARD EVIDENCE -- qualifies alone. */
+const HAZARD_DIRECT = [
+  'hurricane', 'tropical storm', 'tropical depression', 'tsunami',
+  'earthquake', 'earthquakes', 'quake', 'quakes',
+  'flash flood', 'flash flooding', 'flooding', 'flood warning', 'flood watch',
+  'flood advisory', 'flood conditions',
+  'wildfire', 'wildfires', 'brush fire', 'brush fires', 'wildland fire',
+  'volcano', 'volcanic', 'lava', 'vog',
+  'high surf', 'storm surge', 'landslide', 'mudslide', 'rockfall',
+  'evacuation', 'evacuations', 'evacuate', 'evacuated', 'evacuee', 'evacuees'
+];
+
+/* CONTEXT-DEPENDENT FAMILIES -- the contract's decision table, one entry per row.
+   Each needs its own term AND one of its context terms in the same record. */
+const HAZARD_CONTEXT = [
+  { terms: ['erupt', 'erupts', 'erupted', 'eruption', 'eruptions'],
+    context: ['volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',
+              'hawaiian volcano observatory', 'summit', 'caldera', 'vent', 'fissure'] },
+  { terms: ['swell', 'swells', 'swelling'],
+    context: ['high', 'large', 'dangerous', 'ocean', 'surf', 'shore', 'shores',
+              'north shore', 'waves', 'coastal'] },
+  { terms: ['emergency'],
+    context: ['declaration', 'declared', 'proclamation', 'state of emergency', 'disaster',
+              'evacuation', 'evacuate', 'shelter', 'shelters', 'hiema', 'civil defense'] },
+  { terms: ['warning', 'warnings', 'watch', 'watches', 'advisory', 'advisories'],
+    context: ['hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',
+              'high surf', 'surf', 'wind', 'winds', 'storm surge', 'fire', 'wildfire',
+              'brush fire', 'volcanic', 'lava', 'ashfall', 'small craft', 'gale'] },
+  { terms: ['shelter', 'shelters'],
+    context: ['emergency', 'evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',
+              'hurricane', 'tropical storm', 'flood', 'wildfire', 'brush fire', 'storm'] },
+  { terms: ['outage', 'outages'],
+    context: ['power', 'electric', 'electrical', 'utility', 'water', 'communications',
+              'cellular', 'cell', 'phone', 'internet', 'grid'] },
+  /* "storm" only in a physical construction. The exclusions below remove the idioms. */
+  { terms: ['storm', 'storms'],
+    context: ['tropical', 'severe', 'winter', 'thunderstorm', 'thunderstorms', 'surge',
+              'damage', 'damages', 'damaged',
+              'system', 'warning', 'watch', 'rain', 'wind', 'winds', 'flooding', 'flood',
+              'evacuation', 'shelter', 'hurricane', 'approaches', 'approaching', 'passes',
+              'passing', 'hit', 'hits', 'battered', 'knocked'] }
+];
+
+/* Phrases that must never supply hazard evidence, checked before anything else. These are the
+   idioms the predecessor matched: "took the city by storm", "a flood of donations". */
+const HAZARD_IDIOMS = [
+  'by storm', 'storm of', 'political storm', 'brainstorm', 'brainstorming', 'firestorm',
+  'flood of', 'flooded with', 'swept the', 'perfect storm'
+];
+
+/* 'closed'/'closure' are never independent: the contract says the story must carry other hazard
+   evidence, so they are deliberately absent from both lists above. A road closed BY a brush fire
+   qualifies on the brush fire, which is the point. */
+
+function hasHazardEvidence(norm) {
+  if (hasAny(norm, HAZARD_DIRECT)) return true;
+  for (const g of HAZARD_CONTEXT) {
+    if (hasAny(norm, g.terms) && hasAny(norm, g.context)) return true;
+  }
+  return false;
+}
+
+function hasHawaiiAnchor(norm) {
+  return hasAny(norm, HAWAII_ANCHORS);
+}
+
+/* The ONE producer of the item-level hazard boolean -- H01. Pure: same input, same answer, no
+   clock, no network, no outlet identity. Publisher name is not part of the evidence record, so a
+   Hawai'i outlet carrying national wire copy cannot pass the locality gate on its masthead. */
+function classifyHazard(title, summary) {
+  const norm = hazardNormalize(String(title || '') + ' ' + String(summary || ''));
+  if (!norm) return false;
+  /* An idiom removes the phrase that produced it, so a story carrying BOTH an idiom and real
+     hazard language still qualifies on the real language. */
+  let evidenceText = norm;
+  for (const idiom of HAZARD_IDIOMS) {
+    evidenceText = (' ' + evidenceText + ' ').split(' ' + idiom + ' ').join(' ').trim();
+  }
+  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);
+}
 
 /* Entities are decoded BEFORE tags are stripped, and stripping repeats until
    stable. Decoding last would turn "&lt;img onerror=...&gt;" back into live
@@ -84,7 +241,7 @@ function parseFeed(xml, feed) {
       summary,
       published: Number.isNaN(ts) ? null : new Date(ts).toISOString(),
       ts: Number.isNaN(ts) ? 0 : ts,
-      hazard: HAZARD_RE.test(title + ' ' + summary)
+      hazard: classifyHazard(title, summary)
     });
   }
   return items;

@@ -21,6 +21,14 @@ const serve = all.serve;
 const HAZARD_PATH = path.join(__dirname, '..', 'api', 'news', 'hazard.js');
 const hazardEntry = require(HAZARD_PATH);
 
+/* classifyHazard is module-private, so it is lifted out of the SAME source text the handler is
+   loaded from. Requiring the module would not expose it, and re-implementing it here would make
+   the corpus agree with a copy rather than with the shipped code. */
+const classify = (() => {
+  const src = require('fs').readFileSync(API_PATH, 'utf8').replace(/module\.exports[\s\S]*$/, '');
+  return new Function(src + '; return classifyHazard;')();
+})();
+
 let pass = 0, fail = 0;
 function check(label, actual, expected) {
   const ok = actual === expected;
@@ -30,15 +38,21 @@ function check(label, actual, expected) {
 
 /* ---- fixtures -------------------------------------------------------------------------- */
 
-/* Five outlets, matching the real FEEDS length. Titles are chosen so the hazard split is
-   decided by reading them, not by running the app's regex over them:
-     HAZARD:     flood warning, hurricane, tsunami advisory, evacuation, storm surge
-     NOT HAZARD: bake sale, museum opening, jazz festival, library hours, farmers market
-   Each feed yields one hazard item and one ordinary item, so 5 feeds -> 10 items, 5 hazard. */
-const HAZARD_TITLES = ['Flood warning issued', 'Hurricane nears', 'Tsunami advisory lifted',
-                       'Evacuation ordered', 'Storm surge expected'];
-const PLAIN_TITLES  = ['Bake sale Saturday', 'Museum opening downtown', 'Jazz festival lineup',
-                       'Library hours change', 'Farmers market returns'];
+/* Five outlets, matching the real FEEDS length. Titles are chosen so the hazard split is decided
+   by READING them against the contract's two gates, not by running the classifier over them:
+     HAZARD:     hazard evidence AND a Hawai'i anchor
+     NOT HAZARD: a Hawai'i anchor and NO hazard evidence
+   Each feed yields one of each, so 5 feeds -> 10 items, 5 hazard.
+
+   Every ordinary title carries an anchor on purpose. Under the two-gate contract a fixture whose
+   negatives lacked locality would pass for the wrong reason -- the locality gate would be doing
+   the work and the hazard gate would never be tested. These isolate the hazard gate. */
+const HAZARD_TITLES = ['Flood warning issued for Oahu', 'Hurricane nears Maui',
+                       'Tsunami advisory lifted for Hawaii County', 'Evacuation ordered on Kauai',
+                       'Storm surge expected on Molokai'];
+const PLAIN_TITLES  = ['Bake sale Saturday in Hilo', 'Museum opening in downtown Honolulu',
+                       'Jazz festival lineup announced on Maui', 'Library hours change on Kauai',
+                       'Farmers market returns to Oahu'];
 
 function feedXml(i) {
   const t = new Date(Date.UTC(2026, 8, 26, 12, i)).toUTCString();
@@ -59,12 +73,12 @@ function bulkFeedXml(i) {
   let out = '<rss><channel>';
   for (let k = 0; k < 6; k++) {          /* 6 ordinary, newest */
     const t = new Date(Date.UTC(2026, 8, 26, 20, i * 6 + k)).toUTCString();
-    out += '<item><title>Community notice ' + i + '-' + k + '</title><link>https://example.test/n' +
+    out += '<item><title>Community notice for Hilo ' + i + '-' + k + '</title><link>https://example.test/n' +
            i + k + '</link><description>d</description><pubDate>' + t + '</pubDate></item>';
   }
   for (let k = 0; k < 6; k++) {          /* 6 hazard, oldest */
     const t = new Date(Date.UTC(2026, 8, 26, 2, i * 6 + k)).toUTCString();
-    out += '<item><title>Flood warning ' + i + '-' + k + '</title><link>https://example.test/f' +
+    out += '<item><title>Flood warning for Oahu ' + i + '-' + k + '</title><link>https://example.test/f' +
            i + k + '</link><description>d</description><pubDate>' + t + '</pubDate></item>';
   }
   return out + '</channel></rss>';
@@ -256,7 +270,150 @@ async function main() {
   check('it defines no user agent of its own', /Mozilla/.test(hazardSrc), false);
   check('it delegates to the shared serve', /serve\(req, res, true\)/.test(hazardSrc), true);
 
-  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+    /* ======================================================================================
+     HAZARD CLASSIFIER — HAZARD-CLASSIFIER-CONTRACT.md, H01-H18.
+
+     Every expected label below is written here by reading the text against the contract's two
+     gates. None is produced by calling the classifier or by reusing its vocabularies, which is
+     what makes the corpus capable of failing in BOTH directions rather than agreeing with
+     whatever the implementation happens to do.
+     ====================================================================================== */
+  console.log('\nH05 — the required negatives, each a measured failure of the predecessor:');
+  /* All eleven returned TRUE under the old single-gate expression. None is a free pass. */
+  const REQUIRED_NEGATIVES = [
+    ['Gun sale erupted in gunfire in Honolulu.', ''],
+    ['Honolulu Emergency Medical Services responds to stabbing.', ''],
+    ['Warning sign for GOP as Hawaii voters head to polls.', ''],
+    ['HI-5 fund swells after strong quarter in Hawaii.', ''],
+    ['Honolulu DMV closed for holiday.', ''],
+    ['California wildfire forces thousands to evacuate.', ''],
+    ['Texas flood warning extended through Friday.', ''],
+    ['Maui nonprofit animal shelter expands capacity.', ''],
+    ['Candidate takes Oahu by storm.', ''],
+    ['A flood of donations reaches a Hilo food bank.', ''],
+    ['Storm damage repairs begin at an ocean view resort.', '']
+  ];
+  for (const [t, d] of REQUIRED_NEGATIVES) {
+    check('false: ' + t.slice(0, 54), classify(t, d), false);
+  }
+
+  console.log('\nH05/H06/H07 — the required positives:');
+  const REQUIRED_POSITIVES = [
+    ['Hurricane warning issued for Hawaii County.', ''],
+    ['Tropical storm approaches the Big Island.', ''],
+    ['Flash flood warning issued for Oahu.', ''],
+    /* H06: remote ORIGIN with stated Hawaii impact is local. */
+    ['Japan quake prompts tsunami advisory for Hawaii.', ''],
+    ['Kilauea eruption sends vog across Puna.', ''],
+    ['Brush fire prompts Maui evacuation.', ''],
+    ['High surf warning for north shores of Kauai.', ''],
+    ['Power outage affects Hilo residents.', ''],
+    ['Rockfall closes an Oahu highway.', ''],
+    ['Emergency shelter opens on Kauai as storm approaches.', ''],
+    /* H07: evidence split across the two fields, in both arrangements. */
+    ['Flood warning issued', 'for Maui through tonight.'],
+    ['HVO update', 'Kilauea lava activity continues.'],
+    /* The recorded Nolo evacuation the first contract draft would have deleted. */
+    ['Evacuation order issued for Olowalu Village due to brush fire',
+     'Honoapiilani Highway is closed from North Kihei to Olowalu General Store.']
+  ];
+  for (const [t, d] of REQUIRED_POSITIVES) {
+    check('true:  ' + (t + ' ' + d).slice(0, 54), classify(t, d), true);
+  }
+
+  console.log('\nH03 — locality is mandatory, and publisher identity never supplies it:');
+  check('identical hazard wording WITH an anchor', classify('Flood warning issued for Maui', ''), true);
+  check('  and WITHOUT one', classify('Flood warning issued', ''), false);
+  /* H03. The classifier's signature is (title, summary): it is never handed `source` or
+     `sourceId`, so publisher identity as a FIELD cannot satisfy locality. That is the claim H03
+     actually makes, and these two assertions test it. */
+  check('publisher-shaped text with no Hawaii place does not anchor',
+    classify('KHON2 reports a Texas flood warning', ''), false);
+  check('  nor does a second outlet name',
+    classify('Civil Beat reports a California wildfire evacuation', ''), false);
+  /* KNOWN RESIDUAL, recorded rather than asserted away: an outlet whose NAME contains "Hawaii"
+     will anchor if that name appears in the title or summary text, because the token is
+     indistinguishable from the place. Measured on the live feed at implementation time: 0 of 30
+     items carried a publisher name inside title+summary, so this is latent rather than active.
+     It is in the locality ledger; closing it needs a publisher-name stop list, which is a
+     contract amendment rather than a silent vocabulary tweak. */
+  check('the residual is real and asserted honestly: a Hawaii-named outlet DOES anchor',
+    classify('Hawaii News Now reports a Texas flood warning', ''), true);
+
+  console.log('\nH04 — locality vocabulary boundaries:');
+  check('bare HI does not anchor', classify('HI flood warning issued', ''), false);
+  check('bare island does not anchor', classify('Island flood warning issued', ''), false);
+  check('HI-5 does not donate a locality token', classify('HI-5 flood warning', ''), false);
+  check('the ocean view collision does not anchor',
+    classify('Storm damage at an ocean view resort', ''), false);
+  check('a real place does anchor', classify('Flood warning for Waimanalo', ''), true);
+
+  console.log('\nH02 — normalization: case, punctuation, diacritics, entities, word boundaries:');
+  check('uppercase', classify('FLASH FLOOD WARNING FOR OAHU', ''), true);
+  check('diacritic spelling', classify('Flash flood warning for O\u02BBahu', ''), true);
+  check('curly apostrophe spelling', classify('Flash flood warning for O\u2018ahu', ''), true);
+  check('punctuation as separator', classify('Flash flood warning -- Oahu!', ''), true);
+  /* Longer-word collisions the old substring expression would have matched. */
+  check('vog does not match inside vogue', classify('Vogue photoshoot in Honolulu', ''), false);
+  check('kona does not match inside konared', classify('Konared drink launch flood warning', ''), false);
+  check('erupt does not match inside disrupted',
+    classify('Disrupted ferry service in Honolulu', ''), false);
+
+  console.log('\nH05 — the context-dependent families, both directions:');
+  check('erupt WITHOUT volcanic context', classify('Argument erupted in Hilo', ''), false);
+  check('erupt WITH volcanic context', classify('Lava erupted from the Kilauea vent', ''), true);
+  check('swell WITHOUT ocean context', classify('Crowd swells in Honolulu', ''), false);
+  check('swell WITH ocean context', classify('Dangerous ocean swells hit Oahu shores', ''), true);
+  check('emergency WITHOUT declaration context',
+    classify('Honolulu Emergency Medical Services responds', ''), false);
+  check('emergency WITH declaration context',
+    classify('Governor signs emergency proclamation for Maui', ''), true);
+  check('warning WITHOUT a named hazard', classify('Economic warning for Hawaii', ''), false);
+  check('warning WITH a named hazard', classify('High wind warning for Hawaii', ''), true);
+  check('shelter WITHOUT emergency context', classify('Animal shelter opens in Hilo', ''), false);
+  check('shelter WITH emergency context', classify('Evacuation shelter opens in Hilo', ''), true);
+  check('outage WITHOUT utility context', classify('Service outage at a Maui bank', ''), false);
+  check('outage WITH utility context', classify('Power outage across Maui', ''), true);
+  check('closed is never independent', classify('Honolulu post office closed today', ''), false);
+  /* The idiom strip exists for THIS shape. "storm" alone never qualifies, but "storm" plus
+     "damage" is a physical construction and would — so "political storm damages ..." passes both
+     halves of the context rule while being a metaphor. The contract's decision table names
+     "political storm" explicitly; the first corpus pass tested the idiom with a sentence that was
+     already false for other reasons, so the strip looked load-bearing and was not. */
+  check('political storm with damage context is still a metaphor',
+    classify("Political storm damages the Hawaii governor's standing", ''), false);
+  check('  while a real storm with damage context qualifies',
+    classify('Storm damage closes roads across Maui', ''), true);
+  check('closed rides on other evidence',
+    classify('Honoapiilani Highway closed by the Olowalu brush fire', ''), true);
+
+  console.log('\nH04 — three gaps the real five-feed capture found, not the authored corpus:');
+  /* Every one of these is a verbatim shape from the uncapped capture, and every one was a real
+     Hawai'i hazard story that the authored vocabulary dropped. They are regression fixtures with
+     provenance, which is the difference between a corpus that agrees with the implementation and
+     one that could have caught it. */
+  check('a possessive does not break an anchor: O\u02BBahu\u2019s North Shore',
+    classify('Flood warning for O\u02BBahu\u2019s North Shore', ''), true);
+  check('  and the bare form still anchors',
+    classify('Flood warning for O\u02BBahu North Shore', ''), true);
+  check('"the Hawaiian Islands" anchors — NWS forecast copy says this constantly',
+    classify('Tropical storm moves away from the Hawaiian Islands', ''), true);
+  check('"Hawaiian Electric" anchors — every outage story says this',
+    classify('Hawaiian Electric responds to isolated outages as Hurricane Nolo passes', ''), true);
+  check('Papahanaumokuakea anchors',
+    classify('Tropical Storm Nolo threatens Papahanaumokuakea Marine National Monument', ''), true);
+  /* The gates stay independent: these anchors do not make a non-hazard story qualify. */
+  check('  an anchor alone still is not hazard evidence',
+    classify('Hawaiian Electric announces a new billing portal', ''), false);
+
+  console.log('\nH08 — missing fields cannot borrow a label from anywhere:');
+  check('empty title and summary', classify('', ''), false);
+  check('null title and summary', classify(null, null), false);
+  check('undefined inputs', classify(undefined, undefined), false);
+  check('locality alone is not hazard', classify('Maui', ''), false);
+  check('hazard alone is not local', classify('Hurricane', ''), false);
+
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (fail) process.exit(1);
 }
 

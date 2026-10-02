@@ -467,6 +467,114 @@ const mutations = [
     expect: ['origin declares 300s fresh and 900s stale-while-revalidate'],
     suite: 'news', target: 'api' },
 
+  /* ---- Hazard classifier, H01-H18 ---- */
+
+  /* H03: the locality gate is the half that makes this a LOCAL hazard feed rather than a keyword
+     search. Removing it restores the predecessor's behaviour on the two mainland stories. */
+  { name: 'the locality gate removed',
+    from: "  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);",
+    to:   "  return hasHazardEvidence(evidenceText);",
+    expect: ['false: California wildfire forces thousands to evacuate.'],
+    suite: 'news', target: 'api' },
+
+  /* The converse: evidence alone must not be droppable either, or every local story qualifies. */
+  { name: 'the hazard-evidence gate removed',
+    from: "  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);",
+    to:   "  return hasHawaiiAnchor(norm);",
+    expect: ['false: Honolulu DMV closed for holiday.'],
+    suite: 'news', target: 'api' },
+
+  /* H02: whole-token matching is what stops "vog" matching inside "vogue". Loosening it to bare
+     containment is precisely the predecessor's defect. */
+  { name: 'word boundaries loosened to substring containment',
+    from: "  return (' ' + norm + ' ').indexOf(' ' + phrase + ' ') !== -1;",
+    to:   "  return norm.indexOf(phrase) !== -1;",
+    expect: ['vog does not match inside vogue'],
+    suite: 'news', target: 'api' },
+
+  /* H05, one per context-dependent family: each must require its context, not just its term. */
+  { name: 'erupt qualifies without volcanic context',
+    from: "    context: ['volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',",
+    to:   "    context: ['argument', 'volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',",
+    expect: ['erupt WITHOUT volcanic context'],
+    suite: 'news', target: 'api' },
+
+  { name: 'swell qualifies without ocean context',
+    from: "  { terms: ['swell', 'swells', 'swelling'],\n    context: ['high', 'large', 'dangerous', 'ocean', 'surf', 'shore', 'shores',\n              'north shore', 'waves', 'coastal'] },",
+    to:   "  { terms: ['swell', 'swells', 'swelling'],\n    context: ['in', 'the', 'a', 'high', 'large', 'dangerous', 'ocean'] },",
+    expect: ['swell WITHOUT ocean context'],
+    suite: 'news', target: 'api' },
+
+  { name: 'emergency qualifies without declaration context',
+    from: "  { terms: ['emergency'],\n    context: ['declaration', 'declared', 'proclamation', 'state of emergency', 'disaster',\n              'evacuation', 'evacuate', 'shelter', 'shelters', 'hiema', 'civil defense'] },",
+    to:   "  { terms: ['emergency'],\n    context: ['declaration', 'declared', 'services', 'responds', 'medical'] },",
+    expect: ['emergency WITHOUT declaration context'],
+    suite: 'news', target: 'api' },
+
+  { name: 'warning qualifies without a named hazard',
+    from: "    context: ['hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',",
+    to:   "    context: ['economic', 'hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',",
+    expect: ['warning WITHOUT a named hazard'],
+    suite: 'news', target: 'api' },
+
+  { name: 'shelter qualifies without emergency context',
+    from: "  { terms: ['shelter', 'shelters'],\n    context: ['emergency', 'evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',\n              'hurricane', 'tropical storm', 'flood', 'wildfire', 'brush fire', 'storm'] },",
+    to:   "  { terms: ['shelter', 'shelters'],\n    context: ['animal', 'opens', 'in', 'emergency'] },",
+    expect: ['shelter WITHOUT emergency context'],
+    suite: 'news', target: 'api' },
+
+  { name: 'outage qualifies without utility context',
+    from: "  { terms: ['outage', 'outages'],\n    context: ['power', 'electric', 'electrical', 'utility', 'water', 'communications',\n              'cellular', 'cell', 'phone', 'internet', 'grid'] },",
+    to:   "  { terms: ['outage', 'outages'],\n    context: ['service', 'at', 'a', 'power'] },",
+    expect: ['outage WITHOUT utility context'],
+    suite: 'news', target: 'api' },
+
+  /* The idiom strip is what separates "a flood of donations" from a flood. */
+  { name: 'idiom stripping removed',
+    from: "  for (const idiom of HAZARD_IDIOMS) {",
+    to:   "  for (const idiom of []) {",
+    expect: ['political storm with damage context is still a metaphor'],
+    suite: 'news', target: 'api' },
+
+  /* "closed" must never be independent evidence. Adding it back to the direct list is the
+     single-word change that would resurrect the DMV false positive. */
+  { name: 'closed restored as direct hazard evidence',
+    from: "const HAZARD_DIRECT = [\n  'hurricane',",
+    to:   "const HAZARD_DIRECT = [\n  'closed', 'closure',\n  'hurricane',",
+    expect: ['false: Honolulu DMV closed for holiday.'],
+    suite: 'news', target: 'api' },
+
+  /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
+     a real evacuation order, which is the failure this whole contract exists to prevent. */
+  { name: 'the Olowalu-era anchors dropped from the vocabulary',
+    from: "  'olowalu', \"honoapi'ilani\", 'honoapiilani', 'kihei', 'waiawa', 'waimanalo', 'kailua',",
+    to:   "",
+    expect: ['true:  Evacuation order issued for Olowalu Village due t'],
+    suite: 'news', target: 'api' },
+
+  /* Found by the real capture, not the authored corpus: a possessive produced the token
+     "o'ahu's", which the anchor "o'ahu" could not match. */
+  { name: 'possessive suffixes break anchors again',
+    from: "    .map(t => t.replace(/'s$/, ''))",
+    to:   "    .map(t => t)",
+    expect: ['a possessive does not break an anchor'],
+    suite: 'news', target: 'api' },
+
+  /* "Hawaiian" is not a spelling variant of "Hawaii" to a whole-token matcher. Dropping it
+     deleted a hurricane-outage story from the capture. */
+  { name: 'the Hawaiian anchors dropped',
+    from: "  'hawaiian', 'hawaiian islands', 'hawaiian electric',",
+    to:   "",
+    expect: ['"the Hawaiian Islands" anchors'],
+    suite: 'news', target: 'api' },
+
+  /* H01: one producer. Bypassing the helper at the call site is the divergence to catch. */
+  { name: 'the call site bypasses the classifier',
+    from: "      hazard: classifyHazard(title, summary)",
+    to:   "      hazard: /flood|hurricane|storm/i.test(title + ' ' + summary)",
+    expect: ['the hazard items are exactly the ones a reader would pick'],
+    suite: 'news', target: 'api' },
+
   /* ---- Q007/Q008 Stage 3 / T12: the earthquake card ---- */
 
   /* The defect T12 names first: a missing magnitude is the PRIMARY metric missing, so the dot
