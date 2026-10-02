@@ -492,6 +492,112 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-02 — hazard classifier implemented; H15/H16 ledgers, two items reported not banked
+
+`classifyHazard(title, summary)` is the only producer of the item-level boolean and requires **both**
+actionable hazard evidence and an explicit Hawaiʻi anchor. Vocabularies are explicit rather than one
+expression, because the contract requires the accepted language to be reviewable against its
+decision table — a shorter regex would be harder to audit, not better.
+
+**Contract corpus: 24 of 24**, from a measured baseline of **13 of 24**. Every one of the 11 required
+negatives was a false positive beforehand, so none passes trivially.
+
+#### H15 — change ledger, uncapped five-feed capture
+
+```
+captured 2026-10-02T07:47Z     170 items, uncapped, five feeds
+publication dates spanned      7   (2026-09-26 .. 2026-10-02)   H04 minimum is 3: MET
+old classifier hazard          36 of 170
+new classifier hazard          25 of 170
+labels changed                 11, all true -> false
+```
+
+**No item went false → true**, so precision improved with no recall-broadening side effect.
+
+Nine of the eleven removals are plainly correct: a police road closure, an EMS facility
+groundbreaking, a water-main settlement, a sea-arch collapse, a restaurant cleanup, a restaurant
+health placard, a storm-chaser fraud warning, a tourism recovery bus route, and a disaster-fatigue
+wellness piece. None is hazard reporting.
+
+**Two are losses, and they are reported rather than counted as precision.**
+
+```
+KHON2   Tropical Storm Nolo drifts southward: What 2 Know
+KITV 4  Thursday Evening Forecast - Wetter pattern continues through Friday
+```
+
+Both are genuine local Nolo coverage. Both fail the locality gate because their visible evidence
+record names only the storm — *"away from the islands"* — and bare `island` is deliberately excluded
+by the contract. **This is the 240-character truncation boundary named in the claim before work
+started**, now observed rather than predicted: locality may well appear later in the article, but
+the classifier correctly sees only what the response returns.
+
+**I did not tune a keyword to recover them.** Adding storm names would make the vocabulary
+ephemeral, and relaxing bare `island` would undo the gate. They are a contract question — whether a
+named Central Pacific system should itself be locality evidence — and they go back to Codex as
+blockers, per H16.
+
+#### H16 — locality-only ledger
+
+Four items carried hazard evidence and no anchor. Resolved individually, as the contract requires:
+
+```
+BBB storm-chaser fraud warning       proved non-local  — consumer fraud, not hazard reporting
+Disaster-fatigue wellness piece      proved non-local  — seasonal wellness, no place, no event
+Tropical Storm Nolo drifts southward BLOCKER — genuine local coverage, no anchor in visible text
+Thursday Evening Forecast            BLOCKER — same
+```
+
+#### Three defects the real capture found that the authored corpus could not
+
+This is the circularity argument from the contract review, demonstrated on my own work.
+
+1. **A possessive broke anchors.** `Oʻahu's North Shore` tokenizes as `o'ahu's`, and the anchor
+   `o'ahu` did not match it — a real Hawaiʻi story failing the locality gate on an apostrophe.
+   Trailing possessives are now stripped per token; internal ʻokina are untouched.
+2. **`Hawaiian` is not a spelling variant of `Hawaii`** to a whole-token matcher, and the feeds use
+   it constantly — *"the Hawaiian Islands"* in NWS forecast copy, *"Hawaiian Electric"* in every
+   outage story. Its absence dropped **a hurricane-outage story**, which is close to the worst
+   possible false negative for this feed.
+3. **`Papahanaumokuakea`** is a Hawaiʻi place the authored vocabulary did not contain.
+
+All three are now regression fixtures with provenance, and two carry mutations.
+
+#### Three errors of my own, recorded because the pattern matters
+
+- **Two mutations came back MISSED.** One was inert: it removed idiom stripping, but bare `flood` is
+  not direct evidence, so *"a flood of donations"* was already false and the mutation changed
+  nothing. The other targeted a corpus assertion that calls the classifier directly, so mutating
+  the **call site** could not affect it — it needed a handler-level expectation. Both retargeted.
+- **Chasing the first one exposed a vocabulary gap**: the storm context list had `damage` but not
+  `damages`, so the metaphor fixture passed for the wrong reason and the idiom strip *looked*
+  load-bearing while being inert.
+- **I wrote a decorative assertion** — `check(label, true, true)`, which could never fail — beside a
+  label that claimed the opposite of what it asserted. Removed, replaced with two honest
+  assertions, and the residual recorded instead of hidden: an outlet whose **name** contains
+  "Hawaii" will anchor if that name appears in the text. Measured at implementation time: **0 of 30**
+  live items carried a publisher name inside title+summary, so it is latent. Closing it needs a
+  publisher-name stop list, which is a contract amendment rather than a silent tweak.
+
+#### Fixture changes, called out because changing an assertion deserves more scrutiny than adding one
+
+The News API fixtures encoded the **single-gate** meaning, where *"Flood warning issued"* with no
+locality was hazard. Under two gates it correctly is not. Every ordinary title now also carries an
+anchor, so each pair isolates the hazard gate instead of letting locality do the work — the fixtures
+are stronger than before, not merely adjusted to agree.
+
+#### Verification
+
+`npm test` **374** (150 + 35 + 37 + **152**, from 84) · `npm run test:mutation` **120 of 120 caught**,
+zero `ANCHOR LOST`, zero `AMBIGUOUS`. `index.html`, `vercel.json`, `package.json`, `AGENTS.md`,
+`api/news/hazard.js` and the DOM/contrast/severity suites are untouched.
+
+#### Outstanding
+
+H17 preview evidence, and Codex's decision on the two blockers above. H18 production verification
+follows an owner-approved merge.
+
+
 ### 2026-10-01 — hazard-classifier acceptance contract drafted; implementation not started
 
 Owner authorized continuing with the user-visible hazard-classifier false positives next. Codex

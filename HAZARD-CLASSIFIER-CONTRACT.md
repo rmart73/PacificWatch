@@ -1,7 +1,13 @@
 # Pacific Watch — Hazard-classifier acceptance contract
 
-Status: **proposed for review**. This document governs a later implementation only after it is
-reviewed and merged. It changes no runtime behavior by itself.
+Status: **accepted and authoritative**, merged as #32 in `1b3c822` after Claude's read-only review
+(three rounds: the circular locality vocabulary, the `dependencies` wording, and the bare
+`Ocean View` collision) and the owner's merge decision. H01–H18 govern the implementation.
+
+It merged still reading "proposed for review" — the fourth contract in this project to do so — and
+was corrected by the first claim that followed it. A status line describing a document's own
+lifecycle goes stale at exactly the moment it matters, because merging is not an event that edits
+the line saying the document is unmerged.
 
 ## Purpose
 
