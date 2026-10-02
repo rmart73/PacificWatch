@@ -1478,11 +1478,18 @@ function quakeScope() {
    Returns null when the time is unusable, so callers must decide what to show rather than being
    handed a plausible-looking string. That is the point: the old path rendered a future event as
    "just now", an absent one as "NaNd ago", and null as "20728d ago" -- the Unix epoch. */
-function quakeEventAge(ms) {
+function quakeEventAge(ms, now) {
   if (typeof ms !== 'number' || !isFinite(ms)) return null;
   /* The same five-minute allowance the observation clock uses: a source clock a little ahead of
-     ours is ordinary disagreement; further ahead is not a moment we can place. */
-  if (ms - Date.now() > OBS_SKEW_MS) return null;
+     ours is ordinary disagreement; further ahead is not a moment we can place.
+
+     The clock is injectable so the BOUNDARY itself can be pinned. Without it a test can only
+     assert "+2 minutes passes, +90 minutes fails", which leaves the comparison free to drift
+     between > and >= unnoticed — and this function implements OBS_SKEW_MS independently of
+     observationState(), so nothing else would catch it. Exactly OBS_SKEW_MS is INSIDE the
+     allowance; a millisecond beyond is not. */
+  const base = now == null ? Date.now() : now;
+  if (ms - base > OBS_SKEW_MS) return null;
   return timeAgo(ms);
 }
 
@@ -1510,23 +1517,35 @@ function renderQuakeCard(quakes, now) {
     return;
   }
   const p = quakes[0].properties;
-  /* A missing magnitude stays unknown rather than becoming a number. */
+  const age = quakeEventAge(p.time, now);
+  const capped = quakes.length >= USGS_LIMIT ? ' \u00b7 ' + USGS_LIMIT + '+ in range' : '';
+  /* WITHHOLD, do not merely un-dot. The presentation matrix is explicit for "missing/invalid
+     observation time": withhold the point-in-time value, say "Observation time unavailable",
+     unknown dot. An earlier version showed "M 4.0" beside "event time unknown", which still
+     asserts that an earthquake of that size happened recently enough to be worth showing — the
+     magnitude is only meaningful as "an event at a time", and without the time it is a claim the
+     data cannot support. The radius disclosure stays, because the contract requires it. */
+  if (age == null) {
+    val.innerHTML = '<span style="font-size:13px;opacity:.4">\u2014</span>';
+    note.textContent = 'Observation time unavailable \u00b7 ' + quakeRadiusLabel() + capped + suffix;
+    if (dot) dot.className = 's-dot unknown';
+    return;
+  }
+  /* A missing magnitude stays unknown rather than becoming a number. Unlike an unusable time,
+     the event itself is still real and placed, so place and time remain shown. */
   const magUsable = p.mag != null;
   val.innerHTML = magUsable
     ? 'M ' + esc(p.mag.toFixed(1))
     : '<span style="font-size:13px;opacity:.4">M unknown</span>';
-  const age = quakeEventAge(p.time);
-  const capped = quakes.length >= USGS_LIMIT ? ' \u00b7 ' + USGS_LIMIT + '+ in range' : '';
   /* The scope belongs on the populated card too, not only on the empty one and the list. A
      magnitude with no radius reads as "the latest earthquake" rather than "the latest inside
      this query", which is a claim about everywhere else that the data does not support. */
   note.textContent = truncate(p.place || 'Unknown location', 34)
-    + ' \u00b7 ' + (age == null ? 'event time unknown' : age)
+    + ' \u00b7 ' + age
     + ' \u00b7 ' + quakeRadiusLabel() + capped + suffix;
-  /* Place and event time may still be shown, but the dot answers one question: was a usable,
-     current reading verified? A missing magnitude is the PRIMARY metric missing, and a time we
-     cannot place is not a time. Neither earns the dot however healthy the query was. */
-  if (dot) dot.className = (queryVerified && magUsable && age != null) ? 's-dot ok' : 's-dot unknown';
+  /* The dot answers one question: was a usable, current reading verified? A missing magnitude is
+     the PRIMARY metric missing, so it does not earn the dot however healthy the query was. */
+  if (dot) dot.className = (queryVerified && magUsable) ? 's-dot ok' : 's-dot unknown';
 }
 
 function renderQuakeCardUnavailable() {
@@ -2005,21 +2024,32 @@ function renderTideCard(now) {
 /* The quake card has no measurement clock, but its FETCH health ages, so it belongs on the same
    re-render path as the other two: a query that lapses while the page sits idle must stop
    claiming to be verified. */
-function renderQuakeCardFromCache(now) {
+function renderQuakeSurfacesUnavailable() {
+  renderQuakeCardUnavailable();
+  const container = document.getElementById('earthquakes-container');
+  if (container) container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`;
+}
+
+/* BOTH surfaces, because renderQuakes() already promises they are the same data and must not
+   drift apart. Re-rendering only the Overview card let the two disagree on exactly the boundaries
+   that matter: at the fetch-staleness boundary the card lost its dot while the Alerts list still
+   carried no stale notice, and past retention the card was withdrawn while the list kept showing
+   expired retained events. */
+function renderQuakeSurfaces(now) {
   const entry = observationEntry('usgsEarthquakes');
   const state = combinedObservationState('usgsEarthquakes', now, true);
   if (!entry || !entry.data) {
-    if (state !== 'checking') renderQuakeCardUnavailable();
+    if (state !== 'checking') renderQuakeSurfacesUnavailable();
     return;
   }
-  if (state === 'unavailable') { renderQuakeCardUnavailable(); return; }
-  renderQuakeCard(entry.data, now);
+  if (state === 'unavailable') { renderQuakeSurfacesUnavailable(); return; }
+  renderQuakes(entry.data, now);
 }
 
 function renderObservationCards(now) {
   renderWeatherCard(now);
   renderTideCard(now);
-  renderQuakeCardFromCache(now);
+  renderQuakeSurfaces(now);
 }
 
 async function fetchWeather() {
@@ -2169,7 +2199,7 @@ function renderQuakes(quakes, now) {
     const mag = p.mag != null ? p.mag.toFixed(1) : 'unknown';
     /* Same rule as the card: an unplaceable event time is reported as unknown rather than
        rendered as a number the data does not support. */
-    const when = quakeEventAge(p.time);
+    const when = quakeEventAge(p.time, now);
     return `<div class="alert-item"><span class="badge ${eqBadgeClass(p.mag||0)}">M ${esc(mag)}</span><div class="alert-title">${esc(truncate(p.place||'Unknown location',90))}</div><div class="alert-meta">${esc(when == null ? 'event time unknown' : when)} · USGS</div></div>`;
   }).join('');
 }
@@ -2194,7 +2224,7 @@ async function fetchEarthquakes() {
     sourceFail('usgsEarthquakes', e.message);
     const cached = usableCache('usgsEarthquakes');
     if (cached) renderQuakes(cached);
-    else { renderQuakeCardUnavailable(); container.innerHTML = `<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span><div class="alert-title">Earthquake data temporarily unavailable</div><div class="alert-meta">Could not reach earthquake.usgs.gov</div></div>`; }
+    else renderQuakeSurfacesUnavailable();
     console.warn('Earthquake fetch failed:', e.message);
   }
 }

@@ -1326,10 +1326,19 @@ function has(label, sel, needle, expected) {
   for (const [label, t, oldOutput] of badTimes) {
     await seedQuakes([{ properties: { mag: 4.0, place: 'Place', time: t } }]);
     check('  ' + label + ' event time is not verified', dotOf('#dot-quake'), 's-dot unknown');
-    check('    and says the time is unknown',
-      txt('#stat-quake-note').indexOf('event time unknown') !== -1, true);
+    check('    and the card says so in the contract\'s words',
+      txt('#stat-quake-note').indexOf('Observation time unavailable') !== -1, true);
+    /* The presentation matrix requires the point-in-time VALUE to be withheld, not merely
+       un-dotted. An earlier version showed "M 4.0" beside the unknown-time note, which still
+       asserts an earthquake of that size happened recently enough to be worth showing. The dot
+       and copy assertions alone passed across that defect, which is why this one exists. */
+    check('    and the magnitude is WITHHELD, not merely un-dotted',
+      txt('#stat-quake').indexOf('4.0') !== -1, false);
     check('    rather than ' + JSON.stringify(oldOutput),
       txt('#stat-quake-note').indexOf(oldOutput) !== -1, false);
+    /* The radius disclosure survives withdrawal; the contract requires it to stay. */
+    check('    while the query scope is still disclosed',
+      txt('#stat-quake-note').indexOf('within 500 km') !== -1, true);
   }
   /* The worst of them: a future event rendered as "just now" is the fetch clock wearing the
      event's clothes, which is precisely what the contract forbids. */
@@ -1337,6 +1346,7 @@ function has(label, sel, needle, expected) {
   check('  a future event time is not verified', dotOf('#dot-quake'), 's-dot unknown');
   check('    and is never rendered as "just now"',
     txt('#stat-quake-note').indexOf('just now') !== -1, false);
+  check('    its magnitude is withheld too', txt('#stat-quake').indexOf('4.0') !== -1, false);
   check('    the Alerts list refuses it too',
     txt('#earthquakes-container').indexOf('event time unknown') !== -1, true);
   /* Inside the five-minute skew allowance is ordinary clock disagreement, not an unusable time. */
@@ -1352,6 +1362,43 @@ function has(label, sel, needle, expected) {
   check('  and never substitutes the fetch time as the event time',
     txt('#stat-quake-note').indexOf('just now') !== -1, false);
   w.fetch = makeFetch(null);
+  quakeFeatures = null;
+
+  console.log('\n51. T12 — the five-minute skew boundary, pinned on both sides:');
+  /* quakeEventAge() implements OBS_SKEW_MS independently of observationState(), so nothing else
+     in the suite would notice the comparison drifting between > and >=. The clock is injected so
+     the boundary is exact rather than racing the wall clock. */
+  const skewBase = 1800000000000;
+  const SKEW = 5 * MIN;
+  check('exactly +5 minutes is INSIDE the allowance',
+    w.quakeEventAge(skewBase + SKEW, skewBase) != null, true);
+  check('  one millisecond beyond is not',
+    w.quakeEventAge(skewBase + SKEW + 1, skewBase) == null, true);
+  check('  and a past event is unaffected',
+    w.quakeEventAge(skewBase - 60000, skewBase) != null, true);
+
+  console.log('\n52. T12 — the tick re-evaluates BOTH earthquake surfaces:');
+  w.eval('S.cache = {}');
+  await seedQuakes([{ properties: { mag: 3.9, place: 'Shared surface', time: Date.now() - 10 * MIN } }]);
+  check('card and list both show the event', txt('#stat-quake').indexOf('3.9') !== -1
+    && txt('#earthquakes-container').indexOf('Shared surface') !== -1, true);
+  /* Corrupt BOTH surfaces, then let one tick repair them from cache. */
+  $('#dot-quake').className = 's-dot TICK-DID-NOT-RUN';
+  $('#earthquakes-container').innerHTML = '<div>LIST NOT RE-RENDERED</div>';
+  w.ageTick();
+  await settle();
+  check('the tick repaired the card', dotOf('#dot-quake'), 's-dot ok');
+  check('  and the Alerts list, which it used to leave behind',
+    txt('#earthquakes-container').indexOf('Shared surface') !== -1, true);
+  /* Past the fetch retention the two must withdraw TOGETHER, or the list keeps showing expired
+     retained events under a card that has already given up on them. */
+  w.renderQuakeSurfaces(Date.now() + 61 * MIN);
+  check('past retention the card is withdrawn', txt('#stat-quake').indexOf('3.9') !== -1, false);
+  check('  and the list is withdrawn with it',
+    txt('#earthquakes-container').indexOf('Shared surface') !== -1, false);
+  check('  the list says so rather than going blank',
+    txt('#earthquakes-container').indexOf('temporarily unavailable') !== -1, true);
+  w.renderQuakeSurfaces();
   quakeFeatures = null;
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

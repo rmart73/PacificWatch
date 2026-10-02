@@ -39,7 +39,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified, and content equality across the squash confirmed against branch head `ae3a410` | Closed |
-| Q007/Q008 stage 3 — earthquake alignment | Claimed on `claude/observation-stage3`; implementation not started at the time of this claim | Claude implements T12, then hands evidence to Codex for review |
+| Q007/Q008 stage 3 — earthquake alignment | [#30](https://github.com/rmart73/PacificWatch/pull/30) open; implementation, tests and a live record complete. Round one returned four findings, all corrected | Codex re-reviews; the owner decides merge |
 
 ### Active claims
 
@@ -364,7 +364,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 3 | **Claimed and in progress on `claude/observation-stage3`.** Earthquake alignment under T12 | Claude implements and gathers evidence; Codex reviews before merge |
+| Q007/Q008 stage 3 | **In review as [#30](https://github.com/rmart73/PacificWatch/pull/30).** Earthquake alignment under T12; implementation and evidence complete, round-one findings corrected | Codex re-reviews before merge |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
@@ -508,6 +508,71 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-01 — Stage 3 round one: four findings corrected
+
+#### 1. The magnitude leaked past an unusable event time — a real contract violation
+
+The card wrote `M 4.0` before consulting `quakeEventAge()`, so an unplaceable time produced the
+magnitude, an unknown-time note and an `unknown` dot together. The presentation matrix is stricter
+than I implemented: *"Missing/invalid observation time → **withhold point-in-time value**;
+'Observation time unavailable'; `unknown` dot."*
+
+The reasoning behind that row is the part worth keeping: **a magnitude is only meaningful as "an
+event at a time".** Showing `M 4.0` with no usable timestamp still asserts that an earthquake of
+that size happened recently enough to be worth putting on a situational-awareness card, which is a
+claim the data cannot support. The value is now withheld and the copy uses the contract's words.
+The radius disclosure survives, because the contract requires it.
+
+**My test could not have caught this.** Section 49 asserted the dot and the note text and never
+asserted that `M 4.0` had disappeared, so the suite stayed green across a contract violation sitting
+in the same four square centimetres it was inspecting. There is now an explicit withheld-value
+assertion per case and a mutation that restores the leak.
+
+#### 2. The age tick updated one of two surfaces that promise to agree
+
+`renderQuakeCardFromCache()` re-rendered only `#stat-quake`, while `renderQuakes()` carries an
+explicit comment that the card and the Alerts list *"are the same data; updating them together stops
+one going stale while the other refreshes."* I added a re-render path that broke that promise.
+
+The consequences land exactly on the boundaries that matter: at the fetch-staleness boundary the
+card lost its dot while the list still showed no stale notice, and past retention the card withdrew
+while the list kept displaying expired retained events. `renderQuakeSurfaces()` now re-evaluates
+both, with a shared unavailable path so the list says *"temporarily unavailable"* rather than
+silently keeping stale content. Two mutations guard it: one re-renders only the card, the other
+withdraws only the card past retention.
+
+#### 3. The skew boundary was unpinned
+
+`quakeEventAge()` implements `OBS_SKEW_MS` **independently of `observationState()`**, so nothing
+else in the suite would notice the comparison drifting between `>` and `>=`. Fixtures at +2 and +90
+minutes bracket the boundary without touching it.
+
+The function now takes an injectable clock — earthquake-local, not the shared `timeAgo()` — so the
+boundary is exact rather than racing the wall clock: **exactly `OBS_SKEW_MS` is inside the
+allowance, one millisecond beyond is not**, with a mutation flipping `>` to `>=`.
+
+#### 4. Two live rows still instructed implementation
+
+Corrected alongside the rest of the current-state region.
+
+#### Four anchors moved, repaired, and the lesson earning itself again
+
+Changing the dot expression, the skew comparison and the list call site disarmed four existing
+mutations. **That is the third time in this project**, and the second inside a round that had
+already accepted the lesson about it. The repair was routine precisely because the fourth T17 rule
+makes the check mandatory rather than optional — a count alone would have read 101 of 101 and said
+nothing.
+
+#### Verification
+
+`npm test` **306** · `npm run test:dom` **402** · `npm run test:mutation` **105 of 105 caught**,
+zero `ANCHOR LOST`, zero `AMBIGUOUS`.
+
+The live record below predates these corrections. It remains valid for what it shows — the USGS
+asymmetry on real data — and none of the four findings touch that behaviour, but it was captured
+against the earlier head and is labelled as such rather than re-presented as current.
+
 
 ### 2026-10-01 — Stage 3 implementation complete; handed to Codex
 
