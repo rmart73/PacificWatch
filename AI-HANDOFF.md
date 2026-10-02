@@ -479,6 +479,16 @@ island or agency in the summary rather than the title, while current noise still
 weather, a routine police closure and EMS wording. H15/H16 therefore govern decoded title+summary
 and require review of every removal before implementation merges.
 
+Claude's first read-only review found a decisive circularity: the minimum place vocabulary was
+sized to a synthetic corpus authored beside it. The recorded Nolo evacuation for Olowalu Village,
+whose summary names Honoapiilani Highway and North Kihei, matched none of those anchors and would
+have been deleted despite being the most operationally important item in the evidence. The revised
+contract makes that real item a required positive, seeds locality from Nolo plus a five-feed capture
+spanning at least three publication dates, and makes every hazard-evidence/locality-false item a
+separate vocabulary-review record that cannot be banked as improved precision. H14 also now states
+the repository's actual condition: runtime `dependencies` remains **absent or empty**, so no one is
+invited to add an empty key.
+
 **No implementation has started.** `api/news.js`, both canonical routes, the client, tests,
 configuration, dependencies, WAF and production are untouched. Claude reviews read-only; only an
 accepted and merged contract plus a separate owner-authorized claim may start implementation.
