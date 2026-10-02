@@ -68,6 +68,17 @@ function feedXml(i) {
    one. Filtering over the whole pool yields 30 hazard items; filtering after a newest-30 cap
    would yield none of them. The difference is the entire justification for a separate hazard
    representation, so it must be exercised by a fixture that overflows the cap. */
+/* &#699; is the 'okina. The ONLY Hawaii anchor in this fixture is entity-encoded, so the item can
+   only be classified if decode() produces it and the classifier then sees the decoded form. */
+const ENCODED_TITLE = 'Flood warning for Kaua&#699;i';
+let encoded = false;
+function encodedFeedXml() {
+  const t = new Date(Date.UTC(2026, 9, 2, 12, 0)).toUTCString();
+  return '<rss><channel><item><title>' + ENCODED_TITLE +
+    '</title><link>https://example.test/enc</link><description>d</description>' +
+    '<pubDate>' + t + '</pubDate></item></channel></rss>';
+}
+
 let bulk = false;
 function bulkFeedXml(i) {
   let out = '<rss><channel>';
@@ -98,7 +109,7 @@ function installFetch() {
     if (failAll) return Promise.reject(new Error('forced failure'));
     if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
     const idx = Math.max(0, upstream - 1);
-    const xml = bulk ? bulkFeedXml(idx % 5) : feedXml(idx % 5);
+    const xml = encoded ? encodedFeedXml() : (bulk ? bulkFeedXml(idx % 5) : feedXml(idx % 5));
     return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(xml) });
   };
 }
@@ -278,6 +289,26 @@ async function main() {
      what makes the corpus capable of failing in BOTH directions rather than agreeing with
      whatever the implementation happens to do.
      ====================================================================================== */
+  console.log('\nH02 — an ENCODED anchor must survive decode() and reach the classifier:');
+  /* The previous heading claimed "entities" while every assertion handed the classifier text that
+     was already decoded. Nothing proved an encoded anchor travels the real path. This drives the
+     HANDLER with an RSS body whose only Hawaii anchor is entity-encoded, so decode() has to
+     produce it and the classifier has to see it. The classifier itself must NOT become a second
+     entity decoder -- that is decode()'s job, and duplicating it is how the XSS ordering bug
+     described there got introduced in the first place. */
+  encoded = true;
+  o = await call('/api/news', 'GET', false);
+  encoded = false;
+  const encodedItem = o.body.items.filter(i => i.title.indexOf('Flood warning for Kaua') !== -1)[0];
+  check('the encoded item is returned', !!encodedItem, true);
+  check('  its title is decoded in the response, not left as an entity',
+    encodedItem && encodedItem.title.indexOf('&#699;') === -1, true);
+  check('  and the decoded anchor reached the classifier',
+    encodedItem && encodedItem.hazard, true);
+  /* The classifier alone must not decode: handed the raw entity it sees no anchor. */
+  check('the classifier does not decode entities itself',
+    classify(ENCODED_TITLE, ''), false);
+
   console.log('\nH05 — the required negatives, each a measured failure of the predecessor:');
   /* All eleven returned TRUE under the old single-gate expression. None is a free pass. */
   const REQUIRED_NEGATIVES = [
@@ -405,6 +436,45 @@ async function main() {
   /* The gates stay independent: these anchors do not make a non-hazard story qualify. */
   check('  an anchor alone still is not hazard evidence',
     classify('Hawaiian Electric announces a new billing portal', ''), false);
+
+  console.log('\nH02 — macron-bearing names, which the okina-only test did not reach:');
+  /* NFKC preserved the macron as a precomposed letter and the punctuation pass then replaced the
+     whole letter with a space: "Kihei" became "k hei" and stopped matching its own anchor. Kihei
+     is a contract-required anchor from the Olowalu evidence, so this was a required positive
+     failing behind a passing suite. */
+  check('K\u012Bhei with a macron anchors', classify('Flood warning for K\u012Bhei', ''), true);
+  check('Waim\u0101nalo with a macron anchors', classify('Evacuation order for Waim\u0101nalo', ''), true);
+  check('L\u012Bhu\u02BBe with macron and okina anchors',
+    classify('Brush fire evacuation near L\u012Bhu\u02BBe', ''), true);
+  check('Waik\u012Bk\u012B with two macrons anchors',
+    classify('High surf warning for Waik\u012Bk\u012B', ''), true);
+  check('  and the ASCII spellings still anchor', classify('Flood warning for Kihei', ''), true);
+
+  console.log('\nH05 — compound context: ONE token from an unrelated row must not vouch:');
+  /* A loose single-list conjunction let unrelated tokens satisfy each other. Each pair below is
+     the false positive and the true positive that must survive removing it. */
+  check('swell needs a qualifier AND ocean context, not either',
+    classify('Fund swells to record high in Hawaii', ''), false);
+  check('  while the real construction still qualifies',
+    classify('Dangerous ocean swells hit Oahu shores', ''), true);
+  check('erupt is not volcanic because a summit is mentioned',
+    classify('Argument erupted at Honolulu summit', ''), false);
+  check('  while lava at a vent still qualifies',
+    classify('Lava erupted from the Kilauea vent', ''), true);
+  check('an EMS story and an animal shelter do not vouch for each other',
+    classify('Honolulu Emergency Medical Services responds at an animal shelter', ''), false);
+  check('  while an emergency proclamation qualifies',
+    classify('Governor signs emergency proclamation for Maui', ''), true);
+  check('  and a shelter opening during a storm qualifies',
+    classify('Emergency shelter opens on Kauai as storm approaches', ''), true);
+
+  console.log('\nH04 — bare "hawaiian" is an adjective that travels:');
+  check('a Hawaiian-themed mainland resort does not anchor',
+    classify('Storm damage closes a Hawaiian-themed resort in Orlando', ''), false);
+  check('  while the two proven constructions do: Hawaiian Electric',
+    classify('Hawaiian Electric responds to outages as Hurricane Nolo passes', ''), true);
+  check('  and the Hawaiian Islands',
+    classify('Tropical storm moves away from the Hawaiian Islands', ''), true);
 
   console.log('\nH08 — missing fields cannot borrow a label from anywhere:');
   check('empty title and summary', classify('', ''), false);

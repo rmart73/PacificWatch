@@ -494,20 +494,20 @@ const mutations = [
 
   /* H05, one per context-dependent family: each must require its context, not just its term. */
   { name: 'erupt qualifies without volcanic context',
-    from: "    context: ['volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',",
-    to:   "    context: ['argument', 'volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',",
+    from: "    context: ['volcano', 'volcanic', 'volcanoes', 'lava', 'kilauea', 'mauna loa', 'hvo',",
+    to:   "    context: ['argument', 'volcano', 'volcanic', 'volcanoes', 'lava', 'kilauea', 'mauna loa', 'hvo',",
     expect: ['erupt WITHOUT volcanic context'],
     suite: 'news', target: 'api' },
 
   { name: 'swell qualifies without ocean context',
-    from: "  { terms: ['swell', 'swells', 'swelling'],\n    context: ['high', 'large', 'dangerous', 'ocean', 'surf', 'shore', 'shores',\n              'north shore', 'waves', 'coastal'] },",
-    to:   "  { terms: ['swell', 'swells', 'swelling'],\n    context: ['in', 'the', 'a', 'high', 'large', 'dangerous', 'ocean'] },",
-    expect: ['swell WITHOUT ocean context'],
+    from: "            ['ocean', 'surf', 'shore', 'shores', 'waves', 'coastal', 'sea', 'beaches']] },",
+    to:   "            ['ocean', 'surf', 'shore', 'shores', 'waves', 'coastal', 'sea', 'beaches', 'record']] },",
+    expect: ['swell needs a qualifier AND ocean context, not either'],
     suite: 'news', target: 'api' },
 
   { name: 'emergency qualifies without declaration context',
-    from: "  { terms: ['emergency'],\n    context: ['declaration', 'declared', 'proclamation', 'state of emergency', 'disaster',\n              'evacuation', 'evacuate', 'shelter', 'shelters', 'hiema', 'civil defense'] },",
-    to:   "  { terms: ['emergency'],\n    context: ['declaration', 'declared', 'services', 'responds', 'medical'] },",
+    from: "    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
+    to:   "    context: ['services', 'declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
     expect: ['emergency WITHOUT declaration context'],
     suite: 'news', target: 'api' },
 
@@ -518,8 +518,8 @@ const mutations = [
     suite: 'news', target: 'api' },
 
   { name: 'shelter qualifies without emergency context',
-    from: "  { terms: ['shelter', 'shelters'],\n    context: ['emergency', 'evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',\n              'hurricane', 'tropical storm', 'flood', 'wildfire', 'brush fire', 'storm'] },",
-    to:   "  { terms: ['shelter', 'shelters'],\n    context: ['animal', 'opens', 'in', 'emergency'] },",
+    from: "    context: ['evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',",
+    to:   "    context: ['animal', 'evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',",
     expect: ['shelter WITHOUT emergency context'],
     suite: 'news', target: 'api' },
 
@@ -563,9 +563,49 @@ const mutations = [
   /* "Hawaiian" is not a spelling variant of "Hawaii" to a whole-token matcher. Dropping it
      deleted a hurricane-outage story from the capture. */
   { name: 'the Hawaiian anchors dropped',
-    from: "  'hawaiian', 'hawaiian islands', 'hawaiian electric',",
+    from: "  'hawaiian islands', 'hawaiian electric',",
     to:   "",
     expect: ['"the Hawaiian Islands" anchors'],
+    suite: 'news', target: 'api' },
+
+  /* Finding 2: the macron fold. Without it the punctuation pass eats the whole letter. */
+  { name: 'macron folding removed',
+    from: "    .replace(/[\\u0300-\\u036f]/g, '')",
+    to:   "",
+    expect: ['K\u012Bhei with a macron anchors'],
+    suite: 'news', target: 'api' },
+
+  /* Finding 1: each half of the compound conjunction, and the two tightened rows. */
+  { name: 'compound context collapses back to a single list',
+    from: "    if (g.allOf) { if (g.allOf.every(group => hasAny(norm, group))) return true; }",
+    to:   "    if (g.allOf) { if (g.allOf.some(group => hasAny(norm, group))) return true; }",
+    expect: ['swell needs a qualifier AND ocean context, not either'],
+    suite: 'news', target: 'api' },
+
+  { name: 'summit restored as volcanic context',
+    from: "              'hawaiian volcano observatory', 'caldera', 'fissure', 'magma'] },",
+    to:   "              'hawaiian volcano observatory', 'caldera', 'fissure', 'magma', 'summit'] },",
+    expect: ['erupt is not volcanic because a summit is mentioned'],
+    suite: 'news', target: 'api' },
+
+  { name: 'shelter restored as emergency context',
+    from: "    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',\n              'evacuee', 'evacuees', 'hiema', 'civil defense'] },",
+    to:   "    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',\n              'evacuee', 'evacuees', 'hiema', 'civil defense', 'shelter'] },",
+    expect: ['an EMS story and an animal shelter do not vouch for each other'],
+    suite: 'news', target: 'api' },
+
+  /* Finding 3: bare hawaiian travels to a mainland resort. */
+  { name: 'bare hawaiian restored as an anchor',
+    from: "  'hawaiian islands', 'hawaiian electric',",
+    to:   "  'hawaiian', 'hawaiian islands', 'hawaiian electric',",
+    expect: ['a Hawaiian-themed mainland resort does not anchor'],
+    suite: 'news', target: 'api' },
+
+  /* Finding 4: the encoded anchor must survive the real path. */
+  { name: 'entity decoding dropped from the feed path',
+    from: "  out = decodeEntities(out);",
+    to:   "",
+    expect: ['and the decoded anchor reached the classifier'],
     suite: 'news', target: 'api' },
 
   /* H01: one producer. Bypassing the helper at the call site is the divergence to catch. */

@@ -53,6 +53,12 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 function hazardNormalize(text) {
   return String(text == null ? '' : text)
     .normalize('NFKC')
+    /* Decompose, then drop the combining marks only. Without this the macron SURVIVED NFKC as a
+       precomposed letter, and the punctuation pass below then replaced the whole letter with a
+       space: "Kihei" became "k hei" and stopped matching its own anchor. The 'okina is a letter
+       modifier, not a combining mark, so it is untouched here and handled below. */
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     /* 'okina and apostrophe variants collapse to one form so Hawai'i, Hawaii and Hawai`i match. */
     .replace(/[\u02BB\u02BC\u2018\u2019']/g, "'")
     .toLowerCase()
@@ -93,8 +99,13 @@ const HAWAII_ANCHORS = [
   'honolulu', 'maui county', 'hawaii county', 'kauai county', 'honolulu county',
   /* "Hawaiian" is not a spelling variant of "Hawaii" to a whole-token matcher, and the feeds use
      it constantly: "the Hawaiian Islands" in NWS forecast copy, "Hawaiian Electric" in every
-     outage story. Its absence dropped a hurricane-outage story from the capture. */
-  'hawaiian', 'hawaiian islands', 'hawaiian electric',
+     outage story. Its absence dropped a hurricane-outage story from the capture.
+
+     Only the two PROVEN constructions are anchors. Bare "hawaiian" is an adjective that travels
+     anywhere -- a Hawaiian-themed resort on the mainland -- which is the same collision the
+     contract names for bare "Ocean View". A further construction needs its own capture evidence
+     and its own fixtures. */
+  'hawaiian islands', 'hawaiian electric',
   /* A Hawai'i place the authored list did not contain, found in the capture. */
   'papahanaumokuakea',
   /* commonly reported places -- contract plus capture */
@@ -123,24 +134,35 @@ const HAZARD_DIRECT = [
 ];
 
 /* CONTEXT-DEPENDENT FAMILIES -- the contract's decision table, one entry per row.
-   Each needs its own term AND one of its context terms in the same record. */
+   `context` means "the term AND any one of these". `allOf` means "the term AND at least one
+   from EVERY listed group", which is what several contract rows actually require: a loose
+   single-list conjunction let unrelated tokens vouch for each other, so "fund swells to record
+   high" passed on `high` alone and "argument erupted at a summit" passed on `summit` alone. */
 const HAZARD_CONTEXT = [
+  /* Volcanic terms only. "summit" and "vent" are gone: a political summit and an air vent are
+     ordinary English, and they were the tokens letting gunfire "erupt" volcanically. */
   { terms: ['erupt', 'erupts', 'erupted', 'eruption', 'eruptions'],
-    context: ['volcano', 'volcanic', 'lava', 'kilauea', 'mauna loa', 'hvo',
-              'hawaiian volcano observatory', 'summit', 'caldera', 'vent', 'fissure'] },
+    context: ['volcano', 'volcanic', 'volcanoes', 'lava', 'kilauea', 'mauna loa', 'hvo',
+              'hawaiian volcano observatory', 'caldera', 'fissure', 'magma'] },
+  /* The contract requires a qualifier AND ocean context, not either one. */
   { terms: ['swell', 'swells', 'swelling'],
-    context: ['high', 'large', 'dangerous', 'ocean', 'surf', 'shore', 'shores',
-              'north shore', 'waves', 'coastal'] },
+    allOf: [['high', 'large', 'dangerous', 'damaging'],
+            ['ocean', 'surf', 'shore', 'shores', 'waves', 'coastal', 'sea', 'beaches']] },
+  /* "shelter" is gone from this list: it let an Emergency Medical Services story and an animal
+     shelter vouch for each other across an unrelated sentence. */
   { terms: ['emergency'],
-    context: ['declaration', 'declared', 'proclamation', 'state of emergency', 'disaster',
-              'evacuation', 'evacuate', 'shelter', 'shelters', 'hiema', 'civil defense'] },
+    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',
+              'evacuee', 'evacuees', 'hiema', 'civil defense'] },
   { terms: ['warning', 'warnings', 'watch', 'watches', 'advisory', 'advisories'],
     context: ['hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',
               'high surf', 'surf', 'wind', 'winds', 'storm surge', 'fire', 'wildfire',
               'brush fire', 'volcanic', 'lava', 'ashfall', 'small craft', 'gale'] },
+  /* Bare "emergency" is gone from here for the same reason, in the other direction. A shelter
+     qualifies on an actual displacement event, or on the fixed phrase. */
   { terms: ['shelter', 'shelters'],
-    context: ['emergency', 'evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',
-              'hurricane', 'tropical storm', 'flood', 'wildfire', 'brush fire', 'storm'] },
+    context: ['evacuation', 'evacuate', 'evacuee', 'evacuees', 'disaster',
+              'hurricane', 'tropical storm', 'flood', 'flooding', 'wildfire', 'brush fire',
+              'storm', 'storms', 'emergency shelter', 'emergency shelters'] },
   { terms: ['outage', 'outages'],
     context: ['power', 'electric', 'electrical', 'utility', 'water', 'communications',
               'cellular', 'cell', 'phone', 'internet', 'grid'] },
@@ -167,7 +189,11 @@ const HAZARD_IDIOMS = [
 function hasHazardEvidence(norm) {
   if (hasAny(norm, HAZARD_DIRECT)) return true;
   for (const g of HAZARD_CONTEXT) {
-    if (hasAny(norm, g.terms) && hasAny(norm, g.context)) return true;
+    if (!hasAny(norm, g.terms)) continue;
+    /* allOf is a conjunction of groups: every group must contribute. context is the single-group
+       form. A row declares one or the other, never both. */
+    if (g.allOf) { if (g.allOf.every(group => hasAny(norm, group))) return true; }
+    else if (hasAny(norm, g.context)) return true;
   }
   return false;
 }

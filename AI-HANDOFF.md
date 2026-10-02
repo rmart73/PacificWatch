@@ -42,7 +42,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified, and content equality across the squash confirmed against branch head `ae3a410` | Closed |
 | Q007/Q008 stage 3 — earthquake alignment | **#30 merged in `9a83c55`** and production verified: the served HTML is byte-identical to the merged blob, and a 174-minute-old real earthquake renders verified, which is the asymmetry working | **Closed. T12 complete, so T01–T17 are now closed** |
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
-| Hazard-classifier acceptance contract | Claimed on `codex/hazard-classifier-contract`; documentation and design only | Codex writes the acceptance contract; Claude reviews read-only; owner decides merge |
+| Hazard-classifier acceptance contract | #32 merged in `1b3c822`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy verified | Closed; authoritative at H01–H18 |
+| Hazard-classifier implementation | [#33](https://github.com/rmart73/PacificWatch/pull/33) open; corpus 24 of 24 from a 13-of-24 baseline, H15/H16 ledgers and H17 preview captured. Round one returned six findings, all corrected | Codex re-reviews; the owner decides merge |
 
 ### Active claims
 
@@ -333,7 +334,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/hazard-classifier-contract | **Documentation and design only.** Defines the hazard-classifier acceptance contract and absorbs #31's self-close |
+| Claude | claude/hazard-classifier | Hazard-classifier implementation under H01–H18. Branched from `main` at `1b3c822` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -349,15 +350,16 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
-| Hazard classifier false positives | **Contract claimed on `codex/hazard-classifier-contract`.** Roughly 7 of 30 items in the hazard representation during Nolo were not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
+| Hazard classifier false positives | **Contract merged as #32; implementation in review as [#33](https://github.com/rmart73/PacificWatch/pull/33).** The Nolo noise — a political polling story, the HI-5 fund, a DMV closure, two mainland weather items — is removed, with two evidence-boundary false negatives accepted and recorded | Codex re-reviews #33 |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `565f686`**, merged through #31 and serving production. Claims and handoffs for
+**`main` is at `1b3c822`**, merged through #32 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The hazard-classifier acceptance contract is the
+**An application implementation IS in flight: [#33](https://github.com/rmart73/PacificWatch/pull/33)
+changes `api/news.js` and the News API tests.** The hazard-classifier acceptance contract was the
 only active work and is documentation/design only. Stage 3 merged in #30 and its closeout merged in
 #31; the observation-truthfulness contract is fully implemented at T01–T17 across stages 1, 2 and 3.
 
@@ -491,6 +493,88 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-02 — classifier round one: six findings corrected
+
+**Codex ruled on the two H16 blockers: both stay false.** A storm name is not durable proof that a
+system is Central Pacific, and bare *"islands"* is not Hawaiʻi-specific — adding either would weaken
+the locality gate. They are now recorded as **reviewed, accepted evidence-boundary false
+negatives**, not precision wins and no longer blockers. A future authoritative basin signal would
+need its own amendment.
+
+#### 1. The context model was looser than the contract
+
+`term AND any one context token` let unrelated tokens vouch for each other, recreating exactly the
+cross-context false positives the contract exists to remove. All three reproduced:
+
+```
+Fund swells to record high in Hawaii                 true   ('high' alone satisfied swell)
+Argument erupted at Honolulu summit                  true   ('summit' alone was volcanic)
+Honolulu EMS responds at an animal shelter           true   (emergency and shelter vouched
+                                                             for each other across a sentence)
+```
+
+`allOf` now expresses the compound rows: swell requires a qualifier **and** ocean context, both
+groups. `summit` and `vent` are gone from the volcanic list — a political summit and an air vent are
+ordinary English. `shelter` is gone from emergency's context and bare `emergency` from shelter's, in
+both directions. Every pair has a fixture for the false positive **and** the true positive that must
+survive removing it.
+
+#### 2. Macrons were being destroyed — the serious one
+
+NFKC preserved the macron as a precomposed letter, and the punctuation pass then replaced the whole
+letter with a space:
+
+```
+Līhuʻe -> l hu'e     Kīhei -> k hei     Waimānalo -> waim nalo     Waikīkī -> waik k
+```
+
+**`Kīhei` is a contract-required anchor from the Olowalu evidence**, so a required positive was
+failing behind a passing suite. The existing "diacritic spelling" test exercised only the ʻokina,
+which survives NFKC — so it passed while the macron case was broken. NFD now decomposes and only
+the combining marks are dropped; the ʻokina is a letter modifier and is untouched.
+
+#### 3. Bare `hawaiian` repeated the Ocean View collision
+
+The capture proved two constructions — `Hawaiian Islands` and `Hawaiian Electric` — and I
+generalised to the bare adjective, which travels to a Hawaiian-themed mainland resort. Only the
+proven phrases remain, with a collision fixture that already satisfies the hazard gate so locality
+is the only thing under test.
+
+#### 4. H02's entity evidence was claimed and absent
+
+The heading said "entities" while every assertion handed the classifier already-decoded text.
+Nothing proved an encoded anchor travels the real path. A handler-level RSS fixture now carries an
+anchor whose **only** form is `&#699;`, so `decode()` must produce it and the classifier must see
+it — plus an assertion that the classifier does **not** decode entities itself, because duplicating
+that is how the ordering bug `decode()` warns about gets reintroduced.
+
+#### 5 and 6. Board reconciliation, and the two verification items
+
+The whole current-state region is reconciled, not the cited lines: contract closed, #33 row added,
+Active Branches, Review Queue, `main` pointer, in-flight paragraph.
+
+```
+H11  DOM client-shape suite            402 passed, 0 failed
+H14  empty directory, no node_modules  150 + 35 + 37 + 171 = 393 passed, 0 failed
+```
+
+H14 was run by copying only `index.html`, `package.json`, `api/` and the four pure suites into a
+clean directory — eight files, no `node_modules` — and running each suite directly. "Files
+untouched" was not evidence for either, and Codex was right to refuse it.
+
+#### Five anchors lost and repaired — the fourth occurrence
+
+Tightening the vocabularies moved the lines five mutations were anchored on. **Fourth time in this
+project**, and the clearest demonstration yet of why the fourth T17 lesson requires zero
+`ANCHOR LOST` *alongside* the count: the headline would have read `121 of 126` and looked like five
+ordinary misses rather than five guards that had quietly stopped guarding anything.
+
+#### Verification
+
+`npm test` **393** (150 + 35 + 37 + **171**) · `npm run test:dom` **402** · `npm run test:mutation`
+**126 of 126 caught**, zero `ANCHOR LOST`, zero `AMBIGUOUS`.
+
 
 ### 2026-10-02 — hazard classifier implemented; H15/H16 ledgers, two items reported not banked
 
