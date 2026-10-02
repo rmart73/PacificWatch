@@ -69,7 +69,14 @@ therefore not "apply Stage 2 to the quake card"; three of its four rules are abo
    `unknown` there, because the primary metric is the thing that is absent.
 2. **`renderQuakes(quakes, stale)`** — **2100**. Passes the state through to the card and to the
    Alerts list items at **2119**, which render event times with the same helper.
-3. **`timeAgo(ms)`** — **2091**. Measured, not assumed:
+3. **`timeAgo(ms)`** — **2091**. **Left unchanged, deliberately.** It has a third consumer beyond
+   the two earthquake surfaces: `renderNews()` at **2291** calls it for `it.published`. Changing a
+   global helper's invalid-input behaviour would alter the News card from inside a PR claimed for
+   T12, which is scope widening however small the diff. The new validation is therefore
+   **earthquake-specific**, applied at the two call sites at **1495** and **2120**; `timeAgo()` keeps
+   its exact current behaviour and News is untouched and unregressed.
+
+   What it does today, measured rather than assumed:
 
    ```
    undefined / NaN / "not a time"  ->  "NaNd ago"
@@ -80,6 +87,10 @@ therefore not "apply Stage 2 to the quake card"; three of its four rules are abo
    The last is the one the contract names directly: a future or unusable event time must produce
    `unknown`, and the app *"must not substitute the fetch time as the event time."* Rendering a
    future event as **"just now"** is exactly that substitution, wearing a plausible number.
+
+   **News shares this latent defect** — `timeAgo(Date.parse(it.published))` renders `"NaNd ago"` for
+   an unparseable `published` — but fixing it is not T12. It is recorded in the Review Queue as its
+   own unclaimed item rather than folded in here.
 4. **`renderQuakeCardUnavailable()`** — **1500**. Expected to need no change; named because it is the
    fallback the new unusable-time path may route to, and silence about it would be an omission.
 5. **`renderObservationCards(now)`** — added in Stage 2. The quake card is extended into it so the
@@ -325,9 +336,9 @@ the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `f
 at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
 the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 merged as #28
-in `a2d032e` and is production verified. Stage 3 is next** and aligns the earthquake card under
-T12, but it is unclaimed and requires a fresh claim plus the owner's authorization before any edit.
-Each implementation needs its own claim. Q010 is settled as an owner-accepted unverified gap and is
+in `a2d032e` and is production verified. Stage 3 is claimed and in progress** on
+`claude/observation-stage3`, aligning the earthquake card under T12 on the owner's explicit
+authorization. Each implementation needs its own claim. Q010 is settled as an owner-accepted unverified gap and is
 not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
@@ -358,13 +369,14 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
+| `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `e39b772`**, merged through #29 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The only active work is this documentation-only
-checkpoint review. Stage 3 is approved but unclaimed and unstarted.
+**An application implementation IS in flight: Stage 3 on `claude/observation-stage3`**, which will
+change `index.html` and the test suites under T12. Nothing else is active.
 
 This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
