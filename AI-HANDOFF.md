@@ -11,7 +11,8 @@ That archive is historical evidence, not an active claim board.
 Updated 2026-10-02. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, and the
-**#32 documentation deploy**, which Codex performed directly. The #26 checks were unauthenticated HTTP
+**#32 documentation deploy**, and the **#33 classifier deploy**, which Codex performed directly
+and Claude reproduced independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -43,72 +44,23 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Q007/Q008 stage 3 — earthquake alignment | **#30 merged in `9a83c55`** and production verified: the served HTML is byte-identical to the merged blob, and a 174-minute-old real earthquake renders verified, which is the asymmetry working | **Closed. T12 complete, so T01–T17 are now closed** |
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Hazard-classifier acceptance contract | #32 merged in `1b3c822`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy verified | Closed; authoritative at H01–H18 |
-| Hazard-classifier implementation | [#33](https://github.com/rmart73/PacificWatch/pull/33) open; corpus 24 of 24 from a 13-of-24 baseline, H15/H16 ledgers and H17 preview captured. Round one returned six findings, all corrected | Codex re-reviews; the owner decides merge |
+| Hazard-classifier implementation | **#33 merged in `afff98b`** and production verified: HTML byte-identical to the merged blob, both endpoints `200`, 22 hazard items all true, zero feed errors | **Closed. H01–H18 implemented and production verified** |
+| Hazard-classifier closeout record | Claimed on `claude/hz-closeout`; documentation only | Codex reviews read-only; the owner decides merge |
 
 ### Active claims
 
-**Hazard-classifier implementation — Claude Code, `claude/hazard-classifier`.**
-Claimed 2026-10-02 before editing any implementation file, in its own commit ahead of the work, on
-the owner's explicit authorization. Branched from `main` at **`1b3c822`**.
+**Hazard-classifier closeout — Claude Code, `claude/hz-closeout`.**
+Claimed 2026-10-02 before editing, in its own commit ahead of the work, on the owner's explicit
+authorization. Branched from `main` at `afff98b`.
 
-Governed by [HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md), **H01–H18**.
+Scope: absorb #33's self-close across Current Work, Active claims, Active Branches, the Review
+Queue, the `main` pointer, the attribution header and the in-flight paragraph; record the H18
+production evidence and H10's live result; preserve the accepted historical Nolo false negatives
+with the reason the refreshed item now passes; and record the aftermath/consequence cluster as an
+unclaimed possible future contract amendment.
 
-**What this changes, named before touching it**
-
-1. **A single named classifier in `api/news.js`.** Today the decision is one broad expression,
-   `HAZARD_RE` at **35**, evaluated at exactly one place: `hazard: HAZARD_RE.test(title + ' ' +
-   summary)` inside `parseFeed()`'s `items.push` at **87**. That call site stays the only producer
-   of the boolean (H01); what changes is what it calls.
-2. **Two maintained vocabularies**, separate and separately testable: a Hawaiʻi locality anchor set
-   and a hazard-evidence set with the contract's context-dependent groups. Both gates required.
-3. **`parseFeed()` integration only.** No change to `fetchFeed()`, the feed list, `decode()`,
-   `decodeEntities()`, `tag()`, deduplication, sorting, the cap, or `serve()`.
-4. **Tests** in `test/news-api.test.js`: the contract's 11 required negatives and 13 required
-   positives with labels written directly, plus the H02 boundary, H04 locality, H07 cross-field and
-   H08 empty-field cases.
-5. **Mutation cases** in `test/mutation-check.js` covering locality removal, boundary loosening,
-   each context-dependent family, a required-positive removal, and filter/helper divergence (H13).
-6. **Evidence**: the multi-day five-feed provenance capture (H04/H15), the change ledger and the
-   separate locality-only ledger (H15/H16), and preview verification of both representations and
-   their cache identity (H17).
-
-**Two things I know before starting, stated now rather than discovered in the ledger**
-
-**The evidence record is the truncated summary.** `parseFeed()` does
-`tag(b, 'description').slice(0, 240)` at **78**, and the classifier sees that same truncated text —
-which is correct per the contract, since it must classify *"the same decoded title and summary that
-the response returns"*. But it means **a locality anchor past 240 characters is invisible to the
-gate**, so an item can be genuinely local and fail on text the reader never sees either. Any such
-case goes in the locality-only ledger as a boundary artifact rather than being quietly counted as a
-remote item.
-
-**Normalization must not touch the decode order.** `decode()` deliberately decodes entities
-*before* stripping tags and repeats stripping until stable, because the reverse order turned
-encoded markup back into live markup. Hazard normalization happens **after** `decode()`, on its
-output, and adds no second HTML interpretation path (H02).
-
-**Baseline, measured before any change**
-
-The current classifier against the contract's corpus: **11 of 11 required negatives wrong, 0 of 13
-required positives wrong.** Every negative is load-bearing from the first commit and none passes
-trivially. More importantly it fixes where the risk sits: recall is already perfect, so **the only
-way this work can make the product worse is by losing real hazard coverage.** The locality-only
-ledger is therefore the primary acceptance artifact, not any precision figure.
-
-**Out of scope, explicitly**
-
-The two canonical representations, edge query normalization, zero-fan-out rejection, the WAF rule
-and every G01–G18 control. Feed list, parser internals, dedupe, sort, cap, response schema, cache
-policy, user agent, the eight-second abort. `index.html`, the News UI, `timeAgo()` invalid-input
-handling, `AGENTS.md`, Stage 3, the remote-branch convention question, and the closed-claims
-cleanup. No runtime dependency, no new route, no diagnostic endpoint.
-
-**Absorbed into this claim**
-
-#32's self-close, since a board PR cannot record its own merge. Also the status-line correction I
-raised at review: `HAZARD-CLASSIFIER-CONTRACT.md` merged still reading *"proposed for review"*,
-which made it the fourth contract to land while describing itself as unmerged. Codex suggested
-folding it into the next claimed board edit; this is that edit.
+**Documentation only.** No application, API, test, configuration, dependency, WAF or production
+settings change. The merged implementation branch is not touched.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -334,7 +286,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/hazard-classifier | Hazard-classifier implementation under H01–H18. Branched from `main` at `1b3c822` |
+| Claude | claude/hz-closeout | **Documentation only.** Records the #33 production verification and closes the rows a board PR cannot close about itself |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -350,17 +302,18 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
-| Hazard classifier false positives | **Contract merged as #32; implementation in review as [#33](https://github.com/rmart73/PacificWatch/pull/33).** The Nolo noise — a political polling story, the HI-5 fund, a DMV closure, two mainland weather items — is removed, with two evidence-boundary false negatives accepted and recorded | Codex re-reviews #33 |
+| Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
+| Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `1b3c822`**, merged through #32 and serving production. Claims and handoffs for
+**`main` is at `afff98b`**, merged through #33 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An application implementation IS in flight: [#33](https://github.com/rmart73/PacificWatch/pull/33)
-changes `api/news.js` and the News API tests, and is the sole active implementation.** The
-hazard-classifier acceptance contract merged as #32 in `1b3c822` and is authoritative at H01–H18.
+**No application implementation is in flight.** The hazard classifier merged as #33 in `afff98b` and
+is verified in production; the only open work is this documentation-only closeout. The contract
+merged as #32 in `1b3c822` and is authoritative at H01–H18.
 Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
 implemented at T01–T17 across stages 1, 2 and 3.
 
@@ -494,6 +447,111 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-02 — #33 merged and production verified; H01–H18 complete
+
+Merged on the owner's explicit permission, squashed as **`afff98b`**. Codex verified production
+directly and Claude reproduced every figure independently.
+
+#### H18 — production verification
+
+```
+git blob main:index.html   c01cc1618666d40de1a0ba114eb9b53b3ce06407
+production HTML hashed     c01cc1618666d40de1a0ba114eb9b53b3ce06407   IDENTICAL
+/ · /api/news · /api/news/hazard                                      all 200
+mixed representation       30 items ·  2 hazard · 28 non-hazard · 0 feed errors
+hazard representation      22 items · all hazard: true ·              0 feed errors
+```
+
+#### H10, live
+
+**The hazard representation returns 22 items while the capped mixed list contains 2.** A browser
+filtering the newest thirty for itself — exactly the thing a separate representation exists to
+replace — would surface two of the twenty-two.
+
+**The mechanism, stated correctly.** `/api/news` returns the newest thirty items whatever their
+labels; the classifier changes which of them carry `hazard: true`, it removes nothing from that
+endpoint. `/api/news/hazard` filters the whole deduplicated pool **before** the cap, so it reaches
+qualifying items that sit outside the newest thirty. The 22-versus-2 difference is therefore about
+where qualifying items fall in the pool, not about anything being removed from the mixed list.
+
+An earlier version of this entry said precision had "removed non-hazard items from the mixed list"
+and widened the gap. That was wrong on its face — no item leaves `/api/news` — and the widening
+claim compared two different captures besides.
+
+#### Two illustrations from different captures — NOT a controlled comparison
+
+**These are examples, not evidence.** The first set comes from the Nolo-era capture under the old
+classifier; the second is the current production hazard representation under the new one. They are
+different feeds on different days, so nothing causal may be read from placing them together. **The
+controlled same-capture comparison is the H15 ledger**, which ran both classifiers over one
+identical 170-item pool.
+
+```
+examples, old classifier, Nolo-era capture:
+  Trump polling · HI-5 bottle fund · Chinatown stabbing · Bass Pro shooting
+  DMV closure · Northeast flooding · New Mexico utility worker
+
+examples, new classifier, current production:
+  Flash Flood Warning for Kauaʻi · Kīlauea quake swarm · Kalaupapa power outage
+  Olowalu brush fire evacuation · Lahaina school closures · Hawaiian Electric outages
+```
+
+#### Ambiguity recorded rather than smoothed — H18 requires it
+
+Codex flagged *"Pumpkin supply depleted after a year of severe weather"* as the most borderline of
+the 22. It is not alone, and the honest form of the record is the pattern rather than the one item:
+**four of the 22 are consequences of past hazards rather than active ones** — wildfire attorney fee
+caps, the pumpkin story, businesses awaiting aid after Lowell, and tourism spending after major
+storms.
+
+Each passes both gates **correctly**: a real Hawaiʻi place, real hazard language. The implementation
+is faithful to the contract. The contract simply does not distinguish *"a hazard is occurring"* from
+*"a hazard occurred and these are the consequences"*. Recorded in the Review Queue as a possible
+future amendment, explicitly **not** a defect in #33 and **not** authorization to tune anything.
+
+#### The Nolo evidence-boundary decision stands
+
+*"Tropical Storm Nolo drifts southward"* now classifies **true**, because the refreshed production
+summary explicitly names **Papahānaumokuākea** — a durable locality signal that was simply absent
+from the earlier capture.
+
+**That vindicates the gate rather than relaxing it.** The earlier capture remains an accepted
+historical false negative, and neither storm names nor bare *"islands"* are anchors. An item that
+acquires a real anchor passes; one that never had one does not. If a future authoritative basin
+signal is wanted, it needs its own amendment.
+
+#### H01–H18 — complete
+
+```
+corpus            24 of 24      (measured baseline 13 of 24)
+npm test          393           (150 + 35 + 37 + 171)
+test:dom          402
+test:mutation     126 of 126    zero ANCHOR LOST, zero AMBIGUOUS
+H14               393 passing in a clean eight-file directory, no node_modules
+H15/H16           170-item capture, 7 publication dates, both ledgers resolved
+H17/H18           preview 9 of 9; production verified above
+```
+
+#### What three review rounds found, worth keeping
+
+The contract review argued the authored vocabulary was circular — written to match a corpus written
+to match it. **That proved true of my implementation three separate times**, and each defect was
+found by real feed text rather than by the corpus: a possessive silently broke anchors; `Hawaiian`
+was not a variant of `Hawaii` to a whole-token matcher and its absence dropped a hurricane-outage
+story; and **macrons were being deleted entirely**, so `Kīhei` — a contract-required anchor from the
+Olowalu evidence — failed while the suite reported 24 of 24.
+
+I also rebuilt the defect I was removing, twice: a loose conjunction let `summit` make gunfire
+volcanic, and I generalised two proven phrases into bare `hawaiian` after arguing in review that
+bare `Ocean View` was unsafe for exactly that reason.
+
+#### Still open and unclaimed
+
+News `timeAgo()` invalid-input handling — the recommended next user-visible item, pending Codex
+settling its acceptance boundary. The aftermath/consequence question above. The
+deleted-remote-branch convention. The closed-claims cleanup.
+
 
 ### 2026-10-02 — classifier round one: six findings corrected
 
