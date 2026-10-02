@@ -8,11 +8,12 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-28. PR state was checked through GitHub. Production observations below are
-attributed to the user-relayed Claude report, except the #21 deploy check and the **#26 closeout
-verification**, both verified directly against production. The #26 checks were unauthenticated HTTP
+Updated 2026-10-01. PR state was checked through GitHub. Production observations below are
+attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
+verification**, and the **#28 production verification**, which Codex performed directly. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
-per request — not a relayed report.
+per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
+against the merged Git blob and checked both canonical news endpoints directly.
 
 | Work | State | Owner / next action |
 |---|---|---|
@@ -36,88 +37,22 @@ per request — not a relayed report.
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 2 — observation clock in the cards | [#28](https://github.com/rmart73/PacificWatch/pull/28) open; implementation and tests complete, T16 evidence captured. **All review findings corrected across three rounds, T15 layout verified by the owner, and Claude's durable-document review finding corrected** | Ready for the owner's merge decision |
+| Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed review corrected the missed #27 self-close and Claude's stale overnight-hold finding | Claude review complete; owner decides merge |
 
 ### Active claims
 
-**Q007/Q008 Stage 2 — T17 durable-document reconciliation — ChatGPT Codex,
-`claude/observation-stage2`.**
-Claimed 2026-09-28 after the read-only implementation re-review at `5517b09`, under the owner's
-authorization of the reserved Stage 2 documentation sub-scope. Claude is paused; this does not
-transfer implementation ownership.
+**End-of-night checkpoint after Stage 2 — ChatGPT Codex,
+`codex/night-pause-2026-09-28`.**
+Claimed 2026-09-28 on the owner's instruction to merge #28, verify current status and pause for the
+night. Branched from production `main` at the #28 squash merge, after the deployment completed.
+Resumed 2026-10-01 for the promised consistency review; no implementation work was started.
 
-Scope is documentation only: reconcile the retired observation-dot severity classes and the
-remaining `.hazard-pulse` reduced-motion substitute in `AGENTS.md`; add the four mutation-testing
-lessons carried by the Stage 2 Review Queue; record this sub-scope and its result in
-`AI-HANDOFF.md`; and correct the duplicated next-action wording introduced in the final handover.
-No `index.html`, test, API, configuration, dependency, Stage 3, classifier or unrelated board
-cleanup change is in scope.
-
-**Q007/Q008 Stage 2 — wiring the observation clock into the cards — Claude Code,
-`claude/observation-stage2`.**
-Claimed 2026-09-28 before editing, in its own commit ahead of the work, on the owner's explicit
-authorization relayed through Codex. Branched from `main` at `56fa1d5`.
-
-Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md),
-**T01–T11 and T13–T17 as applicable to Stage 2.** T12 is Stage 3 and is excluded.
-
-**Scope — what this changes**
-
-1. **Weather and tide cards consume the Stage 1 helpers.** `observationVerified()` and the state
-   helpers exist and are tested since #24, but the cards still decide their own presentation. The
-   dots and copy become functions of the observation state rather than of fetch success.
-2. **Source details separates the two clocks.** `renderSourceHealth()` currently shows one combined
-   state plus a `lastSuccess` age, so a fresh fetch of a stale measurement reads as healthy. Fetch
-   health and observation age become separately visible.
-3. **NOAA `t` is retained and rendered.** The raw stamp is already captured at
-   `observedAtFromNoaaLst(latest.t)`; Stage 2 renders it in HST rather than discarding it.
-4. **Magnitude-driven dots removed.** Three assignments, all in `index.html`:
-   `dotWind` at **1846** (`windMph>35?'alert':windMph>20?'warn'`), the gust-only form at **1850**,
-   and `dotRain` at **1866** (`>0.5?'alert':>0?'warn'`). A measurement's size is not a statement
-   about whether it was verified, which is the whole point of T01 and T03.
-5. **Dead CSS removed.** `.s-dot.warn` (line 151) and `.s-dot.alert` (line 152) once the consumers
-   are gone, plus the dot-specific reduced-motion rule at **397** and the comment at **393–394**
-   that explains it. **`.hazard-pulse` keeps its static ring substitute** — it is a separate
-   consumer and reduced-motion users still need the second channel.
-6. **Tests** for the T-items above, including the age-tick, island-race, retained-data,
-   partial-weather and hostile/malformed fixtures the contract names, plus mutation cases.
-7. **#27's self-close absorbed**, since a board PR cannot record its own merge: close the
-   `claude/g1-closeout` claim, replace it under Active Branches, and update its Review Queue row.
-
-**A scope item that does not exist, reported rather than silently dropped**
-
-The authorization names *"wind/rain/tide magnitude-driven `warn`/`alert` dot assignments."* **The
-tide dot has no magnitude thresholds.** `renderTide()` at **1941** already assigns
-`stale ? 'unknown' : 'ok'`, and `renderTideUnavailable()` at **1950** assigns `unknown`. So for tide
-there is nothing of that kind to remove — what Stage 2 changes there is the *input*, from a
-fetch-derived `stale` flag to the observation state. Recorded so the closeout is not later read as
-having removed something that was never present.
-
-**Out of scope, explicitly**
-
-Stage 3 earthquake behaviour and T12. `HAZARD_RE` and the hazard-classifier finding. The
-closed-claims cleanup. The remote-branch convention decision. No API, `vercel.json`, WAF or
-dependency change.
-
-**Reserved for Codex on this same branch — Claude does not touch `AGENTS.md`**
-
-The T17 reconciliation in `AGENTS.md` and the three mutation-testing lessons now recorded in the
-Stage 2 Review Queue row are **Codex's documentation sub-scope**, claimed separately after the
-implementation is reviewed. I will not edit that file. When implementation and tests are ready I
-**pause and hand the branch over** rather than continuing into the documentation.
-
-**T16 requires evidence before merge:** a timestamped raw-response-versus-rendered-output record for
-weather and tide, covering source fields, units, observation time, an independently established
-expectation and the actual display. That is gathered against the preview, not asserted from tests.
-
-
-**G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
-Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
-#26 merge. Scope: record the production verification of #26, close the G1 claim, and carry the
-pre-existing hazard-classifier finding into the Review Queue, which is the step Codex directed be
-done through the next properly claimed closeout rather than by widening #26.
-
-**Documentation only.** No application, configuration or test change.
+Scope is documentation only: record #28's merge and independent production verification; close the
+Stage 2 claims, branch and Review Queue entries that #28 could not close about itself; identify
+Stage 3 as the next approved but unclaimed implementation; and leave an exact resume checkpoint.
+No application, test, API, configuration, dependency, Stage 3, classifier, remote-branch convention
+or closed-claims-cleanup change is in scope.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -326,11 +261,11 @@ implementation stays a separate claimed, reviewable PR.
 the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `fcaf55a` and is authoritative
 at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
-the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 is in review as
-[#28](https://github.com/rmart73/PacificWatch/pull/28)**: the observation helpers now reach the cards
-and Source details, the magnitude-driven dot classes are gone, and `AGENTS.md` is reserved for
-Codex's T17 sub-scope on that branch. **Stage 3 is next** and aligns the earthquake card. Each implementation needs its own claim. Q010 is
-settled as an owner-accepted unverified gap and is not outstanding.
+the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 merged as #28
+in `a2d032e` and is production verified. Stage 3 is next** and aligns the earthquake card under
+T12, but it is unclaimed and requires a fresh claim plus the owner's authorization before any edit.
+Each implementation needs its own claim. Q010 is settled as an owner-accepted unverified gap and is
+not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
 Accepted verification adjustments in #13: O06 can manipulate timestamps and count fetches
@@ -343,7 +278,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/observation-stage2 | Q007/Q008 Stage 2: the observation clock reaches the weather and tide cards and Source details; magnitude-driven dot classes removed. `AGENTS.md` is untouched and reserved for Codex's T17 sub-scope on this same branch |
+| Codex | codex/night-pause-2026-09-28 | [#29](https://github.com/rmart73/PacificWatch/pull/29), documentation-only Stage 2 production checkpoint under resumed review; no implementation work |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -353,28 +288,30 @@ Merged branches are omitted from this active list; this does not imply remote br
 |---|---|---|
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
-| Q007/Q008 stage 2 | **Ready to merge as [#28](https://github.com/rmart73/PacificWatch/pull/28).** Implementation review clean; T16 captured against the deployed preview; T15 layout verified by the owner at 320/390px and desktop; T17 durable-document reconciliation and all four mutation-testing lessons placed in `AGENTS.md`; Claude's documentation review finding corrected | Owner decides merge |
-| Q007/Q008 stage 3 | Not started; owner-approved, and G1 is closed so the sequence gate is lifted. Aligns the earthquake card and satisfies T12 | Claim separately after Stage 2 merges |
+| Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed consistency review corrected the missed #27 self-close, and Claude's read-only review finding is corrected | Owner decides merge |
+| Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after #29 merges; claim separately before editing |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `56fa1d5`**, merged through #27 and serving production. Claims and handoffs for
+**`main` is at `a2d032e`**, merged through #28 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An application implementation IS in flight: [#28](https://github.com/rmart73/PacificWatch/pull/28)
-changes `index.html` and the test suites.** Stage 3 is approved but unclaimed and unstarted.
+**No application implementation is in flight.** The only active work is this documentation-only
+checkpoint review. Stage 3 is approved but unclaimed and unstarted.
 
-This paragraph has now been wrong three times and corrected three times — `main` as `22686bb` with G1
+This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
 into a round where #28 was open, written by a closeout that **claimed to absorb #27's self-close and
 did not perform it**. Each was true when written and
 neither was updated as the work moved. **The closeout that merged #26 initially repeated the
 mistake:** the new entry was written while this section and seven others still described the
 pre-merge state, and Codex caught all eight. A line describing "right now" is wrong the moment the
-thing it describes moves, and writing a correct entry elsewhere does not update it.
+thing it describes moves, and writing a correct entry elsewhere does not update it. This checkpoint
+performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
 
@@ -496,6 +433,56 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-01 — resumed review found #27's claim still active in #29
+
+Codex resumed from the pause checkpoint read-only. `main` remained clean at `a2d032e`; PR #29 was
+open, `MERGEABLE/CLEAN`, Vercel passing and limited to `AI-HANDOFF.md`.
+
+The promised consistency review found one real closeout defect: #29 removed both completed Stage 2
+claims but left `claude/g1-closeout` under Active claims. Stage 2 had explicitly claimed #27's
+self-close as item 7, so leaving that block in place both broke the concurrency lock and made the
+checkpoint's claim of closing Stage 2's absorbed work false. The block is removed here; its scope
+and outcome remain preserved in the historical Handoff Log. No application, API, test,
+configuration, dependency or unrelated maintenance file changed.
+
+The current-state rows now describe resumed review rather than instructing the agents to remain
+paused overnight. Stage 3 remains unclaimed and unstarted until #29 is reviewed and merged with the
+owner's permission.
+
+Claude's subsequent read-only review found one remaining stale instruction in the live next-sequence
+paragraph: Stage 3 still said it must not start "during this overnight pause." The historical
+2026-09-28 sentence remains untouched; the live rule now states the durable gate — a fresh claim
+and the owner's authorization before any Stage 3 edit. Claude reported no further finding.
+
+### 2026-09-28 — #28 merged and production verified; overnight pause
+
+The owner explicitly authorized the merge. PR #28 was squash-merged as **`a2d032e`** and the local
+and remote `main` branches were synchronized to that commit. The merged content is identical to
+the source branch despite the expected squash-history difference.
+
+Codex verified the production deployment directly, not through a relayed report:
+
+- Vercel deployment `6729460746` completed successfully.
+- The HTML served by `https://pacific-watch.vercel.app/` is byte-identical to the merged Git blob;
+  both have object ID **`9dc45e4c86ae763477bc44e55abf9080f0991f4b`**.
+- The served page contains the Stage 2 `observationDot` and `renderObservationCards` paths, and the
+  retired `.s-dot.warn` CSS is absent.
+- `/api/news` and `/api/news/hazard` both return `200`, so the unrelated G1 routes stayed healthy.
+
+The final suite evidence remains Claude's independently reproduced result at the reviewed code:
+`npm test` **306**, `test:dom` **354**, and `test:mutation` **95 of 95**, with zero `ANCHOR LOST`
+and zero `AMBIGUOUS`. Codex could not rerun Node in its shell, but verified that the application,
+test, API and configuration files were unchanged after that run before merging.
+
+Stage 2 closes **T01–T11 and T13–T17**. T12 remains Stage 3. No application implementation is active
+at this pause point. Stage 3 is next in the approved sequence but remains unclaimed and unstarted;
+the hazard-classifier finding, deleted-remote-branch convention question and closed-claims cleanup
+also remain separate and unclaimed. The six pre-existing `Closed:` blocks under Active claims are
+deliberately untouched; their cleanup stays off the critical path and requires its own claim.
+
+Resume order: finish review of this documentation-only checkpoint, merge it only with the owner's
+permission, then create a fresh claim before any Stage 3 edit. Nothing is to start overnight.
 
 ### 2026-09-28 — Claude documentation review finding corrected; #28 ready for owner decision
 
