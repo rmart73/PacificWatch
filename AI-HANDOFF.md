@@ -8,7 +8,7 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-09-28. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-01. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, and the **#28 production verification**, which Codex performed directly. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
@@ -38,7 +38,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
 | Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
-| Overnight checkpoint after Stage 2 | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only | Leave unmerged overnight; review and merge only with owner permission on resume |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed review found and corrected the missed #27 self-close | Ready for Claude's read-only review, then the owner's merge decision |
 
 ### Active claims
 
@@ -46,20 +46,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 `codex/night-pause-2026-09-28`.**
 Claimed 2026-09-28 on the owner's instruction to merge #28, verify current status and pause for the
 night. Branched from production `main` at the #28 squash merge, after the deployment completed.
+Resumed 2026-10-01 for the promised consistency review; no implementation work was started.
 
 Scope is documentation only: record #28's merge and independent production verification; close the
 Stage 2 claims, branch and Review Queue entries that #28 could not close about itself; identify
 Stage 3 as the next approved but unclaimed implementation; and leave an exact resume checkpoint.
 No application, test, API, configuration, dependency, Stage 3, classifier, remote-branch convention
 or closed-claims-cleanup change is in scope.
-
-**G1 closeout and Review Queue carry-forward — Claude Code, `claude/g1-closeout`.**
-Claimed 2026-09-28 before editing, in its own commit ahead of the work. Branched from `main` at the
-#26 merge. Scope: record the production verification of #26, close the G1 claim, and carry the
-pre-existing hazard-classifier finding into the Review Queue, which is the step Codex directed be
-done through the next properly claimed closeout rather than by widening #26.
-
-**Documentation only.** No application, configuration or test change.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -284,7 +277,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/night-pause-2026-09-28 | [#29](https://github.com/rmart73/PacificWatch/pull/29), documentation-only checkpoint after #28 merged and production verification completed; no implementation work |
+| Codex | codex/night-pause-2026-09-28 | [#29](https://github.com/rmart73/PacificWatch/pull/29), documentation-only Stage 2 production checkpoint under resumed review; no implementation work |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -295,8 +288,8 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production verified independently by Codex and Claude | Closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
-| Overnight checkpoint after Stage 2 | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only | Review on resume; owner decides merge |
-| Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after the overnight pause; claim separately before editing |
+| Stage 2 production checkpoint | [#29](https://github.com/rmart73/PacificWatch/pull/29) open; documentation only; resumed consistency review corrected the missed #27 self-close | Claude reviews read-only; owner decides merge |
+| Q007/Q008 stage 3 | Not started; owner-approved, and Stage 2 plus G1 are closed. Aligns the earthquake card and satisfies T12 | Next implementation after #29 merges; claim separately before editing |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
@@ -307,7 +300,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application implementation is in flight.** The only active work is this documentation-only
-overnight checkpoint. Stage 3 is approved but unclaimed and unstarted.
+checkpoint review. Stage 3 is approved but unclaimed and unstarted.
 
 This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
@@ -439,6 +432,22 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-01 — resumed review found #27's claim still active in #29
+
+Codex resumed from the pause checkpoint read-only. `main` remained clean at `a2d032e`; PR #29 was
+open, `MERGEABLE/CLEAN`, Vercel passing and limited to `AI-HANDOFF.md`.
+
+The promised consistency review found one real closeout defect: #29 removed both completed Stage 2
+claims but left `claude/g1-closeout` under Active claims. Stage 2 had explicitly claimed #27's
+self-close as item 7, so leaving that block in place both broke the concurrency lock and made the
+checkpoint's claim of closing Stage 2's absorbed work false. The block is removed here; its scope
+and outcome remain preserved in the historical Handoff Log. No application, API, test,
+configuration, dependency or unrelated maintenance file changed.
+
+The current-state rows now describe resumed review rather than instructing the agents to remain
+paused overnight. Stage 3 remains unclaimed and unstarted until #29 is reviewed and merged with the
+owner's permission.
 
 ### 2026-09-28 — #28 merged and production verified; overnight pause
 
