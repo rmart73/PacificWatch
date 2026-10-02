@@ -33,100 +33,23 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Security and launch-readiness review | #21 merged in 648db0f after Codex re-review; deploy verified — `index.html`, `api/`, `vercel.json`, `test/` and `package.json` byte-identical across the deploy, and production HTML byte-identical to merged main | Closed as a report; **G1 is no longer a launch blocker — closed by #26** — and one evidence item is open below |
 | Board and AGENTS reconciliation | #22 merged in 410777d; documentation-only deploy verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | #23 merged in `a3f9897`; documentation-only deploy verified | Closed; the contract is authoritative and governs the stages |
-| Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 remain separately claimed work |
+| Q007/Q008 stage 1 — observation clock | #24 merged in `22686bb`; production HTML byte-identical to merged `main`, independently verified by both agents | Closed; stages 2 and 3 followed in #28 and #30 and are also closed |
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only, three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | G1 abuse/cost bounding implementation | **#26 merged in `9e2cfec`** and production verified: `/api/news` mixed at 30, the new `/api/news/hazard` hazard-only at 30 where it previously 404'd, legacy query URLs still `200`, and a never-before-requested arbitrary key converging on the canonical cache entry | **Closed. G1 closed at G01–G18**, the WAF rule published by the owner and its enforcement measured and attributed |
 | G1 closeout record | #27 merged in `56fa1d5`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 remains Stage 3 |
+| Q007/Q008 stage 2 — observation clock in the cards | #28 merged in `a2d032e`; production HTML is byte-identical to merged `main`, Stage 2 symbols are live, retired severity-dot CSS is absent, and both canonical news endpoints remain healthy | Closed; T01–T11 and T13–T17 complete. T12 followed in #30, so the contract is closed at T01–T17 |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified, and content equality across the squash confirmed against branch head `ae3a410` | Closed |
-| Q007/Q008 stage 3 — earthquake alignment | [#30](https://github.com/rmart73/PacificWatch/pull/30) open; implementation, tests and a live record complete. Round one returned four findings, all corrected | Codex re-reviews; the owner decides merge |
+| Q007/Q008 stage 3 — earthquake alignment | **#30 merged in `9a83c55`** and production verified: the served HTML is byte-identical to the merged blob, and a 174-minute-old real earthquake renders verified, which is the asymmetry working | **Closed. T12 complete, so T01–T17 are now closed** |
+| Stage 3 closeout record | Claimed on `claude/stage3-closeout`; documentation only | Codex reviews; the owner decides merge |
 
 ### Active claims
 
-**Q007/Q008 Stage 3 — earthquake observation-truthfulness alignment — Claude Code,
-`claude/observation-stage3`.**
-Claimed 2026-10-01 before editing any implementation file, in its own commit ahead of the work, on
-the owner's explicit authorization relayed through Codex. Branched from `main` at **`e39b772`**,
-with content equality across the #29 squash verified first: `AI-HANDOFF.md`, `AGENTS.md`,
-`index.html`, `vercel.json`, `package.json`, `api/news.js` and `api/news/hazard.js` are all
-byte-identical to branch head `ae3a410`.
+**Stage 3 closeout — Claude Code, `claude/stage3-closeout`.**
+Claimed 2026-10-02 before editing, in its own commit ahead of the work. Branched from `main` at the
+#30 squash merge. Scope: record the #30 production verification, close the Stage 3 claim, branch and
+Review Queue rows that a board PR cannot close about itself, and reconcile the current-state region.
 
-Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), **T12
-and the Earthquake section**. T01–T11 and T13–T17 closed in Stage 2 and are not reopened.
-
-**The asymmetry that shapes this stage.** The contract gives USGS *"existing fetch-health limits"*
-and existing 60-minute cache retention, and says an event's age *"remains visible as content age and
-does not make a successfully refreshed query stale."* So **USGS must stay out of**
-`OBSERVATION_LIMITS` — unlike weather and tide, an old earthquake is not an old reading. A month-old
-quake inside the 30-day window is a correct answer to a query that ran seconds ago. Stage 3 is
-therefore not "apply Stage 2 to the quake card"; three of its four rules are about something else.
-
-**Functions this changes, named before touching them**
-
-1. **`renderQuakeCard(quakes, stale)`** — `index.html` **1473**. Takes the combined state rather than
-   a fetch-derived boolean. Today the dot is `stale ? 'unknown' : 'ok'` on **both** branches, so a
-   **missing magnitude still earns a verified dot** at line **1498** — the contract requires
-   `unknown` there, because the primary metric is the thing that is absent.
-2. **`renderQuakes(quakes, stale)`** — **2100**. Passes the state through to the card and to the
-   Alerts list items at **2119**, which render event times with the same helper.
-3. **`timeAgo(ms)`** — **2091**. **Left unchanged, deliberately.** It has a third consumer beyond
-   the two earthquake surfaces: `renderNews()` at **2291** calls it for `it.published`. Changing a
-   global helper's invalid-input behaviour would alter the News card from inside a PR claimed for
-   T12, which is scope widening however small the diff. The new validation is therefore
-   **earthquake-specific**, applied at the two call sites at **1495** and **2120**; `timeAgo()` keeps
-   its exact current behaviour and News is untouched and unregressed.
-
-   What it does today, measured rather than assumed:
-
-   ```
-   undefined / NaN / "not a time"  ->  "NaNd ago"
-   null                            ->  "20728d ago"     (the Unix epoch)
-   Date.now() + 90 min             ->  "just now"
-   ```
-
-   The last is the one the contract names directly: a future or unusable event time must produce
-   `unknown`, and the app *"must not substitute the fetch time as the event time."* Rendering a
-   future event as **"just now"** is exactly that substitution, wearing a plausible number.
-
-   **News shares this latent defect** — `timeAgo(Date.parse(it.published))` renders `"NaNd ago"` for
-   an unparseable `published` — but fixing it is not T12. It is recorded in the Review Queue as its
-   own unclaimed item rather than folded in here.
-4. **`renderQuakeCardUnavailable()`** — **1500**. Expected to need no change; named because it is the
-   fallback the new unusable-time path may route to, and silence about it would be an omission.
-5. **`renderObservationCards(now)`** — added in Stage 2. The quake card is extended into it so the
-   age tick and `switchView()` re-evaluate it from cache, as weather and tide already do. Its dot
-   follows fetch health, and fetch health ages.
-6. **`fetchEarthquakes()`** — **2124**. Call sites only, to route through the state-aware renderer.
-   `sourceOk('usgsEarthquakes', data.features, token)` keeps passing **no** `observed` argument,
-   deliberately: that is what keeps event age out of the freshness calculation.
-
-**Markup regions**
-
-- `index.html` **548–550** — `#dot-quake`, `#stat-quake`, `#stat-quake-note`.
-- `#earthquakes-container` — the Alerts list rendered by `renderQuakes()`.
-- **1627** — the `['stat-quake', 'stat-quake-note', 'dot-quake']` triple in
-  `renderIslandScopedChecking()`, read to confirm the island-switch path still holds; changed only
-  if the new states require it.
-
-**Test files**
-
-- `test/dom-behavior.test.js` — T12 fixtures: empty query verified; missing magnitude `unknown`;
-  event age not confused with query freshness; and the unusable and future event-time cases above.
-- `test/mutation-check.js` — a case per rule, so each assertion is demonstrably load-bearing.
-- `test/phase1-source-health.test.js` — **only if** a pure helper is extracted for event-time
-  usability. If the logic stays inside the render path, this file is untouched and the claim says
-  so rather than leaving it ambiguous.
-
-**Out of scope, explicitly**
-
-The hazard-classifier finding and `HAZARD_RE`. The remote-branch convention question. The
-closed-claims cleanup. `AGENTS.md`. Any API, `vercel.json`, WAF, dependency or Stage 1/2 change.
-Existing query-limit and radius disclosures stay exactly as they are — the contract says so, and
-they are the kind of correct, hard-won wording that invites casual rewriting.
-
-**Absorbed into this claim:** #29's self-close, since a board PR cannot record its own merge —
-Current Work, Active Branches, the Review Queue rows, the `main` pointer, and Codex's completed
-checkpoint claim, whose history remains in the Handoff Log.
+**Documentation only.** No application, API, configuration, dependency or test change.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -336,9 +259,9 @@ the sequence **G1 → Stage 2 → Stage 3**. The G1 contract merged as #25 in `f
 at G01–G18; **G1 implementation merged as #26 in `9e2cfec` and G1 is closed** — the WAF rule was
 published by the owner, its enforcement measured at a temporary 5-per-60 setting and attributed to
 the rule from the platform's own traffic log, then restored to 100-per-60. **Stage 2 merged as #28
-in `a2d032e` and is production verified. Stage 3 is claimed and in progress** on
-`claude/observation-stage3`, aligning the earthquake card under T12 on the owner's explicit
-authorization. Each implementation needs its own claim. Q010 is settled as an owner-accepted unverified gap and is
+in `a2d032e` and Stage 3 as #30 in `9a83c55`, both production verified — the approved
+G1 → Stage 2 → Stage 3 sequence is complete and the observation-truthfulness contract is
+implemented at T01–T17.** Each implementation needed its own claim. Q010 is settled as an owner-accepted unverified gap and is
 not outstanding.
 
 The merged [Overview contract](V2-OVERVIEW-CONTRACT.md) governs implementation.
@@ -352,7 +275,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/observation-stage3 | Q007/Q008 Stage 3: earthquake observation-truthfulness alignment under T12. Branched from `main` at `e39b772` |
+| Claude | claude/stage3-closeout | **Documentation only.** Records the #30 production verification and closes the Stage 3 rows that a board PR cannot close about itself |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -364,7 +287,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding contract | #25 merged in `fcaf55a`; reviewed read-only with three findings addressed; documentation-only deploy verified | Closed; the contract is authoritative at G01–G18 |
 | Q007/Q008 stage 2 | #28 merged in `a2d032e`; production HTML byte-identical to merged `main`; implementation review clean; T16 captured against the deployed preview; T15 layout owner-verified; T17 reconciled in `AGENTS.md` | Closed |
 | Stage 2 production checkpoint | #29 merged in `e39b772`; documentation-only deploy verified | Closed |
-| Q007/Q008 stage 3 | **In review as [#30](https://github.com/rmart73/PacificWatch/pull/30).** Earthquake alignment under T12; implementation and evidence complete, round-one findings corrected | Codex re-reviews before merge |
+| Q007/Q008 stage 3 | #30 merged in `9a83c55`; production verified, three review rounds closed | Closed; the observation-truthfulness contract is fully implemented at T01–T17 |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **Open, pre-existing, unclaimed.** Roughly 7 of 30 items in the hazard representation are not Hawaii hazards. `HAZARD_RE` at `api/news.js` is unchanged from before G1, so #26 neither introduced nor worsened it | Needs its own claim. Not to be folded into other work |
@@ -372,11 +295,12 @@ Merged branches are omitted from this active list; this does not imply remote br
 | `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `e39b772`**, merged through #29 and serving production. Claims and handoffs for
+**`main` is at `9a83c55`**, merged through #30 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An application implementation IS in flight: Stage 3 on `claude/observation-stage3`**, which will
-change `index.html` and the test suites under T12. Nothing else is active.
+**No application implementation is in flight.** Stage 3 merged in #30 and is verified in production;
+the only open work is this documentation-only closeout. **The observation-truthfulness contract is
+now fully implemented at T01–T17**, across stages 1, 2 and 3.
 
 This paragraph was wrong three times and corrected three times — `main` as `22686bb` with G1
 a contract only; an implementation in flight as #26; and then "no implementation in flight" carried
@@ -508,6 +432,60 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-02 — #30 merged and production verified; the contract is complete
+
+Merged on the owner's explicit permission, squashed as **`9a83c55`**.
+
+#### Production verification
+
+Using the object-ID method Codex established on the #28 deploy, which is stronger than comparing
+stripped text:
+
+```
+git blob main:index.html   c01cc1618666d40de1a0ba114eb9b53b3ce06407
+production HTML hashed     c01cc1618666d40de1a0ba114eb9b53b3ce06407   IDENTICAL
+quakeEventAge · renderQuakeSurfaces · "Observation time unavailable"   all present
+/ · /api/news · /api/news/hazard                                       all 200
+```
+
+#### The card against real USGS data in production
+
+```
+raw               mag 2.32 · 174 min ago
+#stat-quake       M 2.3
+#stat-quake-note  9 km SW of Wai‘ōhinu, Hawaii · 3h ago · within 500 km of Hawaii · 10+ in range
+#dot-quake        s-dot ok
+USGS Earthquakes  checked 0 sec ago · Current        (no obs age — no measurement clock)
+```
+
+**A 174-minute-old earthquake showing as verified is the design working, not a bug.** That same age
+on the weather card reads stale, because it is past the 75-minute window. Here the query is fresh
+and the event's age is content. It is the one place in this app where ageing a reading would be the
+wrong behaviour, which is why it carries its own mutation.
+
+#### The contract is complete
+
+```
+Stage 1  #24  observation metadata and pure state selection
+Stage 2  #28  the clock reaches the weather and tide cards and Source details
+Stage 3  #30  earthquake alignment, T12
+
+T01–T17  all closed.
+```
+
+What the three stages amount to, stated once in plain terms: the app no longer confuses **when it
+last reached a source** with **when the measurement was taken**, and it no longer lets the size of a
+reading decide whether that reading was verified. A fresh fetch of an hour-old observation reports
+both clocks; a 40 mph wind and a 2 mph wind get the same dot; a value with no usable timestamp is
+withheld rather than shown with an invented age.
+
+#### Still open and unclaimed
+
+The hazard-classifier false positives. `timeAgo()` invalid-input handling in News. The
+deleted-remote-branch convention question. The closed-claims cleanup. Each needs its own claim; none
+is on any critical path.
+
 
 ### 2026-10-01 — Stage 3 round one: four findings corrected
 
