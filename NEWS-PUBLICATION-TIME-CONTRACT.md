@@ -47,10 +47,12 @@ The server invariant is protected too: every `published` value leaving `api/news
 handler tests must fail if that invariant is weakened. Client validation remains necessary
 defense-in-depth rather than trusting that an upstream boundary can never regress.
 
-JavaScript can emit expanded-year ISO such as `+010000-01-01T00:00:00.000Z`. The client deliberately
-does not accept that outside the ordinary four-digit-year shape. That named example is also far
-beyond the future-skew allowance, so the shape and future checks agree; it is not a valid ordinary
-input being suppressed.
+JavaScript can emit expanded-year ISO. The client deliberately does not accept that outside the
+ordinary four-digit-year shape. `+010000-01-01T00:00:00.000Z` is also far beyond the future-skew
+allowance, so the shape and future checks agree. A past expanded year such as
+`-000001-01-01T00:00:00.000Z` is the independent proof that the shape rule itself is load-bearing:
+it round-trips exactly and is not masked by the future guard, but remains outside the accepted
+ordinary form.
 
 The validator never substitutes fetch time, render time or the current clock for a missing or bad
 publication time.
@@ -121,7 +123,7 @@ cached-render paths.
 | ID | Required result | Evidence before implementation merge |
 |---|---|---|
 | N01 | One pure News-specific validator is the only new decision point for publication-time usability. | Source inspection and extraction-based pure tests. |
-| N02 | Only exact canonical `YYYY-MM-DDTHH:mm:ss.sssZ` values that parse and round-trip unchanged are accepted, and `api/news.js` continues emitting only `null` or its canonical `toISOString()` output. | Client and handler fixtures for canonical/null output plus missing zone, numeric offset, loose date text, impossible date, `24:00`, trailing text and non-string values. Separate mutations disable only the shape check and only the round-trip check: offset/loose forms distinguish the first; `2026-02-30T00:00:00.000Z` and `2026-10-02T24:00:00.000Z` distinguish the second. |
+| N02 | Only exact canonical `YYYY-MM-DDTHH:mm:ss.sssZ` values that parse and round-trip unchanged are accepted, and `api/news.js` continues emitting only `null` or its canonical `toISOString()` output. | Client and handler fixtures for canonical/null output plus missing zone, numeric offset, loose date text, impossible date, `24:00`, trailing text and non-string values. Separate mutations disable only the shape check and only the round-trip check. The past expanded-year `-000001-01-01T00:00:00.000Z` distinguishes the shape mutation because it round-trips and cannot be masked by the future guard. `2026-02-30T00:00:00.000Z` and, with a controlled clock later than its rolled instant, `2026-01-15T24:00:00.000Z` distinguish the round-trip mutation. Offset and loose-date forms remain rejection fixtures but are not mutation distinguishers because round-trip equality also rejects them. |
 | N03 | Missing, `null`, `undefined` and empty publication values keep the article and omit the age, preserving existing behavior. | DOM fixtures through the real `renderNews()` path. |
 | N04 | Truthy malformed values keep the article and omit the age; `NaNd ago`, `Invalid Date` and equivalent invented copy are absent. This is defense-in-depth while the N02 server invariant holds. | DOM fixtures and a mutation that bypasses validation and exposes the latent `NaNd ago` client behavior. |
 | N05 | Exact `now + 5 min` is accepted; `now + 5 min + 1 ms` is rejected. | Controlled-clock pure tests whose expected values are independent of the app helper. |

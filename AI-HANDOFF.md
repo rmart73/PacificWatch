@@ -500,11 +500,13 @@ not added to the observation `ageTick()`.
 #### Evidence required later
 
 The contract carries N01–N16: controlled-clock boundaries; full `renderNews()` fixtures; separate
-mutations for the timestamp shape and round-trip checks; mutations in both directions with zero
-`ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite evidence; and a preview pass showing
-that valid live ages, links, filters and hazard tags still render. Truthy malformed input is
-structurally impossible from the current API output invariant, so deterministic DOM fixtures own
-that defense-in-depth case rather than a fabricated preview claim.
+mutations for the timestamp shape and round-trip checks, distinguished respectively by a past
+expanded-year value and past calendar-rollover values so the future guard cannot mask either;
+mutations in both directions with zero `ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite
+evidence; and a preview pass showing that valid live ages, links, filters and hazard tags still
+render. Truthy malformed input is structurally impossible from the current API output invariant,
+so deterministic DOM fixtures own that defense-in-depth case rather than a fabricated preview
+claim.
 
 **No implementation is authorized by this draft.** Claude reviews it read-only. After review and
 an owner-approved merge, implementation requires a fresh Claude claim ahead of every edit.
