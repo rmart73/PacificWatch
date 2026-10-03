@@ -1499,18 +1499,37 @@ function has(label, sel, needle, expected) {
   check('N11 and do not make the fetch stale', w.isStale('news'), false);
   has('N11 the stamp reports the FETCH clock, not any article age',
     '#news-updated', '13 headlines \u00b7 updated', true);
-  /* Re-render the identical items as a STALE fetch. A two-day-old article and an unusable one
-     must read the same way in both states, and the stamp must switch on the fetch clock alone. */
-  w.renderNews({ items: newsItems, errors: [] }, true);
-  has('N11 a stale fetch switches the stamp to last verified',
+  /* Drive the stale state through the REAL failure path. Codex's finding: renderNews(..., true)
+     only proves the renderer obeys its own argument, which is not what N11 asks. Nor is poking
+     S.sourceHealth, which is not reachable from the test anyway -- S is a const, not a global.
+
+     A successful fetch followed by a FAILED refresh is exactly how News goes stale in
+     production: fetchNews() catches, calls sourceFail('news', ...), and re-renders the CACHED
+     payload with staleness derived from the fetch lifecycle. Nothing below is hand-supplied. */
+  w.fetch = makeFetch('/api/news');
+  await w.fetchNews();
+  await settle();
+  check('N11 a failed refresh makes News genuinely stale', w.sourceState('news'), 'stale');
+  check('N11   and isStale() agrees, so the render argument is derived', w.isStale('news'), true);
+  has('N11 the stale note reaches the list through the real state',
+    '#news-headlines', 'Showing data last verified', true);
+  has('N11 the stamp switches to last verified',
     '#news-updated', '13 headlines \u00b7 last verified', true);
+  check('N11 every article is still retained from cache', itemsOf().length, 13);
   check('N11 an old article age is unchanged by the fetch state',
     tagOf('Days item'), 'KHON2 \u00b7 2d ago');
   check('N11 an unusable time still withholds under a stale fetch',
     tagOf('Malformed item'), 'KHON2');
   check('N11 exactly four ages under a stale fetch too', aged(), 4);
-  check('N11 rendering stale did not alter source health', w.sourceState('news'), 'current');
-  w.renderNews({ items: newsItems, errors: [] }, false);
+  check('N11 rendering did not alter the stale health state', w.sourceState('news'), 'stale');
+  /* Restore through the real path too: a successful refresh returns News to current, so
+     nothing after this inherits a stale source. */
+  w.fetch = makeFetch(null);
+  await w.fetchNews();
+  await settle();
+  check('N11 a successful refresh restores current', w.sourceState('news'), 'current');
+  has('N11   and the stale note is gone again',
+    '#news-headlines', 'Showing data last verified', false);
   newsItems = null;
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
