@@ -459,6 +459,52 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-02 — News publication-time acceptance contract drafted; implementation not started
+
+Codex drafted [the News publication-time contract](NEWS-PUBLICATION-TIME-CONTRACT.md) on
+`codex/news-publication-time-contract`, after publishing the claim separately in `3c612e5`.
+Documentation and design only: runtime, API, tests, configuration, dependencies and `AGENTS.md`
+remain untouched.
+
+#### The existing board statement was too broad
+
+The earlier queue item inherited a Stage 3 observation about what happens when `timeAgo()` is
+called directly with invalid values. That is not the same as the live News render path.
+`renderNews()` already guards `it.published` by truthiness, so missing, `null`, `undefined` and empty
+values omit the age today. The rendered defects are narrower:
+
+```
+truthy malformed published value       Date.parse(...) -> NaN -> "NaNd ago"
+materially future published value      negative minutes -> "just now"
+```
+
+The contract records that correction rather than claiming a null-value defect the UI does not
+have.
+
+#### Boundary settled
+
+The later implementation accepts only the canonical UTC ISO form already emitted by
+`api/news.js`, verified by shape plus parse/round-trip equality. It tolerates exactly five minutes
+of positive clock skew; one millisecond beyond is unusable. Unusable time withholds only the age
+and its separator — the article and its other fields stay visible, and no fetch or render timestamp
+is substituted.
+
+Publication age remains content metadata, never source health. It cannot change sorting, filtering,
+hazard classification, cache behavior or the whole-pool-before-cap rule. The correction is
+News-specific: shared `timeAgo()` and the Stage 3 earthquake boundary remain unchanged, and News is
+not added to the observation `ageTick()`.
+
+#### Evidence required later
+
+The contract carries N01–N16: controlled-clock boundaries; full `renderNews()` fixtures; mutations
+in both directions with zero `ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite evidence;
+and a preview pass showing that valid live ages, links, filters and hazard tags still render. A live
+feed cannot safely be forced to emit malformed time, so deterministic DOM fixtures own the invalid
+cases rather than a fabricated preview claim.
+
+**No implementation is authorized by this draft.** Claude reviews it read-only. After review and
+an owner-approved merge, implementation requires a fresh Claude claim ahead of every edit.
+
 ### 2026-10-02 — #33 merged and production verified; H01–H18 complete
 
 Merged on the owner's explicit permission, squashed as **`afff98b`**. Codex verified production
