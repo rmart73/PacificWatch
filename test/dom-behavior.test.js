@@ -1401,6 +1401,81 @@ function has(label, sel, needle, expected) {
   w.renderQuakeSurfaces();
   quakeFeatures = null;
 
+  console.log('\nNews publication time (N03, N04, N06-N11) — an unusable time withholds only the age:');
+  /* Deterministic fixtures own these cases because production cannot produce most of them:
+     api/news.js emits only null or canonical ISO, and live traffic currently carries neither a
+     null nor a future value. A preview pass can show valid ages rendering; it cannot show these. */
+  const H3 = 3 * 60 * 60 * 1000;
+  newsItems = [
+    { source: 'KHON2', title: 'Valid past item',  link: 'https://example.com/v',
+      published: new Date(Date.now() - H3).toISOString(), hazard: false },
+    { source: 'KHON2', title: 'Malformed item',   link: 'https://example.com/m',
+      published: 'not a date', summary: 'Body text retained', hazard: false },
+    { source: 'KHON2', title: 'Null item',        link: 'https://example.com/z',
+      published: null, hazard: false },
+    { source: 'KHON2', title: 'Empty item',       link: 'https://example.com/e',
+      published: '', hazard: false },
+    { source: 'KHON2', title: 'Future item',      link: 'https://example.com/f',
+      published: new Date(Date.now() + 90 * MIN).toISOString(), hazard: true },
+    { source: 'KHON2', title: 'Impossible month', link: 'https://example.com/i',
+      published: '2026-13-01T00:00:00.000Z', hazard: false },
+    { source: 'KHON2', title: 'Rolled midnight',  link: 'https://example.com/r',
+      published: '2026-01-15T24:00:00.000Z', hazard: false },
+    { source: 'KHON2', title: 'Expanded year',    link: 'https://example.com/x',
+      published: '-000001-01-01T00:00:00.000Z', hazard: false }
+  ];
+  w.fetch = makeFetch(null);
+  await w.fetchNews();
+  await settle();
+
+  /* Reads the COMPLETE source-tag text, so a dangling separator cannot hide beside a correct
+     age-or-nothing assertion. That is N08's whole point. */
+  const tagOf = title => {
+    const el = Array.from(d.querySelectorAll('#news-headlines .news-item')).find(n => {
+      const h = n.querySelector('.news-headline');
+      return h && h.textContent.trim() === title;
+    });
+    return el ? el.querySelector('.news-source-tag').textContent : '<missing>';
+  };
+  const hrefOf = title => {
+    const el = Array.from(d.querySelectorAll('#news-headlines .news-item')).find(n => {
+      const h = n.querySelector('.news-headline');
+      return h && h.textContent.trim() === title;
+    });
+    return el ? el.getAttribute('href') : '<missing>';
+  };
+
+  check('N09 every article is retained, none dropped for a bad time',
+    d.querySelectorAll('#news-headlines .news-item').length, 8);
+  check('N07 a valid past item keeps its existing wording, separator and all',
+    tagOf('Valid past item'), 'KHON2 \u00b7 3h ago');
+  check('N04/N08 a malformed value shows no age AND no dangling separator',
+    tagOf('Malformed item'), 'KHON2');
+  check('N03 null shows no age',  tagOf('Null item'), 'KHON2');
+  check('N03 empty shows no age', tagOf('Empty item'), 'KHON2');
+  check('N02 an impossible month shows no age and does not throw',
+    tagOf('Impossible month'), 'KHON2');
+  check('N02 an ISO-legal 24:00 that rolls a day shows no age',
+    tagOf('Rolled midnight'), 'KHON2');
+  check('N02 a past expanded year shows no age',
+    tagOf('Expanded year'), 'KHON2');
+  check('N06 a materially future item shows no age, and keeps its HAZARD tag',
+    tagOf('Future item'), 'KHON2HAZARD');
+  has('N04 no NaNd ago anywhere in the feed',    '#news-headlines', 'NaNd', false);
+  has('N04 no Invalid Date anywhere either',     '#news-headlines', 'Invalid Date', false);
+  has('N06 nothing claims to be just now',       '#news-headlines', 'just now', false);
+  has('N09 the summary survives an unusable time',
+    '#news-headlines', 'Body text retained', true);
+  check('N13 the link still passes through safeUrl unchanged',
+    hrefOf('Malformed item'), 'https://example.com/m');
+  check('N10 order is as served; publication time did not reorder anything',
+    Array.from(d.querySelectorAll('#news-headlines .news-headline'))[0].textContent.trim(),
+    'Valid past item');
+  check('N11 unusable article times do not make the News SOURCE unhealthy',
+    w.sourceState('news'), 'current');
+  check('N11 and do not make the fetch stale',  w.isStale('news'), false);
+  newsItems = null;
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);

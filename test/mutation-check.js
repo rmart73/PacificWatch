@@ -650,6 +650,89 @@ const mutations = [
     to:   "    if (dot) dot.className = 's-dot unknown';",
     expect: ['an empty result is verified, not treated as missing data'], suite: 'dom' },
 
+  /* ---- News publication time, N14 -------------------------------------------------------
+
+     The shape check and the round-trip check are mutated SEPARATELY and on purpose. During the
+     #35 contract review the fixtures first proposed for the shape mutation distinguished
+     nothing, because round-trip equality rejects the offset and loose-date forms by itself; a
+     probe showing 'rejected by shape' only revealed which check ran FIRST and short-circuited.
+     Evaluation order is not load-bearingness. A fixture proving one check load-bearing has to
+     survive every other check and fail only that one. */
+  { name: 'the News publication-time validator bypassed entirely',
+    from: "      const pubMs = newsPublishedAt(it.published);\n      const when = pubMs === null ? '' : timeAgo(pubMs);",
+    to:   "      const when = it.published ? timeAgo(Date.parse(it.published)) : '';",
+    expect: ['N04/N08 a malformed value shows no age AND no dangling separator',
+             'N04 no NaNd ago anywhere in the feed',
+             'N06 a materially future item shows no age, and keeps its HAZARD tag',
+             'N06 nothing claims to be just now'],
+    suite: 'dom' },
+
+  /* Only the four-digit-year shape test is removed. Round-trip equality still rejects offsets,
+     loose dates and rolled calendar values, so the ONLY witness is a past expanded year, which
+     round-trips exactly and sits before the clock so the future guard cannot mask it. */
+  { name: 'only the canonical-shape check removed',
+    from: "  if (typeof raw !== 'string' || !NEWS_PUB_ISO_RE.test(raw)) return null;",
+    to:   "  if (typeof raw !== 'string') return null;",
+    expect: ['past expanded year rejected'],
+    suite: 'health' },
+
+  /* Only round-trip equality is removed. The shape test still rejects offsets and loose dates,
+     so the witnesses must be values that MATCH the canonical shape yet mean something else: an
+     impossible calendar day and an ISO-legal 24:00 that rolls into the next day. */
+  { name: 'only the round-trip equality check removed',
+    from: "  if (new Date(ms).toISOString() !== raw) return null;",
+    to:   "  if (false) return null;",
+    expect: ['impossible day rejected', 'ISO-legal 24:00 rejected'],
+    suite: 'health' },
+
+  /* The finite check must stay ahead of the round-trip comparison: an impossible month matches
+     the shape, parses to NaN, and new Date(NaN).toISOString() throws RangeError. */
+  { name: 'the finite-parse check removed, so an impossible month throws',
+    from: '  if (!isFinite(ms)) return null;',
+    to:   '  if (false) return null;',
+    expect: ['impossible month rejected and does not throw'],
+    suite: 'health' },
+
+  /* Exactly the allowance is INSIDE it. A > that became >= would move the boundary by one
+     millisecond and no wall-clock test would notice. */
+  { name: 'the skew boundary tightened from > to >=',
+    from: '  if (ms - base > NEWS_PUB_SKEW_MS) return null;',
+    to:   '  if (ms - base >= NEWS_PUB_SKEW_MS) return null;',
+    expect: ['exactly now + the allowance is usable'],
+    suite: 'health' },
+
+  /* Each case runs ONE suite, so expectations never mix a pure label with a DOM label. The
+     future guard therefore gets two cases: the boundary in the pure suite, the rendered
+     consequence in the DOM suite. */
+  { name: 'the future guard removed, so a future value becomes usable again',
+    from: '  if (ms - base > NEWS_PUB_SKEW_MS) return null;',
+    to:   '  if (false) return null;',
+    expect: ['ninety minutes into the future is not'],
+    suite: 'health' },
+
+  { name: 'the future guard removed, so a future item dates itself just now again',
+    from: '  if (ms - base > NEWS_PUB_SKEW_MS) return null;',
+    to:   '  if (false) return null;',
+    expect: ['N06 a materially future item shows no age, and keeps its HAZARD tag',
+             'N06 nothing claims to be just now'],
+    suite: 'dom' },
+
+  /* News must not silently become an observation clock by borrowing a different allowance. 90
+     minutes is still rejected at 45, so the VALUE assertion is the only witness here. */
+  { name: 'the News allowance widened away from five minutes',
+    from: 'const NEWS_PUB_SKEW_MS = 5 * 60 * 1000;',
+    to:   'const NEWS_PUB_SKEW_MS = 45 * 60 * 1000;',
+    expect: ['the allowance is exactly five minutes'],
+    suite: 'health' },
+
+  /* A validator that returned the age instead of null would reinstate the invented copy. */
+  { name: 'the call site falls back to the raw parse when validation fails',
+    from: "      const when = pubMs === null ? '' : timeAgo(pubMs);",
+    to:   "      const when = pubMs === null ? timeAgo(Date.parse(it.published)) : timeAgo(pubMs);",
+    expect: ['N04 no NaNd ago anywhere in the feed',
+             'N04/N08 a malformed value shows no age AND no dangling separator'],
+    suite: 'dom' },
+
   /* The Alerts list and the card are the same data and must not disagree about it. */
   { name: 'the Alerts list dates an unplaceable event again',
     from: "    const when = quakeEventAge(p.time, now);",
