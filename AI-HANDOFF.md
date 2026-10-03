@@ -58,7 +58,9 @@ the owner's explicit authorization. Branched from `main` at **`2875d0f`**.
 Governed by [NEWS-PUBLICATION-TIME-CONTRACT.md](NEWS-PUBLICATION-TIME-CONTRACT.md), **N01–N16**,
 which merged as #35 and is authoritative.
 
-**What this changes, named before touching it**
+**Items 1-5 below are the ORIGINAL SCOPE as claimed before any code was written**, retained as
+history. The corrections that followed Codex's first review are recorded beneath them, so the
+change in file list is visible rather than edited away.
 
 1. **One pure News-specific validator in `index.html`**, placed beside the News renderer. It takes
    the raw `published` value and an injectable `now`, and returns either a usable millisecond
@@ -71,14 +73,55 @@ which merged as #35 and is authoritative.
 3. **Tests** across three test files: pure validator fixtures with an injected clock and a handler
    assertion that every emitted `published` is `null` or canonical ISO, both in
    `test/news-api.test.js`; the full `renderNews()` DOM path in `test/dom-behavior.test.js`; and
-   mutation cases in `test/mutation-check.js`.
+   mutation cases in `test/mutation-check.js`. **This proved wrong in two ways — see the
+   corrections below.**
 4. **Mutation cases**, including the two the contract names separately: one disabling only the
    four-digit-year shape check and one disabling only the round-trip equality check.
 5. **Evidence**: controlled-clock boundary runs, full-suite counts, a dependency-free run, and a
    preview pass before the PR is offered for review (N15, N16).
 
-**Files touched:** `index.html`, `test/news-api.test.js`, `test/dom-behavior.test.js`,
-`test/mutation-check.js`, and this board. Nothing else.
+**Files touched as originally claimed:** `index.html`, `test/news-api.test.js`,
+`test/dom-behavior.test.js`, `test/mutation-check.js`, and this board.
+
+**FINAL SCOPE — four test files, not three.** `index.html`,
+**`test/phase1-source-health.test.js`**, `test/news-api.test.js`, `test/dom-behavior.test.js`,
+`test/mutation-check.js`, and this board. `api/news.js`, `api/news/hazard.js`, `vercel.json`,
+`package.json` and `AGENTS.md` are byte-identical to `main`.
+
+**Added by review corrections, round one (`26d32ae`)**
+
+1. **The pure validator tests moved to `test/phase1-source-health.test.js`.** That suite takes an
+   html path, so `test/mutation-check.js` can aim it at a mutant; `test/news-api.test.js` takes an
+   api path and `require`s it as a module, which would have made every pure assertion
+   unmutatable — decorative by this project's own standard. The handler invariant assertion stayed
+   in `test/news-api.test.js`, where its subject is. Disclosed in the implementation commit and
+   the PR body, but the board's live scope still said three files until this correction.
+2. **The server invariant is now mutation-proven, not merely asserted.** Codex's finding: all nine
+   original mutations targeted `index.html`, so nothing weakened `api/news.js` normalization and
+   N14 was unmet for that assertion. Two API-targeted mutations were added — one passing upstream
+   publication text straight through, one normalising to `toUTCString()` instead of ISO.
+3. **The invariant assertion now tests parse/round-trip canonicality, not regex shape.** A raw
+   `2026-02-30T00:00:00.000Z` satisfies the canonical shape while breaking the `toISOString()`
+   promise, so a shape-only check would have passed a pass-through handler. That upstream fixture
+   is now in the set and its normalised output `2026-03-02T00:00:00.000Z` is asserted directly.
+4. **N07's four wording classes are each covered through `renderNews()`**: under a minute, minutes,
+   hours and days, from independently chosen offsets rather than from `timeAgo()`. Only the hours
+   case existed before.
+5. **N03's matrix is complete**: `undefined` and an **absent** `published` property now go through
+   the real render path, not only the pure suite.
+6. **N11 is exercised under both fetch states**, current and stale, and now inspects the
+   `news-updated` stamp — that it reports the fetch clock when current, switches to `last
+   verified` when stale, and that an old article age and an unusable one read identically in both.
+
+**Evidence, final**
+
+```
+npm test        425  =  175 + 35 + 37 + 178
+test:dom        430
+test:mutation   137 of 137, zero ANCHOR LOST, zero AMBIGUOUS
+clean run       425 in an eight-file directory, no node_modules
+preview         N16 captured with jsdom against the deployed page and API
+```
 
 **The API invariant this depends on, protected rather than assumed**
 
