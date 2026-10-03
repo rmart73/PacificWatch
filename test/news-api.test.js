@@ -79,6 +79,22 @@ function encodedFeedXml() {
     '<pubDate>' + t + '</pubDate></item></channel></rss>';
 }
 
+/* N02 SERVER INVARIANT fixture. The client validator is defense-in-depth; the reason a truthy
+   malformed publication time cannot reach the renderer today is that THIS handler emits only
+   null or exact toISOString() output. That is an invariant, not an accident, so it is asserted
+   at the boundary that produces it -- if it is ever weakened, this fails here rather than
+   silently shifting the burden onto the page. RSS parsing itself is unchanged. */
+let pubDates = null;            /* raw pubDate strings, emitted verbatim into the feed */
+function pubDateFeedXml(i) {
+  if (i !== 0) return '<rss><channel></channel></rss>';
+  let out = '<rss><channel>';
+  pubDates.forEach(function (raw, k) {
+    out += '<item><title>Flood warning for Oahu ' + k + '</title><link>https://example.test/pd' +
+           k + '</link><description>d</description><pubDate>' + raw + '</pubDate></item>';
+  });
+  return out + '</channel></rss>';
+}
+
 let bulk = false;
 function bulkFeedXml(i) {
   let out = '<rss><channel>';
@@ -109,7 +125,8 @@ function installFetch() {
     if (failAll) return Promise.reject(new Error('forced failure'));
     if (failPattern && u.includes(failPattern)) return Promise.reject(new Error('forced failure'));
     const idx = Math.max(0, upstream - 1);
-    const xml = encoded ? encodedFeedXml() : (bulk ? bulkFeedXml(idx % 5) : feedXml(idx % 5));
+    const xml = pubDates ? pubDateFeedXml(idx % 5)
+                         : (encoded ? encodedFeedXml() : (bulk ? bulkFeedXml(idx % 5) : feedXml(idx % 5)));
     return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(xml) });
   };
 }
@@ -482,6 +499,39 @@ async function main() {
   check('undefined inputs', classify(undefined, undefined), false);
   check('locality alone is not hazard', classify('Maui', ''), false);
   check('hazard alone is not local', classify('Hurricane', ''), false);
+
+  console.log('\nN02 — the handler emits publication time as null or canonical ISO, nothing else:');
+  const CANON_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+  /* Canonicality is parse-AND-round-trip, never regex shape alone. A raw
+     '2026-02-30T00:00:00.000Z' satisfies the shape while breaking the toISOString() promise, so
+     a handler that passed upstream text straight through would slip past a shape-only check.
+     Codex's finding; the fixture below is the one that proves it. */
+  const canonical = function (v) {
+    return typeof v === 'string' && CANON_ISO.test(v) &&
+           new Date(Date.parse(v)).toISOString() === v;
+  };
+  /* Hostile upstream dates: RFC-822, an offset form, a loose one, an empty element, pure junk,
+     and an ISO-shaped impossible calendar day. */
+  pubDates = ['Fri, 02 Oct 2026 09:00:00 GMT', '2026-10-02T09:00:00.000+00:00',
+              'October 2 2026', '', 'not a date at all', '2026-02-30T00:00:00.000Z'];
+  o = await call('/api/news', 'GET', false);
+  pubDates = null;
+  check('every item still returned', o.body.items.length, 6);
+  const pubs = o.body.items.map(i => i.published);
+  check('every published value is null or canonical, by round-trip not shape alone',
+    pubs.every(v => v === null || canonical(v)), true);
+  check('an impossible upstream day is normalised, not passed through',
+    pubs.indexOf('2026-03-02T00:00:00.000Z') !== -1, true);
+  check('  and its ISO-shaped raw form does not survive',
+    pubs.indexOf('2026-02-30T00:00:00.000Z'), -1);
+  check('unparseable upstream dates become null, not a guess and not the raw string',
+    pubs.filter(v => v === null).length, 2);
+  check('no upstream date text survives into the response',
+    pubs.some(v => v === 'October 2 2026' || v === 'not a date at all'), false);
+  /* The offset form must be NORMALISED, not merely accepted: the client rejects offset shapes,
+     so a handler that passed one through would silently lose that item's age. */
+  check('an offset-carrying upstream date is normalised to Z form',
+    pubs.indexOf('2026-10-02T09:00:00.000Z') !== -1, true);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (fail) process.exit(1);

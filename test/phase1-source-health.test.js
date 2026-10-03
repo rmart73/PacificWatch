@@ -40,10 +40,18 @@ const parts = [
   grab(/function observationState\(key, observedAt, now\) \{[\s\S]*?\n\}/, 'observationState'),
   grab(/function observationEntry\(key\) \{[\s\S]*?\n\}/, 'observationEntry'),
   grab(/function combinedObservationState\(key, now, valueUsable\) \{[\s\S]*?\n\}/, 'combinedObservationState'),
-  grab(/function observationVerified\(state\) \{[^}]*\}/, 'observationVerified')
+  grab(/function observationVerified\(state\) \{[^}]*\}/, 'observationVerified'),
+  /* N01/N02/N05 — the News publication-time validator. It lives beside the News renderer in
+     index.html but is pure, so its boundary belongs here rather than in the DOM suite: a DOM
+     test cannot pin a millisecond without the render path's own clock read interfering, and this
+     suite already owns the other injectable clock. Parameters are matched loosely and the skew
+     value is NOT pinned inside the regex, per the durable extraction rules. */
+  grab(/const NEWS_PUB_SKEW_MS = [^;]+;/, 'NEWS_PUB_SKEW_MS'),
+  grab(/const NEWS_PUB_ISO_RE = [^;]+;/, 'NEWS_PUB_ISO_RE'),
+  grab(/function newsPublishedAt\([^)]*\) \{[\s\S]*?\n\}/, 'newsPublishedAt')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, requestPending, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, requestPending, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate, newsPublishedAt, NEWS_PUB_SKEW_MS, NEWS_PUB_ISO_RE})');
 const St = api.S;
 
 /* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
@@ -469,6 +477,70 @@ const tok2 = api.beginRequest('fema');
 api.sourceOk('fema', [], tok2);
 check('a source passing no clock stores null', St.cache.fema.observedAt, null);
 check('and null raw', St.cache.fema.observedAtRaw, null);
+
+
+/* ---- News publication time, N01-N02-N05 ------------------------------------------------
+
+   One fixed clock for the whole block. Nothing here reads Date.now(), because N05 forbids
+   elapsed wall time from deciding a boundary assertion, and because the two round-trip witnesses
+   below only work while the clock sits LATER than the instants they roll to -- otherwise the
+   future allowance rejects them and the check under test is not the one doing the work. */
+const NP_T0 = Date.UTC(2026, 9, 2, 12, 0, 0);          /* 2026-10-02T12:00:00.000Z */
+
+console.log('\nN02 — only canonical UTC ISO output is accepted:');
+check('a canonical past value is accepted',
+  api.newsPublishedAt('2026-10-02T09:00:00.000Z', NP_T0), Date.UTC(2026, 9, 2, 9, 0, 0));
+check('missing zone rejected',          api.newsPublishedAt('2026-10-02T09:00:00.000', NP_T0), null);
+check('numeric offset rejected',        api.newsPublishedAt('2026-10-02T02:00:00.000-10:00', NP_T0), null);
+check('loose English date rejected',    api.newsPublishedAt('Thu, 02 Oct 2026 09:00:00 GMT', NP_T0), null);
+check('second-precision ISO rejected',  api.newsPublishedAt('2026-10-02T09:00:00Z', NP_T0), null);
+check('trailing text rejected',         api.newsPublishedAt('2026-10-02T09:00:00.000Zx', NP_T0), null);
+check('leading space rejected',         api.newsPublishedAt(' 2026-10-02T09:00:00.000Z', NP_T0), null);
+check('impossible day rejected',        api.newsPublishedAt('2026-02-30T00:00:00.000Z', NP_T0), null);
+check('ISO-legal 24:00 rejected',       api.newsPublishedAt('2026-01-15T24:00:00.000Z', NP_T0), null);
+check('past expanded year rejected',    api.newsPublishedAt('-000001-01-01T00:00:00.000Z', NP_T0), null);
+check('future expanded year rejected',  api.newsPublishedAt('+010000-01-01T00:00:00.000Z', NP_T0), null);
+check('null rejected',                  api.newsPublishedAt(null, NP_T0), null);
+check('undefined rejected',             api.newsPublishedAt(undefined, NP_T0), null);
+check('empty string rejected',          api.newsPublishedAt('', NP_T0), null);
+check('a number rejected, not coerced', api.newsPublishedAt(1790000000000, NP_T0), null);
+
+/* An impossible MONTH parses to NaN while matching the shape. If the finite check were ever
+   reordered after the round-trip comparison, new Date(NaN).toISOString() would THROW RangeError
+   and take the whole News render down rather than drop one age.
+
+   The throw is caught and turned into a VALUE here deliberately. An uncaught exception ends the
+   suite without printing a FAIL line, so the mutation that reorders those checks would be
+   reported MISSED -- the assertion has to observe the throw to be able to fail on it. */
+check('impossible month rejected and does not throw', (function () {
+  try { return api.newsPublishedAt('2026-13-01T00:00:00.000Z', NP_T0); }
+  catch (e) { return 'threw ' + e.name; }
+}()), null);
+
+console.log('\nN02 — shape and round-trip reject different things, which is why each is mutated alone:');
+/* Round-trip equality rejects every non-canonical form EXCEPT expanded years, which round-trip
+   exactly. So the shape rule is load-bearing against that one family and nothing else, and these
+   two assertions pin the premise each mutation witness depends on. */
+check('the expanded-year witness fails the shape check, so only shape rejects it',
+  api.NEWS_PUB_ISO_RE.test('-000001-01-01T00:00:00.000Z'), false);
+check('the rolled-24:00 witness PASSES the shape check, so only round-trip rejects it',
+  api.NEWS_PUB_ISO_RE.test('2026-01-15T24:00:00.000Z'), true);
+check('  and the impossible-day witness passes it too',
+  api.NEWS_PUB_ISO_RE.test('2026-02-30T00:00:00.000Z'), true);
+
+console.log('\nN05 — the five-minute allowance, pinned to the millisecond:');
+check('the allowance is exactly five minutes', api.NEWS_PUB_SKEW_MS, 5 * 60 * 1000);
+const NP_EDGE = new Date(NP_T0 + api.NEWS_PUB_SKEW_MS).toISOString();
+const NP_PAST = new Date(NP_T0 + api.NEWS_PUB_SKEW_MS + 1).toISOString();
+check('exactly now + the allowance is usable',
+  api.newsPublishedAt(NP_EDGE, NP_T0), NP_T0 + api.NEWS_PUB_SKEW_MS);
+check('one millisecond beyond is not', api.newsPublishedAt(NP_PAST, NP_T0), null);
+check('a minute into the future is usable',
+  api.newsPublishedAt(new Date(NP_T0 + 60000).toISOString(), NP_T0), NP_T0 + 60000);
+check('ninety minutes into the future is not',
+  api.newsPublishedAt(new Date(NP_T0 + 90 * 60000).toISOString(), NP_T0), null);
+check('the injected clock decides the boundary: one ms earlier and the same value is unusable',
+  api.newsPublishedAt(NP_EDGE, NP_T0 - 1), null);
 
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

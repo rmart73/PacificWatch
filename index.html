@@ -2354,6 +2354,52 @@ document.addEventListener('keydown', e => {
   if (t) { e.preventDefault(); toggleNewsSource(t.getAttribute('data-news-source')); }
 });
 
+/* Publication time is CONTENT metadata: how old a headline is. It never says when we last
+   reached the News API, so it cannot touch source health, sorting, filtering or hazard labels.
+   Governed by NEWS-PUBLICATION-TIME-CONTRACT.md, N01-N16.
+
+   News gets its OWN five-minute allowance rather than borrowing OBS_SKEW_MS. That constant
+   belongs to the observation clock, and sharing it would couple a feed's publication date to
+   source freshness -- the one thing this boundary must not do.
+
+   The value is spelled out in milliseconds instead of 5 * MIN because MIN is initialised further
+   down this file; a const referencing it from here is a TDZ ReferenceError at page load. Do not
+   "tidy" this into 5 * MIN without also moving the declaration. */
+const NEWS_PUB_SKEW_MS = 5 * 60 * 1000;
+
+/* Deliberately STRICTER than observedAtFromIso(). That helper accepts offset-carrying instants
+   and optional seconds because NWS genuinely sends them. api/news.js emits publication time as
+   either null or new Date(ts).toISOString(), so the only shape News ever has to accept is the
+   canonical one -- anything else is an upstream regression to reject, not a format to guess at. */
+const NEWS_PUB_ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+/* Returns null when the time is unusable, so the caller decides what to show rather than being
+   handed a plausible-looking string. That is the point: the old path rendered a materially future
+   item as "just now" and a malformed one as "NaNd ago", both of which read as real ages.
+
+   The clock is injectable so the BOUNDARY itself can be pinned, exactly as quakeEventAge() does.
+   Exactly NEWS_PUB_SKEW_MS is INSIDE the allowance; a millisecond beyond is not. */
+function newsPublishedAt(raw, now) {
+  if (typeof raw !== 'string' || !NEWS_PUB_ISO_RE.test(raw)) return null;
+  const ms = Date.parse(raw);
+  /* Must precede the round-trip check: new Date(NaN).toISOString() THROWS RangeError, so a
+     shape-matching impossible month like "2026-13-01T00:00:00.000Z" would crash the render
+     rather than lose its age. */
+  if (!isFinite(ms)) return null;
+  /* Round-trip equality is what rejects an impossible calendar date and an ISO-legal "24:00"
+     that silently rolls into the next day: both satisfy the shape above, and both come back
+     from toISOString() as a different string.
+
+     The shape check is NOT redundant with it. For years 0000-9999 toISOString() output always
+     matches NEWS_PUB_ISO_RE, so round-trip alone would admit expanded-year forms such as
+     "-000001-01-01T00:00:00.000Z", which round-trip exactly. Each check rejects inputs the other
+     accepts, which is why N02 mutates them separately. */
+  if (new Date(ms).toISOString() !== raw) return null;
+  const base = now == null ? Date.now() : now;
+  if (ms - base > NEWS_PUB_SKEW_MS) return null;
+  return ms;
+}
+
 function renderNews(data, stale) {
   const container = document.getElementById('news-headlines');
   const stamp = document.getElementById('news-updated');
@@ -2371,7 +2417,11 @@ function renderNews(data, stale) {
       : `<div class="news-item"><div class="news-headline">No headlines available</div><div class="news-byline">Checked ${esc(fmtTime(new Date()))}</div></div>`);
   } else {
     container.innerHTML = note + items.map(it => {
-      const when = it.published ? timeAgo(Date.parse(it.published)) : '';
+      /* An unusable publication time withholds ONLY the age; the separator guard below drops its
+         ' · ' with it, and every other field stays. timeAgo() receives the validated millisecond
+         value, so valid past items keep their existing wording exactly. */
+      const pubMs = newsPublishedAt(it.published);
+      const when = pubMs === null ? '' : timeAgo(pubMs);
       const haz = it.hazard ? '<span class="news-hazard-tag">HAZARD</span>' : '';
       return `<a class="news-item" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
         <div class="news-source-tag">${esc(it.source)}${when ? ' · ' + esc(when) : ''}${haz}</div>

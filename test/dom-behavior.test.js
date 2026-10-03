@@ -1401,6 +1401,137 @@ function has(label, sel, needle, expected) {
   w.renderQuakeSurfaces();
   quakeFeatures = null;
 
+  console.log('\nNews publication time (N03, N04, N06-N11) — an unusable time withholds only the age:');
+  /* Deterministic fixtures own these cases because production cannot produce most of them:
+     api/news.js emits only null or canonical ISO, and live traffic currently carries neither a
+     null nor a future value. A preview pass can show valid ages rendering; it cannot show these. */
+  /* N07's four wording classes, each from an independently chosen offset rather than from
+     timeAgo(): under 1 minute rounds to 'just now', 5 minutes to '5m ago', 3 hours to '3h ago',
+     2 days to '2d ago'. The earthquake suite exercises the same formatter but not this
+     validation path, so it cannot stand in for these. */
+  const SEC = 1000;
+  newsItems = [
+    { source: 'KHON2', title: 'Just now item',   link: 'https://example.com/j',
+      published: new Date(Date.now() - 10 * SEC).toISOString(), hazard: false },
+    { source: 'KHON2', title: 'Minutes item',    link: 'https://example.com/5',
+      published: new Date(Date.now() - 5 * MIN).toISOString(), hazard: false },
+    { source: 'KHON2', title: 'Valid past item', link: 'https://example.com/v',
+      published: new Date(Date.now() - 3 * 60 * MIN).toISOString(), hazard: false },
+    { source: 'KHON2', title: 'Days item',       link: 'https://example.com/d',
+      published: new Date(Date.now() - 2 * 24 * 60 * MIN).toISOString(), hazard: false },
+    { source: 'KHON2', title: 'Malformed item',  link: 'https://example.com/m',
+      published: 'not a date', summary: 'Body text retained', hazard: false },
+    { source: 'KHON2', title: 'Null item',       link: 'https://example.com/z',
+      published: null, hazard: false },
+    { source: 'KHON2', title: 'Empty item',      link: 'https://example.com/e',
+      published: '', hazard: false },
+    { source: 'KHON2', title: 'Undefined item',  link: 'https://example.com/u',
+      published: undefined, hazard: false },
+    /* N03's fourth case: the property is ABSENT, not merely undefined. */
+    { source: 'KHON2', title: 'Missing item',    link: 'https://example.com/o', hazard: false },
+    { source: 'KHON2', title: 'Future item',     link: 'https://example.com/f',
+      published: new Date(Date.now() + 90 * MIN).toISOString(), hazard: true },
+    { source: 'KHON2', title: 'Impossible month',link: 'https://example.com/i',
+      published: '2026-13-01T00:00:00.000Z', hazard: false },
+    { source: 'KHON2', title: 'Rolled midnight', link: 'https://example.com/r',
+      published: '2026-01-15T24:00:00.000Z', hazard: false },
+    { source: 'KHON2', title: 'Expanded year',   link: 'https://example.com/x',
+      published: '-000001-01-01T00:00:00.000Z', hazard: false }
+  ];
+  w.fetch = makeFetch(null);
+  await w.fetchNews();
+  await settle();
+
+  /* Reads the COMPLETE source-tag text, so a dangling separator cannot hide beside a correct
+     age-or-nothing assertion. That is N08's whole point. */
+  const itemsOf = () => Array.from(d.querySelectorAll('#news-headlines .news-item'));
+  const nodeOf = title => itemsOf().find(n => {
+    const h = n.querySelector('.news-headline');
+    return h && h.textContent.trim() === title;
+  });
+  const tagOf = title => {
+    const el = nodeOf(title);
+    return el ? el.querySelector('.news-source-tag').textContent : '<missing>';
+  };
+  const hrefOf = title => { const el = nodeOf(title); return el ? el.getAttribute('href') : '<missing>'; };
+  const aged = () => itemsOf().filter(n => {
+    const t = n.querySelector('.news-source-tag');
+    return t && t.textContent.indexOf('\u00b7') !== -1;
+  }).length;
+
+  check('N09 every article is retained, none dropped for a bad time', itemsOf().length, 13);
+
+  console.log('  N07 — the four wording classes, through the real validation path:');
+  check('N07 under a minute reads just now', tagOf('Just now item'), 'KHON2 \u00b7 just now');
+  check('N07 minutes',                       tagOf('Minutes item'),  'KHON2 \u00b7 5m ago');
+  check('N07 hours',                         tagOf('Valid past item'), 'KHON2 \u00b7 3h ago');
+  check('N07 days',                          tagOf('Days item'),     'KHON2 \u00b7 2d ago');
+
+  console.log('  N03/N04/N06 — everything unusable withholds the age and its separator:');
+  check('N04/N08 a malformed value shows no age AND no dangling separator',
+    tagOf('Malformed item'), 'KHON2');
+  check('N03 null shows no age',        tagOf('Null item'), 'KHON2');
+  check('N03 empty shows no age',       tagOf('Empty item'), 'KHON2');
+  check('N03 undefined shows no age',   tagOf('Undefined item'), 'KHON2');
+  check('N03 an absent property shows no age', tagOf('Missing item'), 'KHON2');
+  check('N02 an impossible month shows no age and does not throw',
+    tagOf('Impossible month'), 'KHON2');
+  check('N02 an ISO-legal 24:00 that rolls a day shows no age',
+    tagOf('Rolled midnight'), 'KHON2');
+  check('N02 a past expanded year shows no age', tagOf('Expanded year'), 'KHON2');
+  check('N06 a materially future item shows no age, and keeps its HAZARD tag',
+    tagOf('Future item'), 'KHON2HAZARD');
+  /* The aggregate: exactly the four valid items carry an age. A guard that leaked one extra
+     age would move this count even if its own per-item assertion were somehow satisfied. */
+  check('N06/N03/N04 exactly the four valid items carry an age', aged(), 4);
+  has('N04 no NaNd ago anywhere in the feed', '#news-headlines', 'NaNd', false);
+  has('N04 no Invalid Date anywhere either',  '#news-headlines', 'Invalid Date', false);
+  has('N09 the summary survives an unusable time',
+    '#news-headlines', 'Body text retained', true);
+  check('N13 the link still passes through safeUrl unchanged',
+    hrefOf('Malformed item'), 'https://example.com/m');
+  check('N10 order is as served; publication time did not reorder anything',
+    itemsOf()[0].querySelector('.news-headline').textContent.trim(), 'Just now item');
+
+  console.log('  N11 — publication age is not fetch health, under BOTH fetch states:');
+  check('N11 unusable article times do not make the News SOURCE unhealthy',
+    w.sourceState('news'), 'current');
+  check('N11 and do not make the fetch stale', w.isStale('news'), false);
+  has('N11 the stamp reports the FETCH clock, not any article age',
+    '#news-updated', '13 headlines \u00b7 updated', true);
+  /* Drive the stale state through the REAL failure path. Codex's finding: renderNews(..., true)
+     only proves the renderer obeys its own argument, which is not what N11 asks. Nor is poking
+     S.sourceHealth, which is not reachable from the test anyway -- S is a const, not a global.
+
+     A successful fetch followed by a FAILED refresh is exactly how News goes stale in
+     production: fetchNews() catches, calls sourceFail('news', ...), and re-renders the CACHED
+     payload with staleness derived from the fetch lifecycle. Nothing below is hand-supplied. */
+  w.fetch = makeFetch('/api/news');
+  await w.fetchNews();
+  await settle();
+  check('N11 a failed refresh makes News genuinely stale', w.sourceState('news'), 'stale');
+  check('N11   and isStale() agrees, so the render argument is derived', w.isStale('news'), true);
+  has('N11 the stale note reaches the list through the real state',
+    '#news-headlines', 'Showing data last verified', true);
+  has('N11 the stamp switches to last verified',
+    '#news-updated', '13 headlines \u00b7 last verified', true);
+  check('N11 every article is still retained from cache', itemsOf().length, 13);
+  check('N11 an old article age is unchanged by the fetch state',
+    tagOf('Days item'), 'KHON2 \u00b7 2d ago');
+  check('N11 an unusable time still withholds under a stale fetch',
+    tagOf('Malformed item'), 'KHON2');
+  check('N11 exactly four ages under a stale fetch too', aged(), 4);
+  check('N11 rendering did not alter the stale health state', w.sourceState('news'), 'stale');
+  /* Restore through the real path too: a successful refresh returns News to current, so
+     nothing after this inherits a stale source. */
+  w.fetch = makeFetch(null);
+  await w.fetchNews();
+  await settle();
+  check('N11 a successful refresh restores current', w.sourceState('news'), 'current');
+  has('N11   and the stale note is gone again',
+    '#news-headlines', 'Showing data last verified', false);
+  newsItems = null;
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
   process.exit(fail ? 1 : 0);
