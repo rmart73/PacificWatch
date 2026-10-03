@@ -63,8 +63,10 @@ design-first split. Claimed before editing, on a fresh branch from `main` at `77
    freshness; the rendering fallback; controlled-time boundaries; and the test, mutation, preview
    and production evidence required before implementation may merge.
 3. Correct the existing board overstatement: News already omits the age for null, undefined and
-   empty `published` values through its truthiness guard. The live defects are a truthy malformed
-   value rendering `NaNd ago` and a materially future value rendering `just now`.
+   empty `published` values through its truthiness guard. A materially future value can reach the
+   client and renders `just now`. A truthy malformed value would render `NaNd ago`, but the current
+   API structurally prevents that input by emitting only `null` or canonical ISO; the client guard
+   is defense-in-depth against a boundary regression, not a second live feed defect.
 
 **Out of scope:** no edit to `index.html`, `api/`, tests, configuration, dependencies, `AGENTS.md`,
 WAF or production settings; no implementation; no change to earthquake semantics or hazard
@@ -315,7 +317,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
-| News publication-time handling | **Acceptance contract claimed on `codex/news-publication-time-contract`.** A truthy malformed `published` value renders `"NaNd ago"`; a materially future value renders `"just now"`. Null, undefined and empty values already omit the age and were overstated by the earlier row | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
+| News publication-time handling | **Acceptance contract claimed on `codex/news-publication-time-contract`.** A materially future `published` value can reach the client and renders `"just now"`. A truthy malformed value would render `"NaNd ago"`, but the API currently makes that structurally unreachable by emitting only `null` or canonical ISO; the client check is defense-in-depth. Null, undefined and empty values already omit the age | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -471,20 +473,21 @@ remain untouched.
 The earlier queue item inherited a Stage 3 observation about what happens when `timeAgo()` is
 called directly with invalid values. That is not the same as the live News render path.
 `renderNews()` already guards `it.published` by truthiness, so missing, `null`, `undefined` and empty
-values omit the age today. The rendered defects are narrower:
+values omit the age today. The reachable defect and the latent client weakness are narrower:
 
 ```
-truthy malformed published value       Date.parse(...) -> NaN -> "NaNd ago"
-materially future published value      negative minutes -> "just now"
+materially future published value      reachable from a valid feed date -> "just now"
+truthy malformed published value       API prevents it today; if admitted -> "NaNd ago"
 ```
 
 The contract records that correction rather than claiming a null-value defect the UI does not
-have.
+have or a second live defect the API boundary currently prevents.
 
 #### Boundary settled
 
 The later implementation accepts only the canonical UTC ISO form already emitted by
-`api/news.js`, verified by shape plus parse/round-trip equality. It tolerates exactly five minutes
+`api/news.js`, verified by shape plus parse/round-trip equality, and protects the server invariant
+that output is only `null` or canonical ISO. It tolerates exactly five minutes
 of positive clock skew; one millisecond beyond is unusable. Unusable time withholds only the age
 and its separator — the article and its other fields stay visible, and no fetch or render timestamp
 is substituted.
@@ -496,11 +499,12 @@ not added to the observation `ageTick()`.
 
 #### Evidence required later
 
-The contract carries N01–N16: controlled-clock boundaries; full `renderNews()` fixtures; mutations
-in both directions with zero `ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite evidence;
-and a preview pass showing that valid live ages, links, filters and hazard tags still render. A live
-feed cannot safely be forced to emit malformed time, so deterministic DOM fixtures own the invalid
-cases rather than a fabricated preview claim.
+The contract carries N01–N16: controlled-clock boundaries; full `renderNews()` fixtures; separate
+mutations for the timestamp shape and round-trip checks; mutations in both directions with zero
+`ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite evidence; and a preview pass showing
+that valid live ages, links, filters and hazard tags still render. Truthy malformed input is
+structurally impossible from the current API output invariant, so deterministic DOM fixtures own
+that defense-in-depth case rather than a fabricated preview claim.
 
 **No implementation is authorized by this draft.** Claude reviews it read-only. After review and
 an owner-approved merge, implementation requires a fresh Claude claim ahead of every edit.
