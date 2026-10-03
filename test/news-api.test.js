@@ -86,10 +86,13 @@ function encodedFeedXml() {
    silently shifting the burden onto the page. RSS parsing itself is unchanged. */
 let pubDates = null;            /* raw pubDate strings, emitted verbatim into the feed */
 function pubDateFeedXml(i) {
-  const raw = pubDates[i % pubDates.length];
-  return '<rss><channel><item><title>Flood warning for Oahu ' + i +
-    '</title><link>https://example.test/pd' + i + '</link><description>d</description>' +
-    '<pubDate>' + raw + '</pubDate></item></channel></rss>';
+  if (i !== 0) return '<rss><channel></channel></rss>';
+  let out = '<rss><channel>';
+  pubDates.forEach(function (raw, k) {
+    out += '<item><title>Flood warning for Oahu ' + k + '</title><link>https://example.test/pd' +
+           k + '</link><description>d</description><pubDate>' + raw + '</pubDate></item>';
+  });
+  return out + '</channel></rss>';
 }
 
 let bulk = false;
@@ -499,19 +502,29 @@ async function main() {
 
   console.log('\nN02 — the handler emits publication time as null or canonical ISO, nothing else:');
   const CANON_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-  /* Deliberately hostile upstream dates: a valid RFC-822 pubDate, an offset form, a loose one,
-     an empty element, pure junk, and an ISO instant that is already canonical. */
+  /* Canonicality is parse-AND-round-trip, never regex shape alone. A raw
+     '2026-02-30T00:00:00.000Z' satisfies the shape while breaking the toISOString() promise, so
+     a handler that passed upstream text straight through would slip past a shape-only check.
+     Codex's finding; the fixture below is the one that proves it. */
+  const canonical = function (v) {
+    return typeof v === 'string' && CANON_ISO.test(v) &&
+           new Date(Date.parse(v)).toISOString() === v;
+  };
+  /* Hostile upstream dates: RFC-822, an offset form, a loose one, an empty element, pure junk,
+     and an ISO-shaped impossible calendar day. */
   pubDates = ['Fri, 02 Oct 2026 09:00:00 GMT', '2026-10-02T09:00:00.000+00:00',
-              'October 2 2026', '', 'not a date at all'];
+              'October 2 2026', '', 'not a date at all', '2026-02-30T00:00:00.000Z'];
   o = await call('/api/news', 'GET', false);
   pubDates = null;
-  check('every item still returned', o.body.items.length, 5);
+  check('every item still returned', o.body.items.length, 6);
   const pubs = o.body.items.map(i => i.published);
-  check('every published value is null or canonical ISO, none of them upstream text',
-    pubs.every(v => v === null || (typeof v === 'string' && CANON_ISO.test(v))), true);
-  check('  and the parseable ones became canonical ISO rather than being passed through',
-    pubs.filter(v => v !== null).length, 3);
-  check('  while the unparseable ones became null, not a guess and not the raw string',
+  check('every published value is null or canonical, by round-trip not shape alone',
+    pubs.every(v => v === null || canonical(v)), true);
+  check('an impossible upstream day is normalised, not passed through',
+    pubs.indexOf('2026-03-02T00:00:00.000Z') !== -1, true);
+  check('  and its ISO-shaped raw form does not survive',
+    pubs.indexOf('2026-02-30T00:00:00.000Z'), -1);
+  check('unparseable upstream dates become null, not a guess and not the raw string',
     pubs.filter(v => v === null).length, 2);
   check('no upstream date text survives into the response',
     pubs.some(v => v === 'October 2 2026' || v === 'not a date at all'), false);

@@ -650,6 +650,29 @@ const mutations = [
     to:   "    if (dot) dot.className = 's-dot unknown';",
     expect: ['an empty result is verified, not treated as missing data'], suite: 'dom' },
 
+  /* N02's SERVER half, which the first review round found asserted but unmutated. The client
+     validator is defense-in-depth only while api/news.js keeps emitting null or toISOString()
+     output, so that invariant needs its own mutation or the assertion guarding it is untested.
+     Both cases target the handler rather than the page. */
+  { name: 'the handler passes upstream publication text through instead of normalising',
+    from: '      published: Number.isNaN(ts) ? null : new Date(ts).toISOString(),',
+    to:   '      published: pub || null,',
+    expect: ['every published value is null or canonical, by round-trip not shape alone',
+             'an impossible upstream day is normalised, not passed through',
+             '  and its ISO-shaped raw form does not survive',
+             'no upstream date text survives into the response'],
+    suite: 'news', target: 'api' },
+
+  /* A canonical-looking but non-ISO normalisation. The client accepts ONE shape, so this would
+     silently strip every age in the feed while the handler still looked like it normalised. */
+  { name: 'the handler normalises to a non-ISO canonical form',
+    from: '      published: Number.isNaN(ts) ? null : new Date(ts).toISOString(),',
+    to:   '      published: Number.isNaN(ts) ? null : new Date(ts).toUTCString(),',
+    expect: ['every published value is null or canonical, by round-trip not shape alone',
+             'an impossible upstream day is normalised, not passed through',
+             'an offset-carrying upstream date is normalised to Z form'],
+    suite: 'news', target: 'api' },
+
   /* ---- News publication time, N14 -------------------------------------------------------
 
      The shape check and the round-trip check are mutated SEPARATELY and on purpose. During the
@@ -664,7 +687,7 @@ const mutations = [
     expect: ['N04/N08 a malformed value shows no age AND no dangling separator',
              'N04 no NaNd ago anywhere in the feed',
              'N06 a materially future item shows no age, and keeps its HAZARD tag',
-             'N06 nothing claims to be just now'],
+             'N06/N03/N04 exactly the four valid items carry an age'],
     suite: 'dom' },
 
   /* Only the four-digit-year shape test is removed. Round-trip equality still rejects offsets,
@@ -714,7 +737,7 @@ const mutations = [
     from: '  if (ms - base > NEWS_PUB_SKEW_MS) return null;',
     to:   '  if (false) return null;',
     expect: ['N06 a materially future item shows no age, and keeps its HAZARD tag',
-             'N06 nothing claims to be just now'],
+             'N06/N03/N04 exactly the four valid items carry an age'],
     suite: 'dom' },
 
   /* News must not silently become an observation clock by borrowing a different allowance. 90
