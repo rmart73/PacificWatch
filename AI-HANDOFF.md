@@ -128,8 +128,9 @@ change in file list is visible rather than edited away.
    `const`, so it is not reachable from the test at all.
 2. **The live in-flight paragraph said "three test files".** The FINAL SCOPE line and the PR body
    already said four, but that paragraph is current state, not preserved history, so it was a
-   false live claim. It now says four. The one remaining "three test files" on this board sits
-   inside the original claim's item 3, which is retained as history and flagged as superseded.
+   false live claim. It now says four. The only surviving CLAIM of three test files is the
+   original claim's item 3, retained as history and flagged as superseded; the phrase also appears
+   in this record, quoting the finding, which is narration rather than a claim.
 
 **Evidence, final**
 
