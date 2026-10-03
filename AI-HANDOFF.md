@@ -10,9 +10,9 @@ That archive is historical evidence, not an active claim board.
 
 Updated 2026-10-02. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
-verification**, the **#28 production verification**, the **#31 documentation deploy**, and the
-**#32 documentation deploy**, the **#33 classifier deploy**, and the **#34 closeout deploy**, which
-Codex performed directly and Claude reproduced independently. The #26 checks were unauthenticated HTTP
+verification**, the **#28 production verification**, the **#31 documentation deploy**, the
+**#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
+**#35 contract deploy**, which Codex performed directly and Claude reproduced independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -46,33 +46,123 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Hazard-classifier acceptance contract | #32 merged in `1b3c822`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy verified | Closed; authoritative at H01–H18 |
 | Hazard-classifier implementation | **#33 merged in `afff98b`** and production verified: HTML byte-identical to the merged blob, both endpoints `200`, 22 hazard items all true, zero feed errors | **Closed. H01–H18 implemented and production verified** |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
-| News publication-time acceptance contract | Claimed on `codex/news-publication-time-contract`; documentation and design only | Codex settles the boundary; Claude reviews read-only; owner decides merge |
+| News publication-time acceptance contract | #35 merged in `2875d0f`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy independently verified | Closed; authoritative at N01–N16 |
+| News publication-time implementation | Claimed on `claude/news-publication-time`; implements N01–N16 | Claude implements; Codex reviews read-only; the owner decides merge |
 
 ### Active claims
 
-**News publication-time acceptance contract — ChatGPT Codex,
-`codex/news-publication-time-contract`.** Owner-authorized 2026-10-02 on resume under the agreed
-design-first split. Claimed before editing, on a fresh branch from `main` at `77ed33c`.
+**News publication-time implementation — Claude Code, `claude/news-publication-time`.**
+Claimed 2026-10-02 before editing any implementation file, in its own commit ahead of the work, on
+the owner's explicit authorization. Branched from `main` at **`2875d0f`**.
 
-**Scope:**
+Governed by [NEWS-PUBLICATION-TIME-CONTRACT.md](NEWS-PUBLICATION-TIME-CONTRACT.md), **N01–N16**,
+which merged as #35 and is authoritative.
 
-1. Absorb #34's self-close across Current Work, Active claims, Active Branches, Review Queue, the
-   `main` pointer, attribution header and in-flight paragraph.
-2. Write `NEWS-PUBLICATION-TIME-CONTRACT.md`, defining accepted News timestamp input; missing,
-   malformed and future-skewed behavior; the distinction between publication age and source-fetch
-   freshness; the rendering fallback; controlled-time boundaries; and the test, mutation, preview
-   and production evidence required before implementation may merge.
-3. Correct the existing board overstatement: News already omits the age for null, undefined and
-   empty `published` values through its truthiness guard. A materially future value can reach the
-   client and renders `just now`. A truthy malformed value would render `NaNd ago`, but the current
-   API structurally prevents that input by emitting only `null` or canonical ISO; the client guard
-   is defense-in-depth against a boundary regression, not a second live feed defect.
+**Items 1-5 below are the ORIGINAL SCOPE as claimed before any code was written**, retained as
+history. The corrections that followed Codex's first review are recorded beneath them, so the
+change in file list is visible rather than edited away.
 
-**Out of scope:** no edit to `index.html`, `api/`, tests, configuration, dependencies, `AGENTS.md`,
-WAF or production settings; no implementation; no change to earthquake semantics or hazard
-classification; and no work on the aftermath/active-hazard question, remote-branch convention or
-closed-claims cleanup. Claude reviews read-only. Implementation requires a separate owner-authorized
-Claude claim after this contract is reviewed and merged.
+1. **One pure News-specific validator in `index.html`**, placed beside the News renderer. It takes
+   the raw `published` value and an injectable `now`, and returns either a usable millisecond
+   value or `null`. It is the only new decision point for publication-time usability (N01).
+2. **One call site.** `renderNews()` currently does
+   `const when = it.published ? timeAgo(Date.parse(it.published)) : '';` — the sole occurrence of
+   `it.published` in the entire client. The validator is called there, before `timeAgo()`, and the
+   existing `${when ? ' · ' + esc(when) : ''}` separator guard is what already withholds the
+   separator together with the age (N08).
+3. **Tests** across three test files: pure validator fixtures with an injected clock and a handler
+   assertion that every emitted `published` is `null` or canonical ISO, both in
+   `test/news-api.test.js`; the full `renderNews()` DOM path in `test/dom-behavior.test.js`; and
+   mutation cases in `test/mutation-check.js`. **This proved wrong in two ways — see the
+   corrections below.**
+4. **Mutation cases**, including the two the contract names separately: one disabling only the
+   four-digit-year shape check and one disabling only the round-trip equality check.
+5. **Evidence**: controlled-clock boundary runs, full-suite counts, a dependency-free run, and a
+   preview pass before the PR is offered for review (N15, N16).
+
+**Files touched as originally claimed:** `index.html`, `test/news-api.test.js`,
+`test/dom-behavior.test.js`, `test/mutation-check.js`, and this board.
+
+**FINAL SCOPE — four test files, not three.** `index.html`,
+**`test/phase1-source-health.test.js`**, `test/news-api.test.js`, `test/dom-behavior.test.js`,
+`test/mutation-check.js`, and this board. `api/news.js`, `api/news/hazard.js`, `vercel.json`,
+`package.json` and `AGENTS.md` are byte-identical to `main`.
+
+**Added by review corrections, round one (`26d32ae`)**
+
+1. **The pure validator tests moved to `test/phase1-source-health.test.js`.** That suite takes an
+   html path, so `test/mutation-check.js` can aim it at a mutant; `test/news-api.test.js` takes an
+   api path and `require`s it as a module, which would have made every pure assertion
+   unmutatable — decorative by this project's own standard. The handler invariant assertion stayed
+   in `test/news-api.test.js`, where its subject is. Disclosed in the implementation commit and
+   the PR body, but the board's live scope still said three files until this correction.
+2. **The server invariant is now mutation-proven, not merely asserted.** Codex's finding: all nine
+   original mutations targeted `index.html`, so nothing weakened `api/news.js` normalization and
+   N14 was unmet for that assertion. Two API-targeted mutations were added — one passing upstream
+   publication text straight through, one normalising to `toUTCString()` instead of ISO.
+3. **The invariant assertion now tests parse/round-trip canonicality, not regex shape.** A raw
+   `2026-02-30T00:00:00.000Z` satisfies the canonical shape while breaking the `toISOString()`
+   promise, so a shape-only check would have passed a pass-through handler. That upstream fixture
+   is now in the set and its normalised output `2026-03-02T00:00:00.000Z` is asserted directly.
+4. **N07's four wording classes are each covered through `renderNews()`**: under a minute, minutes,
+   hours and days, from independently chosen offsets rather than from `timeAgo()`. Only the hours
+   case existed before.
+5. **N03's matrix is complete**: `undefined` and an **absent** `published` property now go through
+   the real render path, not only the pure suite.
+6. **N11 is exercised under both fetch states**, current and stale, and now inspects the
+   `news-updated` stamp — that it reports the fetch clock when current, switches to `last
+   verified` when stale, and that an old article age and an unusable one read identically in both.
+
+**Evidence, final**
+
+```
+npm test        425  =  175 + 35 + 37 + 178
+test:dom        430
+test:mutation   137 of 137, zero ANCHOR LOST, zero AMBIGUOUS
+clean run       425 in an eight-file directory, no node_modules
+preview         N16 captured with jsdom against the deployed page and API
+```
+
+**The API invariant this depends on, protected rather than assumed**
+
+`api/news.js` emits `published` as either `null` or `new Date(ts).toISOString()`. That is why a
+truthy malformed value cannot reach the renderer today, and why N04 is defense-in-depth rather
+than a live defect. **RSS parsing is not changed**, but a handler assertion now fails if that
+invariant is weakened. I sampled it live against production before claiming: 51 item records
+across both representations, every `published` canonical ISO, zero non-canonical, zero null, zero
+beyond the five-minute skew. Live traffic currently exercises neither the null path nor the future
+path, which is why deterministic fixtures own N03, N04 and N06.
+
+**Preserved, explicitly — each of these is a thing this change must not do**
+
+`timeAgo()` keeps its exact behaviour for every caller; it has two, and the earthquake one is
+`quakeEventAge()`, settled under T12. `ageTick()` is not given a News render and no timer is added.
+No change to item sorting, source filtering, hazard classification, item visibility, the
+whole-pool-before-cap rule, either canonical representation, the 30-item cap, cache identity, cache
+headers, WAF behaviour, upstream fan-out, `api/news.js` RSS parsing, or the `esc()` / `safeUrl()`
+escaping boundary.
+
+**The mutation lesson this claim carries forward**
+
+From the #35 review: **a check that short-circuits first is not necessarily the check doing the
+work. A fixture proving a specific check load-bearing must survive every other check and fail only
+that one.** I made this mistake during that review — I read an evaluation order as evidence of
+load-bearingness, and it cost a round. It belongs in `AGENTS.md` beside the zero-`ANCHOR LOST`
+rule, but **`AGENTS.md` is not edited here**; placing it there needs its own claim.
+
+**Out of scope, explicitly**
+
+No `api/news.js` change. No `AGENTS.md` edit. No earthquake or observation-clock change, no
+hazard-classifier change, no layout work, no refresh-interval change, no new route or dependency.
+The aftermath/active-hazard question, the deleted-remote-branch convention and the closed-claims
+cleanup remain unclaimed and untouched.
+
+**Absorbed into this claim**
+
+#35's self-close, since a board PR cannot record its own merge: the `main` pointer, attribution
+header, Current Work row, Active claims block, Active Branches row, Review Queue row and in-flight
+paragraph — seven items — plus the Handoff Log entry for the merge, and one stray conjunction in
+the attribution header left from an earlier edit.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -298,7 +388,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/news-publication-time-contract | **Documentation and design only.** Defines the News publication-time acceptance boundary and absorbs #34's self-close |
+| Claude | claude/news-publication-time | Implements N01–N16: one News-specific publication-time validator, its `renderNews()` call site, tests and mutations. Branched from `main` at `2875d0f` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -317,16 +407,17 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
-| News publication-time handling | **Acceptance contract claimed on `codex/news-publication-time-contract`.** A materially future `published` value can reach the client and renders `"just now"`. A truthy malformed value would render `"NaNd ago"`, but the API currently makes that structurally unreachable by emitting only `null` or canonical ISO; the client check is defense-in-depth. Null, undefined and empty values already omit the age | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
+| News publication-time handling | **Contract merged as #35 in `2875d0f`; implementation claimed on `claude/news-publication-time`.** The reachable defect is a materially future `published` value rendering `"just now"`. A truthy malformed value would render `"NaNd ago"`, but `api/news.js` makes that structurally unreachable by emitting only `null` or canonical ISO, so that guard is defense-in-depth and the invariant is now asserted. Null, undefined and empty values already omit the age | Claude implements N01–N16; Codex re-reviews |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `77ed33c`**, merged through #34 and serving production. Claims and handoffs for
+**`main` is at `2875d0f`**, merged through #35 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The News publication-time acceptance contract is
-the only active work and is documentation/design only. The hazard classifier merged as #33 in
-`afff98b`, its closeout merged as #34 in `77ed33c`, and H01–H18 are production verified.
+**An application implementation IS in flight: `claude/news-publication-time` changes `index.html`
+and three test files, and is the sole active implementation.** The News publication-time contract
+merged as #35 in `2875d0f` and is authoritative at N01–N16. The hazard classifier merged as #33 in
+`afff98b`, its closeout as #34 in `77ed33c`, and H01–H18 are production verified.
 Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
 implemented at T01–T17 across stages 1, 2 and 3.
 
@@ -460,6 +551,50 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-02 — #35 merged; News publication-time implementation claimed
+
+The acceptance contract merged on the owner's explicit permission, squashed as **`2875d0f`**. Codex
+verified production directly and Claude reproduced it independently: merge scope exactly the two
+documentation files, every runtime and test file byte-identical to `77ed33c`, production HTML and
+`main:index.html` both `c01cc1618666d40de1a0ba114eb9b53b3ce06407`, all three paths `200`, zero feed
+errors.
+
+#### The contract's status line worked
+
+"Authoritative upon merge" reads correctly now that it is merged, with no post-merge edit. It is
+the first of the four contracts not to need a status correction after landing — the three before
+it each merged while describing themselves as unmerged.
+
+#### What three read-only review rounds produced
+
+Round one found a reachability overstatement: the contract described two live defects when
+`api/news.js` structurally prevents one of them. Round two found that the fixtures named to
+distinguish the shape-only mutation distinguished nothing — **my own error**, carried into the
+contract from my round-one recommendation. I had read a probe printing `reject shape` as evidence
+that the shape check was load-bearing, when it only showed which check ran first and
+short-circuited.
+
+Round-trip equality rejects the offset and loose-English forms by itself, so removing the shape
+regex changed nothing for them. The structural reason is narrow and worth keeping: for years
+0000–9999, `toISOString()` output always matches the four-digit canonical shape, so **round-trip
+equality subsumes the shape check for every input except expanded-year forms.** Shape is
+independently load-bearing against that one family and nothing else. A past expanded year
+(`-000001-01-01T00:00:00.000Z`) round-trips exactly and is not masked by the future guard, which
+makes it the only usable witness.
+
+The durable lesson, carried in the implementation claim for later placement in `AGENTS.md`:
+**a check that short-circuits first is not necessarily the check doing the work; a fixture proving
+a specific check load-bearing must survive every other check and fail only that one.**
+
+#### Live corroboration of the N02 server invariant
+
+Sampled from production before claiming: 51 item records across both representations, every
+`published` value canonical ISO — zero non-canonical, zero null, zero beyond the five-minute skew.
+Live traffic exercises neither the null path nor the future path today, so deterministic fixtures
+own N03, N04 and N06 out of necessity rather than convenience. This corroborates the invariant; it
+does not discharge N02's handler assertion, which is the thing that fails if the invariant weakens.
+
 
 ### 2026-10-02 — News publication-time acceptance contract drafted; implementation not started
 
