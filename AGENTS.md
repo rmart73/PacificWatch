@@ -715,6 +715,10 @@ Mutation anchors are part of the test and must move with the code they guard:
   `AMBIGUOUS`. After changing a render path, revalidate every mutation anchored in that path; a
   behavior fix can otherwise disarm the mutation that was meant to protect it while leaving the
   headline count looking plausible.
+- A check that short-circuits first is not necessarily the check doing the work. To prove one
+  check is load-bearing, its fixture must survive every other check and fail only the targeted
+  one. A probe that merely reports which guard rejected first establishes evaluation order, not
+  independent coverage.
 
 The harness checks whether assertions can fail, so it has to hold itself to the same standard.
 
