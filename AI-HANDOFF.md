@@ -12,8 +12,8 @@ Updated 2026-10-03. PR state was checked through GitHub. Production observations
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
-**#35 contract deploy** and **#36 implementation deploy**, which Codex performed directly and
-Claude reproduced independently. The #26 checks were unauthenticated HTTP
+**#35 contract deploy** and **#36 implementation deploy**, which Codex and Claude verified
+independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -319,6 +319,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
+| CI for independently reproducible suite evidence | **Open, unclaimed.** Codex authors a documentation-only acceptance contract; Claude reviews read-only. The agreed boundary covers PR/`main` triggers, least privilege, pinned toolchain policy, dependency-free versus jsdom execution, mutation timeout and failure semantics, no secrets or live external-state dependency, required-check promotion only after a stable proving run, and a clean checkout of the exact commit for every run; caches may accelerate dependency retrieval but never substitute source, tests, generated output or verdicts | Owner decides whether to authorize the contract. Workflow implementation requires its own later claim and authorization after the contract merges |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -465,8 +466,8 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ### 2026-10-03 — #36 merged and production verified; N01–N16 complete
 
-Merged on the owner's explicit permission, squashed as **`9348284`**. Codex verified production
-directly and Claude reproduced the deployment independently.
+Merged on the owner's explicit permission, squashed as **`9348284`**. Claude performed the merge
+and production verification; Codex then reproduced the deployment checks independently.
 
 ```
 production HTML blob    a42963cd26766d91174edba217be9f4e9a7c571d
