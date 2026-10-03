@@ -113,15 +113,37 @@ change in file list is visible rather than edited away.
    `news-updated` stamp — that it reports the fetch clock when current, switches to `last
    verified` when stale, and that an old article age and an unusable one read identically in both.
 
+**Added by review corrections, round two (`3960cc4`)**
+
+1. **N11 now reaches the stale state through the real fetch lifecycle.** The round-one version
+   called `renderNews(..., true)`, which proved only that the renderer obeys a boolean it was
+   handed — Codex's finding, and correct: `sourceState('news')` was still `current` throughout,
+   and an assertion said so. The test now forces a failed refresh, so `fetchNews()` catches,
+   calls `sourceFail('news', ...)` and re-renders the cached payload with staleness **derived**
+   from `isStale('news')`. It asserts `sourceState('news') === 'stale'`, the `last verified`
+   stamp, the stale note reaching the list, the old age unchanged, the unusable age still
+   withheld, the four-of-thirteen aggregate holding, and health unaltered by the render — then
+   restores `current` through a successful refresh so nothing downstream inherits a stale source.
+   Poking `S.sourceHealth` was not an option and would have been the wrong fix anyway: `S` is a
+   `const`, so it is not reachable from the test at all.
+2. **The live in-flight paragraph said "three test files".** The FINAL SCOPE line and the PR body
+   already said four, but that paragraph is current state, not preserved history, so it was a
+   false live claim. It now says four. The one remaining "three test files" on this board sits
+   inside the original claim's item 3, which is retained as history and flagged as superseded.
+
 **Evidence, final**
 
 ```
 npm test        425  =  175 + 35 + 37 + 178
-test:dom        430
+test:dom        436
 test:mutation   137 of 137, zero ANCHOR LOST, zero AMBIGUOUS
 clean run       425 in an eight-file directory, no node_modules
 preview         N16 captured with jsdom against the deployed page and API
 ```
+
+Every count above was reproduced from a detached worktree checked out at the pushed head with
+zero modified files, after Codex declined — correctly — to accept a mutation result produced
+against an uncommitted working tree.
 
 **The API invariant this depends on, protected rather than assumed**
 
@@ -415,7 +437,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **An application implementation IS in flight: `claude/news-publication-time` changes `index.html`
-and three test files, and is the sole active implementation.** The News publication-time contract
+and four test files, and is the sole active implementation.** The News publication-time contract
 merged as #35 in `2875d0f` and is authoritative at N01–N16. The hazard classifier merged as #33 in
 `afff98b`, its closeout as #34 in `77ed33c`, and H01–H18 are production verified.
 Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
