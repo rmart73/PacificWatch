@@ -61,8 +61,9 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 1. Absorb #37's self-close across the attribution header, Current Work, Active claims, Active
    Branches and the `main` pointer; add the production verification record to the Handoff Log.
-2. Write a documentation-only CI acceptance contract covering the agreed boundary: pull-request
-   and `main` triggers; least-privilege permissions; pinned toolchain policy; dependency-free pure
+2. Write [the documentation-only CI acceptance contract](CI-ACCEPTANCE-CONTRACT.md) covering the
+   agreed boundary: pull-request and `main` triggers; least-privilege permissions; pinned toolchain
+   policy; dependency-free pure
    suites versus the jsdom installation required by DOM tests; deterministic suites only, with no
    secrets or live external state; mutation timeout and failure semantics for `MISSED`,
    `ANCHOR LOST` and `AMBIGUOUS`; exact-commit attribution beside every reported count; and a clean
@@ -323,7 +324,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract claimed on `codex/ci-acceptance-contract`; implementation unclaimed and unauthorized.** Codex authors the documentation-only acceptance contract; Claude reviews read-only. The boundary includes deterministic PR/`main` execution, exact-commit attribution, least privilege, pinned tooling, dependency-free versus jsdom execution, mutation timeout and complete failure semantics, no secrets or live external state, proving-run requirements, and clean checkout isolation; caches may accelerate dependency retrieval but never substitute source, tests, generated output or verdicts | Claude reviews the contract when opened; owner decides merge. Workflow implementation requires its own later claim and authorization after the contract merges |
+| CI for independently reproducible suite evidence | **Contract claimed on `codex/ci-acceptance-contract`; implementation unclaimed and unauthorized.** [The draft contract](CI-ACCEPTANCE-CONTRACT.md) requires deterministic PR/`main` execution, exact-commit attribution, least privilege, pinned tooling, dependency-free versus jsdom execution, complete mutation and timeout failure semantics, no secrets or live external state, three clean job checkouts, dependency-only caching and a two-run proving sequence before required-check promotion | Claude reviews the contract read-only; owner decides merge. Workflow implementation requires its own later claim and authorization after the contract merges |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -468,6 +469,26 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-03 — CI acceptance contract claimed and drafted
+
+Owner-authorized documentation work on `codex/ci-acceptance-contract`, claimed at `4ad3d22`
+before the contract was written. [The draft](CI-ACCEPTANCE-CONTRACT.md) turns the evidence failure
+that prompted this work — a mutation count first reported from an uncommitted working tree — into
+an exact-commit gate rather than relying on a reviewer to distrust the right run.
+
+The contract requires three independent clean-checkout jobs on every pull request and `main` push:
+dependency-free pure tests, DOM behaviour after locked dev-dependency installation, and mutation
+coverage. Each run verifies and prints its exact SHA beside measured counts. The mutation job runs
+on every PR despite its roughly four-minute local duration and, with the other two jobs, becomes a
+required check only after a first-attempt green implementation-head run and a green `main` run.
+Timeouts, missing summaries, nonzero exits, `MISSED`, `ANCHOR LOST` and `AMBIGUOUS` are failures.
+Caches may retrieve dependencies but never source, tests, output or verdicts. Live-feed, Vercel and
+visual evidence stays human-triggered and outside deterministic CI.
+
+This branch contains documentation only. It does not create `.github/`, modify the ruleset or
+authorize workflow implementation. Claude reviews read-only; implementation requires a later
+owner authorization and its own claim after this contract merges.
 
 ### 2026-10-03 — #37 merged; News publication-time closeout complete
 
