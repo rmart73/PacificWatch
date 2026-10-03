@@ -11,8 +11,8 @@ That archive is historical evidence, not an active claim board.
 Updated 2026-10-02. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, and the
-**#32 documentation deploy**, and the **#33 classifier deploy**, which Codex performed directly
-and Claude reproduced independently. The #26 checks were unauthenticated HTTP
+**#32 documentation deploy**, the **#33 classifier deploy**, and the **#34 closeout deploy**, which
+Codex performed directly and Claude reproduced independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -45,22 +45,34 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Hazard-classifier acceptance contract | #32 merged in `1b3c822`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy verified | Closed; authoritative at H01–H18 |
 | Hazard-classifier implementation | **#33 merged in `afff98b`** and production verified: HTML byte-identical to the merged blob, both endpoints `200`, 22 hazard items all true, zero feed errors | **Closed. H01–H18 implemented and production verified** |
-| Hazard-classifier closeout record | Claimed on `claude/hz-closeout`; documentation only | Codex reviews read-only; the owner decides merge |
+| Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
+| News publication-time acceptance contract | Claimed on `codex/news-publication-time-contract`; documentation and design only | Codex settles the boundary; Claude reviews read-only; owner decides merge |
 
 ### Active claims
 
-**Hazard-classifier closeout — Claude Code, `claude/hz-closeout`.**
-Claimed 2026-10-02 before editing, in its own commit ahead of the work, on the owner's explicit
-authorization. Branched from `main` at `afff98b`.
+**News publication-time acceptance contract — ChatGPT Codex,
+`codex/news-publication-time-contract`.** Owner-authorized 2026-10-02 on resume under the agreed
+design-first split. Claimed before editing, on a fresh branch from `main` at `77ed33c`.
 
-Scope: absorb #33's self-close across Current Work, Active claims, Active Branches, the Review
-Queue, the `main` pointer, the attribution header and the in-flight paragraph; record the H18
-production evidence and H10's live result; preserve the accepted historical Nolo false negatives
-with the reason the refreshed item now passes; and record the aftermath/consequence cluster as an
-unclaimed possible future contract amendment.
+**Scope:**
 
-**Documentation only.** No application, API, test, configuration, dependency, WAF or production
-settings change. The merged implementation branch is not touched.
+1. Absorb #34's self-close across Current Work, Active claims, Active Branches, Review Queue, the
+   `main` pointer, attribution header and in-flight paragraph.
+2. Write `NEWS-PUBLICATION-TIME-CONTRACT.md`, defining accepted News timestamp input; missing,
+   malformed and future-skewed behavior; the distinction between publication age and source-fetch
+   freshness; the rendering fallback; controlled-time boundaries; and the test, mutation, preview
+   and production evidence required before implementation may merge.
+3. Correct the existing board overstatement: News already omits the age for null, undefined and
+   empty `published` values through its truthiness guard. A materially future value can reach the
+   client and renders `just now`. A truthy malformed value would render `NaNd ago`, but the current
+   API structurally prevents that input by emitting only `null` or canonical ISO; the client guard
+   is defense-in-depth against a boundary regression, not a second live feed defect.
+
+**Out of scope:** no edit to `index.html`, `api/`, tests, configuration, dependencies, `AGENTS.md`,
+WAF or production settings; no implementation; no change to earthquake semantics or hazard
+classification; and no work on the aftermath/active-hazard question, remote-branch convention or
+closed-claims cleanup. Claude reviews read-only. Implementation requires a separate owner-authorized
+Claude claim after this contract is reviewed and merged.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -286,7 +298,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/hz-closeout | **Documentation only.** Records the #33 production verification and closes the rows a board PR cannot close about itself |
+| Codex | codex/news-publication-time-contract | **Documentation and design only.** Defines the News publication-time acceptance boundary and absorbs #34's self-close |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -303,17 +315,18 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
+| Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
-| `timeAgo()` invalid-input handling in News | **Open, pre-existing, unclaimed.** `renderNews()` at `index.html:2291` calls `timeAgo(Date.parse(it.published))`, which renders `"NaNd ago"` for an unparseable `published`, `"20728d ago"` for `null`, and `"just now"` for a future timestamp. Found while scoping Stage 3, which deliberately left `timeAgo()` unchanged rather than widen a T12 PR into the News card | Needs its own claim. The earthquake surfaces are handled inside Stage 3 without touching the shared helper |
+| News publication-time handling | **Acceptance contract claimed on `codex/news-publication-time-contract`.** A materially future `published` value can reach the client and renders `"just now"`. A truthy malformed value would render `"NaNd ago"`, but the API currently makes that structurally unreachable by emitting only `null` or canonical ISO; the client check is defense-in-depth. Null, undefined and empty values already omit the age | Codex defines acceptance; Claude reviews read-only; implementation requires a later claim |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
-**`main` is at `afff98b`**, merged through #33 and serving production. Claims and handoffs for
+**`main` is at `77ed33c`**, merged through #34 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application implementation is in flight.** The hazard classifier merged as #33 in `afff98b` and
-is verified in production; the only open work is this documentation-only closeout. The contract
-merged as #32 in `1b3c822` and is authoritative at H01–H18.
+**No application implementation is in flight.** The News publication-time acceptance contract is
+the only active work and is documentation/design only. The hazard classifier merged as #33 in
+`afff98b`, its closeout merged as #34 in `77ed33c`, and H01–H18 are production verified.
 Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
 implemented at T01–T17 across stages 1, 2 and 3.
 
@@ -447,6 +460,56 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-02 — News publication-time acceptance contract drafted; implementation not started
+
+Codex drafted [the News publication-time contract](NEWS-PUBLICATION-TIME-CONTRACT.md) on
+`codex/news-publication-time-contract`, after publishing the claim separately in `3c612e5`.
+Documentation and design only: runtime, API, tests, configuration, dependencies and `AGENTS.md`
+remain untouched.
+
+#### The existing board statement was too broad
+
+The earlier queue item inherited a Stage 3 observation about what happens when `timeAgo()` is
+called directly with invalid values. That is not the same as the live News render path.
+`renderNews()` already guards `it.published` by truthiness, so missing, `null`, `undefined` and empty
+values omit the age today. The reachable defect and the latent client weakness are narrower:
+
+```
+materially future published value      reachable from a valid feed date -> "just now"
+truthy malformed published value       API prevents it today; if admitted -> "NaNd ago"
+```
+
+The contract records that correction rather than claiming a null-value defect the UI does not
+have or a second live defect the API boundary currently prevents.
+
+#### Boundary settled
+
+The later implementation accepts only the canonical UTC ISO form already emitted by
+`api/news.js`, verified by shape plus parse/round-trip equality, and protects the server invariant
+that output is only `null` or canonical ISO. It tolerates exactly five minutes
+of positive clock skew; one millisecond beyond is unusable. Unusable time withholds only the age
+and its separator — the article and its other fields stay visible, and no fetch or render timestamp
+is substituted.
+
+Publication age remains content metadata, never source health. It cannot change sorting, filtering,
+hazard classification, cache behavior or the whole-pool-before-cap rule. The correction is
+News-specific: shared `timeAgo()` and the Stage 3 earthquake boundary remain unchanged, and News is
+not added to the observation `ageTick()`.
+
+#### Evidence required later
+
+The contract carries N01–N16: controlled-clock boundaries; full `renderNews()` fixtures; separate
+mutations for the timestamp shape and round-trip checks, distinguished respectively by a past
+expanded-year value and past calendar-rollover values so the future guard cannot mask either;
+mutations in both directions with zero `ANCHOR LOST` or `AMBIGUOUS`; dependency-free and full-suite
+evidence; and a preview pass showing that valid live ages, links, filters and hazard tags still
+render. Truthy malformed input is structurally impossible from the current API output invariant,
+so deterministic DOM fixtures own that defense-in-depth case rather than a fabricated preview
+claim.
+
+**No implementation is authorized by this draft.** Claude reviews it read-only. After review and
+an owner-approved merge, implementation requires a fresh Claude claim ahead of every edit.
 
 ### 2026-10-02 — #33 merged and production verified; H01–H18 complete
 
