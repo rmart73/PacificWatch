@@ -48,8 +48,31 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | News publication-time acceptance contract | #35 merged in `2875d0f`; reviewed read-only over three rounds, all findings addressed; documentation-only deploy independently verified | Closed; authoritative at N01–N16 |
 | News publication-time implementation | Claimed on `claude/news-publication-time`; implements N01–N16 | Claude implements; Codex reviews read-only; the owner decides merge |
+| News publication-time closeout | Claimed on `codex/news-publication-time-closeout`; documentation only | Codex reconciles #36 and adds the accepted mutation lesson to `AGENTS.md`; Claude reviews read-only |
 
 ### Active claims
+
+**News publication-time closeout — ChatGPT Codex,
+`codex/news-publication-time-closeout`.** Owner-authorized 2026-10-03. Claimed before the closeout
+edits, on a fresh branch from `main` at `9348284`.
+
+**Scope:**
+
+1. Absorb #36's self-close across the attribution header, Current Work, Active claims, Active
+   Branches, Review Queue, the `main` pointer and the in-flight paragraph; add the production
+   verification record to the Handoff Log.
+2. Add the review-proven mutation rule to the shared `AGENTS.md` beside the existing zero-
+   `ANCHOR LOST` / zero-`AMBIGUOUS` rule: a check that short-circuits first is not necessarily the
+   check doing the work; a fixture proving a specific check load-bearing must survive every other
+   check and fail only that one.
+3. State the ownership correction accurately: `AGENTS.md` remains a shared contract. Codex owns
+   this claimed edit; earlier reservations were task-specific concurrency locks, not permanent
+   file ownership.
+
+**Out of scope:** no runtime, API, tests, configuration, dependencies, workflow, WAF or production
+change; no CI contract or implementation; no aftermath-classification change; no remote-branch
+convention decision; and no closed-claims cleanup. Claude reviews this documentation PR read-only;
+the owner decides merge.
 
 **News publication-time implementation — Claude Code, `claude/news-publication-time`.**
 Claimed 2026-10-02 before editing any implementation file, in its own commit ahead of the work, on
@@ -411,6 +434,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
+| Codex | codex/news-publication-time-closeout | Documentation-only #36 closeout and the accepted mutation-testing lesson in shared `AGENTS.md` |
 | Claude | claude/news-publication-time | Implements N01–N16: one News-specific publication-time validator, its `renderNews()` call site, tests and mutations. Branched from `main` at `2875d0f` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
