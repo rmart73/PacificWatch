@@ -42,6 +42,13 @@ jobs:
           node-version: 24.21.0
 
       # C03/C07 — this runs IMMEDIATELY before npm test, with nothing between it and the suite.
+      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
+      # C07 negative witness: pre-create node_modules so the gate below must refuse to run
+      # npm test. Without this probe that check can never fail in CI, because a fresh
+      # actions/checkout never carries an install.
+      - name: PROBE pre-create node_modules
+        run: mkdir -p node_modules
+      # ===== END PROBE =====
       - name: Verify checkout identity and clean, uninstalled state
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -113,7 +120,12 @@ jobs:
 
       - name: Verify checkout identity and clean, uninstalled state
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
+          # C03 negative witness: a deliberately wrong expected SHA must fail the identity gate
+          # before any suite runs. This is the check that would have caught the discarded
+          # mutation result reported against an uncommitted tree.
+          EXPECTED_SHA: "0000000000000000000000000000000000000000"
+          # ===== END PROBE =====
         run: |
           set -euo pipefail
           echo "commit under test (expected): ${EXPECTED_SHA}"
@@ -181,6 +193,12 @@ jobs:
         with:
           node-version: 24.21.0
 
+      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
+      # C03 negative witness: an untracked file must make git status --porcelain non-empty and
+      # fail the gate before npm ci and before the suite.
+      - name: PROBE create an untracked marker
+        run: echo probe > probe-marker.txt
+      # ===== END PROBE =====
       - name: Verify checkout identity and clean, uninstalled state
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
