@@ -13,7 +13,8 @@ attributed to the user-relayed Claude report, except the #21 deploy check, the *
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
-**#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy** and **#41 C16 deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
+**#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
+**#42 closeout deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -54,6 +55,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | CI workflow implementation | #39 merged in `32d732a`; exact workflow blob proven on the PR and on the post-merge `main` run, both attempt 1: 425 pure, 436 DOM and 137 of 137 mutations | **Closed at C01–C18.** The owner promoted all three stable job names under C16 after C15 completed |
 | CI workflow closeout | #40 merged in `a545e18`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed |
 | C16 required-check promotion record | #41 merged in `24ef13f`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; production and ruleset independently re-verified | Closed; all three jobs required, zero bypass actors |
+| C16 closeout | #42 merged in `87ef841`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed; C01–C18 complete end to end |
+| C09 runner-family amendment | Owner-authorized documentation work claimed on `codex/c09-runner-family-amendment`; no workflow edit begun | Codex authors; Claude reviews read-only. A later workflow correction needs separate authorization and claim |
 
 ### Active claims
 
@@ -322,17 +325,19 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract #38, implementation #39, closeout #40 and C16 record #41 are merged. C01–C18 complete.** `pure tests (dependency-free)`, `DOM behaviour` and `mutation coverage` are required from GitHub Actions; #41 proved pending checks block and all three green checks release merge eligibility | Closed. At promotion, the first six green mutation runs measured 675–707 seconds, 75–79% of the 15-minute ceiling; a ceiling breach is a release-blocking C12 review event |
+| CI for independently reproducible suite evidence | **Contract #38, implementation #39, closeout #40, C16 record #41 and closeout #42 are merged. C01–C18 complete.** The C09 runner-family amendment is claimed, documentation-only; `ubuntu-latest` remains in the workflow until a later separately authorized implementation | Codex authors the amendment; Claude reviews read-only. Pin the OS family without calling the weekly refreshed hosted image immutable; record the exact image version and leave C12 unchanged |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #41 and serving production.** Claims and handoffs for
+**`main` is merged through #42 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application or workflow implementation is in flight.** The only active work is the
-documentation-only `codex/c16-closeout` claim. #41 merged in `24ef13f`; its exact-SHA post-merge run
-passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137 mutations.
+documentation-only `codex/c09-runner-family-amendment` claim. The current workflow still uses
+`ubuntu-latest`; no `.github/` edit is authorized by this claim. #42 merged in `87ef841`, and its
+exact-SHA post-merge run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
+mutations.
 
 **C16 is complete.** `Protect main` now requires all three GitHub Actions jobs. Existing deletion,
 non-fast-forward and pull-request rules are unchanged, approvals remain zero, and the bypass list
@@ -479,6 +484,32 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-04 — #42 merged; C09 runner-family amendment authorized
+
+The owner authorized #42 after Claude's final read-only review found no remaining findings. It was
+squash-merged as `87ef841b48dec6f269cc9b754b7853dd72363159`; merge scope was this board alone, and
+the complete tree comparison found no unexpected change. Exact-main run `37186546315`, push event,
+attempt 1, passed at 425 pure assertions, 436 DOM assertions and 137 of 137 mutations with 137
+verdict lines. Mutation completed in 700 seconds. Production HTML stayed byte-identical to
+`main:index.html` at `a42963cd26766d91174edba217be9f4e9a7c571d`; `/`, `/api/news` and
+`/api/news/hazard` returned `200`. `Protect main` remained active with the same three required jobs
+and zero bypass actors.
+
+That run's GitHub setup log reported `Image: ubuntu-24.04`, image version `20260927.320.1` and the
+matching `Image Release`. The workflow nevertheless selects it through `runs-on: ubuntu-latest` in
+all three jobs. GitHub announced that alias will begin moving to Ubuntu 26.04 on October 19. The
+current 700-second mutation run has 200 seconds of room under C12's 900-second ceiling: a 28.6%
+slowdown would exhaust it, after which every PR would be blocked by the required check. Recovery is
+possible through an owner ruleset edit, but would require weakening the gate to repair the gate.
+
+Claude correctly escalated that C09's purpose — tooling as reviewed inputs — was broader than its
+literal Node-and-Action wording. Codex's correction is equally important: `ubuntu-24.04` fixes the
+OS family but **does not pin an immutable image**, because GitHub refreshes hosted images under that
+label. The owner authorized this documentation-only amendment: require the explicit OS family,
+record the concrete image-version string from each proving log, leave C12 unchanged, and reserve
+the later `.github/` change for a separately authorized Claude claim after the amendment merges.
+The product rename discussion remains parked and outside this work.
 
 ### 2026-10-04 — #41 merged; C01–C18 complete under the live required-check gate
 

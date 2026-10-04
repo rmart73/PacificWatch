@@ -1,8 +1,9 @@
 # CI acceptance contract
 
-Status: **authoritative upon merge**. This document defines the acceptance boundary for a later
-continuous-integration implementation. Merging it does not create a workflow, change branch
-protection or authorize any `.github/` edit.
+Status: **authoritative upon merge**. The original workflow implementation and required-check
+promotion are complete; amendments in a merged version of this document govern any later workflow
+correction. Merging an amendment does not change the workflow or branch protection and does not
+authorize any `.github/` edit.
 
 ## Purpose
 
@@ -82,7 +83,7 @@ then run their named suites. Installation is for the existing `jsdom` dev depend
 runtime `dependencies` key remains forbidden, and the workflow does not use globally installed
 packages as a substitute for the lockfile.
 
-### 5. Tooling and actions are pinned, reviewed inputs
+### 5. Tooling, actions and the runner OS family are reviewed inputs
 
 The implementation selects a supported Node LTS release and pins its full `major.minor.patch`
 version. Floating aliases such as `node`, `lts/*`, `latest`, `22` or `22.x` are not accepted. A
@@ -91,6 +92,25 @@ Node update is an explicit reviewed diff followed by the full proving sequence.
 Every GitHub Action reference is pinned to a full commit SHA, with a nearby comment naming the
 human-readable release. Mutable tags alone are not accepted. Dependency installation uses the
 committed lockfile and `npm ci`; the workflow does not regenerate or rewrite that lockfile.
+
+Every GitHub-hosted job uses the explicit supported OS-family label `ubuntu-24.04`.
+`ubuntu-latest` and other `*-latest` aliases are not accepted: GitHub can move them to a new OS
+family without a workflow diff. Changing the explicit family is a reviewed workflow change followed
+by the proving run below, just like changing Node.
+
+This is deliberately **not called an immutable image pin**. GitHub's
+[runner-image policy](https://github.com/actions/runner-images#image-releases) says hosted images
+are normally updated weekly while retaining the same workflow label. The setup log's `Image`,
+image `Version` and `Image Release` identify the concrete image that executed a job; proving
+evidence records the image-version string for every job so weekly drift is observable and timing
+changes can be compared against it. The similarly formatted runner-agent `Version` line is not a
+substitute for the image version. Requiring an explicit OS family narrows unreviewed change; it does
+not claim to eliminate GitHub-managed patch drift.
+
+The pre-amendment baseline is post-#42 run `37186546315` on `87ef841`: the mutation job used
+`Image: ubuntu-24.04`, image version `20260927.320.1`, and completed in 700 seconds against the
+unchanged 900-second C12 ceiling. That leaves 200 seconds, or 28.6% relative to the measured run;
+the later implementation measures again rather than treating this as permanent headroom.
 
 ### 6. Permissions are read-only and untrusted pull requests receive no privileged path
 
@@ -154,7 +174,7 @@ longer reports.
 
 ## Acceptance criteria
 
-| ID | Required result | Evidence before workflow merge |
+| ID | Required result | Required evidence |
 |---|---|---|
 | C01 | The workflow triggers for every pull request and every push to `main`, with no path exemption. | Workflow trigger inspection plus a PR run and, after owner-approved merge, the `main` run. |
 | C02 | Pure, DOM and mutation suites are three separately named jobs, and each runs on both triggers. | Workflow inspection and three check records on the proving PR and `main`. |
@@ -164,7 +184,7 @@ longer reports.
 | C06 | Caches, if enabled, accelerate dependency retrieval only and cannot restore `node_modules`, checkout files, mutants, output, counts or verdicts; a cache hit still runs the suite. | Workflow inspection plus one miss and one hit when practical; otherwise no cache ships in the first implementation. |
 | C07 | `npm test` runs with `node_modules` absent and without any installation step in its job. | Pure-job log showing the absence check immediately before `npm test`, plus a temporary implementation-branch probe that pre-creates `node_modules` and proves the gate fails before `npm test`; remove the probe before merge. |
 | C08 | DOM and mutation jobs construct dependencies with `npm ci --ignore-scripts` from the committed lockfile, then run only their named suite. | Workflow inspection and proving logs. |
-| C09 | Node is pinned to one full supported-LTS semver and every Action to a full commit SHA with a release comment; no floating alias or mutable Action tag remains. | Exact workflow diff and resolved versions in the proving logs. |
+| C09 | Node is pinned to one full supported-LTS semver, every Action to a full commit SHA with a release comment, and every job to the explicit `ubuntu-24.04` OS-family label; no floating Node alias, mutable Action tag or `*-latest` runner-family alias remains. The hosted image is not represented as immutable. | Exact workflow diff; resolved Node and Action versions; and each job's setup-log `Image`, image `Version` and `Image Release`. |
 | C10 | Workflow and jobs have read-only repository permission, checkout credentials are not persisted, and neither secrets nor `pull_request_target` are used. | Workflow inspection and repository permission summary in the run. |
 | C11 | CI has no live feed, preview, production, browser-layout or deployment dependency. | Search of workflow and invoked test paths; a proving run with no project secret configured. |
 | C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 15 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. |
@@ -173,7 +193,7 @@ longer reports.
 | C15 | The implementation PR records exact job names, head SHA, counts and durations from a first-attempt green run; after merge, the same record is captured for the exact `main` SHA. | PR evidence and subsequent closeout record. |
 | C16 | Required-check promotion occurs only after C15, by a separate owner action; all three stable job names then gate pull-request merges. | Owner-confirmed ruleset record after the successful `main` proving run. This does not gate the workflow PR's merge. |
 | C17 | Runtime remains dependency-free: no runtime `dependencies` key is added, and no runtime, API or client file needs CI-specific code. | Package and application diff. |
-| C18 | The workflow implementation is separately claimed and owner-authorized after this contract merges. | Handoff claim and commit ordering; this contract PR contains no `.github/` path. |
+| C18 | The original workflow implementation and every later `.github/` change governed by an amendment are separately claimed and owner-authorized after the governing contract text merges. | Handoff claim and commit ordering; a contract or amendment PR contains no `.github/` path. |
 
 ## Proving sequence
 
@@ -189,6 +209,15 @@ The implementation claim must plan these stages explicitly:
 5. after the owner's merge decision, verify the three jobs again on the exact `main` merge SHA;
 6. only then may the owner promote the three stable job names to required checks and record C16.
 
+For the runner-family correction governed by the amended C09, the original four negative probes do
+not repeat because no checkout, dependency or mutation-gate logic changes. Its separate,
+owner-authorized implementation claim replaces all three `ubuntu-latest` labels with
+`ubuntu-24.04`; its final PR head and exact merge commit must each pass all three jobs on attempt 1.
+The evidence records every job's image-version string, counts and durations, compares mutation time
+with the 700-second baseline above, and confirms the workflow diff contains no other change. C12's
+15-minute mutation ceiling remains unchanged; changing it requires a separate evidence-backed
+contract amendment.
+
 If the hosted environment exposes an assumption the contract did not settle, implementation stops
 for review rather than weakening a criterion in workflow syntax. In particular, the 15-minute
 mutation ceiling is an assumption to measure on the hosted runner: exceeding it requires contract
@@ -199,5 +228,7 @@ review, not a quiet timeout increase or a partial run presented as evidence.
 This contract does not create a workflow, modify `.github/`, change the `main` ruleset, deploy the
 application, upload artifacts, comment on pull requests, run live-source or Vercel checks, replace
 human visual review, change production code or tests, add runtime dependencies, decide the remote-
-branch deletion convention, distinguish active hazards from aftermath, refine visual layout or
-clean completed claim blocks from the handoff board.
+branch deletion convention, distinguish active hazards from aftermath, refine visual layout, rename
+the product or clean completed claim blocks from the handoff board. The C09 amendment does not edit
+`.github/`, choose a different runner family, freeze GitHub's weekly hosted-image contents or raise
+the C12 timeout.
