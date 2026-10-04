@@ -57,24 +57,26 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**C16 closeout — ChatGPT Codex, `codex/c16-closeout`.**
-Owner-authorized 2026-10-03 documentation-only claim, published before any closeout edit. Branched
-from synchronized `main` at `24ef13f` after #41 merged, its exact-SHA `main` run passed attempt 1,
-production was verified and the ruleset was re-read with all three checks still required.
+**C09 runner-family amendment — ChatGPT Codex, `codex/c09-runner-family-amendment`.**
+Owner-authorized 2026-10-03 documentation-only claim, published before any contract edit. Branched
+from synchronized `main` at `87ef841` after #42 merged and its exact-SHA `main` run passed attempt 1.
 
 Scope:
 
-1. Absorb #41's self-close across the attribution header, Current Work, Active claims, Active
-   Branches, `main` pointer and in-flight paragraph.
-2. Record the #41 merge, exact-main CI, production verification and post-merge ruleset readback in
-   the Handoff Log.
-3. Record the first operating measurement under the gate: mutation took 675–707 seconds across six
-   green runs, 75–79% of the 15-minute ceiling; crossing it blocks all merges and requires C12
-   contract review rather than a quiet timeout increase.
+1. Absorb #42's self-close across the attribution header, Current Work, Active claims, Active
+   Branches, stable `main` pointer and in-flight paragraph, plus its Handoff Log entry.
+2. Amend Decision 5 and C09 so GitHub-hosted jobs use an explicit supported OS-family label rather
+   than `ubuntu-latest`, without falsely describing the weekly refreshed image as immutable.
+3. Require proving evidence to record the runner image's exact version string already exposed in
+   the job log, making weekly image drift measurable between runs.
+4. Record the existing baseline — `ubuntu-24.04`, image version `20260927.320.1`, mutation 700 of
+   900 seconds — and keep C12's ceiling unchanged. A runner-label implementation remains a later,
+   separately authorized Claude claim after this amendment merges.
 
-File touched: `AI-HANDOFF.md` only. No workflow, ruleset, application, API, test, dependency,
-configuration or production change. The remote-branch convention, closed-claims cleanup, hazard
-aftermath question and visual layout remain separate and unclaimed.
+Files claimed: `AI-HANDOFF.md` and `CI-ACCEPTANCE-CONTRACT.md` only. No workflow, ruleset,
+application, API, test, dependency, configuration or production change. The remote-branch
+convention, closed-claims cleanup, hazard aftermath question, visual layout and parked rename
+review remain separate and unclaimed.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -300,7 +302,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/c16-closeout | Documentation-only #41 closeout and first operating record under the required-check gate. Branched from `main` at `24ef13f` |
+| Codex | codex/c09-runner-family-amendment | Documentation-only C09 runner-family amendment and #42 closeout. Branched from `main` at `87ef841` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
