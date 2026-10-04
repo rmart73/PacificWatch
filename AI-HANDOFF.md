@@ -540,9 +540,10 @@ response; those item counts are one rotating capture, not a durable ratio. Serve
 confirmed the same object identity and all three paths, and rechecked the N02 publication invariant
 across 46 live records with zero non-canonical and zero null values.
 
-**C16 is not complete.** The active `Protect main` ruleset has no `required_status_checks` rule.
-CI is now reproducible and visible, but it does not prevent a merge when a job fails. Promoting the
-three job names remains a separate owner action and was not performed by #39 or this closeout.
+**At this checkpoint, C16 was not complete.** The active `Protect main` ruleset had no
+`required_status_checks` rule. CI was reproducible and visible, but did not prevent a merge when a
+job failed. Promotion of the three job names remained a separate owner action and was not performed
+by #39 or that closeout.
 
 ### 2026-10-04 — CI workflow implemented and proven; #39 open for the owner's decision
 
