@@ -13,7 +13,7 @@ attributed to the user-relayed Claude report, except the #21 deploy check, the *
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
-**#38 contract deploy** and **#39 workflow deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
+**#38 contract deploy**, **#39 workflow deploy** and **#40 closeout deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -51,7 +51,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | News publication-time implementation | **#36 merged in `9348284`** and production verified: deployed HTML byte-identical to merged `main`, all three paths `200`, both News representations healthy, and the N02 server invariant confirmed live | **Closed. N01–N16 implemented and production verified** |
 | News publication-time closeout | #37 merged in `0c0bf5d`; documentation-only deploy independently verified | Closed; News publication-time work is complete end to end |
 | CI acceptance contract | #38 merged in `1ae1ae0`; reviewed read-only over two rounds, both findings addressed; documentation-only deploy independently verified | Closed; authoritative at C01–C18 |
-| CI workflow implementation | #39 merged in `32d732a`; exact workflow blob proven on the PR and on the post-merge `main` run, both attempt 1: 425 pure, 436 DOM and 137 of 137 mutations | **Closed at C01–C15 and C17–C18.** C16 promotion remains a separate owner action; CI reports but does not yet gate merges |
+| CI workflow implementation | #39 merged in `32d732a`; exact workflow blob proven on the PR and on the post-merge `main` run, both attempt 1: 425 pure, 436 DOM and 137 of 137 mutations | **Closed at C01–C18.** The owner promoted all three stable job names under C16 after C15 completed |
+| CI workflow closeout | #40 merged in `a545e18`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed |
 
 ### Active claims
 
@@ -73,29 +74,6 @@ Documentation scope, claimed before any repository edit:
 File touched: `AI-HANDOFF.md` only. No workflow, application, API, test, dependency,
 configuration or production change; no further ruleset change. The 15-minute mutation ceiling is
 not widened: exceeding it after promotion is a release-blocking C12 contract-review event.
-
-**CI workflow closeout — ChatGPT Codex, `codex/ci-workflow-closeout`.**
-Owner-authorized 2026-10-03 documentation-only claim, published before any closeout edit. Branched
-from synchronized `main` at `32d732a` after #39 merged and its exact-SHA `main` run completed.
-
-Scope:
-
-1. Reconcile #39 across the current-state region: attribution header, Current Work, the completed
-   implementation claim, Active Branches, Review Queue, `main` pointer and in-flight paragraph.
-2. Record the attempt-1 post-merge run on `main` — 425 pure, 436 DOM and 137 of 137 mutations —
-   and state accurately that CI reports but does not gate because C16 ruleset promotion remains a
-   separate owner action.
-3. Add the durable volatile-identifier rule to `AGENTS.md`: live current-state entries must not name
-   branch heads, PR heads or run IDs that their own recording commit supersedes; stable work and
-   updateable authorities belong there instead.
-4. Add the already-carried closed-claims cleanup as an unclaimed Review Queue row so it no longer
-   exists only in historical prose. This claim tracks it but does not perform the cleanup.
-5. Add the #39 merge and production-verification Handoff Log entry.
-
-Files touched: `AI-HANDOFF.md` and `AGENTS.md` only. No workflow, application, API, test,
-configuration, dependency, ruleset or production change. In particular, this claim does not
-promote required checks under C16 and does not resolve the remote-branch convention, hazard
-aftermath classification, visual layout or closed-claims cleanup.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -321,7 +299,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/ci-workflow-closeout | Documentation-only #39 closeout and durable volatile-identifier guidance; no workflow or ruleset change. Branched from `main` at `32d732a` |
+| Codex | codex/c16-required-checks | Records the owner-authorized C16 promotion and #40 closeout; documentation only. Branched from `main` at `a545e18` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -341,22 +319,24 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`; implementation merged as #39 in `32d732a`.** The same workflow blob passed on the PR and on the exact `main` merge SHA, attempt 1: 425 pure, 436 DOM and 137 of 137 mutations. C01–C15 and C17–C18 are complete | **C16 remains open:** owner decides whether to make `pure tests (dependency-free)`, `DOM behaviour` and `mutation coverage` required checks. Until then CI reports and does not gate |
+| CI for independently reproducible suite evidence | **Contract #38, implementation #39 and closeout #40 are merged. C01–C18 complete.** After C15, the owner promoted `pure tests (dependency-free)`, `DOM behaviour` and `mutation coverage` as required checks from GitHub Actions | This documentation PR proves the gate operationally: pending checks block merge eligibility and all three green checks release it. Exact current evidence lives in the PR checks/body, not in this volatile live row |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is at `32d732a`**, merged through #39 and serving production. Claims and handoffs for
+**`main` is at `a545e18`**, merged through #40 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application or workflow implementation is in flight.** The only active work is the
-documentation-only `codex/ci-workflow-closeout` claim. #39 merged in `32d732a`, and its exact-SHA
-post-merge `main` run completed attempt 1 with 425 pure assertions, 436 DOM assertions and 137 of
-137 mutations caught. C15 is complete on both the PR and `main` halves.
+documentation-only `codex/c16-required-checks` record. #40 merged in `a545e18`; its exact-SHA
+post-merge run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137 mutations.
 
-**C16 remains deliberately pending.** The `Protect main` ruleset has no required-status-check rule,
-so the three CI jobs report results but do not gate merges. Promotion is a separate owner action;
-this closeout neither authorizes nor performs it.
+**C16 is complete.** `Protect main` now requires all three GitHub Actions jobs. Existing deletion,
+non-fast-forward and pull-request rules are unchanged, approvals remain zero, and the bypass list
+remains empty. The policy is deliberately loose: checks must pass on the PR head, but promotion did
+not add a separate requirement to rebase onto the latest `main`. Every PR now waits for mutation;
+if its 15-minute ceiling is exceeded, merges stop and C12 requires contract review rather than a
+quiet timeout increase.
 
 The CI acceptance contract merged as #38 in `1ae1ae0` and is authoritative at C01–C18.
 News publication-time work is complete end to end: the contract merged as #35 in `2875d0f`, its
@@ -496,6 +476,43 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-04 — #40 merged; C16 promoted all three CI jobs to required checks
+
+The owner authorized #40's merge and then separately authorized C16 promotion. #40 was
+squash-merged as `a545e18438e80e93dbb986aa2e15ee0fb17995e2`; merge scope was exactly `AGENTS.md`
+and this board. Its exact-commit `main` run `37177983226`, push event, attempt 1, passed at 425 pure,
+436 DOM and 137 of 137 mutations with 137 verdict lines for 137 declared. Each job logged a clean
+checkout of the squash commit before running. Production HTML remained byte-identical to
+`main:index.html` at `a42963cd26766d91174edba217be9f4e9a7c571d`, all three paths returned `200`, and
+Codex and Claude verified the documentation deploy independently.
+
+Only after that C15 record existed, Codex performed the owner-authorized ruleset action. API
+readback of active ruleset `Protect main` (`22397785`) recorded:
+
+```
+target                 branch; ~DEFAULT_BRANCH
+required checks        pure tests (dependency-free)
+                       DOM behaviour
+                       mutation coverage
+source                 GitHub Actions, integration_id 15368 for all three
+strict/up-to-date      false
+enforce on create      true (do_not_enforce_on_create=false)
+bypass actors          0; current_user_can_bypass=never
+unchanged rules        deletion, non_fast_forward, pull_request
+approvals              0
+merge methods          merge, squash, rebase
+```
+
+The loose policy is deliberate and minimal: each PR head must carry all three passing checks, but
+promotion did not add a separate requirement to update the branch after every `main` change. This
+does not weaken the checks themselves. It avoids adding a fourth merge condition that C16 did not
+authorize and the repository did not previously impose.
+
+**Operational consequence:** mutation now blocks every merge for roughly 11–12 minutes, including
+documentation-only PRs. It has used 75–79% of its 15-minute ceiling in the proving series. If growth
+crosses that ceiling, all merges stop; C12 requires contract review rather than a quick timeout
+increase, suite split or partial run presented as success.
 
 ### 2026-10-04 — #39 merged; exact-main CI and production verified
 
