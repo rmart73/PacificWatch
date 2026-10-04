@@ -131,6 +131,14 @@ prints a final `X of X mutations caught` summary, and reports zero `MISSED`, zer
 zero `AMBIGUOUS`. A high caught count does not offset any of those categories. A timeout or
 truncated run is a failure, never a partial pass.
 
+The harness exit code is authoritative for mutation semantics. Its existing `missed` counter covers
+`MISSED`, `ANCHOR LOST` and `AMBIGUOUS` and exits nonzero for any of them, so the workflow must not
+reimplement those three decisions with separate log-grep gates. It may capture the final summary to
+report the count and must fail if that summary is absent, but it keeps the complete raw output and
+trusts the harness exit status for the verdict. One negative probe in any of the three categories is
+therefore sufficient to prove the workflow propagates the harness failure; three category-specific
+workflow probes would test redundant parsing that this contract forbids.
+
 ### 9. Required-check promotion follows evidence; it is not assumed by workflow creation
 
 The workflow lands before it becomes a required check. Its implementation PR must show all three
@@ -150,17 +158,17 @@ longer reports.
 |---|---|---|
 | C01 | The workflow triggers for every pull request and every push to `main`, with no path exemption. | Workflow trigger inspection plus a PR run and, after owner-approved merge, the `main` run. |
 | C02 | Pure, DOM and mutation suites are three separately named jobs, and each runs on both triggers. | Workflow inspection and three check records on the proving PR and `main`. |
-| C03 | Every job prints the expected SHA, verifies `HEAD` equals it and refuses a dirty checkout before testing. | Job logs from the proving PR; a temporary implementation-branch probe that supplies a wrong expected SHA must fail before any suite runs, then be removed before merge. |
+| C03 | Every job prints the expected SHA, verifies `HEAD` equals it and refuses a dirty checkout before testing. | Job logs from the proving PR; temporary implementation-branch probes that supply a wrong expected SHA and create an untracked marker before the clean-state gate must each fail before any suite runs, then be removed before merge. |
 | C04 | Every count is reported beside the exact tested SHA; no expected count is hardcoded as the pass condition. | Raw suite output and job summaries from the proving PR. |
 | C05 | Each job starts from its own clean checkout; no job receives cached source, generated output or a prior verdict. | Workflow and cache-key inspection; job logs showing checkout and clean-state gates independently. |
 | C06 | Caches, if enabled, accelerate dependency retrieval only and cannot restore `node_modules`, checkout files, mutants, output, counts or verdicts; a cache hit still runs the suite. | Workflow inspection plus one miss and one hit when practical; otherwise no cache ships in the first implementation. |
-| C07 | `npm test` runs with `node_modules` absent and without any installation step in its job. | Pure-job log showing the absence check immediately before `npm test`. |
+| C07 | `npm test` runs with `node_modules` absent and without any installation step in its job. | Pure-job log showing the absence check immediately before `npm test`, plus a temporary implementation-branch probe that pre-creates `node_modules` and proves the gate fails before `npm test`; remove the probe before merge. |
 | C08 | DOM and mutation jobs construct dependencies with `npm ci --ignore-scripts` from the committed lockfile, then run only their named suite. | Workflow inspection and proving logs. |
 | C09 | Node is pinned to one full supported-LTS semver and every Action to a full commit SHA with a release comment; no floating alias or mutable Action tag remains. | Exact workflow diff and resolved versions in the proving logs. |
 | C10 | Workflow and jobs have read-only repository permission, checkout credentials are not persisted, and neither secrets nor `pull_request_target` are used. | Workflow inspection and repository permission summary in the run. |
 | C11 | CI has no live feed, preview, production, browser-layout or deployment dependency. | Search of workflow and invoked test paths; a proving run with no project secret configured. |
 | C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 15 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. |
-| C13 | Mutation passes only with one verdict per case, `X of X` caught, and zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. | Complete mutation output and an implementation-branch negative probe that makes one case `ANCHOR LOST` or `MISSED`, proves the job fails, and is removed before merge. |
+| C13 | Mutation passes only when the harness exits zero with one verdict per case, `X of X` caught, and zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. The harness exit code is authoritative; the workflow does not separately grep those categories. | Complete mutation output and one implementation-branch negative probe that makes any one case `ANCHOR LOST`, `AMBIGUOUS` or `MISSED`, proves the job propagates the harness's nonzero exit, and is removed before merge. |
 | C14 | No step uses `continue-on-error`, a masking shell pipeline or an automatic retry that replaces the original verdict. | Workflow inspection. |
 | C15 | The implementation PR records exact job names, head SHA, counts and durations from a first-attempt green run; after merge, the same record is captured for the exact `main` SHA. | PR evidence and subsequent closeout record. |
 | C16 | Required-check promotion occurs only after C15, by a separate owner action; all three stable job names then gate pull-request merges. | Owner-confirmed ruleset record after the successful `main` proving run. This does not gate the workflow PR's merge. |
@@ -173,15 +181,18 @@ The implementation claim must plan these stages explicitly:
 
 1. create the workflow on a fresh branch from updated `main`, after publishing the claim;
 2. run the three jobs on the implementation PR at its exact head;
-3. perform and remove the C03 wrong-SHA probe and the C13 mutation-failure probe, preserving their
-   failed check links or logs as evidence without leaving a broken workflow in the final head;
+3. perform and remove the C03 wrong-SHA and dirty-tree probes, the C07 pre-created-`node_modules`
+   probe and the C13 mutation-failure probe, preserving their failed check links or logs as
+   evidence without leaving a broken workflow in the final head;
 4. obtain one first-attempt green run at the final pushed head, with no manual rerun replacing a
    failure;
 5. after the owner's merge decision, verify the three jobs again on the exact `main` merge SHA;
 6. only then may the owner promote the three stable job names to required checks and record C16.
 
 If the hosted environment exposes an assumption the contract did not settle, implementation stops
-for review rather than weakening a criterion in workflow syntax.
+for review rather than weakening a criterion in workflow syntax. In particular, the 15-minute
+mutation ceiling is an assumption to measure on the hosted runner: exceeding it requires contract
+review, not a quiet timeout increase or a partial run presented as evidence.
 
 ## Non-goals
 

@@ -490,6 +490,21 @@ This branch contains documentation only. It does not create `.github/`, modify t
 authorize workflow implementation. Claude reviews read-only; implementation requires a later
 owner authorization and its own claim after this contract merges.
 
+#### Read-only review, round one
+
+Claude verified the two-file scope, claim ordering and all five #37 carry-forward corrections. Two
+findings tightened the proving boundary. First, the mutation harness's existing nonzero exit is now
+the single authority for `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`; CI may capture the final count but
+must not rebuild those semantics with three log greps. One negative mutation probe is therefore
+sufficient. Second, the clean-tree and dependency-free gates now receive real failure witnesses:
+an untracked marker must trip the clean-state gate, and a pre-created `node_modules` directory must
+stop the pure job before `npm test`. Both probes are removed before the final green head.
+
+The 15-minute mutation ceiling remains unchanged but is named as a hosted-runner assumption the
+implementation must measure. If it proves too tight, implementation stops for contract review
+rather than silently raising the ceiling or presenting a truncated run as a pass. Claude's optional
+concurrency suggestion remains an implementation detail, not an added contract requirement.
+
 ### 2026-10-03 — #37 merged; News publication-time closeout complete
 
 Merged on the owner's explicit production authorization, squashed as **`0c0bf5d`**. Codex and
