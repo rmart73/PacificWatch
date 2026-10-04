@@ -55,6 +55,25 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**C16 required-check promotion record — ChatGPT Codex, `codex/c16-required-checks`.**
+Owner-authorized 2026-10-03 after C15 completed. The external ruleset action was performed and
+verified before this documentation claim: `Protect main` now requires the three proven GitHub
+Actions jobs, with all prior protections and the empty bypass list preserved.
+
+Documentation scope, claimed before any repository edit:
+
+1. Absorb #40's self-close across the attribution header, Current Work, Active claims, Active
+   Branches, `main` pointer and in-flight paragraph, plus its Handoff Log entry.
+2. Record the C16 ruleset fields and the operational consequence that every PR—including
+   documentation-only work—waits for the approximately 11–12 minute mutation job.
+3. Use this PR's own pending-to-green transition as the functional proof that the three checks
+   block and then release merge eligibility; record exact evidence without volatile identifiers in
+   the live current-state region.
+
+File touched: `AI-HANDOFF.md` only. No workflow, application, API, test, dependency,
+configuration or production change; no further ruleset change. The 15-minute mutation ceiling is
+not widened: exceeding it after promotion is a release-blocking C12 contract-review event.
+
 **CI workflow closeout — ChatGPT Codex, `codex/ci-workflow-closeout`.**
 Owner-authorized 2026-10-03 documentation-only claim, published before any closeout edit. Branched
 from synchronized `main` at `32d732a` after #39 merged and its exact-SHA `main` run completed.
