@@ -209,27 +209,6 @@ jobs:
           set -euo pipefail
           npm ci --ignore-scripts
 
-      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
-      # C13 negative witness: inject one mutation case whose anchor cannot exist, so the harness
-      # reports ANCHOR LOST and exits nonzero. This proves the job PROPAGATES that exit rather
-      # than reading a high caught-count as success. Injected at runtime, after the gate, so no
-      # tracked test file is altered in any commit.
-      - name: PROBE inject an ANCHOR LOST mutation case
-        run: |
-          set -euo pipefail
-          node - <<'PROBE_EOF'
-          const fs = require('fs');
-          const p = 'test/mutation-check.js';
-          let s = fs.readFileSync(p, 'utf8');
-          const needle = 'const mutations = [';
-          if (!s.includes(needle)) { console.error('probe anchor missing'); process.exit(1); }
-          const injected = needle +
-            "\n  { name: 'PROBE anchor lost', from: '__anchor_that_cannot_exist_in_index_html__'," +
-            " to: 'x', expect: ['nothing'], suite: 'dom' },";
-          fs.writeFileSync(p, s.replace(needle, injected));
-          console.log('probe: one ANCHOR LOST case injected');
-          PROBE_EOF
-      # ===== END PROBE =====
       - name: Run the mutation suite
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
