@@ -51,7 +51,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | News publication-time implementation | **#36 merged in `9348284`** and production verified: deployed HTML byte-identical to merged `main`, all three paths `200`, both News representations healthy, and the N02 server invariant confirmed live | **Closed. N01–N16 implemented and production verified** |
 | News publication-time closeout | #37 merged in `0c0bf5d`; documentation-only deploy independently verified | Closed; News publication-time work is complete end to end |
 | CI acceptance contract | #38 merged in `1ae1ae0`; reviewed read-only over two rounds, both findings addressed; documentation-only deploy independently verified | Closed; authoritative at C01–C18 |
-| CI workflow implementation | Claimed on `claude/ci-workflow`; implements C01–C18 | Claude implements; Codex reviews read-only; the owner decides merge |
+| CI workflow implementation | **[#39](https://github.com/rmart73/PacificWatch/pull/39) open at `f7a7e33`.** C01–C18 implemented; four negative probes proven and removed; first-attempt green at the final head with 425 pure, 436 DOM and 137 of 137 mutations. Codex reviewed read-only and supports merge | **The owner decides merge.** Post-merge `main` run and C16 ruleset promotion remain pending |
 
 ### Active claims
 
@@ -379,19 +379,29 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`, authoritative at C01–C18; workflow implementation claimed on `claude/ci-workflow`.** The failure this addresses is concrete: one mutation result was reported against an uncommitted working tree and had to be discarded. Review caught it by declining to infer the number, which worked but does not scale | Claude implements C01–C18; Codex re-reviews read-only. **Required-check promotion remains a separate owner action under C16** |
+| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`, authoritative at C01–C18; implementation open as [#39](https://github.com/rmart73/PacificWatch/pull/39) at `f7a7e33` and reviewed.** The failure this addresses is concrete: one mutation result was reported against an uncommitted working tree and had to be discarded. Review caught it by declining to infer the number, which worked but does not scale. CI now reproduces 425 / 436 / 137 from an immutable commit on a Node line neither agent runs locally | **The owner decides merge.** C16 promotion to required checks stays a separate owner action; until then CI reports and does not gate |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
 **`main` is at `1ae1ae0`**, merged through #38 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**An implementation IS in flight: `claude/ci-workflow` creates `.github/workflows/ci.yml` and is
-the sole active implementation. It changes no runtime, API, client or test file.** News publication-time work is complete end to end:
-the contract merged as #35 in `2875d0f`, its implementation as #36 in `9348284`, and its closeout
-as #37 in `0c0bf5d`; N01–N16 are production verified. The documentation-only CI acceptance contract
-is the sole active work, and no workflow implementation is authorized. The hazard classifier merged as #33 in
-`afff98b`, its closeout as #34 in `77ed33c`, and H01–H18 are production verified.
+**One implementation is in flight and it is the only active work: `claude/ci-workflow`, open as
+[#39](https://github.com/rmart73/PacificWatch/pull/39) at `f7a7e33` and awaiting the owner's merge
+decision.** It adds `.github/workflows/ci.yml` and changes no runtime, API, client, test,
+configuration or dependency file. Codex has reviewed it read-only and supports merge.
+
+**The PR half of C15 is complete; two things remain pending and neither is authorized here.** The
+first-attempt green run at the final head is recorded below. The post-merge verification on the
+exact `main` merge SHA cannot happen until the owner merges, and **C16 promotion of the three job
+names to required checks is a separate owner action on the `main` ruleset** — so until the owner
+does that, CI reports without gating.
+
+The CI acceptance contract merged as #38 in `1ae1ae0` and is authoritative at C01–C18.
+News publication-time work is complete end to end: the contract merged as #35 in `2875d0f`, its
+implementation as #36 in `9348284`, and its closeout as #37 in `0c0bf5d`; N01–N16 are production
+verified. The hazard classifier merged as #33 in `afff98b`, its closeout as #34 in `77ed33c`, and
+H01–H18 are production verified.
 Stage 3 merged in #30 and its closeout in #31; the observation-truthfulness contract is fully
 implemented at T01–T17 across stages 1, 2 and 3.
 
@@ -525,6 +535,85 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-04 — CI workflow implemented and proven; #39 open for the owner's decision
+
+`.github/workflows/ci.yml` implements C01–C18. Three separately named jobs on every pull request
+and every push to `main`, each taking its own clean checkout and passing nothing to the others.
+
+#### C15 — first-attempt green for the proven workflow blob
+
+Run `37168313095`, **attempt 1**, on commit `f7a7e3338c4212a1beb9d965ca3b2937c1bb0180`. No rerun
+replaced a failure.
+
+This entry is itself a documentation-only commit that lands after that run, so it moves the branch
+head while carrying the **identical** workflow blob. Recording a head here would be self-refuting
+for the same reason a board PR cannot record its own merge, so the PR body — which is editable
+without a commit — carries the final-head run, and the blob hash is what ties the two together.
+
+```
+pure tests (dependency-free)   success     6s   425 assertions passed, 0 failed, 4 suites
+DOM behaviour                  success    20s   436 assertions passed, 0 failed
+mutation coverage              success   695s   137 of 137 caught; 137 verdict lines / 137 declared
+all three                      verified clean checkout of f7a7e333…, node v24.21.0
+```
+
+**Those counts match local Node 18.20.4 runs exactly.** 425, 436 and 137 now reproduce across Node
+major lines, from an immutable commit, in an environment neither agent controls. That is the whole
+purpose of the contract rather than a pleasant side effect.
+
+#### The four negative witnesses, each failing for its own reason
+
+Every probe lived in `ci.yml` alone. Probe four injects its case at runtime after the gate, so no
+test or source file was modified in any commit on the branch, even temporarily.
+
+```
+run 37167519748  cd24786   40s, all three jobs failed AT THEIR GATES
+  pure      FAIL: node_modules present before any install            C07
+  DOM       FAIL: HEAD is not the commit under test                  C03
+            expected 0000000000000000000000000000000000000000
+            actual   cd24786353d3952fe6e5d5145581e4c334a0fa60
+  mutation  FAIL: working tree is not clean                          C03
+  zero suite summary lines in the entire run: nothing ran past a gate
+
+run 37167627681  2f745c9   mutation failed after a full pass; pure and DOM passed
+  probe step   probe: one ANCHOR LOST case injected                  C13
+  harness        ANCHOR LOST  PROBE anchor lost
+  harness      137 of 138 mutations caught
+  harness      An undetected mutation means an assertion is decorative.
+  the post-suite count echo never ran, so pipefail propagated the nonzero
+  exit AT THE SUITE rather than reading a high caught-count as success
+
+run 37166826684  1a9ecdf   baseline, green before any probe, same three counts
+```
+
+The final head restores the workflow **byte-exactly** to the blob that ran green at the baseline,
+`fd10a51177f174295f4e9397d6542ac39e754128`, with zero probe text and zero CR bytes remaining.
+
+#### Measured rather than assumed: the mutation ceiling
+
+Mutation took **695 seconds, 77% of its 15-minute budget**; the baseline took 704. Inside the
+ceiling, so no stop condition triggered, but the headroom is modest and the case count only grows.
+The timeout was not touched. A future run that exceeds it is a C12 contract-review item, not an
+implementation fix.
+
+#### What the board got wrong, and the shape of the error
+
+Codex's review found no fault in the workflow and one in this board: the in-flight paragraph
+asserted that an implementation was in flight and, four lines later, that no workflow
+implementation was authorized. The cause is worth recording because it is a pattern rather than a
+typo — the claim commit **swapped the paragraph's opening sentence** and left the rest describing
+the pre-implementation state. A current-state paragraph has to be rewritten as a whole, because the
+sentences after the first one are claims too. This paragraph already carried a note that it had
+been wrong three times; this was the fourth, and the first by sentence-swap rather than by going
+stale.
+
+#### Still pending, and not authorized by this work
+
+The post-merge verification on the exact `main` merge SHA, and **C16 promotion of the three job
+names to required checks, which is the owner's separate ruleset action**. Merging #39 changes no
+branch protection: between merge and promotion, CI reports without gating.
+
 
 ### 2026-10-03 — #38 merged; CI workflow implementation claimed
 
