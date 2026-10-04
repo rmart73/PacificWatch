@@ -325,7 +325,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is at `24ef13f`**, merged through #41 and serving production. Claims and handoffs for
+**`main` is merged through #41 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application or workflow implementation is in flight.** The only active work is the
