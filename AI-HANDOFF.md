@@ -55,6 +55,29 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**CI workflow closeout — ChatGPT Codex, `codex/ci-workflow-closeout`.**
+Owner-authorized 2026-10-03 documentation-only claim, published before any closeout edit. Branched
+from synchronized `main` at `32d732a` after #39 merged and its exact-SHA `main` run completed.
+
+Scope:
+
+1. Reconcile #39 across the current-state region: attribution header, Current Work, the completed
+   implementation claim, Active Branches, Review Queue, `main` pointer and in-flight paragraph.
+2. Record the attempt-1 post-merge run on `main` — 425 pure, 436 DOM and 137 of 137 mutations —
+   and state accurately that CI reports but does not gate because C16 ruleset promotion remains a
+   separate owner action.
+3. Add the durable volatile-identifier rule to `AGENTS.md`: live current-state entries must not name
+   branch heads, PR heads or run IDs that their own recording commit supersedes; stable work and
+   updateable authorities belong there instead.
+4. Add the already-carried closed-claims cleanup as an unclaimed Review Queue row so it no longer
+   exists only in historical prose. This claim tracks it but does not perform the cleanup.
+5. Add the #39 merge and production-verification Handoff Log entry.
+
+Files touched: `AI-HANDOFF.md` and `AGENTS.md` only. No workflow, application, API, test,
+configuration, dependency, ruleset or production change. In particular, this claim does not
+promote required checks under C16 and does not resolve the remote-branch convention, hazard
+aftermath classification, visual layout or closed-claims cleanup.
+
 **CI workflow implementation — Claude Code, `claude/ci-workflow`.**
 Claimed 2026-10-03 before creating any `.github/` path, in its own commit ahead of the work, on the
 owner's explicit authorization. Branched from `main` at **`1ae1ae0`**.
