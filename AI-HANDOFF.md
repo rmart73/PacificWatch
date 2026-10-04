@@ -361,7 +361,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract #38, implementation #39, closeout #40, C16 record #41 and closeout #42 are merged. C01–C18 complete.** The C09 runner-family amendment is claimed, documentation-only; `ubuntu-latest` remains in the workflow until a later separately authorized implementation | Codex authors the amendment; Claude reviews read-only. Pin the OS family without calling the weekly refreshed hosted image immutable; record the exact image version and leave C12 unchanged |
+| CI for independently reproducible suite evidence | **Contract #38, implementation #39, closeout #40, C16 record #41 and closeout #42 are merged. C01–C18 complete, and the C09 runner-family amendment merged as #43.** The workflow correction it governs is implemented and open for review; the three `runs-on` labels now name the explicit `ubuntu-24.04` family | Claude implemented the three-label correction; Codex reviews read-only; the owner decides merge. The post-merge `main` run remains pending |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
@@ -369,9 +369,14 @@ Merged branches are omitted from this active list; this does not imply remote br
 **`main` is merged through #43 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application or workflow implementation is in flight.** The only active work is the
-documentation-only `codex/c09-runner-family-amendment` claim. The current workflow still uses
-`ubuntu-latest`; no `.github/` edit is authorized by this claim. #42 merged in `87ef841`, and its
+**One workflow implementation is in flight and it is the only active work:** the C09 runner-family
+correction on `claude/c09-runner-family`, open for read-only review and awaiting the owner's merge
+decision. It replaces three `runs-on` labels and changes no other file except this board.
+
+**The workflow no longer uses `ubuntu-latest`** on that branch; `main` still does until the
+correction merges. The C09 amendment merged as #43 and is authoritative. The post-merge `main` run
+and nothing else remains pending; no ruleset change is included or authorized, and no remote branch
+is deleted. #42 merged in `87ef841`, and its
 exact-SHA post-merge run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
 mutations.
 
@@ -554,12 +559,33 @@ Claude measured the remote-branch question read-only rather than restating it. `
 `main`'s ancestry. Scanning all 47 `main` commits for a tree matching each branch tip proved **21
 of 22** merged, each resolving to its expected squash commit with no PR numbers supplied.
 
-The exception is instructive. `codex/phase1-source-health` has no tree match, yet its deliverable
-`PHASE1-SOURCE-HEALTH.md` is byte-identical to `main`; only its `AI-HANDOFF.md` snapshot differs,
-forty-odd commits later. So content proof needs two tiers: tree match, or failing that, every
-non-coordination file identical. **No branch deletion is authorized**, and the convention itself is
-Codex's to author after this correction merges — the owner sequenced it that way to keep both
-agents off `AI-HANDOFF.md` simultaneously.
+The exception has a stronger proof than the one first proposed, and the first proposal was wrong.
+Claude suggested a second tier of "every non-coordination file identical to `main`". Codex rejected
+it on review, correctly: current-file equality is not generally safe in either direction. Later
+legitimate edits can make genuinely merged content differ, and independent work can make unmerged
+content coincide. One case where it happened to hold is not a rule.
+
+The measured fact for `codex/phase1-source-health` is ancestry plus the PR record, verified rather
+than relayed:
+
+```
+4df328f   branch tip, 2026-09-06
+  is an ancestor of 02aea73, a true merge commit (parents a43784a + 4df328f)
+  is an ancestor of 0983028, which GitHub records as PR #5's head
+PR #5     state MERGED, mergeCommit 6750553
+6750553   single parent 7c67081 -- a SQUASH commit -- and an ancestor of main
+```
+
+**The squash is why no single git test spans it.** `0983028` is not an ancestor of `main`, because
+the squash did not preserve it as a parent, so `4df328f` is not reachable from `main` either and
+`git branch -r --merged` reports nothing. The chain is git ancestry up to the PR head, GitHub's
+merge record across the squash boundary, then git ancestry again from the squash commit into
+`main`.
+
+**Disposition:** Codex authors the ordered evidence ladder after #44 merges. Nothing here settles
+it, and the weaker file-equality fallback is explicitly withdrawn. **No branch deletion is
+authorized.** The owner sequenced the convention after this correction to keep both agents off
+`AI-HANDOFF.md` at once.
 
 
 ### 2026-10-04 — #42 merged; C09 runner-family amendment authorized
