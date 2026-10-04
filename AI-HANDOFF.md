@@ -13,7 +13,7 @@ attributed to the user-relayed Claude report, except the #21 deploy check, the *
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
-**#38 contract deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
+**#38 contract deploy** and **#39 workflow deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -51,7 +51,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | News publication-time implementation | **#36 merged in `9348284`** and production verified: deployed HTML byte-identical to merged `main`, all three paths `200`, both News representations healthy, and the N02 server invariant confirmed live | **Closed. N01–N16 implemented and production verified** |
 | News publication-time closeout | #37 merged in `0c0bf5d`; documentation-only deploy independently verified | Closed; News publication-time work is complete end to end |
 | CI acceptance contract | #38 merged in `1ae1ae0`; reviewed read-only over two rounds, both findings addressed; documentation-only deploy independently verified | Closed; authoritative at C01–C18 |
-| CI workflow implementation | **[#39](https://github.com/rmart73/PacificWatch/pull/39) open.** C01–C18 implemented; four negative probes proven and removed; first-attempt green at the final head with 425 pure, 436 DOM and 137 of 137 mutations. Codex reviewed read-only and supports merge | **The owner decides merge.** Post-merge `main` run and C16 ruleset promotion remain pending |
+| CI workflow implementation | #39 merged in `32d732a`; exact workflow blob proven on the PR and on the post-merge `main` run, both attempt 1: 425 pure, 436 DOM and 137 of 137 mutations | **Closed at C01–C15 and C17–C18.** C16 promotion remains a separate owner action; CI reports but does not yet gate merges |
 
 ### Active claims
 
@@ -77,86 +77,6 @@ Files touched: `AI-HANDOFF.md` and `AGENTS.md` only. No workflow, application, A
 configuration, dependency, ruleset or production change. In particular, this claim does not
 promote required checks under C16 and does not resolve the remote-branch convention, hazard
 aftermath classification, visual layout or closed-claims cleanup.
-
-**CI workflow implementation — Claude Code, `claude/ci-workflow`.**
-Claimed 2026-10-03 before creating any `.github/` path, in its own commit ahead of the work, on the
-owner's explicit authorization. Branched from `main` at **`1ae1ae0`**.
-
-Governed by [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md), **C01–C18**, which merged as
-#38 and is authoritative. Required by C18 to be a separate claim published ahead of every edit.
-
-**What this creates**
-
-1. **One workflow, `.github/workflows/ci.yml`.** Three separately named jobs — pure, DOM and
-   mutation — on `pull_request` and on `push` limited to `main`, with no path exemptions (C01, C02).
-2. **Per-job checkout identity gates.** Each job resolves the commit under test, checks that exact
-   SHA out, and fails before any suite runs unless `git rev-parse HEAD` equals it, the working tree
-   is clean, and `node_modules` is absent (C03). For a pull request the commit under test is the
-   **head** SHA, not the merge commit `actions/checkout` would otherwise select by default.
-3. **Counts bound to the SHA.** Each job echoes the tested SHA beside its measured counts in both
-   raw output and the job summary, and no expected count is hardcoded as a pass condition (C04).
-4. **No cache in this first implementation**, taking C06's stated fallback. A cache that provably
-   restores only dependency tarballs is permitted but cannot be demonstrated with one miss and one
-   hit on a first run, so shipping none is the option the contract offers and the one I take.
-
-**Files touched:** `.github/workflows/ci.yml` (new) and this board. Nothing else.
-
-**Pinned, not floating** — resolved from upstream rather than written from memory:
-
-```
-node                    24.21.0        current active LTS (Krypton); full semver, no alias
-actions/checkout        3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-actions/setup-node      820762786026740c76f36085b0efc47a31fe5020   # v7.0.0
-```
-
-CI runs Node 24 while this machine runs 18.20.4, so the hosted run is the first execution of these
-suites on that line. That is a real difference and the proving run is what settles it, not an
-assumption recorded here.
-
-**The four negative probes, planned rather than discovered**
-
-Each is pushed on this branch, shown failing, and **removed before the final head** (C03, C07, C13
-and proving step 3). Their failed check links are the evidence; a passing gate that has never been
-made to fail is the thing the contract exists to prevent.
-
-1. **Wrong expected SHA** — the identity gate must fail before any suite runs.
-2. **Dirty tree** — an untracked marker created before the gate must trip the clean-state check.
-3. **Pre-created `node_modules`** — the pure job must stop before `npm test`.
-4. **Mutation failure** — one case made `ANCHOR LOST`, `AMBIGUOUS` or `MISSED` must propagate the
-   harness's nonzero exit. One probe suffices because all three categories share the harness's
-   `missed` counter and single exit, which the contract names as authoritative; CI does not grep
-   those three categories separately.
-
-**Then, in order:** one **first-attempt green** run at the final pushed head with no rerun replacing
-a failure (proving step 4, C15), the PR offered for Codex's read-only review, and — only after an
-owner-approved merge — the same three jobs verified on the exact `main` merge SHA (proving step 5).
-
-**The stop condition, stated before I hit it**
-
-The mutation job's ceiling is 15 minutes. 137 cases each spawn a jsdom process, and locally that
-exceeded two minutes of foreground wall time on a machine faster than a hosted runner. If the
-hosted job exceeds the ceiling I **stop for contract review** rather than raising the timeout,
-splitting the suite to fit, or presenting a truncated run as evidence. Measured durations go in the
-PR record either way (C12, C15).
-
-**Out of scope, explicitly**
-
-**No `main` ruleset change.** Promotion of the three job names to required checks is the owner's
-separate action under C16 and is not authorized by this claim or by merging its PR. Until the owner
-does it, CI reports and does not gate — which the PR record will state plainly rather than implying
-protection that is not yet in force.
-
-No runtime, API, client, test, configuration or dependency change; no `AGENTS.md` edit; no
-`package-lock.json` regeneration; no secrets, bypass value, `pull_request_target`, artifact upload,
-PR comment, deployment, Vercel call or live-feed dependency; no preview or production capture moved
-into CI. The closed-claims cleanup, remote-branch convention, aftermath-versus-active-hazard
-question and visual layout remain unclaimed and untouched.
-
-**Absorbed into this claim**
-
-#38's self-close, since a board PR cannot record its own merge: the `main` pointer, attribution
-header, Current Work row, Active claims block, Active Branches row, Review Queue row and in-flight
-paragraph — seven items — plus the Handoff Log entry for the merge.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -382,7 +302,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/ci-workflow | Implements C01–C18: one workflow with three clean-checkout jobs, four negative probes, no ruleset change. Branched from `main` at `1ae1ae0` |
+| Codex | codex/ci-workflow-closeout | Documentation-only #39 closeout and durable volatile-identifier guidance; no workflow or ruleset change. Branched from `main` at `32d732a` |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -402,26 +322,22 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`, authoritative at C01–C18; implementation open as [#39](https://github.com/rmart73/PacificWatch/pull/39) and reviewed.** The failure this addresses is concrete: one mutation result was reported against an uncommitted working tree and had to be discarded. Review caught it by declining to infer the number, which worked but does not scale. CI now reproduces 425 / 436 / 137 from an immutable commit on a Node line neither agent runs locally | **The owner decides merge.** C16 promotion to required checks stays a separate owner action; until then CI reports and does not gate |
+| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`; implementation merged as #39 in `32d732a`.** The same workflow blob passed on the PR and on the exact `main` merge SHA, attempt 1: 425 pure, 436 DOM and 137 of 137 mutations. C01–C15 and C17–C18 are complete | **C16 remains open:** owner decides whether to make `pure tests (dependency-free)`, `DOM behaviour` and `mutation coverage` required checks. Until then CI reports and does not gate |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
+| Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is at `1ae1ae0`**, merged through #38 and serving production. Claims and handoffs for
+**`main` is at `32d732a`**, merged through #39 and serving production. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**One implementation is in flight and it is the only active work: `claude/ci-workflow`, open as
-[#39](https://github.com/rmart73/PacificWatch/pull/39) and awaiting the owner's merge decision.**
-**No commit hash is named for it here on purpose:** a live entry naming a branch head is superseded
-by the very commit that records it, so the exact head and its green run live in the PR body and the
-GitHub checks, both of which update without a commit. Historical hashes in the Handoff Log below
-stay, because a past run is tied to the commit it actually tested. It adds `.github/workflows/ci.yml` and changes no runtime, API, client, test,
-configuration or dependency file. Codex has reviewed it read-only and supports merge.
+**No application or workflow implementation is in flight.** The only active work is the
+documentation-only `codex/ci-workflow-closeout` claim. #39 merged in `32d732a`, and its exact-SHA
+post-merge `main` run completed attempt 1 with 425 pure assertions, 436 DOM assertions and 137 of
+137 mutations caught. C15 is complete on both the PR and `main` halves.
 
-**The PR half of C15 is complete; two things remain pending and neither is authorized here.** The
-first-attempt green run at the final head is recorded below. The post-merge verification on the
-exact `main` merge SHA cannot happen until the owner merges, and **C16 promotion of the three job
-names to required checks is a separate owner action on the `main` ruleset** — so until the owner
-does that, CI reports without gating.
+**C16 remains deliberately pending.** The `Protect main` ruleset has no required-status-check rule,
+so the three CI jobs report results but do not gate merges. Promotion is a separate owner action;
+this closeout neither authorizes nor performs it.
 
 The CI acceptance contract merged as #38 in `1ae1ae0` and is authoritative at C01–C18.
 News publication-time work is complete end to end: the contract merged as #35 in `2875d0f`, its
@@ -561,6 +477,36 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-04 — #39 merged; exact-main CI and production verified
+
+The owner authorized #39's merge. It was squash-merged as `32d732ae477da8bf8dbe24a594f5e0aa3a0c8fbc`.
+Merge scope was exactly `.github/workflows/ci.yml` and this board; the workflow blob on `main` is
+byte-identical to the one proven on the PR.
+
+**C15 completed on both sides of the merge.** GitHub Actions run `37175421125`, event `push`,
+attempt 1, checked out the exact merge SHA independently in all three jobs and reported:
+
+```
+pure tests (dependency-free)   success     7s   425 assertions passed, 0 failed, 4 suites
+DOM behaviour                  success    16s   436 assertions passed, 0 failed
+mutation coverage              success   675s   137 of 137 caught; 137 verdict lines / 137 declared
+all three                      verified clean checkout of 32d732ae…, node v24.21.0
+```
+
+Mutation used 75% of its 15-minute ceiling on `main`; the five attempt-1 green measurements for
+the identical workflow blob were 704, 695, 707, 702 and 675 seconds. The ceiling was not changed.
+
+Production verification was independent by Codex and Claude. Codex measured `/`, `/api/news` and
+`/api/news/hazard` at `200`, zero feed errors, a 30-item mixed response and a 16-item all-hazard
+response; those item counts are one rotating capture, not a durable ratio. Served HTML and
+`main:index.html` both hashed to `a42963cd26766d91174edba217be9f4e9a7c571d`. Claude independently
+confirmed the same object identity and all three paths, and rechecked the N02 publication invariant
+across 46 live records with zero non-canonical and zero null values.
+
+**C16 is not complete.** The active `Protect main` ruleset has no `required_status_checks` rule.
+CI is now reproducible and visible, but it does not prevent a merge when a job fails. Promoting the
+three job names remains a separate owner action and was not performed by #39 or this closeout.
 
 ### 2026-10-04 — CI workflow implemented and proven; #39 open for the owner's decision
 

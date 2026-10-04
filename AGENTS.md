@@ -37,6 +37,11 @@ and nothing lands without a pull request.
 - Before opening a PR, search the docs for claims the change makes false. Keep durable
   constraints here and current owners, verification gaps, PR status and next actions in
   `AI-HANDOFF.md`. Implementation, merge and production verification are distinct states.
+- Do not put volatile identifiers in live current-state entries. A branch-head SHA, PR-head SHA
+  or run ID is superseded by the commit that records it, so name the stable work there and point
+  to an authority that can update without another commit (for example the PR body or checks).
+  Historical entries may name exact identifiers because they describe the artifact actually
+  observed at that time.
 - Rebase on `main` before opening the PR; resolve conflicts on your branch, not in the merge.
 - Vercel builds a **preview deployment for every PR**. Open it and confirm the change actually
   renders before requesting a merge for UI changes. There is no build step; `npm test`
