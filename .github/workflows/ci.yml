@@ -1,0 +1,249 @@
+# Pacific Watch CI — implements CI-ACCEPTANCE-CONTRACT.md, C01-C18.
+#
+# The point of this workflow is attribution, not automation. Every suite result must be traceable
+# to an immutable commit, because the failure it exists to prevent already happened once: a
+# mutation result was reported against an uncommitted working tree and had to be discarded.
+#
+# Three jobs, three independent clean checkouts, no artifact or verdict passed between them (C05).
+# No cache ships in this first implementation, taking C06's stated fallback: a cache cannot be
+# proven safe with one miss and one hit on a first run.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# C10 — read-only at workflow level; no job widens it. The suites need no write of any kind.
+permissions:
+  contents: read
+
+jobs:
+  pure:
+    # C02 — separately named job. C16 promotes this exact name to a required check, so it is stable.
+    name: pure tests (dependency-free)
+    runs-on: ubuntu-latest
+    # C12 — ceiling, not a measured value. Exceeding it fails the job.
+    timeout-minutes: 5
+    steps:
+      # C03 — for a pull request the commit under test is the HEAD sha, not the merge commit that
+      # actions/checkout would select by default. Getting this wrong is the whole point of the gate.
+      - name: Check out the exact commit under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      # C09 — one full semver, no floating alias. A Node change is a reviewed diff plus re-proving.
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+
+      # C03/C07 — this runs IMMEDIATELY before npm test, with nothing between it and the suite.
+      - name: Verify checkout identity and clean, uninstalled state
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "commit under test (expected): ${EXPECTED_SHA}"
+          actual="$(git rev-parse HEAD)"
+          echo "checked out HEAD:             ${actual}"
+          if [ -z "${EXPECTED_SHA}" ]; then
+            echo "FAIL: no expected commit resolved from the event"; exit 1
+          fi
+          if [ "${actual}" != "${EXPECTED_SHA}" ]; then
+            echo "FAIL: HEAD is not the commit under test"; exit 1
+          fi
+          # Untracked generated output would appear here. node_modules would NOT: it is gitignored,
+          # which is exactly why it gets its own check rather than relying on porcelain.
+          dirty="$(git status --porcelain)"
+          if [ -n "${dirty}" ]; then
+            echo "FAIL: working tree is not clean"; printf '%s\n' "${dirty}"; exit 1
+          fi
+          if [ -e node_modules ]; then
+            echo "FAIL: node_modules present before any install"; exit 1
+          fi
+          echo "verified: clean checkout of ${actual}, nothing installed"
+
+      # C07 — no npm ci in this job. This is the CI proof of the dependency-free runtime rule.
+      - name: Run the pure suites with nothing installed
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          npm test 2>&1 | tee pure.log
+
+          # C04 — counts are MEASURED from output and reported beside the tested commit. No
+          # expected total is hardcoded as the pass condition; npm's exit status is that.
+          summaries="$(grep -cE '^[0-9]+ passed, [0-9]+ failed$' pure.log || true)"
+          if [ "${summaries}" -lt 1 ]; then
+            echo "FAIL: no suite summary printed"; exit 1
+          fi
+          passed="$(awk '/^[0-9]+ passed, [0-9]+ failed$/ {s+=$1} END {print s+0}' pure.log)"
+          failed="$(awk '/^[0-9]+ passed, [0-9]+ failed$/ {f+=$3} END {print f+0}' pure.log)"
+          echo "commit ${EXPECTED_SHA}: ${passed} assertions passed, ${failed} failed across ${summaries} suites"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} failing assertions"; exit 1
+          fi
+          {
+            echo "### pure tests (dependency-free)"
+            echo ""
+            echo "| commit under test | assertions passed | failed | suites |"
+            echo "|---|---|---|---|"
+            echo "| \`${EXPECTED_SHA}\` | ${passed} | ${failed} | ${summaries} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  dom:
+    name: DOM behaviour
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact commit under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+
+      - name: Verify checkout identity and clean, uninstalled state
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "commit under test (expected): ${EXPECTED_SHA}"
+          actual="$(git rev-parse HEAD)"
+          echo "checked out HEAD:             ${actual}"
+          if [ -z "${EXPECTED_SHA}" ]; then
+            echo "FAIL: no expected commit resolved from the event"; exit 1
+          fi
+          if [ "${actual}" != "${EXPECTED_SHA}" ]; then
+            echo "FAIL: HEAD is not the commit under test"; exit 1
+          fi
+          dirty="$(git status --porcelain)"
+          if [ -n "${dirty}" ]; then
+            echo "FAIL: working tree is not clean"; printf '%s\n' "${dirty}"; exit 1
+          fi
+          if [ -e node_modules ]; then
+            echo "FAIL: node_modules present before any install"; exit 1
+          fi
+          echo "verified: clean checkout of ${actual}, nothing installed"
+
+      # C08 — from the committed lockfile only, with lifecycle scripts disabled.
+      - name: Install the locked dev dependency
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+
+      - name: Run the DOM behaviour suite
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          npm run test:dom 2>&1 | tee dom.log
+
+          summaries="$(grep -cE '^[0-9]+ passed, [0-9]+ failed$' dom.log || true)"
+          if [ "${summaries}" -lt 1 ]; then
+            echo "FAIL: no suite summary printed"; exit 1
+          fi
+          passed="$(awk '/^[0-9]+ passed, [0-9]+ failed$/ {s+=$1} END {print s+0}' dom.log)"
+          failed="$(awk '/^[0-9]+ passed, [0-9]+ failed$/ {f+=$3} END {print f+0}' dom.log)"
+          echo "commit ${EXPECTED_SHA}: ${passed} assertions passed, ${failed} failed"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} failing assertions"; exit 1
+          fi
+          {
+            echo "### DOM behaviour"
+            echo ""
+            echo "| commit under test | assertions passed | failed |"
+            echo "|---|---|---|"
+            echo "| \`${EXPECTED_SHA}\` | ${passed} | ${failed} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  mutation:
+    name: mutation coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the exact commit under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+
+      - name: Verify checkout identity and clean, uninstalled state
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "commit under test (expected): ${EXPECTED_SHA}"
+          actual="$(git rev-parse HEAD)"
+          echo "checked out HEAD:             ${actual}"
+          if [ -z "${EXPECTED_SHA}" ]; then
+            echo "FAIL: no expected commit resolved from the event"; exit 1
+          fi
+          if [ "${actual}" != "${EXPECTED_SHA}" ]; then
+            echo "FAIL: HEAD is not the commit under test"; exit 1
+          fi
+          dirty="$(git status --porcelain)"
+          if [ -n "${dirty}" ]; then
+            echo "FAIL: working tree is not clean"; printf '%s\n' "${dirty}"; exit 1
+          fi
+          if [ -e node_modules ]; then
+            echo "FAIL: node_modules present before any install"; exit 1
+          fi
+          echo "verified: clean checkout of ${actual}, nothing installed"
+
+      - name: Install the locked dev dependency
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+
+      - name: Run the mutation suite
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # The harness EXIT CODE is the verdict (C13). ANCHOR LOST, AMBIGUOUS and MISSED all
+          # increment one shared `missed` counter in test/mutation-check.js and any of them exits
+          # nonzero, so this workflow must NOT rebuild those three decisions as separate greps --
+          # a pattern matching one of them does not match the others. pipefail is what preserves
+          # the harness status through tee.
+          npm run test:mutation 2>&1 | tee mutation.log
+
+          # C13 — a truncated run must never read as a partial pass, so the final summary is
+          # required rather than assumed.
+          if ! grep -qE '^[0-9]+ of [0-9]+ mutations caught$' mutation.log; then
+            echo "FAIL: mutation run printed no final summary"; exit 1
+          fi
+          summary="$(grep -E '^[0-9]+ of [0-9]+ mutations caught$' mutation.log | tail -1)"
+          caught="$(printf '%s' "${summary}" | awk '{print $1}')"
+          declared="$(printf '%s' "${summary}" | awk '{print $3}')"
+
+          # C13 — one verdict per declared case. This counts the four verdict labels COLLECTIVELY
+          # to prove completeness; it does not gate on whether any particular category appeared,
+          # which is the harness's job and is forbidden here.
+          verdicts="$(grep -cE '^  (CAUGHT|MISSED|ANCHOR LOST|AMBIGUOUS) ' mutation.log || true)"
+          echo "commit ${EXPECTED_SHA}: ${summary}; ${verdicts} verdict lines for ${declared} declared cases"
+          if [ "${verdicts}" -ne "${declared}" ]; then
+            echo "FAIL: ${verdicts} verdict lines for ${declared} declared cases"; exit 1
+          fi
+          {
+            echo "### mutation coverage"
+            echo ""
+            echo "| commit under test | caught | declared | verdict lines |"
+            echo "|---|---|---|---|"
+            echo "| \`${EXPECTED_SHA}\` | ${caught} | ${declared} | ${verdicts} |"
+            echo ""
+            echo "Verdict is the harness exit status; \`MISSED\`, \`ANCHOR LOST\` and \`AMBIGUOUS\` share its counter."
+          } >> "${GITHUB_STEP_SUMMARY}"
