@@ -51,7 +51,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | News publication-time implementation | **#36 merged in `9348284`** and production verified: deployed HTML byte-identical to merged `main`, all three paths `200`, both News representations healthy, and the N02 server invariant confirmed live | **Closed. N01–N16 implemented and production verified** |
 | News publication-time closeout | #37 merged in `0c0bf5d`; documentation-only deploy independently verified | Closed; News publication-time work is complete end to end |
 | CI acceptance contract | #38 merged in `1ae1ae0`; reviewed read-only over two rounds, both findings addressed; documentation-only deploy independently verified | Closed; authoritative at C01–C18 |
-| CI workflow implementation | **[#39](https://github.com/rmart73/PacificWatch/pull/39) open at `f7a7e33`.** C01–C18 implemented; four negative probes proven and removed; first-attempt green at the final head with 425 pure, 436 DOM and 137 of 137 mutations. Codex reviewed read-only and supports merge | **The owner decides merge.** Post-merge `main` run and C16 ruleset promotion remain pending |
+| CI workflow implementation | **[#39](https://github.com/rmart73/PacificWatch/pull/39) open.** C01–C18 implemented; four negative probes proven and removed; first-attempt green at the final head with 425 pure, 436 DOM and 137 of 137 mutations. Codex reviewed read-only and supports merge | **The owner decides merge.** Post-merge `main` run and C16 ruleset promotion remain pending |
 
 ### Active claims
 
@@ -379,7 +379,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`, authoritative at C01–C18; implementation open as [#39](https://github.com/rmart73/PacificWatch/pull/39) at `f7a7e33` and reviewed.** The failure this addresses is concrete: one mutation result was reported against an uncommitted working tree and had to be discarded. Review caught it by declining to infer the number, which worked but does not scale. CI now reproduces 425 / 436 / 137 from an immutable commit on a Node line neither agent runs locally | **The owner decides merge.** C16 promotion to required checks stays a separate owner action; until then CI reports and does not gate |
+| CI for independently reproducible suite evidence | **Contract merged as #38 in `1ae1ae0`, authoritative at C01–C18; implementation open as [#39](https://github.com/rmart73/PacificWatch/pull/39) and reviewed.** The failure this addresses is concrete: one mutation result was reported against an uncommitted working tree and had to be discarded. Review caught it by declining to infer the number, which worked but does not scale. CI now reproduces 425 / 436 / 137 from an immutable commit on a Node line neither agent runs locally | **The owner decides merge.** C16 promotion to required checks stays a separate owner action; until then CI reports and does not gate |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 
@@ -387,8 +387,11 @@ Merged branches are omitted from this active list; this does not imply remote br
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **One implementation is in flight and it is the only active work: `claude/ci-workflow`, open as
-[#39](https://github.com/rmart73/PacificWatch/pull/39) at `f7a7e33` and awaiting the owner's merge
-decision.** It adds `.github/workflows/ci.yml` and changes no runtime, API, client, test,
+[#39](https://github.com/rmart73/PacificWatch/pull/39) and awaiting the owner's merge decision.**
+**No commit hash is named for it here on purpose:** a live entry naming a branch head is superseded
+by the very commit that records it, so the exact head and its green run live in the PR body and the
+GitHub checks, both of which update without a commit. Historical hashes in the Handoff Log below
+stay, because a past run is tied to the commit it actually tested. It adds `.github/workflows/ci.yml` and changes no runtime, API, client, test,
 configuration or dependency file. Codex has reviewed it read-only and supports merge.
 
 **The PR half of C15 is complete; two things remain pending and neither is authorized here.** The
