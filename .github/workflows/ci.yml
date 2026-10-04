@@ -42,13 +42,6 @@ jobs:
           node-version: 24.21.0
 
       # C03/C07 — this runs IMMEDIATELY before npm test, with nothing between it and the suite.
-      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
-      # C07 negative witness: pre-create node_modules so the gate below must refuse to run
-      # npm test. Without this probe that check can never fail in CI, because a fresh
-      # actions/checkout never carries an install.
-      - name: PROBE pre-create node_modules
-        run: mkdir -p node_modules
-      # ===== END PROBE =====
       - name: Verify checkout identity and clean, uninstalled state
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -120,12 +113,7 @@ jobs:
 
       - name: Verify checkout identity and clean, uninstalled state
         env:
-          # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
-          # C03 negative witness: a deliberately wrong expected SHA must fail the identity gate
-          # before any suite runs. This is the check that would have caught the discarded
-          # mutation result reported against an uncommitted tree.
-          EXPECTED_SHA: "0000000000000000000000000000000000000000"
-          # ===== END PROBE =====
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           echo "commit under test (expected): ${EXPECTED_SHA}"
@@ -193,12 +181,6 @@ jobs:
         with:
           node-version: 24.21.0
 
-      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
-      # C03 negative witness: an untracked file must make git status --porcelain non-empty and
-      # fail the gate before npm ci and before the suite.
-      - name: PROBE create an untracked marker
-        run: echo probe > probe-marker.txt
-      # ===== END PROBE =====
       - name: Verify checkout identity and clean, uninstalled state
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -227,6 +209,27 @@ jobs:
           set -euo pipefail
           npm ci --ignore-scripts
 
+      # ===== PROBE ONLY, REMOVED BEFORE THE FINAL HEAD =====
+      # C13 negative witness: inject one mutation case whose anchor cannot exist, so the harness
+      # reports ANCHOR LOST and exits nonzero. This proves the job PROPAGATES that exit rather
+      # than reading a high caught-count as success. Injected at runtime, after the gate, so no
+      # tracked test file is altered in any commit.
+      - name: PROBE inject an ANCHOR LOST mutation case
+        run: |
+          set -euo pipefail
+          node - <<'PROBE_EOF'
+          const fs = require('fs');
+          const p = 'test/mutation-check.js';
+          let s = fs.readFileSync(p, 'utf8');
+          const needle = 'const mutations = [';
+          if (!s.includes(needle)) { console.error('probe anchor missing'); process.exit(1); }
+          const injected = needle +
+            "\n  { name: 'PROBE anchor lost', from: '__anchor_that_cannot_exist_in_index_html__'," +
+            " to: 'x', expect: ['nothing'], suite: 'dom' },";
+          fs.writeFileSync(p, s.replace(needle, injected));
+          console.log('probe: one ANCHOR LOST case injected');
+          PROBE_EOF
+      # ===== END PROBE =====
       - name: Run the mutation suite
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
