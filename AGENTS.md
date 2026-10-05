@@ -74,6 +74,55 @@ A local `pre-push` hook in this clone also blocks direct pushes to `main` with a
 so you fail fast instead of at the remote. It is not committed (`.git/hooks` never is), so it
 protects only clones where it has been installed — the ruleset is the real gate.
 
+### Verifying a merged remote branch before deletion
+
+This repository squash-merges PRs, so a merged branch tip is normally **not** an ancestor of
+`main`. `git branch -r --merged main` therefore has false negatives and is not a complete merged-
+branch detector. Omission from `AI-HANDOFF.md`'s Active Branches table is a coordination update,
+not deletion authority.
+
+Deleting a remote branch is a separate destructive action. Do it only when the owner authorizes
+the exact branch or exact reviewed set, and preserve the evidence below **before** deleting the
+ref. Record the branch name, its remote-tip commit and tree IDs, and the proof path used.
+
+Start from an explicitly non-pruning fetch, then resolve immutable IDs rather than reasoning from
+moving names. Do not rely on the user's global `fetch.prune` setting:
+
+```text
+git -c fetch.prune=false fetch origin
+git rev-parse refs/remotes/origin/<branch>^{commit}
+git rev-parse refs/remotes/origin/<branch>^{tree}
+```
+
+Accept one of these proofs, in order:
+
+1. **Direct ancestry.** The remote tip is an ancestor of `main`. A positive result is sufficient;
+   a negative result proves nothing under squash merging.
+2. **Merged-PR ancestry across the squash boundary.** GitHub records a PR as `MERGED`; the remote
+   tip equals that PR's head or is an ancestor of it; and the PR's recorded merge commit is an
+   ancestor of `main`. The PR head may be a different branch that incorporated the branch under
+   review, as happened in Phase 1. This is two Git ancestry checks joined by the GitHub PR record:
+   branch tip → PR head, then squash commit → `main`. Fetch the PR-head object before testing if it
+   is not present locally.
+3. **Exact historical tree equality.** The remote tip's complete tree ID equals the complete tree
+   ID of a commit reachable from `main`. Record the matching `main` commit. Comparing trees, not
+   commit ancestry, is what makes this useful for a squash whose content landed without its commit
+   history.
+
+For the PR proof, record GitHub's PR number, `state`, `headRefOid` and `mergeCommit`, then run both
+ancestry checks with those immutable IDs. For tree proof, inspect every commit reachable from
+`main`, not only `HEAD`, and compare its complete tree ID with the captured remote-tip tree ID.
+
+If none applies, stop and investigate. **Current selected-file equality is never proof:** later
+legitimate edits can make merged work differ from current `main`, while independent work can make
+unmerged files happen to coincide. Only the complete Git tree-ID equality in step 3 qualifies as
+content proof. A partial file list, a clean diff for selected paths, a PR title, a locally cached
+commit surviving a prune, or an agent's memory is also insufficient.
+
+After an authorized deletion, confirm the exact remote ref is absent and record the deletion with
+the evidence above. Never use a broad branch-cleanup command or infer permission from a branch
+being old, merged-looking, or absent from the active-work table.
+
 ## Coordinating edits to `index.html`
 
 The entire front end is one ~1,930-line file, so two agents editing "different features" routinely

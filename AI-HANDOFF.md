@@ -59,7 +59,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C16 closeout | #42 merged in `87ef841`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed; C01–C18 complete end to end |
 | C09 runner-family amendment | #43 merged in `6c2166f`; reviewed read-only with no findings; exact-`main` run passed attempt 1 on image `ubuntu-24.04` version `20260927.320.1` | Closed; the amended C09 is authoritative |
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
-| Remote-branch verification convention | Owner-authorized documentation work claimed on `codex/remote-branch-verification`; no branch deletion authorized | Codex documents the squash-safe evidence ladder; Claude reviews read-only; the owner decides merge |
+| Remote-branch verification convention | Documented on `codex/remote-branch-verification`; three proof shapes reproduced against known merged branches; no branch deletion authorized | Ready for Claude's read-only review; the owner decides merge |
 
 ### Active claims
 
@@ -327,7 +327,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
-| Deleted merged remote branch vs the AGENTS convention | **Claimed, documentation only.** Squash merging makes `git branch -r --merged main` report a false negative for merged branch tips. The convention will require evidence across the squash boundary or exact historical tree equality and will reject current-file equality as proof | Codex documents the convention; Claude reviews read-only; the owner decides merge. **No deletion authorized** |
+| Deleted merged remote branch vs the AGENTS convention | **Documented, awaiting review.** The proposed `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality. It rejects current-file equality and Active Branches omission as proof | Claude reviews read-only; the owner decides merge. **No deletion authorized** |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented; C12 remains unchanged |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
@@ -509,6 +509,19 @@ The owner separately authorized Codex to document the remote-branch verification
 edit `AI-HANDOFF.md` concurrently. The durable rule will distinguish Git ancestry within a branch,
 GitHub's merged-PR record across a squash boundary, and exact historical tree equality. It will
 explicitly reject `git branch -r --merged main` and current-file equality as sufficient proof.
+
+The drafted rule was exercised before review rather than accepted from prose:
+
+- #44 proves the exact-tip PR case: remote tip `f823754` equals the merged PR head, and squash
+  commit `6e5a94e` is an ancestor of `main`.
+- #5 proves the earlier-tip case: `4df328f` is an ancestor of PR head `0983028`; GitHub records the
+  PR as merged in squash commit `6750553`; that squash commit is an ancestor of `main`.
+- `claude/ci-workflow` proves historical tree equality: its tip tree `4dfb569c` equals the complete
+  tree of `main` commit `32d732a`.
+
+At the same checkpoint, `git branch -r --merged main` listed only `origin/main` and its symbolic
+`origin/HEAD`, demonstrating why an absent result cannot reject the two squash-safe proofs above.
+No remote ref was changed or deleted.
 
 ### 2026-10-04 — #43 merged; the C09 runner-family correction claimed
 
