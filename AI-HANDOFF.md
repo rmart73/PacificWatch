@@ -14,7 +14,7 @@ verification**, the **#28 production verification**, the **#31 documentation dep
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
-**#42 closeout deploy** and the **#43 C09 amendment deploy**, which Codex and Claude verified
+**#42 closeout deploy**, the **#43 C09 amendment deploy**, and the **#44 runner-family deploy**, which Codex and Claude verified
 independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
@@ -58,64 +58,32 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C16 required-check promotion record | #41 merged in `24ef13f`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; production and ruleset independently re-verified | Closed; all three jobs required, zero bypass actors |
 | C16 closeout | #42 merged in `87ef841`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed; C01–C18 complete end to end |
 | C09 runner-family amendment | #43 merged in `6c2166f`; reviewed read-only with no findings; exact-`main` run passed attempt 1 on image `ubuntu-24.04` version `20260927.320.1` | Closed; the amended C09 is authoritative |
-| C09 runner-family workflow correction | Claimed on `claude/c09-runner-family`; replaces three `runs-on` labels and nothing else | Claude implements; Codex reviews read-only; the owner decides merge |
+| C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
+| Remote-branch verification convention | Owner-authorized documentation work claimed on `codex/remote-branch-verification`; no branch deletion authorized | Codex documents the squash-safe evidence ladder; Claude reviews read-only; the owner decides merge |
 
 ### Active claims
 
-**C09 runner-family workflow correction — Claude Code, `claude/c09-runner-family`.**
-Claimed 2026-10-04 before editing `.github/`, in its own commit ahead of the work, on the owner's
-explicit authorization. Branched from `main` at **`6c2166f`**.
+**Remote-branch verification convention — ChatGPT Codex,
+`codex/remote-branch-verification`.** Owner-authorized 2026-10-04 documentation-only claim,
+published before editing `AGENTS.md`. Branched from synchronized `main` after #44 merged as
+`6e5a94e` and its exact-`main` run passed attempt 1.
 
-Governed by the **amended C09** in [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md), merged
-as #43. C18 requires this to be a separate claim published ahead of every `.github/` edit.
+Scope:
 
-**What this changes: three lines.**
+1. Absorb #44's self-close across the attribution header, Current Work, Active claims, Active
+   Branches, Review Queue, stable `main` pointer and in-flight paragraph, plus its Handoff Log entry.
+2. Add a durable squash-safe remote-branch verification convention to `AGENTS.md`: capture the
+   remote tip before deletion; prove incorporation through a merged PR plus ancestry on both sides
+   of the squash boundary, or by exact tree equality with a historical `main` commit; record the
+   evidence; otherwise stop and investigate.
+3. State the negative rule explicitly: `git branch -r --merged main` is insufficient under squash
+   merging, and current-file equality is never accepted as proof in either direction.
+4. Preserve the existing rule that omission from Active Branches is not deletion authority.
 
-`runs-on: ubuntu-latest` becomes `runs-on: ubuntu-24.04` in the pure, DOM and mutation jobs.
-Nothing else in the workflow changes — not Node, not an action SHA, not a timeout, not a gate, not
-a permission, not a trigger. The diff is three lines and the evidence includes confirming that.
-
-**Why, stated so the result is not misread**
-
-`ubuntu-latest` can be moved to a new OS family by GitHub without a workflow diff; the announced
-migration begins **2026-10-19**. An explicit family makes that a reviewed change instead of a date.
-
-**This is not an immutable image pin.** GitHub refreshes hosted images weekly behind the same
-label, which is why the amended C09 requires recording each job's concrete `Image`, image
-`Version` and `Image Release` rather than claiming the image is frozen.
-
-**The expected result is that nothing changes.** `ubuntu-latest` already resolves to
-`ubuntu-24.04` today, so the proving run should report the same 425 pure, 436 DOM and 137 of 137
-mutations, at a mutation duration near the 700-second baseline from post-#42 run `37186546315` on
-image version `20260927.320.1`. That sameness is the intended outcome, not a sign the change was
-inert — what it removes is the unreviewed path by which the runner could change underneath us.
-
-**Evidence this claim commits to**
-
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit.
-2. Each job's `Image`, image `Version` and `Image Release`, taken from the image lines and **not**
-   from the similarly formatted runner-agent `Version` line that appears first in the log.
-3. Mutation duration compared against the 700-second baseline, with the image version recorded so
-   a future timing change can be attributed rather than guessed at.
-4. Confirmation that the workflow diff contains no change beyond the three labels.
-
-**The four negative probes do not repeat.** No checkout, dependency or mutation-gate logic changes,
-so re-running them would demonstrate nothing new; the amended proving sequence says so explicitly.
-
-**Out of scope, explicitly**
-
-**C12's 15-minute mutation ceiling is not touched.** If the measurement warrants changing it, that
-is a separate evidence-backed contract amendment, not a line in this PR. No ruleset change: the
-three required checks and the empty bypass list stay as they are, and that is the owner's area.
-No test, runtime, API, client, configuration, dependency, `AGENTS.md` or contract edit. No branch
-deletion. The remote-branch convention stays with Codex after this merges, which is the sequence
-the owner set to keep us off `AI-HANDOFF.md` at the same time.
-
-**Absorbed into this claim**
-
-#43's self-close, since a board PR cannot record its own merge: the attribution header, Current
-Work row, Active claims block, Active Branches row and the stable `main` pointer line — five items
-— plus the Handoff Log entry for the merge.
+Files claimed: `AGENTS.md` and `AI-HANDOFF.md` only. No application, API, test, workflow, ruleset,
+dependency, configuration or production change. **No remote branch deletion is authorized by this
+claim or by the owner's authorization for this documentation.** Claude reviews read-only; the owner
+decides merge.
 
 **Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
 `codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
@@ -341,7 +309,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/c09-runner-family | Replaces three `runs-on` labels with the explicit `ubuntu-24.04` family under the amended C09. No other workflow change. Branched from `main` at `6c2166f` |
+| Codex | codex/remote-branch-verification | Documents the squash-safe evidence required before a merged remote branch may be deleted. Documentation only; no deletion authorized. Branched from `main` after #44 merged |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -359,26 +327,23 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
-| Deleted merged remote branch vs the AGENTS convention | **Open, unclaimed.** The merged `codex/g1-abuse-bounding-contract` branch was deleted on the remote, which contradicts the `AGENTS.md` line that omitting a merged branch from the active list "does not imply remote branch deletion." Either the convention changed and that line is stale, or the deletion was unintended. It cost the usual squash content-equality check, which succeeded only because the head commit survived locally from a pre-prune fetch | Owner and Codex decide: correct the convention or treat the deletion as unintended. No edit made |
+| Deleted merged remote branch vs the AGENTS convention | **Claimed, documentation only.** Squash merging makes `git branch -r --merged main` report a false negative for merged branch tips. The convention will require evidence across the squash boundary or exact historical tree equality and will reject current-file equality as proof | Codex documents the convention; Claude reviews read-only; the owner decides merge. **No deletion authorized** |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
-| CI for independently reproducible suite evidence | **Contract #38, implementation #39, closeout #40, C16 record #41 and closeout #42 are merged. C01–C18 complete, and the C09 runner-family amendment merged as #43.** The workflow correction it governs is implemented and open for review; the three `runs-on` labels now name the explicit `ubuntu-24.04` family | Claude implemented the three-label correction; Codex reviews read-only; the owner decides merge. The post-merge `main` run remains pending |
+| CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented; C12 remains unchanged |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #43 and serving production.** Claims and handoffs for
+**`main` is merged through #44 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**One workflow implementation is in flight and it is the only active work:** the C09 runner-family
-correction on `claude/c09-runner-family`, open for read-only review and awaiting the owner's merge
-decision. It replaces three `runs-on` labels and changes no other file except this board.
+**No application or workflow implementation is in flight.** The only active work is the
+documentation-only remote-branch verification convention on `codex/remote-branch-verification`.
+It changes `AGENTS.md` and this board only. It does not delete a branch or authorize deletion.
 
-**The workflow no longer uses `ubuntu-latest`** on that branch; `main` still does until the
-correction merges. The C09 amendment merged as #43 and is authoritative. The post-merge `main` run
-and nothing else remains pending; no ruleset change is included or authorized, and no remote branch
-is deleted. #42 merged in `87ef841`, and its
-exact-SHA post-merge run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
-mutations.
+**The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
+its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
+mutations in 694 seconds on image version `20260927.320.1`. C12 and the ruleset are unchanged.
 
 **C16 is complete.** `Protect main` now requires all three GitHub Actions jobs. Existing deletion,
 non-fast-forward and pull-request rules are unchanged, approvals remain zero, and the bypass list
@@ -525,6 +490,25 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-04 — #44 merged; remote-branch verification convention claimed
+
+The C09 runner-family correction merged as **`6e5a94e`**. Codex verified the exact landed state:
+the workflow blob is the reviewed three-label change, production HTML is byte-identical to
+`main:index.html`, all three public paths return `200`, and the ruleset remains active with the
+same three required checks and zero bypass actors.
+
+Post-merge run `37261474302`, attempt 1, `event=push`, passed on the exact merge commit: 425 pure
+assertions in 8 seconds, 436 DOM assertions in 17 seconds and 137 of 137 mutations with 137 verdict
+lines in 694 seconds. Every job recorded `Image: ubuntu-24.04`, image version `20260927.320.1` and
+the matching `Image Release`. The 694-second mutation job used 77% of the unchanged 900-second C12
+ceiling. No ruleset or remote-branch change accompanied the merge.
+
+The owner separately authorized Codex to document the remote-branch verification convention, but
+**did not authorize deleting any remote branch**. This claim follows #44 so Codex and Claude do not
+edit `AI-HANDOFF.md` concurrently. The durable rule will distinguish Git ancestry within a branch,
+GitHub's merged-PR record across a squash boundary, and exact historical tree equality. It will
+explicitly reject `git branch -r --merged main` and current-file equality as sufficient proof.
 
 ### 2026-10-04 — #43 merged; the C09 runner-family correction claimed
 
