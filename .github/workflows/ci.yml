@@ -23,7 +23,7 @@ jobs:
   pure:
     # C02 — separately named job. C16 promotes this exact name to a required check, so it is stable.
     name: pure tests (dependency-free)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # C12 — ceiling, not a measured value. Exceeding it fails the job.
     timeout-minutes: 5
     steps:
@@ -97,7 +97,7 @@ jobs:
 
   dom:
     name: DOM behaviour
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out the exact commit under test
@@ -167,7 +167,7 @@ jobs:
 
   mutation:
     name: mutation coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out the exact commit under test
