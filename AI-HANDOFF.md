@@ -63,6 +63,28 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**October 9 Phase 1 engineering brief intake — ChatGPT Codex,
+`codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
+before editing any other file. Branched from synchronized `main` at `a14d31f` after confirming
+through GitHub that no pull request is open.
+
+Scope:
+
+1. Preserve the owner-approved October 9 brief in the repository as the shared authority for
+   PW-101 through PW-106, with a filename that distinguishes this new UI phase from the historical
+   source-health Phase 1 already recorded in this project.
+2. Record the concrete current-code baseline for the five requested improvements and map the
+   approved Codex-specification / Claude-implementation split onto the recommended delivery order.
+3. Absorb #45's unavoidable self-close: it merged as `a14d31f`, so the remote-branch convention is
+   no longer active work. No remote branch deletion is authorized.
+4. Identify conflicts or verification dependencies without changing the owner's locked product
+   decisions or silently weakening existing architecture and source-truthfulness contracts.
+
+Files claimed: `AI-HANDOFF.md` and a new documentation-only copy of the October 9 implementation
+brief. No edit to `AGENTS.md`, `index.html`, `api/`, tests, workflow, configuration, dependencies,
+ruleset, Vercel settings or production. This claim does not implement PW-101 through PW-106 and
+does not authorize a merge; Claude may review this intake read-only.
+
 **Remote-branch verification convention — ChatGPT Codex,
 `codex/remote-branch-verification`.** Owner-authorized 2026-10-04 documentation-only claim,
 published before editing `AGENTS.md`. Branched from synchronized `main` after #44 merged as
