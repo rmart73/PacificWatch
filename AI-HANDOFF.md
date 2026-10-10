@@ -8,13 +8,14 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-10-04. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-10. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
-**#42 closeout deploy**, the **#43 C09 amendment deploy**, and the **#44 runner-family deploy**, which Codex and Claude verified
+**#42 closeout deploy**, the **#43 C09 amendment deploy**, and the **#44 runner-family deploy**, which
+Codex and Claude verified
 independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
@@ -59,7 +60,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C16 closeout | #42 merged in `87ef841`; exact-main CI passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations; documentation deploy independently verified | Closed; C01–C18 complete end to end |
 | C09 runner-family amendment | #43 merged in `6c2166f`; reviewed read-only with no findings; exact-`main` run passed attempt 1 on image `ubuntu-24.04` version `20260927.320.1` | Closed; the amended C09 is authoritative |
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
-| Remote-branch verification convention | Documented on `codex/remote-branch-verification`; both squash-safe positive proofs reproduced, direct ancestry retained but unwitnessed under the repo's squash-only practice, and the open branch used as a negative control; no branch deletion authorized | Ready for Claude's read-only re-review; the owner decides merge |
+| Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
+| October 9 Phase 1 engineering brief | Owner-approved PW-101 through PW-106 brief received and preserved on `codex/oct9-phase1-intake`; current implementation baseline inspected | Documentation intake in progress. Codex maps acceptance to the current architecture; Claude implements later under separate claims |
 
 ### Active claims
 
@@ -85,10 +87,10 @@ brief. No edit to `AGENTS.md`, `index.html`, `api/`, tests, workflow, configurat
 ruleset, Vercel settings or production. This claim does not implement PW-101 through PW-106 and
 does not authorize a merge; Claude may review this intake read-only.
 
-**Remote-branch verification convention — ChatGPT Codex,
+**Closed: remote-branch verification convention — ChatGPT Codex,
 `codex/remote-branch-verification`.** Owner-authorized 2026-10-04 documentation-only claim,
-published before editing `AGENTS.md`. Branched from synchronized `main` after #44 merged as
-`6e5a94e` and its exact-`main` run passed attempt 1.
+published before editing `AGENTS.md`. Merged as #45 in `a14d31f`; the durable convention is now in
+`AGENTS.md`. The claim authorized no remote branch deletion, and the merge did not broaden that.
 
 Scope:
 
@@ -331,7 +333,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/remote-branch-verification | Documents the squash-safe evidence required before a merged remote branch may be deleted. Documentation only; no deletion authorized. Branched from `main` after #44 merged |
+| Codex | codex/oct9-phase1-intake | Preserves and reconciles the owner-approved October 9 PW-101–PW-106 engineering brief. Documentation only; no application implementation or merge authorized |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -349,19 +351,21 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
-| Deleted merged remote branch vs the AGENTS convention | **Documented, awaiting re-review.** The proposed `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality. Proof 1 is retained for completeness but has no positive witness under the repository's squash-only practice; proofs 2 and 3 and a negative control are reproduced | Claude reviews read-only; the owner decides merge. **No deletion authorized** |
+| Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
+| October 9 Phase 1 engineering brief (PW-101–PW-106) | **Owner-approved, intake claimed.** The supplied brief is being preserved under a disambiguated filename because the repository already has a historical Phase 1. Read-only inspection confirms each requested UI delta still exists | Codex completes the current-code/acceptance mapping in this documentation PR; Claude implements the ordered items only under later, non-overlapping claims |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented; C12 remains unchanged |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #44 and serving production.** Claims and handoffs for
+**`main` is merged through #45 as `a14d31f` and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**No application or workflow implementation is in flight.** The only active work is the
-documentation-only remote-branch verification convention on `codex/remote-branch-verification`.
-It changes `AGENTS.md` and this board only. It does not delete a branch or authorize deletion.
+**No application or workflow implementation is in flight.** The only active work is Codex's
+documentation-only intake of the owner-approved October 9 Phase 1 brief. It adds the brief and
+updates this board only; PW-101 through PW-106 require later implementation claims. #45 is closed,
+and no remote branch deletion is authorized.
 
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
@@ -512,6 +516,49 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-10 — owner-approved October Phase 1 brief received; documentation intake claimed
+
+The owner supplied the approved October 9 engineering brief for five UI improvements plus
+regression protection: PW-101 internal Overview-to-Alerts navigation, PW-102 intentional external
+alert sources, PW-103 mobile ticker calibration, PW-104 precipitation as the Ventusky default,
+PW-105 subtle wave-logo animation, and PW-106 consolidated validation. Locked product direction
+retains the Pacific Watch name and existing wave identity; authentication, subscriptions,
+payments, custom-feed ingestion, AI-premium work, push notifications and saved locations remain
+future work and are not authorized by this phase.
+
+This is a **new October 2026 UI phase**, not the historical source-health Phase 1. The brief is
+preserved as `OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md` so both names can remain accurate without
+silently rewriting history. The existing agreement still governs ownership: Codex maps layout and
+acceptance criteria to the current code and reviews; Claude owns implementation under separately
+claimed work. The brief recommends PW-101/PW-102 first, then PW-103, PW-104, PW-105 and PW-106.
+
+Read-only inspection against `main` at `a14d31f` confirmed the actual baseline:
+
+- **PW-101/PW-102:** `priorityCard()` calls `alertUrl()`, which turns the NWS feature ID into an
+  external `target=_blank` link. `renderAlerts()` has no per-alert selection/detail state, and
+  `switchView()` has no URL/history integration. The new deep-link behavior is not already present.
+- **PW-103:** `.ticker-track` uses one fixed `70s` duration while the keyframe travels from `100vw`
+  to `-100%`; duration does not derive from content or container width. The global reduced-motion
+  rule shortens all animation to `.01ms` and one iteration but does not explicitly reset the ticker
+  transform, so the required stationary readable alternative needs focused acceptance coverage.
+- **PW-104:** both the Ventusky iframe and its outbound map link currently use `l=radar` at the
+  established Hawaii position `20.7;-157.5;7`. The implementation must verify the live supported
+  precipitation parameter before changing either representation.
+- **PW-105:** the header logo is the existing inline SVG with three static path elements, the
+  middle path fully opaque and the outer paths at `.4` opacity. It is a suitable dependency-free
+  CSS/SVG animation target, but no logo motion exists today.
+- **PW-106:** source health, last-known-good retention, alert eligibility and `nwsSnapshot()` remain
+  load-bearing regression boundaries. Local `npm test` and `npm run test:dom` could not start in
+  Codex's shell because Node/npm is unavailable. The last recorded exact-main CI baseline remains
+  425 pure assertions, 436 DOM assertions and 137 of 137 mutations; each implementation claim must
+  capture its own pre-change baseline and final evidence rather than borrowing those counts.
+
+No application, test, API, configuration, dependency, workflow, ruleset, Vercel or production
+change was made by this intake. GitHub reported zero open PRs before the claim. The same pass
+absorbs #45's self-close: GitHub records the remote-branch convention merged as `a14d31f`, and its
+exact-merge push run `37272634824` passed on attempt 1. The merge did not authorize deleting any
+remote branch. No new production-deploy claim is inferred from that CI result.
 
 ### 2026-10-04 — #44 merged; remote-branch verification convention claimed
 
