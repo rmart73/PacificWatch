@@ -8,15 +8,15 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-10-10. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-11. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
 **#42 closeout deploy**, the **#43 C09 amendment deploy**, the **#44 runner-family deploy**, the
-**#45 convention deploy**, and the **#46 brief-intake deploy**, which Codex and Claude verified
-independently. The #26 checks were unauthenticated HTTP
+**#45 convention deploy**, the **#46 brief-intake deploy**, and the **#48 C12 amendment deploy**, which Codex and
+Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -63,27 +63,76 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | #47 is open from `claude/pw101-pw102-alert-navigation`; pure and DOM passed, but hosted mutation was cancelled after exceeding C12 | Claude is stopped at the contract boundary; no merge until hosted mutation passes under an implemented amendment |
-| C12 mutation-ceiling amendment | Owner-authorized documentation-only contract review on `codex/c12-mutation-ceiling-amendment` | Codex drafts a measured amendment; Claude reviews read-only; no workflow or ruleset change in this unit |
+| C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
+| C12 mutation timeout — workflow implementation | Claimed on `claude/c12-mutation-timeout`; one line, `timeout-minutes: 15 → 20` on the mutation job | Claude implements; Codex reviews read-only; the owner decides merge |
 
 ### Active claims
 
-**C12 mutation-ceiling amendment — ChatGPT Codex,
-`codex/c12-mutation-ceiling-amendment`.** Owner-authorized 2026-10-10 after #47's hosted mutation
-job was cancelled at 916 seconds against C12's 900-second ceiling. Claimed before editing the
-contract, on a fresh branch from current `main`.
+**C12 mutation timeout — workflow implementation — Claude Code, `claude/c12-mutation-timeout`.**
+Claimed 2026-10-11 before editing `.github/`, in its own commit ahead of the work, on the owner's
+explicit authorization. Branched from `main` after #48 merged.
 
-Scope: amend C12 on measured evidence, with the proposed mutation ceiling of 20 minutes restoring
-approximately the historical 77% utilization (`916 / 1200 = 76.3%`); record the failure and the
-sequenced recovery path in `AI-HANDOFF.md`; preserve the 5-minute pure and 10-minute DOM ceilings,
-all mutation verdict semantics, the three stable required-check names, and the zero-bypass ruleset.
-Files claimed: `CI-ACCEPTANCE-CONTRACT.md` and `AI-HANDOFF.md` only.
+Governed by the **amended C12** in [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md), which
+merged as #48 and is authoritative at 5/10/20 minutes. C18 requires this to be a separate claim
+published after the governing text merged — which is why the contract and the workflow are
+deliberately out of step until this lands.
 
-This unit contains no `.github/` edit. C18 requires a separate claim and owner authorization for
-the workflow-only implementation after this amendment merges. It does not authorize a ruleset
-change, removal of a required check, retry, partial-run substitution, test change, application
-change, dependency change, or #47 merge. This claim also absorbs #46's unavoidable self-close and
-records #47's current stop without absorbing Claude's implementation scope. Claude reviews this
-contract amendment read-only; the owner decides merge.
+**What this changes: one line.**
+
+`timeout-minutes: 15` becomes `timeout-minutes: 20` on the **mutation job only**. The pure job
+stays at 5 and the DOM job at 10. Nothing else in the workflow changes — not a job name, not a
+trigger, not a permission, not a gate, not an action SHA, not the Node pin, not the runner family.
+
+**Why the job names matter here.** All three are required checks with zero bypass actors. A rename
+in this edit would silently detach branch protection from checks that report, which is the failure
+C16 warned about. The names are verified against the live ruleset before and after.
+
+**Why this is needed, measured rather than asserted**
+
+#47 enlarged the DOM suite from 436 to 503 assertions and the mutation set from 137 to 146 cases.
+81 of those 146 execute the DOM suite, so DOM growth is multiplied across a serial run; case count
+alone does not describe the cost. Hosted run `38103799949` was **cancelled at 916 seconds** against
+the 15-minute ceiling, with no final summary — a valid failure, not a flake.
+
+**The comparison is image-controlled**, which it was not when the amendment was first drafted:
+
+```
+image 20261004.327.1, 137 cases   679s   (#48 head run 38108891020)
+image 20261004.327.1, 137 cases   684s   (exact main run 38111366496)
+image 20261004.327.1, 146 cases   916s   (#47 head run 38103799949, cancelled)
+```
+
+The same corpus on the same image costs ~680s, inside the 675–707s band measured on the previous
+image, so the weekly refresh contributes nothing measurable and the +237s is corpus growth. At
+916s the amended ceiling runs at 76.3% of budget, restoring the 75–79% utilisation the gate was
+promoted at.
+
+**Evidence this claim commits to**
+
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit.
+2. Each job's `Image`, image `Version` and `Image Release`, taken from the image line and not the
+   runner-agent `Version` line that prints first and looks identical.
+3. The workflow diff confirmed to contain no change beyond the one timeout value.
+4. The three required check names verified unchanged against the live ruleset.
+
+**The probes do not repeat.** C03, C07 and C13 negative probes guard checkout identity, the
+dependency-free gate and mutation verdict propagation. None of that logic changes, so re-running
+them would demonstrate nothing new.
+
+**Out of scope, explicitly**
+
+No ruleset change — the required checks and the empty bypass list are the owner's area. No
+mutation optimisation: the amended contract reserves bounded internal concurrency for separate
+work with its own review, and this claim does not start it. No change to the pure or DOM ceilings.
+No test, runtime, API, client, configuration, dependency, `AGENTS.md` or contract edit. **#47 is
+not touched, rebased or rerun** by this unit; it resumes only after this merges and its exact-`main`
+run is green.
+
+**Absorbed into this claim**
+
+#48's self-close, since a board PR cannot record its own merge: the attribution header, Current
+Work row, Active claims block, Active Branches row and the `main` pointer — five items — plus the
+Handoff Log entry for the merge.
 
 **Closed: October 9 Phase 1 engineering brief intake — ChatGPT Codex,
 `codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
@@ -353,7 +402,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/c12-mutation-ceiling-amendment | Evidence-backed C12 amendment only: proposed 15-to-20-minute mutation ceiling change, preserving the required check and its failure semantics |
+| Claude | claude/c12-mutation-timeout | Workflow-only C12 implementation: the mutation job's `timeout-minutes` 15 → 20, with all three required check names and every other workflow line preserved |
 | Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102 implementation; stopped pending an implemented C12 amendment and a clean hosted mutation run |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
@@ -382,7 +431,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #46 and serving production.** Claims and handoffs for
+**`main` is merged through #48 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 implementation is open as #47 but stopped at C12's contract boundary.** Codex's
@@ -539,6 +588,44 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-11 — #48 merged; the C12 workflow correction claimed
+
+The C12 amendment merged and is authoritative at 5/10/20 minutes. Exact-`main` run
+`38111366496`, attempt 1, `event=push`, passed the **unchanged** required-check gate at 425 pure,
+436 DOM and 137 of 137 mutations with 137 verdict lines, on `ubuntu-24.04` image
+`20261004.327.1`, in roughly 684 seconds. No ruleset change, no bypass, no rerun.
+
+#### The recovery path preserved the gate, and Claude's deadlock claim was wrong
+
+Claude reported the stop condition correctly but then asserted the repair could not merge without
+removing `mutation coverage` from the required checks. That was wrong, and Codex corrected it: the
+repair branches carry `main`'s smaller 137-case corpus, which has always completed well under 900
+seconds, so both repair PRs clear the existing gate on their own merits. #48's own green mutation
+check demonstrated it rather than arguing it. The deadlock property would only bite if `main`
+itself exceeded the ceiling.
+
+#### What read-only review contributed, and what it withdrew
+
+Claude raised one finding — that the 696s-versus-916s comparison was not image-controlled, since
+the hosted image had drifted from `20260927.320.1` to `20261004.327.1` between the two runs,
+leaving part of the increase unattributable. #48's own head run then dissolved that finding: the
+**137-case corpus on the new image cost 679s**, inside the 675–707s band measured on the old one.
+The refresh contributes nothing measurable, so the +237s is corpus growth and the amendment's
+causal claim is better supported than when written.
+
+That exchange only happened because the C09 amendment requires recording the concrete image
+version on every run. **This was the first observed hosted-image drift**, and the requirement is
+what made it visible — and then what made it dismissible on evidence rather than on assumption.
+
+#### The ceiling is recovery capacity, not a fix
+
+20 minutes restores measured headroom; it does not address serial cost growth. 81 of 146 cases
+execute the full DOM suite, so each DOM assertion added is paid 81 times. Bounded internal
+concurrency, retaining one aggregating `mutation coverage` job and one complete verdict, is
+reserved for separate work under its own review. No optimisation may omit cases, weaken isolation,
+accept a partial summary or change the stable check identity.
+
 
 ### 2026-10-10 — #47 exceeded C12; measured 20-minute amendment drafted
 
