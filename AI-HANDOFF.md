@@ -97,15 +97,30 @@ the 15-minute ceiling, with no final summary — a valid failure, not a flake.
 **The comparison is image-controlled**, which it was not when the amendment was first drafted:
 
 ```
-image 20261004.327.1, 137 cases   679s   (#48 head run 38108891020)
-image 20261004.327.1, 137 cases   684s   (exact main run 38111366496)
-image 20261004.327.1, 146 cases  –916s   (#47 head run 38103799949, cancelled at the ceiling)
+all figures are GitHub mutation-JOB durations, started_at -> completed_at
+
+image 20261004.327.1, 137 cases    679s   (#48 head        38108891020)
+image 20261004.327.1, 137 cases    686s   (exact main      38111366496)
+image 20261004.327.1, 137 cases    709s   (#49 superseded  38112352386)
+image 20261004.327.1, 146 cases   ≥916s   (#47 head        38103799949, cancelled at the ceiling)
 ```
 
-The same corpus on the same image costs ~680s, inside the 675–707s band measured on the previous
-image. That supports **no material image-driven slowdown for the 137-case corpus** — which is
-weaker than what this block first claimed, that the refresh contributes nothing measurable, and is
-all three controlled runs can carry.
+**One metric throughout: the GitHub job duration.** A mutation run yields two numbers that differ
+by a few seconds — the suite step and the enclosing job, which also pays for setup, checkout and
+cleanup. Run `38112352386` is 701s at the step and 709s at the job. Mixing them silently shrinks
+or inflates a comparison, so every figure above is the job duration, read from `started_at` and
+`completed_at`.
+
+The same corpus on the same image spans 679–709s, against the 675–707s band measured on the
+previous image. It is **not** strictly inside that band: the top of the new range is 2 seconds
+above the top of the old. At this resolution that is noise, and it is two orders short of the
+≥237s that corpus growth produced. The old band is itself a job-duration figure, checked on one
+of its runs — promotion run `37181771627`, mutation job 06:05:18Z to 06:16:59Z, 701 seconds —
+so the two are comparable rather than assumed so.
+
+Three controlled runs therefore support **no material image-driven slowdown for the 137-case
+corpus** — weaker than what this block first claimed, that the refresh contributes nothing
+measurable, and all the evidence can carry.
 
 **916s is a censored lower bound, not a cost.** The run was killed at the ceiling, so the 146-case
 corpus costs **at least** 916 seconds and its completed cost is unknown. Two claims written here
@@ -123,9 +138,10 @@ here on a bound.
 **Evidence this claim commits to**
 
 1. Attempt-1 green on the final PR head and again on the exact `main` merge commit. This
-   correction moves the head, so the superseded head's green run (`38112352386`, 137 of 137 in
-   701s) stands as corpus-cost evidence only and is **not** offered as final-head evidence; the
-   replacement head earns its own attempt-1 run.
+   correction moves the head, so a superseded head's green run stands as corpus-cost evidence only
+   and is **not** offered as final-head evidence; each replacement head earns its own attempt-1
+   run. Superseded so far: `38112352386` at `b381b90` (137 of 137; suite step 701s, job 709s)
+   and the run at `bdaf01f`.
 2. Each job's `Image`, image `Version` and `Image Release`, taken from the image line and not the
    runner-agent `Version` line that prints first and looks identical.
 3. The workflow diff confirmed to contain no change beyond the one timeout value.
@@ -624,7 +640,8 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 The C12 amendment merged and is authoritative at 5/10/20 minutes. Exact-`main` run
 `38111366496`, attempt 1, `event=push`, passed the **unchanged** required-check gate at 425 pure,
 436 DOM and 137 of 137 mutations with 137 verdict lines, on `ubuntu-24.04` image
-`20261004.327.1`, in roughly 684 seconds. No ruleset change, no bypass, no rerun.
+`20261004.327.1`, in a 686-second job — corrected from “roughly 684 seconds”, which mixed
+metrics; the job ran 04:22:19Z to 04:33:45Z. No ruleset change, no bypass, no rerun.
 
 #### The recovery path preserved the gate, and Claude's deadlock claim was wrong
 
