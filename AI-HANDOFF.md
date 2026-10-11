@@ -14,9 +14,8 @@ verification**, the **#28 production verification**, the **#31 documentation dep
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
-**#42 closeout deploy**, the **#43 C09 amendment deploy**, and the **#44 runner-family deploy**, which
-Codex and Claude verified
-independently. The #26 checks were unauthenticated HTTP
+**#42 closeout deploy**, the **#43 C09 amendment deploy**, the **#44 runner-family deploy**, the **#45 convention deploy**, and the
+**#46 brief-intake deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -61,31 +60,81 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family amendment | #43 merged in `6c2166f`; reviewed read-only with no findings; exact-`main` run passed attempt 1 on image `ubuntu-24.04` version `20260927.320.1` | Closed; the amended C09 is authoritative |
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
-| October 9 Phase 1 engineering brief | Owner-approved PW-101 through PW-106 brief received and preserved on `codex/oct9-phase1-intake`; current implementation baseline inspected | Documentation intake in progress. Codex maps acceptance to the current architecture; Claude implements later under separate claims |
+| October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106, and its volatile live-state SHA was corrected before merge | Closed. Implementation proceeds unit by unit under separate claims |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | Claimed on `claude/pw101-pw102-alert-navigation`; implements AC-101-01..08 and AC-102-01..08 under the owner's binding link-model decisions | Claude implements; Codex reviews read-only; the owner decides merge |
 
 ### Active claims
 
-**October 9 Phase 1 engineering brief intake — ChatGPT Codex,
-`codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
-before editing any other file. Branched from synchronized `main` at `a14d31f` after confirming
-through GitHub that no pull request is open.
+**October Phase 1 PW-101/PW-102 — alert navigation and source links — Claude Code,
+`claude/pw101-pw102-alert-navigation`.** Claimed 2026-10-10 before editing any application file,
+in its own commit ahead of the work, on the owner's explicit authorization. Rebased onto `main`
+after #46 merged, with the board overlap resolved on this branch.
 
-Scope:
+Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
+**AC-101-01 through AC-101-08 and AC-102-01 through AC-102-08**, plus the owner's binding decisions
+recorded below.
 
-1. Preserve the owner-approved October 9 brief in the repository as the shared authority for
-   PW-101 through PW-106, with a filename that distinguishes this new UI phase from the historical
-   source-health Phase 1 already recorded in this project.
-2. Record the concrete current-code baseline for the five requested improvements and map the
-   approved Codex-specification / Claude-implementation split onto the recommended delivery order.
-3. Absorb #45's unavoidable self-close: it merged as `a14d31f`, so the remote-branch convention is
-   no longer active work. No remote branch deletion is authorized.
-4. Identify conflicts or verification dependencies without changing the owner's locked product
-   decisions or silently weakening existing architecture and source-truthfulness contracts.
+**What the mandatory inspection found, before any code**
 
-Files claimed: `AI-HANDOFF.md` and a new documentation-only copy of the October 9 implementation
-brief. No edit to `AGENTS.md`, `index.html`, `api/`, tests, workflow, configuration, dependencies,
-ruleset, Vercel settings or production. This claim does not implement PW-101 through PW-106 and
-does not authorize a merge; Claude may review this intake read-only.
+1. **One function is the root cause of both tickets.** `alertUrl(f)` returns `f.id`, which for NWS
+   *is* the machine-readable API product URL, and `priorityCard()` renders it as an outbound
+   `Official NWS alert` link.
+2. **The Alerts rows carry no external link at all.** So PW-102 is partly **additive**, and
+   AC-102-05 holds today by accident rather than by design.
+3. **There is no routing layer.** Navigation is `switchView()` on tab buttons; nothing reads or
+   writes `location.hash` or `history`. AC-101-06 and AC-101-07 therefore add history surface.
+4. **Existing alert fixtures carry no `id`.** Every fixture is `{ properties: {...} }`, so
+   `alertUrl()` returns null under test and the outbound API link is **unexercised by any current
+   test**.
+
+**Binding decisions this unit implements** (owner, relayed through Codex)
+
+- **Tier 3 satisfies AC-102-03** when no verified per-alert HTML page exists: an official NWS
+  office or hazard page, **labelled as a general source, never as the specific alert**.
+- The full alert stays readable inside Pacific Watch.
+- Verified tier-1/tier-2 links are used when genuinely supplied. **Nothing is fabricated.**
+- **No speculative per-provider resolution layer.**
+- The link model distinguishes an exact-alert link from a general-source link **by an intentional
+  label**, not by hoping the reader infers it.
+- **Canonical/source ID, machine API URL and human-readable URL stay three separate concepts.**
+- **A missing source ID produces no individual deep link** and never falls back to title matching.
+  Navigation fixtures gain realistic distinct IDs; a graceful missing-ID case is retained.
+- Health states stay `loading`, `current`, `stale`, `unavailable`. **`REFERENCE` remains a
+  presentation badge, not a health state.**
+- **Only a successful authoritative refresh confirming absence may call a deep-linked alert expired
+  or inactive. A failed NWS fetch must say the target could not be verified** — the distinction
+  between "gone" and "unverified" is the same truthfulness rule the observation contract enforces.
+- **iOS Safari stays `NOT TESTED`** absent a real device.
+
+**Preserved, explicitly**
+
+Last-known-good retention and its per-source policies, the eligibility filter, dedupe, sort and the
+no-display-truncation rule, the observation clock and T01-T17, the news pipeline and hazard
+classifier, `esc()` and `safeUrl()`, cache identity, and the CI workflow.
+
+**Expected cost that is not a surprise**
+
+This changes render paths that **137 mutation anchors** sit in, and `AGENTS.md` requires zero
+`ANCHOR LOST`. Anchor revalidation is part of this unit, not cleanup after it.
+
+**Evidence limits stated up front**
+
+There were **no active Hawai'i NWS alerts** at claim time, so the id shape could not be sampled
+live and the work is fixture-driven. Baseline before any change: `npm test` 425, `test:dom` 436,
+`test:mutation` 137 of 137.
+
+**Out of scope**
+
+PW-103, PW-104, PW-105 and the PW-106 consolidated validation are separate units. No
+authentication, subscription, payment, premium, saved-location, notification or AI work. No product
+rename or branding change. No `api/`, `vercel.json`, dependency, `AGENTS.md`, contract or workflow
+edit. No ruleset change. No remote branch deletion.
+
+**Absorbed into this claim**
+
+#46's self-close, since a board PR cannot record its own merge: the attribution header, Current
+Work row, Active claims block, Active Branches row and the `main` pointer — five items — plus the
+Handoff Log entry for the merge.
 
 **Closed: remote-branch verification convention — ChatGPT Codex,
 `codex/remote-branch-verification`.** Owner-authorized 2026-10-04 documentation-only claim,
@@ -333,7 +382,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | codex/oct9-phase1-intake | Preserves and reconciles the owner-approved October 9 PW-101–PW-106 engineering brief. Documentation only; no application implementation or merge authorized |
+| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -359,7 +408,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #45 and serving production.** Claims and handoffs for
+**`main` is merged through #46 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application or workflow implementation is in flight.** The only active work is Codex's
@@ -516,6 +565,47 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-10 — #46 merged; October Phase 1 PW-101/PW-102 claimed
+
+The owner-approved October 9 engineering brief is preserved on `main` as the shared authority for
+PW-101 through PW-106. Codex's intake was documentation-only and its volatile live-state SHA was
+corrected before merge, so the live pointer keeps the stable form the `AGENTS.md` rule requires.
+
+Claude reviewed the intake read-only and raised one finding on it: the pointer had been changed to
+name `main`'s current head, re-adding a branch-head SHA to a live current-state entry one PR after
+#45 made that rule durable. Corrected before merge.
+
+#### What the PW-101/PW-102 inspection established before any code
+
+`alertUrl(f)` returning `f.id` is the single root cause of both tickets — for NWS that *is* the API
+product URL, and `priorityCard()` renders it as an outbound link. The Alerts rows carry **no**
+external link at all, so PW-102 is partly additive and AC-102-05 passes today by accident. There is
+**no routing layer**: navigation is `switchView()` on tab buttons with nothing touching `hash` or
+`history`, so AC-101-06 and AC-101-07 add new surface. And **every existing alert fixture lacks an
+`id`**, so `alertUrl()` returns null under test and the outbound API link has never been exercised
+by a test.
+
+#### The owner's binding link-model decisions
+
+Tier 3 satisfies AC-102-03 where no verified per-alert HTML page exists, using an official office
+or hazard page labelled as a general source rather than the specific alert, with the full alert
+readable in-app. Canonical/source ID, machine API URL and human-readable URL remain three separate
+concepts. A missing source ID yields no individual deep link and never falls back to title
+matching. `REFERENCE` stays a presentation badge rather than becoming a health state.
+
+**The truthfulness rule carried into navigation:** only a successful authoritative refresh that
+confirms absence may call a deep-linked alert expired or inactive. A failed NWS fetch must say the
+target could not be verified. That is the same distinction between absence and ignorance that the
+observation contract enforces for measurements, applied to deep links.
+
+#### A vocabulary mismatch settled rather than silently reconciled
+
+PW-106A asks to preserve "OK / UNKNOWN / REFERENCE". The implemented states are `loading`,
+`current`, `stale` and `unavailable`; `REFERENCE` is a badge on the PTWC row and `badge-unknown` a
+CSS class. The implemented vocabulary is preserved and no state was invented to match the brief's
+wording.
+
 
 ### 2026-10-10 — owner-approved October Phase 1 brief received; documentation intake claimed
 
