@@ -35,6 +35,140 @@ const apiSrc = fs.readFileSync(path.join(ROOT, 'api', 'news.js'), 'utf8').replac
 const SUBJECT = { html: { src: src, ext: '.html' }, api: { src: apiSrc, ext: '.js' } };
 
 const mutations = [
+  /* ---- PW-101 / PW-102, October Phase 1 ------------------------------------------------
+
+     Each case restores a defect the ticket was filed about, or collapses a distinction the
+     owner made binding. The truthfulness pair matters most: conflating "gone" with "could not
+     check" is the same error the observation contract exists to prevent, now reachable through
+     a deep link instead of a measurement. */
+
+  /* ---- the history lifecycle, from Codex's review of the rebased #47 head --------------
+
+     The original code switched to Alerts when a fragment carried a key and did nothing when it
+     did not, which left four separate defects behind one gap. These cases restore each of them
+     individually, so none can regress under cover of the others. */
+
+  /* The first version of this case also expected 'and leaves no fragment behind'. That assertion
+     checks the URL after Back, which the BROWSER clears whether or not the view follows it — so it
+     cannot discriminate this mutation, and since expect is a conjunction the case was reported
+     MISSED despite genuinely breaking three assertions. Expect only what the mutation breaks. */
+  { name: 'Back to the hashless state strands the reader in Alerts',
+    from: "  } else if (changed && S.view === 'alerts') {",
+    to:   "  } else if (false) {",
+    expect: ['AC-101-06 Back from the first alert returns to Overview',
+             'and one more Back ends the session at the origin'],
+    suite: 'dom' },
+
+  { name: 'leaving Alerts by tab keeps the stale fragment',
+    from: "  if (v !== 'alerts' && S.selectedAlertKey) {",
+    to:   "  if (false) {",
+    expect: ['leaving Alerts by tab clears the stale fragment',
+             'AC-101-06 re-selecting the SAME alert reopens Alerts',
+             'AC-101-07 a refresh after leaving Alerts stays on Overview'],
+    suite: 'dom' },
+
+  /* The fragment is stripped with replaceState. Putting the hash back into the replacement URL
+     is the subtle version of the same bug: the view changes, the URL does not. */
+  { name: 'the fragment survives the replaceState that is meant to strip it',
+    from: "    window.history.replaceState(null, '', location.pathname + location.search);",
+    to:   "    window.history.replaceState(null, '', location.pathname + location.search + location.hash);",
+    expect: ['leaving Alerts by tab clears the stale fragment',
+             'AC-101-06 re-selecting the SAME alert reopens Alerts'],
+    suite: 'dom' },
+
+  /* Back returns to the origin, not unconditionally to Overview. */
+  { name: 'Back always returns to Overview, ignoring where the reader came from',
+    from: "    const back = S.alertHashReturnView || 'overview';",
+    to:   "    const back = 'overview';",
+    expect: ['and Back returns to Alerts, not Overview'],
+    suite: 'dom' },
+
+  /* Recording the origin on every hash application instead of once per session makes A -> B
+     overwrite it with 'alerts', so Back can never leave the session. */
+  { name: 'the origin is overwritten each time the fragment changes',
+    from: "    if (!S.alertHashReturnView) S.alertHashReturnView = S.view;",
+    to:   "    S.alertHashReturnView = S.view;",
+    expect: ['the origin survives moving between alerts',
+             'and one more Back ends the session at the origin'],
+    suite: 'dom' },
+
+  { name: 'the Overview card links out to the API again',
+    from: "    ? '<a class=\"pri-link\" href=\"#' + ALERT_HASH_PREFIX + key + '\">View alert details</a>'",
+    to:   "    ? '<a class=\"pri-link\" href=\"' + alertApiUrl(f) + '\" target=\"_blank\" rel=\"noopener noreferrer\">Official NWS alert</a>'",
+    expect: ['AC-101-03 the priority card links inward, not to the API',
+             'AC-101-03 and no Overview control points at api.weather.gov'],
+    suite: 'dom' },
+
+  /* A title-derived key is the fallback the brief forbids: two identically titled products
+     collapse onto one address, which is exactly AC-101-04. */
+  { name: 'alertKey falls back to a title-derived key',
+    from: '  const id = alertSourceId(f);\n  if (!id) return \'\';',
+    to:   '  const id = alertSourceId(f) || ((f.properties && f.properties.event) || \'\');\n  if (!id) return \'\';',
+    expect: ['no id means no per-alert link',
+             'two identically titled id-less alerts produce no addresses at all'],
+    suite: 'dom' },
+
+  /* The binding decision is that a missing provider id yields NO address at all. */
+  /* The first version of this case mutated `const tail = ...`, which the guard above makes
+     unreachable: alertKey() returns before it when there is no id. It was reported MISSED with
+     zero failures, which is what an unreachable mutation looks like. Mutating the guard itself
+     gives every id-less alert one shared address instead. */
+  { name: 'a missing provider id still gets an address',
+    from: "  if (!id) return '';",
+    to:   "  if (!id) return 'unknown';",
+    expect: ['no id means no per-alert link',
+             'and the row carries no address'],
+    suite: 'dom' },
+
+  /* THE truthfulness case: a failed fetch must not be reported as the alert being gone. */
+  { name: 'a failed fetch reports the alert as gone rather than unverified',
+    from: "  if (snap.sourceState === 'current') return { state: 'gone' };",
+    to:   "  return { state: 'gone' };",
+    expect: ['a failed fetch says it could not be verified',
+             'and never says it is no longer active'],
+    suite: 'dom' },
+
+  /* An island-filtered alert is active. Calling it expired is a false statement about NWS data. */
+  { name: 'an island-filtered alert is reported as expired',
+    from: "    return { state: expired ? 'expired' : 'filtered', feature: anywhere };",
+    to:   "    return { state: 'expired', feature: anywhere };",
+    expect: ['an island-filtered alert is reported hidden, not expired',
+             'and explicitly says it has not expired'],
+    suite: 'dom' },
+
+  /* The notice was once omitted from the empty-list branch, so an island filter hid the answer
+     entirely. The test caught it; this keeps it caught. */
+  /* The unavailable path is a SECOND early return that skips renderAlerts() entirely. Dropping
+     the notice there leaves a reader following a link during an NWS outage with a generic outage
+     row and no answer about their alert. */
+  { name: 'the deep-link notice is dropped when NWS is unavailable',
+    from: "    const deep = snap ? selectedAlertNotice(resolveSelectedAlert(snap), snap) : '';",
+    to:   "    const deep = '';",
+    expect: ['a deep link still gets an answer when NWS is unreachable'],
+    suite: 'dom' },
+
+  { name: 'the deep-link notice is dropped when the visible list is empty',
+    from: '    container.innerHTML = note + deepNotice + body + ptwcNote;',
+    to:   '    container.innerHTML = note + body + ptwcNote;',
+    expect: ['an island-filtered alert is reported hidden, not expired'],
+    suite: 'dom' },
+
+  /* PW-102. An api host is a data endpoint whatever field it arrived in. */
+  { name: 'an api host is accepted as a human-readable destination',
+    from: "    if (u !== '#' && !isAlertCollectionUrl(u) && !/^https?:\\/\\/api\\./i.test(u)) {",
+    to:   "    if (u !== '#') {",
+    expect: ['AC-102-06 a collection endpoint never becomes the destination',
+             'AC-102-06 a collection query never becomes the destination'],
+    suite: 'dom' },
+
+  /* The label is the whole mechanism by which a general source cannot masquerade as the alert. */
+  { name: 'the general source is labelled as the exact alert',
+    from: "  if (isNws) return { href: NWS_OFFICE_URL, label: 'NWS Honolulu — general source', exact: false };",
+    to:   "  if (isNws) return { href: NWS_OFFICE_URL, label: 'Official NWS alert', exact: true };",
+    expect: ['AC-102-01 and says so in the label rather than implying the exact alert',
+             'the label is machine-readable too, so callers cannot confuse the two'],
+    suite: 'dom' },
+
   { name: 'island filter dropped from nwsEligible',
     from: '    .filter(f => alertMatchesIsland(f, S.island))',
     to:   '    .filter(f => true)',
@@ -105,8 +239,8 @@ const mutations = [
 
   /* PR 3 review defects. Each mutation restores the defect that was reported. */
   { name: 'the Alerts list caps at twelve products again',
-    from: '  container.innerHTML = note + filtered.map(f => {',
-    to:   '  container.innerHTML = note + filtered.slice(0,12).map(f => {',
+    from: '  container.innerHTML = note + deepNotice + filtered.map(f => {',
+    to:   '  container.innerHTML = note + deepNotice + filtered.slice(0,12).map(f => {',
     expect: ['the Alerts view lists all twenty'] },
 
   { name: 'the earthquake card survives an island switch',
@@ -142,9 +276,12 @@ const mutations = [
     to:   "    + '<span class=\"pri-event\">' + (p.event || 'Alert') + '</span></div>'",
     expect: ['no injected element was created in the priority card'] },
 
+  /* PW-101 removed the Overview card's outbound link, so this anchor moved to the Alerts row's
+     source link — which is now the new-tab link the rel assertion actually examines. The case
+     still guards the same property: a new-tab link that keeps noopener but drops noreferrer. */
   { name: 'a new-tab link drops noreferrer',
-    from: '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener noreferrer">',
-    to:   '<a class="pri-link" href="\' + url + \'" target="_blank" rel="noopener">',
+    from: "link.href + '\" target=\"_blank\" rel=\"noopener noreferrer\"'",
+    to:   "link.href + '\" target=\"_blank\" rel=\"noopener\"'",
     expect: ['every one carries noopener AND noreferrer'] },
 
   { name: 'the loading aggregate claims a refresh while sources are still checking',

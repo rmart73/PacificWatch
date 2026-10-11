@@ -178,6 +178,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .pri-area{font-size:11.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
 .pri-meta{font-size:10.5px;color:var(--ink3);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .pri-link{color:var(--sky);font-weight:600;text-decoration:none}
+/* PW-101. The Overview control is an <a> when the alert has a provider id and a <button> when it
+   does not, so both must look identical. Resetting the button's UA chrome is what makes that true
+   rather than approximately true. */
+button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;text-align:left}
 .pri-none{padding:12px 16px;font-size:12px;color:var(--ink3);border-bottom:1px solid var(--rule);background:var(--card)}
 #priority-viewall{padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--card)}
 .viewall-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--sky);border:1px solid var(--rule);background:transparent;border-radius:20px;padding:6px 13px;cursor:pointer}
@@ -197,6 +201,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .alert-item{padding:13px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:5px;transition:background .15s;-webkit-tap-highlight-color:transparent}
 .alert-item:last-child{border-bottom:none}
 .alert-item:active{background:var(--surf)}
+/* PW-101. The deep-linked row. A left border plus a tinted ground rather than colour alone, so
+   the selection is still visible to a reader who cannot distinguish the accent hue. */
+.alert-item.is-selected{background:var(--surf);border-left:3px solid var(--sky);padding-left:13px}
+.alert-item.is-selected:focus-visible{outline:2px solid var(--sky);outline-offset:-2px}
+.alert-detail{font-size:12px;color:var(--ink2);line-height:1.5;margin-top:4px}
+.alert-detail p{margin:0 0 6px}
+.alert-detail p:last-child{margin-bottom:0}
 .badge{display:inline-flex;align-items:center;font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:3px;width:fit-content}
 .badge-warn{background:var(--b-warn-bg);color:var(--b-warn-fg)}
 .badge-alert{background:var(--b-alert-bg);color:var(--b-alert-fg)}
@@ -1009,6 +1020,16 @@ const S = {
   newsFilter: 'hazard',
   newsSources: null,   // Set of enabled outlet names; populated below
 
+  /* PW-101. The deep-linked alert key, or '' for none. Held here rather than read from
+     location.hash at render time so one navigation decision is made in one place, and so the
+     Alerts list can be re-rendered on refresh without re-parsing the URL. */
+  selectedAlertKey: '',
+
+  /* PW-101. Where the reader was standing when a deep link took them to Alerts, so Back can put
+     them back there instead of stranding them in Alerts with nothing selected. Only the first
+     hash-driven switch records it; moving between two alert hashes must not overwrite the origin. */
+  alertHashReturnView: '',
+
   alertsCache: []
 };
 
@@ -1220,7 +1241,30 @@ function saveKey(context) {
   showToast('API key saved');
 }
 
+/* PW-101. Strips the alert fragment without firing hashchange and without adding a history entry.
+   replaceState is the point: the URL is being corrected to match a view change the reader already
+   made, not navigated to. */
+function clearAlertHash() {
+  if (!alertKeyFromHash()) return;
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', location.pathname + location.search);
+  } else {
+    location.hash = '';
+  }
+}
+
 function switchView(v) {
+  /* The fragment asserts "an alert is selected". Leaving Alerts by tab or in-app route makes that
+     false, so the URL is corrected to match rather than left contradicting the screen. Skipping
+     this strands a stale fragment with three consequences: re-selecting the same alert changes
+     nothing in the URL, so no hashchange fires and Alerts never reopens; a refresh reopens the
+     view the reader had deliberately left; and Back lands on a fragment that no longer describes
+     anything. */
+  if (v !== 'alerts' && S.selectedAlertKey) {
+    S.selectedAlertKey = '';
+    S.alertHashReturnView = '';
+    clearAlertHash();
+  }
   S.view = v;
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   const t = document.getElementById('view-' + v);
@@ -1362,6 +1406,10 @@ function nwsSnapshot() {
        let a page left open keep advancing the time it claims to have checked. */
     checkedAt: S.sourceHealth.nwsAlerts ? S.sourceHealth.nwsAlerts.lastSuccess : null,
     features: [],
+    /* PW-101. The pre-eligibility list, so deep-link resolution can tell "this alert expired"
+       from "this alert is hidden by your island selection". Conflating those would report a live
+       Kauai warning as expired to a reader viewing Maui, which is false. */
+    allFeatures: [],
     total: 0,
     counts: { warning: 0, watch: 0, advisory: 0, statement: 0 },
     other: 0,
@@ -1380,6 +1428,7 @@ function nwsSnapshot() {
   if (state === 'unavailable') { snap.presentation = 'unavailable'; return snap; }
   if (raw == null) { snap.presentation = snap.stale ? 'stale-empty' : 'checking'; return snap; }
 
+  snap.allFeatures = (raw || []).slice();
   snap.features = nwsEligible(raw);
   snap.total = snap.features.length;
   snap.features.forEach(x => {
@@ -1401,12 +1450,189 @@ function nwsSnapshot() {
    and a route to the rest. Never a summary that hides how many are active. */
 const PRIORITY_MAX = 3;
 
-function alertUrl(f) {
-  /* NWS returns the canonical product URL as the feature id. Anything else is not linked
-     rather than rendered as a live-looking dead link. */
+/* ALERT IDENTITY AND LINK MODEL — PW-101/PW-102.
+
+   Three concepts, deliberately not one `url` field:
+
+     alertSourceId()    the provider's own identifier, preserved verbatim
+     alertApiUrl()      the machine-readable product URL, provenance only
+     alertSourceLink()  a human-readable destination carrying its own label
+
+   This existed as a single alertUrl() that returned the source id — which for NWS *is* the API
+   product URL — and the Overview card rendered it as "Official NWS alert". That sent readers to
+   JSON. Keeping the three ideas apart is what stops that recurring, so they are not recombined. */
+
+/* The fragment Overview links to and the Alerts view resolves. One constant so the producer and
+   the consumer cannot drift apart. */
+const ALERT_HASH_PREFIX = 'alert=';
+
+function alertSourceId(f) {
   const raw = (f && (f.id || (f.properties && f.properties['@id']))) || '';
-  const u = safeUrl(raw);
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
+/* A URL-safe key for deep links, derived ONLY from the provider id. No composite of event, area
+   or title: a missing id yields '' and that alert simply gets no deep link. Title-derived keys
+   would collide across identically titled products, which is the case AC-101-04 exists to catch,
+   and the owner's binding decision forbids the fallback outright. */
+function alertKey(f) {
+  const id = alertSourceId(f);
+  if (!id) return '';
+  /* NWS ids are URIs ending in a urn:oid; the last path segment is the stable part. Encoding it
+     keeps it safe in a fragment without inventing our own hash, which could collide silently. */
+  const tail = id.split('/').pop() || id;
+  return encodeURIComponent(tail);
+}
+
+/* Machine-readable only. Retained for provenance and never presented as a reader destination. */
+function alertApiUrl(f) {
+  const u = safeUrl(alertSourceId(f));
   return u === '#' ? null : u;
+}
+
+/* An alerts COLLECTION endpoint is a list, not an alert. AC-102-02 forbids presenting one as the
+   alert, and it is the specific mistake this ticket was filed about. */
+function isAlertCollectionUrl(u) {
+  return /^https?:\/\/api\.weather\.gov\/alerts\/?(\?|#|$)/i.test(u || '');
+}
+
+const NWS_OFFICE_URL = 'https://www.weather.gov/hfo';
+
+/* Tier 1/2 when the provider genuinely supplies a human-readable page; tier 3 — the issuing
+   office, labelled as a general source — for NWS products, which do not reliably have a per-alert
+   public page; tier 4, no link at all, for anything else. No per-provider resolution layer.
+
+   The label travels WITH the href rather than being chosen at the call site, so a general source
+   cannot be rendered with exact-alert wording. `exact` is the machine-readable form of the same
+   fact, for tests and for callers that need to distinguish the two. */
+function alertSourceLink(f) {
+  const p = (f && f.properties) || {};
+  const web = typeof p.web === 'string' ? p.web.trim() : '';
+  if (web) {
+    const u = safeUrl(web);
+    /* An api.* host is a data endpoint whatever the field it arrived in; a collection URL is a
+       list. Neither is a reader destination, so both fall through to the office link. */
+    if (u !== '#' && !isAlertCollectionUrl(u) && !/^https?:\/\/api\./i.test(u)) {
+      return { href: u, label: 'Official alert page', exact: true };
+    }
+  }
+  const isNws = /api\.weather\.gov/i.test(alertSourceId(f)) || /NWS|National Weather/i.test(p.senderName || '');
+  if (isNws) return { href: NWS_OFFICE_URL, label: 'NWS Honolulu — general source', exact: false };
+  return null;
+}
+
+/* DEEP-LINK RESOLUTION — PW-101, AC-101-07 and AC-101-08.
+
+   The outcomes below are deliberately distinct, because collapsing them commits the error the
+   observation contract exists to prevent: reporting absence when the truth is ignorance.
+
+     visible in the list                  -> select it
+     absent, but present in refreshed data-> say WHY: expired, or hidden by the island filter
+     absent entirely, source `current`    -> genuinely no longer active
+     source not `current`                 -> we could not verify it; say exactly that
+
+   Only `sourceState === 'current'` means NWS actually answered, so only that state may assert an
+   alert is gone. A failed or stale fetch says unverified. */
+
+function alertKeyFromHash() {
+  const h = (location.hash || '').replace(/^#/, '');
+  if (h.indexOf(ALERT_HASH_PREFIX) !== 0) return '';
+  return h.slice(ALERT_HASH_PREFIX.length);
+}
+
+function resolveSelectedAlert(snap) {
+  const key = S.selectedAlertKey;
+  if (!key) return { state: 'none' };
+  const hit = (snap.features || []).find(f => alertKey(f) === key);
+  if (hit) return { state: 'found', feature: hit };
+  const anywhere = (snap.allFeatures || []).find(f => alertKey(f) === key);
+  if (anywhere) {
+    const exp = anywhere.properties && anywhere.properties.expires;
+    const expired = exp ? new Date(exp).getTime() <= Date.now() : false;
+    return { state: expired ? 'expired' : 'filtered', feature: anywhere };
+  }
+  if (snap.sourceState === 'current') return { state: 'gone' };
+  /* Nothing has been attempted yet. That is not the same as a failed fetch, and saying "could
+     not be verified" during the first load would be a false report of failure. */
+  if (snap.sourceState === 'loading') return { state: 'checking' };
+  return { state: 'unverified' };
+}
+
+/* The notice shown when a deep link cannot be honoured. Wording is the whole point: three of
+   these four are NOT "expired", and only one of them asserts the alert is gone. */
+function selectedAlertNotice(res, snap) {
+  if (res.state === 'none' || res.state === 'found') return '';
+  const base = '<div class="alert-item" id="alert-deeplink-notice"><span class="badge badge-unknown">';
+  if (res.state === 'expired') {
+    return base + 'EXPIRED</span><div class="alert-title">That alert has expired</div>'
+      + '<div class="alert-meta">It was active when the link was made. NWS Honolulu · Checked '
+      + esc(checkedTime(snap)) + '</div></div>';
+  }
+  if (res.state === 'filtered') {
+    return base + 'HIDDEN</span><div class="alert-title">That alert is active but hidden by your island filter</div>'
+      + '<div class="alert-meta">Switch to Statewide in Settings to see it. It has not expired.</div></div>';
+  }
+  if (res.state === 'gone') {
+    return base + 'NOT ACTIVE</span><div class="alert-title">That alert is no longer active</div>'
+      + '<div class="alert-meta">NWS answered and does not list it. Checked ' + esc(checkedTime(snap))
+      + '</div></div>';
+  }
+  if (res.state === 'checking') {
+    return base + 'CHECKING</span><div class="alert-title">Looking for that alert…</div>'
+      + '<div class="alert-meta">NWS has not answered yet. This is not a result.</div></div>';
+  }
+  /* unverified — the honest state when we could not reach NWS. It must not read as all-clear. */
+  return base + 'UNVERIFIED</span><div class="alert-title">That alert could not be verified</div>'
+    + '<div class="alert-meta">NWS could not be reached, so we cannot say whether it is still '
+    + 'active. Last verified ' + esc(snap.verifiedAge) + '</div></div>';
+}
+
+/* Applies the URL fragment to view and selection. Called on load, on hashchange — which covers
+   Back and Forward without a router — and after refreshes so a selection survives new data. */
+function applyAlertHash() {
+  const key = alertKeyFromHash();
+  const changed = key !== S.selectedAlertKey;
+  S.selectedAlertKey = key;
+  if (key) {
+    /* Record the origin once, when a deep-link session begins. Moving from alert A to alert B must
+       not overwrite it, and a link followed from inside Alerts records Alerts — so Back returns
+       the reader where they actually were, not always to Overview. */
+    if (!S.alertHashReturnView) S.alertHashReturnView = S.view;
+    switchView('alerts');
+  } else if (changed && S.view === 'alerts') {
+    /* Back cleared the fragment, so the selection it described is gone. The URL is the router, so
+       the view follows it home instead of leaving the reader in Alerts with nothing selected and
+       no way to tell that Back did anything. The origin view is restored when one was recorded;
+       a deep link followed from inside Alerts returns to Alerts, which is where it started. */
+    const back = S.alertHashReturnView || 'overview';
+    S.alertHashReturnView = '';
+    switchView(back);
+  }
+  if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
+  if (key && changed) focusSelectedAlert();
+}
+
+function focusSelectedAlert() {
+  const el = document.querySelector('#nws-alerts-container .alert-item.is-selected');
+  if (!el) {
+    const notice = document.getElementById('alert-deeplink-notice');
+    if (notice && notice.scrollIntoView) notice.scrollIntoView({ block: 'center' });
+    return;
+  }
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  /* The header is sticky, so scrollIntoView({block:'start'}) tucks the row underneath it.
+     Measure the sticky chrome instead of hard-coding a height that drifts with the safe-area
+     inset and with the desktop tab bar appearing at wider widths. */
+  let offset = 12;
+  const header = document.querySelector('.app-header');
+  const tabs = document.querySelector('.desktop-tabs');
+  if (header && header.getBoundingClientRect) offset += header.getBoundingClientRect().height || 0;
+  if (tabs && tabs.getBoundingClientRect) offset += tabs.getBoundingClientRect().height || 0;
+  if (el.getBoundingClientRect && window.scrollTo) {
+    const top = el.getBoundingClientRect().top + (window.pageYOffset || 0) - offset;
+    window.scrollTo({ top: top < 0 ? 0 : top, behavior: 'auto' });
+  }
+  if (el.focus) el.focus({ preventScroll: true });
 }
 
 function priorityCard(f) {
@@ -1416,14 +1642,24 @@ function priorityCard(f) {
   /* Expiry is stated or explicitly absent; it is never invented. */
   const expMs = p.expires ? new Date(p.expires).getTime() : NaN;
   const expiry = isNaN(expMs) ? 'Expiry not provided' : 'Expires ' + fmtTime(new Date(expMs));
-  const url = alertUrl(f);
+  /* PW-101: this was an outbound link to alertUrl() \u2014 the NWS API product URL, i.e. JSON, labelled
+     "Official NWS alert". It now routes INWARD to the Alerts section.
+
+     A real <a href="#alert=KEY"> rather than a click handler, because that gets deep links,
+     Back/Forward and refresh restoration from the browser itself instead of from a routing
+     framework the brief told us not to add. An alert with no provider id gets no key and so no
+     per-alert link: it still opens the section, it just cannot be addressed. */
+  const key = alertKey(f);
+  const open = key
+    ? '<a class="pri-link" href="#' + ALERT_HASH_PREFIX + key + '">View alert details</a>'
+    : '<button type="button" class="pri-link" onclick="goToAlerts()">View in Alerts</button>';
   return '<div class="pri-card">'
     + '<div class="pri-top"><span class="badge ' + (tier ? tier.badge : 'badge-unknown') + '">'
     + esc(tier ? tier.label : 'ACTIVE') + '</span>'
     + '<span class="pri-event">' + esc(p.event || 'Alert') + '</span></div>'
     + (area ? '<div class="pri-area">' + esc(area) + '</div>' : '')
     + '<div class="pri-meta"><span>' + esc(expiry) + '</span><span>NWS Honolulu</span>'
-    + (url ? '<a class="pri-link" href="' + url + '" target="_blank" rel="noopener noreferrer">Official NWS alert \u2197</a>' : '')
+    + open
     + '</div></div>';
 }
 
@@ -1591,7 +1827,7 @@ function renderAlertSurfaces() {
      with a confident-looking empty state. */
   if (snap.presentation === 'checking') return snap;
   if (snap.presentation === 'unavailable') {
-    renderAlertsUnavailable();
+    renderAlertsUnavailable(snap);
     updateTicker(snap);
     return snap;
   }
@@ -1748,7 +1984,12 @@ function updateHazardBanner(snap) {
 }
 
 /* No successful alerts fetch at all — distinct from stale, which still has data. */
-function renderAlertsUnavailable() {
+/* PW-101. Takes the snapshot so a deep link still gets an answer when NWS is down. renderAlerts()
+   has one call site and is skipped entirely on this path, so an earlier version of this work lost
+   the deep-link notice here — the same early-return class of bug as the empty-visible-list case.
+   A reader following a link while NWS is unreachable must be told we could not verify it, not
+   handed a generic outage row that ignores what they asked for. */
+function renderAlertsUnavailable(snap) {
   const banner = document.getElementById('hazard-banner');
   const head = document.getElementById('hazard-headline');
   const sub = document.getElementById('hazard-sub');
@@ -1761,7 +2002,8 @@ function renderAlertsUnavailable() {
   }
   const container = document.getElementById('nws-alerts-container');
   if (container) {
-    container.innerHTML = '<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span>'
+    const deep = snap ? selectedAlertNotice(resolveSelectedAlert(snap), snap) : '';
+    container.innerHTML = deep + '<div class="alert-item"><span class="badge badge-unknown">UNAVAILABLE</span>'
       + '<div class="alert-title">NWS alerts temporarily unavailable</div>'
       + '<div class="alert-meta">Could not reach api.weather.gov. '
       + '<a href="https://www.weather.gov/hfo" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">View NWS HFO directly ↗</a> · '
@@ -1781,26 +2023,55 @@ function renderAlerts(snap) {
   // through the alerts feed above, so a real Tsunami Warning for Hawaii renders in this
   // same list as a normal alert. The row states both facts and asserts no status.
   const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  /* PW-101. Resolved before the empty-list branch on purpose. An island filter can empty the
+     visible list while the deep-linked alert is still active in the refreshed data, and an
+     earlier version of this returned here without the notice — so a reader following a link to a
+     live Kauai warning while viewing Maui was shown a bare "No active NWS alerts" and told
+     nothing about the alert they had asked for. */
+  const res = resolveSelectedAlert(snap);
+  const deepNotice = selectedAlertNotice(res, snap);
   if (filtered.length === 0) {
     const name = snap.areaLabel;
     const body = stale
       ? `<div class="alert-item"><span class="badge badge-unknown">STALE</span><div class="alert-title">Alert data could not be refreshed for ${esc(name)}</div><div class="alert-meta">Last verified ${esc(snap.verifiedAge)} · NWS Honolulu</div></div>`
       : `<div class="alert-item"><span class="badge badge-ok">ALL CLEAR</span><div class="alert-title">No active NWS alerts for ${esc(name)}</div><div class="alert-meta">NWS Honolulu · Checked ${esc(checkedTime(snap))}</div></div>`;
-    container.innerHTML = note + body + ptwcNote;
+    container.innerHTML = note + deepNotice + body + ptwcNote;
     return;
   }
   /* Every eligible product is listed. This used to cap at 12, so Overview could offer
      "View all 20" and land the reader on a list of 12 with no sign the rest existed. The
      cap is the eligibility filter, never a display truncation. */
-  container.innerHTML = note + filtered.map(f => {
+  /* PW-101/PW-102. Rows become addressable and the selected one expands in place. The selection
+     comes from S.selectedAlertKey, set from the URL fragment, so a refresh and Back/Forward both
+     restore it without a routing framework. */
+  container.innerHTML = note + deepNotice + filtered.map(f => {
     const p = f.properties;
     const tier = ALERT_TIERS[alertTier(p)];
     const issued = p.sent ? fmtTime(new Date(p.sent)) : '';
     const expires = p.expires ? fmtTime(new Date(p.expires)) : 'Until further notice';
     const area = truncate(p.areaDesc || '', 90);
+    const key = alertKey(f);
+    const selected = !!key && key === S.selectedAlertKey;
+    /* PW-102. The label travels with the href from alertSourceLink(), so a general source can
+       never be rendered with exact-alert wording. An alert with no usable destination simply
+       shows no link and stays fully readable here — AC-102-05 by design, not by accident. */
+    const link = alertSourceLink(f);
+    const linkHtml = link
+      ? ' · <a href="' + link.href + '" target="_blank" rel="noopener noreferrer"'
+        + ' data-exact="' + (link.exact ? 'true' : 'false') + '"'
+        + ' style="color:var(--sky)">' + esc(link.label) + ' ↗</a>'
+      : '';
+    /* Only the selected row expands, and only to text NWS actually supplied. */
+    const detail = selected
+      ? '<div class="alert-detail">'
+        + (p.description ? '<p>' + esc(p.description) + '</p>' : '')
+        + (p.instruction ? '<p><strong>Instructions:</strong> ' + esc(p.instruction) + '</p>' : '')
+        + (!p.description && !p.instruction ? '<p>No further detail was supplied for this alert.</p>' : '')
+        + '</div>'
+      : '';
     /* The badge shows the product type, not CAP severity. "SEVERE" on a Flood Watch told the
        reader nothing useful and read identically to a Tropical Storm Warning. */
-    return `<div class="alert-item"><span class="badge ${tier ? tier.badge : 'badge-unknown'}">${esc(tier ? tier.label : 'ACTIVE')}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu</div></div>`;
+    return `<div class="alert-item${selected ? ' is-selected' : ''}"${key ? ` data-alert-key="${esc(key)}" id="alert-${esc(key)}"` : ''}${selected ? ' aria-current="true"' : ''}><span class="badge ${tier ? tier.badge : 'badge-unknown'}">${esc(tier ? tier.label : 'ACTIVE')}</span><div class="alert-title">${esc(p.event)}${area?' — '+esc(area):''}</div><div class="alert-meta">${issued?'Issued '+esc(issued)+' · ':''}Expires ${esc(expires)} · NWS Honolulu${linkHtml}</div>${detail}</div>`;
   }).join('') + ptwcNote;
 }
 
@@ -2948,6 +3219,13 @@ startAgeTick();
 watchChrome();
 
 switchView('overview');
+
+/* PW-101. The browser is the router: a fragment change covers deep links, Back and Forward with
+   no framework, which is what the brief asked for. Resolve once on load so a pasted or refreshed
+   link is honoured before the first fetch lands — it will report "checking" and then resolve for
+   real when NWS answers, rather than guessing. */
+window.addEventListener('hashchange', applyAlertHash);
+if (alertKeyFromHash()) applyAlertHash();
 
 async function callClaude(sys, user, outEl, tsEl, btnEl, label) {
   if (!S.apiKey) {

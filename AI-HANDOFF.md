@@ -15,8 +15,8 @@ verification**, the **#28 production verification**, the **#31 documentation dep
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
 **#42 closeout deploy**, the **#43 C09 amendment deploy**, the **#44 runner-family deploy**, the
-**#45 convention deploy**, the **#46 brief-intake deploy**, and the **#48 C12 amendment deploy**, which Codex and
-Claude verified independently. The #26 checks were unauthenticated HTTP
+**#45 convention deploy**, the **#46 brief-intake deploy**, the **#48 C12 amendment deploy**, and
+the **#49 mutation-ceiling deploy**, which Codex and Claude verified independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
 against the merged Git blob and checked both canonical news endpoints directly.
@@ -62,109 +62,157 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
-| October Phase 1 PW-101/PW-102 — alert navigation and source links | #47 is open from `claude/pw101-pw102-alert-navigation`; pure and DOM passed, but hosted mutation was cancelled after exceeding C12 | Claude is stopped at the contract boundary; no merge until hosted mutation passes under an implemented amendment |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | Rebased onto `main` at `73ca4f5`; first hosted verdict passed complete at 146 of 146 in a 963-second job. Read-only review then found a blocking AC-101-06 lifecycle defect, now fixed, so the corpus is 151 and a fresh hosted verdict is required on the corrected head | Claude implements; Codex reviews read-only and runs the available browser pass; the owner decides merge |
 | C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
-| C12 mutation timeout — workflow implementation | Claimed on `claude/c12-mutation-timeout`; one line, `timeout-minutes: 15 → 20` on the mutation job | Claude implements; Codex reviews read-only; the owner decides merge |
+| C12 mutation timeout — workflow implementation | #49 merged as `73ca4f5`; the mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. The remaining contract-wording fix is deferred to a separate claim once #47 supplies a completed duration |
 
 ### Active claims
 
-**C12 mutation timeout — workflow implementation — Claude Code, `claude/c12-mutation-timeout`.**
-Claimed 2026-10-11 before editing `.github/`, in its own commit ahead of the work, on the owner's
-explicit authorization. Branched from `main` after #48 merged.
+**October Phase 1 PW-101/PW-102 — alert navigation and source links — Claude Code,
+`claude/pw101-pw102-alert-navigation`.** Claimed 2026-10-10 before editing any application file,
+in its own commit ahead of the work, on the owner's explicit authorization. **Rebased onto `main`
+at `73ca4f5` after #49 merged**, with the board overlap resolved on this branch. The application
+diff is unchanged by that rebase: `index.html` and both test files carry the same blob hashes as
+before it.
 
-Governed by the **amended C12** in [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md), which
-merged as #48 and is authoritative at 5/10/20 minutes. C18 requires this to be a separate claim
-published after the governing text merged — which is why the contract and the workflow are
-deliberately out of step until this lands.
+**Why this stopped and what released it.** The first hosted attempt had its `mutation coverage`
+job cancelled by C12's 15-minute ceiling, so the unit stopped at the contract boundary rather than
+presenting a partial verdict. C12 was then amended (#48) and implemented (#49), and the mutation
+ceiling on `main` is now 20 minutes. This unit resumes against that ceiling and **requires a
+complete hosted 151-of-151 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. The
+earlier cancelled run and any local result are diagnostic only and are not offered as hosted
+evidence. If the hosted run exceeds 20 minutes or arrives without its final summary, this stops
+again rather than reporting success.
 
-**What this changes: one line.**
+Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
+**AC-101-01 through AC-101-08 and AC-102-01 through AC-102-08**, plus the owner's binding decisions
+recorded below.
 
-`timeout-minutes: 15` becomes `timeout-minutes: 20` on the **mutation job only**. The pure job
-stays at 5 and the DOM job at 10. Nothing else in the workflow changes — not a job name, not a
-trigger, not a permission, not a gate, not an action SHA, not the Node pin, not the runner family.
+**What the mandatory inspection found, before any code**
 
-**Why the job names matter here.** All three are required checks with zero bypass actors. A rename
-in this edit would silently detach branch protection from checks that report, which is the failure
-C16 warned about. The names are verified against the live ruleset before and after.
+1. **One function is the root cause of both tickets.** `alertUrl(f)` returns `f.id`, which for NWS
+   *is* the machine-readable API product URL, and `priorityCard()` renders it as an outbound
+   `Official NWS alert` link.
+2. **The Alerts rows carry no external link at all.** So PW-102 is partly **additive**, and
+   AC-102-05 holds today by accident rather than by design.
+3. **There is no routing layer.** Navigation is `switchView()` on tab buttons; nothing reads or
+   writes `location.hash` or `history`. AC-101-06 and AC-101-07 therefore add history surface.
+4. **Existing alert fixtures carry no `id`.** Every fixture is `{ properties: {...} }`, so
+   `alertUrl()` returns null under test and the outbound API link is **unexercised by any current
+   test**.
 
-**Why this is needed, measured rather than asserted**
+**Binding decisions this unit implements** (owner, relayed through Codex)
 
-#47 enlarged the DOM suite from 436 to 503 assertions and the mutation set from 137 to 146 cases.
-81 of those 146 execute the DOM suite, so DOM growth is multiplied across a serial run; case count
-alone does not describe the cost. Hosted run `38103799949` was **cancelled at 916 seconds** against
-the 15-minute ceiling, with no final summary — a valid failure, not a flake.
+- **Tier 3 satisfies AC-102-03** when no verified per-alert HTML page exists: an official NWS
+  office or hazard page, **labelled as a general source, never as the specific alert**.
+- The full alert stays readable inside Pacific Watch.
+- Verified tier-1/tier-2 links are used when genuinely supplied. **Nothing is fabricated.**
+- **No speculative per-provider resolution layer.**
+- The link model distinguishes an exact-alert link from a general-source link **by an intentional
+  label**, not by hoping the reader infers it.
+- **Canonical/source ID, machine API URL and human-readable URL stay three separate concepts.**
+- **A missing source ID produces no individual deep link** and never falls back to title matching.
+  Navigation fixtures gain realistic distinct IDs; a graceful missing-ID case is retained.
+- Health states stay `loading`, `current`, `stale`, `unavailable`. **`REFERENCE` remains a
+  presentation badge, not a health state.**
+- **Only a successful authoritative refresh confirming absence may call a deep-linked alert expired
+  or inactive. A failed NWS fetch must say the target could not be verified** — the distinction
+  between "gone" and "unverified" is the same truthfulness rule the observation contract enforces.
+- **iOS Safari stays `NOT TESTED`** absent a real device.
 
-**The comparison is image-controlled**, which it was not when the amendment was first drafted:
+**Preserved, explicitly**
 
-```
-all figures are GitHub mutation-JOB durations, started_at -> completed_at
+Last-known-good retention and its per-source policies, the eligibility filter, dedupe, sort and the
+no-display-truncation rule, the observation clock and T01-T17, the news pipeline and hazard
+classifier, `esc()` and `safeUrl()`, cache identity, and the CI workflow.
 
-image 20261004.327.1, 137 cases    679s   (#48 head        38108891020)
-image 20261004.327.1, 137 cases    686s   (exact main      38111366496)
-image 20261004.327.1, 137 cases    709s   (#49 superseded  38112352386)
-image 20261004.327.1, 146 cases   ≥916s   (#47 head        38103799949, cancelled at the ceiling)
-```
+**Expected cost that is not a surprise**
 
-**One metric throughout: the GitHub job duration.** A mutation run yields two numbers that differ
-by a few seconds — the suite step and the enclosing job, which also pays for setup, checkout and
-cleanup. Run `38112352386` is 701s at the step and 709s at the job. Mixing them silently shrinks
-or inflates a comparison, so every figure above is the job duration, read from `started_at` and
-`completed_at`.
+This changes render paths that **137 mutation anchors** sit in, and `AGENTS.md` requires zero
+`ANCHOR LOST`. Anchor revalidation is part of this unit, not cleanup after it.
 
-The same corpus on the same image spans 679–709s, against the 675–707s band measured on the
-previous image. It is **not** strictly inside that band: the top of the new range is 2 seconds
-above the top of the old. At this resolution that is noise, and it is two orders short of the
-≥237s that corpus growth produced. The old band is itself a job-duration figure, checked on one
-of its runs — promotion run `37181771627`, mutation job 06:05:18Z to 06:16:59Z, 701 seconds —
-so the two are comparable rather than assumed so.
+**Evidence limits stated up front**
 
-Three controlled runs therefore support **no material image-driven slowdown for the 137-case
-corpus** — weaker than what this block first claimed, that the refresh contributes nothing
-measurable, and all the evidence can carry.
+There were **no active Hawai'i NWS alerts** at claim time, so the id shape could not be sampled
+live and the work is fixture-driven. Baseline before any change: `npm test` 425, `test:dom` 436,
+`test:mutation` 137 of 137.
 
-**916s is a censored lower bound, not a cost.** The run was killed at the ceiling, so the 146-case
-corpus costs **at least** 916 seconds and its completed cost is unknown. Two claims written here
-first overreached and are corrected: **at least 237 additional seconds elapsed before
-cancellation** rather than “the +237s is corpus growth”, and **the cancelled run had already
-consumed 76.3% of the amended ceiling when it was killed** rather than “the amended ceiling runs
-at 76.3% of budget”. The eventual completed utilisation stays unknown until #47 reaches a verdict
-under the 20-minute workflow, and it may be worse than 76.3%.
+**Round one of read-only review: a blocking lifecycle defect, and what the first tests missed**
 
-The ceiling does not depend on that number. The hosted suite demonstrably exceeded 15 minutes, and
-20 minutes is the next measured recovery ceiling to prove — if 146 cases turn out to need more,
-that is a finding for #47's completed run to report, not a reason to widen the gate pre-emptively
-here on a bound.
+The first hosted verdict passed complete — run `38118022258`, attempt 1, 425 pure, 503 DOM, **146 of
+146 mutations** with 146 verdict lines, all `CAUGHT`, mutation job 963 seconds on image
+`20261004.327.1`. Codex then found a defect the green gate did not: **AC-101-06's view lifecycle**.
 
-**Evidence this claim commits to**
+`applyAlertHash()` read `if (key) switchView('alerts')` with **no branch for the key being
+cleared**. A fragment with a key meant go to Alerts; a fragment without one meant nothing. So Back
+cleared `S.selectedAlertKey` and stranded the reader in Alerts, and because `switchView()` never
+touched the fragment, three more failures followed from the same gap:
 
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit. This
-   correction moves the head, so a superseded head's green run stands as corpus-cost evidence only
-   and is **not** offered as final-head evidence; each replacement head earns its own attempt-1
-   run. Superseded so far: `38112352386` at `b381b90` (137 of 137; suite step 701s, job 709s)
-   and the run at `bdaf01f`.
-2. Each job's `Image`, image `Version` and `Image Release`, taken from the image line and not the
-   runner-agent `Version` line that prints first and looks identical.
-3. The workflow diff confirmed to contain no change beyond the one timeout value.
-4. The three required check names verified unchanged against the live ruleset.
+1. Back removed the hash but left the view in Alerts.
+2. Returning to Overview by tab left `#alert=A` in the URL, contradicting the screen.
+3. Re-selecting that same alert changed nothing in the URL, so **no `hashchange` fired** and Alerts
+   never reopened — the alert became unreachable by the route the reader had just used.
+4. A refresh from that Overview state reopened the Alerts view the reader had deliberately left.
 
-**The probes do not repeat.** C03, C07 and C13 negative probes guard checkout identity, the
-dependency-free gate and mutation verdict propagation. None of that logic changes, so re-running
-them would demonstrate nothing new.
+**The fix, three changes.** `applyAlertHash()` handles the cleared fragment and restores the view
+the deep-link session began from. `switchView()` strips the fragment when leaving Alerts with a key
+set, through `clearAlertHash()`, which uses `replaceState` — no `hashchange`, no history entry,
+because the URL is being corrected to match a view change the reader already made rather than
+navigated to. `S.alertHashReturnView` records the origin **once per session**, so Back returns the
+reader where they actually were: a link followed from inside Alerts returns to Alerts, not
+unconditionally to Overview.
 
-**Out of scope, explicitly**
+**Why the original tests did not catch it.** They drove Back between two alert hashes, which never
+exercises the transition to *no* hash. Both states had a key, so both took the one branch that
+existed. A test suite can be thorough along the axis it imagines and blind across the boundary it
+does not.
 
-No ruleset change — the required checks and the empty bypass list are the owner's area. No
-mutation optimisation: the amended contract reserves bounded internal concurrency for separate
-work with its own review, and this claim does not start it. No change to the pure or DOM ceilings.
-No test, runtime, API, client, configuration, dependency, `AGENTS.md` or contract edit. **#47 is
-not touched, rebased or rerun** by this unit; it resumes only after this merges and its exact-`main`
-run is green.
+**The new tests were checked against the unfixed code before being trusted.** Against the previous
+`index.html` the new block fails **nine** assertions, one per symptom above. Tests that pass after
+a fix prove nothing about whether they would have caught the defect, so this direction of the check
+is the one that matters. DOM 503 → **526**; pure unchanged at 425; mutation corpus 146 → **151**
+with five cases restoring each defect separately, and an anchor pre-check reporting zero lost and
+zero ambiguous.
+
+**A mutation-harness lesson, recorded because it is the second occurrence.** One new case was
+reported MISSED although the mutation genuinely broke three assertions. Its `expect` list named
+“and leaves no fragment behind”, which checks the URL after Back — and the **browser** clears the
+fragment whether or not the view logic runs, so it cannot discriminate the mutation. Since `expect`
+is a **conjunction**, one non-discriminating entry fails the whole case. The entry was replaced
+rather than the harness loosened, and the reasoning now sits in a comment above the case. Naming an
+assertion the mutation does not break is the same error recorded against Claude earlier in this
+unit.
+
+**Browser pass, as Codex reported it.** Edge reached production at `pacific-watch.vercel.app` and
+the page loaded normally. The immutable #47 preview redirects to Vercel login; **no authentication
+was attempted and no credentials were created**, and Edge was restored to production. The **#47
+Edge row therefore stays `NOT TESTED`** — a production load is not a preview-head pass, and the
+distinction is kept rather than rounded up.
+
+**The completed duration the C12 correction was waiting for.** 963 seconds is **80.3% of the
+20-minute ceiling**, against the censored ≥916s lower bound and the 76.3% the amendment reasoned
+from. The real figure is worse, as the censored-bound correction warned it might be. That was
+measured at 146 cases and a 503-assertion DOM suite; this head carries 151 and 526, so the next
+hosted job will land higher again. If it exceeds the ceiling the unit stops and reports that rather
+than retrying, and **bounded internal concurrency stops being optional**: 81-plus of 151 cases run
+the full DOM suite, so every assertion added is paid once per case that spawns it.
+
+**Out of scope**
+
+PW-103, PW-104, PW-105 and the PW-106 consolidated validation are separate units. No
+authentication, subscription, payment, premium, saved-location, notification or AI work. No product
+rename or branding change. No `api/`, `vercel.json`, dependency, `AGENTS.md`, contract or workflow
+edit. No ruleset change. No remote branch deletion.
 
 **Absorbed into this claim**
 
-#48's self-close, since a board PR cannot record its own merge: the attribution header, Current
-Work row, Active claims block, Active Branches row and the `main` pointer — five items — plus the
-Handoff Log entry for the merge.
+#46's self-close when this claim was first published, and now **#49's self-close as well**, since a
+board PR cannot record its own merge: the attribution header, Current Work rows, Active claims
+block, Active Branches row and the `main` pointer, plus the Handoff Log entry for each merge. The
+stale current-state paragraph describing this unit as stopped at the contract boundary is rewritten
+whole rather than patched sentence by sentence, which is the failure mode this board has recorded
+against Claude before.
+
 
 **Closed: October 9 Phase 1 engineering brief intake — ChatGPT Codex,
 `codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
@@ -434,8 +482,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/c12-mutation-timeout | Workflow-only C12 implementation: the mutation job's `timeout-minutes` 15 → 20, with all three required check names and every other workflow line preserved |
-| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102 implementation; stopped pending an implemented C12 amendment and a clean hosted mutation run |
+| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL. Rebased onto `main` at `73ca4f5`; carrying the AC-101-06 lifecycle fix and seeking a complete hosted 151-of-151 mutation verdict |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -463,13 +510,15 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #48 and serving production.** Claims and handoffs for
+**`main` is merged through #49 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**PW-101/PW-102 implementation is open as #47 but stopped at C12's contract boundary.** Codex's
-only active work is this documentation-only C12 amendment. No workflow implementation or ruleset
-change is claimed; #47 remains unmergeable until the amendment is implemented separately and its
-hosted mutation check passes. No remote branch deletion is authorized.
+**PW-101/PW-102 implementation is open as #47 and has resumed.** The C12 boundary that stopped it
+is cleared: the amendment merged as #48 and its workflow implementation as #49, so the mutation
+ceiling on `main` is 20 minutes. #47 is rebased onto `main` at `73ca4f5` and stays unmergeable
+until a **complete** hosted mutation verdict of 151 of 151 arrives under that ceiling, with zero
+`MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. A cancelled run, a partial summary or a local result is
+not that evidence. No ruleset change is claimed and no remote branch deletion is authorized.
 
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
@@ -479,8 +528,9 @@ mutations in 694 seconds on image version `20260927.320.1`. C12 and the ruleset 
 non-fast-forward and pull-request rules are unchanged, approvals remain zero, and the bypass list
 remains empty. The policy is deliberately loose: checks must pass on the PR head, but promotion did
 not add a separate requirement to rebase onto the latest `main`. Every PR now waits for mutation;
-if its 15-minute ceiling is exceeded, merges stop and C12 requires contract review rather than a
-quiet timeout increase.
+if its ceiling is exceeded, merges stop and C12 requires contract review rather than a quiet
+timeout increase. That ceiling is now **20 minutes**, raised from 15 through exactly that route:
+#47 breached it, #48 amended the contract, #49 implemented the one-line change.
 
 The CI acceptance contract merged as #38 in `1ae1ae0` and is authoritative at C01–C18.
 News publication-time work is complete end to end: the contract merged as #35 in `2875d0f`, its
@@ -513,8 +563,9 @@ performs #28's expected self-close transition immediately after the merge.
   The amendment's conclusion therefore stands: the suite exceeded 15 minutes and 20 is the next
   ceiling to prove. This is a precision fix to stated evidence, not a reopening. It is **outside
   #49's authorized scope** and must not be folded into a workflow-only PR. Codex owns claimed
-  edits to the contract. Recorded here so the wording does not drift once #47's completed run
-  supplies the figure that settles the real utilisation.
+  edits to the contract. **Sequenced:** it waits until #47's hosted run supplies a completed
+  146-case duration, and then replaces the censored lower bound with the real figure in a
+  separately claimed documentation pass. Recorded here so the wording does not drift meanwhile.
 
 - **F005 changed tiles:** closed by the user's report of Claude's production verification;
   local render matched #12 head 968d73d at merge. Both replacement destinations resolve.
@@ -635,6 +686,71 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-11 — #49 merged; the mutation ceiling is 20 minutes and #47 resumes
+
+The C12 workflow implementation merged as `73ca4f5`. `main` now reads 5, 10 and 20 minutes, and the
+diff against the previous `main` is one line — `timeout-minutes` on the mutation job, with
+`git diff --numstat 83bbca3 73ca4f5 -- .github/workflows/ci.yml` reporting `1 1`.
+
+Exact-`main` run `38116240346`, attempt 1, `event=push`, passed every required check: 425 pure
+assertions, 436 DOM assertions, 137 of 137 mutations with 137 verdict lines, mutation job 05:53:15Z
+to 06:04:53Z — 698 seconds — on `ubuntu-24.04` image version `20261004.327.1`. No rerun, no
+ruleset change, no bypass.
+
+#### Two review rounds found three evidence defects, and none of them touched the diff
+
+The one-line change was right in its first draft and never changed. Everything Codex found was in
+what Claude claimed **about** the change:
+
+1. **Censored data read as a measurement.** Run `38103799949` was cancelled at the old ceiling, so
+   916s is a lower bound on the 146-case corpus, not its cost. “The +237s is corpus growth” became
+   **at least 237 additional seconds elapsed before cancellation**; “the ceiling runs at 76.3% of
+   budget” became **the cancelled run had already consumed 76.3% when it was killed**; and “the
+   refresh contributes nothing measurable” became **no material image-driven slowdown detected for
+   the 137-case corpus**. The error has a direction: a run killed at a limit understates the true
+   cost by an unknown amount.
+2. **A sign.** The measurement table wrote the bound with an en dash, so `–916s` read as negative
+   916 seconds. It is now `≥916s`.
+3. **A mixed metric.** A mutation run yields a suite-step figure and an enclosing job figure that
+   differ by a few seconds. Run `38112352386` is 701s at the step and 709s at the job, and Claude
+   had quoted one on the board and the other in the PR for the same run.
+
+Fixing the metric honestly surfaced two further figures of Claude's own: the #48 exact-`main` job
+took **686** seconds, not the “roughly 684” first recorded here, and the same-image runs do **not**
+sit “inside” the 675–707s band — 709 is two seconds above it. Both are corrected above. Rounding
+an inconvenient figure into a band is the same class of error as reading a cancelled run as a cost.
+
+#### What the measurement series supports, and what it does not
+
+Six 137-case mutation **job** durations on one fixed image, `20261004.327.1`:
+
+```
+679s   #48 head            38108891020
+686s   exact main (#48)    38111366496
+697s   #49 superseded      38113997013
+698s   exact main (#49)    38116240346
+705s   #49 final head      38114346269
+709s   #49 superseded      38112352386
+```
+
+The previous image's band was 675–707s, and it is job-based rather than assumed so — checked on
+promotion run `37181771627`, mutation job 701 seconds. Six runs support **no material image-driven
+slowdown for the 137-case corpus**; they do not prove the weekly refresh contributes nothing. The
+146-case cost remains **≥916 seconds and censored** until #47 completes a hosted run.
+
+#### Two conventions this unit established
+
+**Run evidence for a final head belongs in the PR body, not the board.** A board commit moves the
+head and invalidates the run it was recording, so recording each run on the board cannot terminate.
+The board carries the durable series; the PR body carries the per-head verdicts.
+
+**History was preserved rather than rewritten.** `b381b90`'s commit message still carries the
+original framing and the correction commits supersede it in the open, matching how this board
+records its other corrections. A clean squash title and body are what keep superseded wording out
+of `main`, and they did: the squash message on `73ca4f5` states the censored-bound framing
+correctly.
+
+
 ### 2026-10-11 — #48 merged; the C12 workflow correction claimed
 
 The C12 amendment merged and is authoritative at 5/10/20 minutes. Exact-`main` run
@@ -711,6 +827,46 @@ This is capacity recovery, not the cost fix. A later, separately authorized opti
 may evaluate bounded internal concurrency while preserving one aggregate verdict and stable check
 identity. It may not omit cases, weaken isolation, accept partial output, or quietly split the
 required check. #47 remains stopped; no merge is authorized by this amendment.
+
+### 2026-10-10 — #46 merged; October Phase 1 PW-101/PW-102 claimed
+
+The owner-approved October 9 engineering brief is preserved on `main` as the shared authority for
+PW-101 through PW-106. Codex's intake was documentation-only and its volatile live-state SHA was
+corrected before merge, so the live pointer keeps the stable form the `AGENTS.md` rule requires.
+
+Claude reviewed the intake read-only and raised one finding on it: the pointer had been changed to
+name `main`'s current head, re-adding a branch-head SHA to a live current-state entry one PR after
+#45 made that rule durable. Corrected before merge.
+
+#### What the PW-101/PW-102 inspection established before any code
+
+`alertUrl(f)` returning `f.id` is the single root cause of both tickets — for NWS that *is* the API
+product URL, and `priorityCard()` renders it as an outbound link. The Alerts rows carry **no**
+external link at all, so PW-102 is partly additive and AC-102-05 passes today by accident. There is
+**no routing layer**: navigation is `switchView()` on tab buttons with nothing touching `hash` or
+`history`, so AC-101-06 and AC-101-07 add new surface. And **every existing alert fixture lacks an
+`id`**, so `alertUrl()` returns null under test and the outbound API link has never been exercised
+by a test.
+
+#### The owner's binding link-model decisions
+
+Tier 3 satisfies AC-102-03 where no verified per-alert HTML page exists, using an official office
+or hazard page labelled as a general source rather than the specific alert, with the full alert
+readable in-app. Canonical/source ID, machine API URL and human-readable URL remain three separate
+concepts. A missing source ID yields no individual deep link and never falls back to title
+matching. `REFERENCE` stays a presentation badge rather than becoming a health state.
+
+**The truthfulness rule carried into navigation:** only a successful authoritative refresh that
+confirms absence may call a deep-linked alert expired or inactive. A failed NWS fetch must say the
+target could not be verified. That is the same distinction between absence and ignorance that the
+observation contract enforces for measurements, applied to deep links.
+
+#### A vocabulary mismatch settled rather than silently reconciled
+
+PW-106A asks to preserve "OK / UNKNOWN / REFERENCE". The implemented states are `loading`,
+`current`, `stale` and `unavailable`; `REFERENCE` is a badge on the PTWC row and `badge-unknown` a
+CSS class. The implemented vocabulary is preserved and no state was invented to match the brief's
+wording.
 
 ### 2026-10-10 — owner-approved October Phase 1 brief received; documentation intake claimed
 
