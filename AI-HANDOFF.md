@@ -14,8 +14,8 @@ verification**, the **#28 production verification**, the **#31 documentation dep
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
 **#35 contract deploy**, **#36 implementation deploy**, **#37 closeout deploy**, and the
 **#38 contract deploy**, **#39 workflow deploy**, **#40 closeout deploy**, **#41 C16 deploy** and
-**#42 closeout deploy**, the **#43 C09 amendment deploy**, and the **#44 runner-family deploy**, which
-Codex and Claude verified
+**#42 closeout deploy**, the **#43 C09 amendment deploy**, the **#44 runner-family deploy**, the
+**#45 convention deploy**, and the **#46 brief-intake deploy**, which Codex and Claude verified
 independently. The #26 checks were unauthenticated HTTP
 against `pacific-watch.vercel.app` — status, item counts, hazard composition and `x-vercel-cache`
 per request — not a relayed report. For #28, Codex verified the production HTML byte-for-byte
@@ -85,10 +85,10 @@ change, dependency change, or #47 merge. This claim also absorbs #46's unavoidab
 records #47's current stop without absorbing Claude's implementation scope. Claude reviews this
 contract amendment read-only; the owner decides merge.
 
-**October 9 Phase 1 engineering brief intake — ChatGPT Codex,
+**Closed: October 9 Phase 1 engineering brief intake — ChatGPT Codex,
 `codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
-before editing any other file. Branched from synchronized `main` at `a14d31f` after confirming
-through GitHub that no pull request is open.
+before editing any other file. Merged as #46; the brief is the shared authority for PW-101 through
+PW-106.
 
 Scope:
 
@@ -373,7 +373,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
-| October 9 Phase 1 engineering brief (PW-101–PW-106) | **Owner-approved, intake claimed.** The supplied brief is being preserved under a disambiguated filename because the repository already has a historical Phase 1. Read-only inspection confirms each requested UI delta still exists | Codex completes the current-code/acceptance mapping in this documentation PR; Claude implements the ordered items only under later, non-overlapping claims |
+| October 9 Phase 1 engineering brief (PW-101–PW-106) | #46 merged; the disambiguated brief and current-code mapping are preserved on `main` | Closed; implementation proceeds only under later, non-overlapping claims |
 | PW-101/PW-102 implementation | #47 open at its published head; pure and DOM green, hosted mutation cancelled after exceeding C12's 900-second ceiling | Hold. A local 146/146 result is supporting evidence only; hosted confirmation remains required before merge |
 | C12 mutation-ceiling amendment | **Claimed, documentation only.** The proposed 20-minute ceiling gives the measured 916-second hosted workload 23.7% headroom | Codex drafts; Claude reviews read-only; owner decides merge. Workflow implementation remains separate under C18 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
@@ -539,6 +539,35 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-10 — #47 exceeded C12; measured 20-minute amendment drafted
+
+The owner authorized this documentation-only contract review after #47's required
+`mutation coverage` job was cancelled by the 15-minute ceiling. Codex independently read hosted run
+`38103799949` at exact #47 head `0d479f238b133ef0538152fd927086db00146f53`: attempt 1, pure and
+DOM successful, mutation cancelled without a final summary. The mutation setup log reports
+`Image: ubuntu-24.04`, image version `20261004.327.1`, starts at `02:01:47.684Z`, records
+`The operation was canceled` at `02:16:59.377Z`, and finishes cleanup at `02:16:59.649Z`.
+GitHub reports approximately 916 seconds. Claude's local 146-of-146 result remains diagnostic
+support only and is not substituted for that hosted failure.
+
+The measured workload is 146 mutation cases, 81 of which spawn the DOM suite, against a DOM suite
+that grew from 436 to 503 assertions. The amendment changes C12's mutation ceiling from 15 to 20
+minutes and leaves pure at 5 and DOM at 10. The calculation is explicit: `916 / 1200 = 76.3%`,
+which restores the gate's historical 75–79% utilization. Twenty-five minutes would use about 61%
+and is not supported by this evidence.
+
+The required-check gate stays intact. There is no inherent ruleset deadlock if C18 is followed:
+this contract PR branches from `main` and runs its existing 137-case corpus under the current
+ceiling; after this amendment merges, a separately claimed and owner-authorized workflow-only PR
+changes only mutation `timeout-minutes: 15` to `20` while retaining the stable `mutation coverage`
+name. Only after that workflow merge may #47 rebase and seek a complete hosted 146-of-146 verdict.
+No required check is removed, renamed, bypassed or made post-merge-only.
+
+This is capacity recovery, not the cost fix. A later, separately authorized optimization contract
+may evaluate bounded internal concurrency while preserving one aggregate verdict and stable check
+identity. It may not omit cases, weaken isolation, accept partial output, or quietly split the
+required check. #47 remains stopped; no merge is authorized by this amendment.
 
 ### 2026-10-10 — owner-approved October Phase 1 brief received; documentation intake claimed
 
