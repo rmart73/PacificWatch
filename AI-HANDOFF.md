@@ -99,17 +99,33 @@ the 15-minute ceiling, with no final summary — a valid failure, not a flake.
 ```
 image 20261004.327.1, 137 cases   679s   (#48 head run 38108891020)
 image 20261004.327.1, 137 cases   684s   (exact main run 38111366496)
-image 20261004.327.1, 146 cases   916s   (#47 head run 38103799949, cancelled)
+image 20261004.327.1, 146 cases  –916s   (#47 head run 38103799949, cancelled at the ceiling)
 ```
 
 The same corpus on the same image costs ~680s, inside the 675–707s band measured on the previous
-image, so the weekly refresh contributes nothing measurable and the +237s is corpus growth. At
-916s the amended ceiling runs at 76.3% of budget, restoring the 75–79% utilisation the gate was
-promoted at.
+image. That supports **no material image-driven slowdown for the 137-case corpus** — which is
+weaker than what this block first claimed, that the refresh contributes nothing measurable, and is
+all three controlled runs can carry.
+
+**916s is a censored lower bound, not a cost.** The run was killed at the ceiling, so the 146-case
+corpus costs **at least** 916 seconds and its completed cost is unknown. Two claims written here
+first overreached and are corrected: **at least 237 additional seconds elapsed before
+cancellation** rather than “the +237s is corpus growth”, and **the cancelled run had already
+consumed 76.3% of the amended ceiling when it was killed** rather than “the amended ceiling runs
+at 76.3% of budget”. The eventual completed utilisation stays unknown until #47 reaches a verdict
+under the 20-minute workflow, and it may be worse than 76.3%.
+
+The ceiling does not depend on that number. The hosted suite demonstrably exceeded 15 minutes, and
+20 minutes is the next measured recovery ceiling to prove — if 146 cases turn out to need more,
+that is a finding for #47's completed run to report, not a reason to widen the gate pre-emptively
+here on a bound.
 
 **Evidence this claim commits to**
 
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit.
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit. This
+   correction moves the head, so the superseded head's green run (`38112352386`, 137 of 137 in
+   701s) stands as corpus-cost evidence only and is **not** offered as final-head evidence; the
+   replacement head earns its own attempt-1 run.
 2. Each job's `Image`, image `Version` and `Image Release`, taken from the image line and not the
    runner-agent `Version` line that prints first and looks identical.
 3. The workflow diff confirmed to contain no change beyond the one timeout value.
@@ -470,6 +486,20 @@ performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
 
+- **Narrow evidence correction owed to the merged C12 amendment text.**
+  [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md) and the #48 Handoff Log entry below carry
+  the censored-data wording #49 corrected. The contract reads “**At the observed cost**, 916
+  seconds uses 76.3% of 1,200 seconds” and the #48 log entry reads `916 / 1200 = 76.3%`; 916s is
+  not an observed cost but a lower bound from a run killed at the old ceiling, so the true
+  utilisation is unknown and may be higher. C12's own criterion row is **not** affected — it
+  rests on the cancellation itself, which is a fact, not on the percentage.
+
+  The amendment's conclusion therefore stands: the suite exceeded 15 minutes and 20 is the next
+  ceiling to prove. This is a precision fix to stated evidence, not a reopening. It is **outside
+  #49's authorized scope** and must not be folded into a workflow-only PR. Codex owns claimed
+  edits to the contract. Recorded here so the wording does not drift once #47's completed run
+  supplies the figure that settles the real utilisation.
+
 - **F005 changed tiles:** closed by the user's report of Claude's production verification;
   local render matched #12 head 968d73d at merge. Both replacement destinations resolve.
 - **Other bot-challenged destinations:** the prior audit lists poweroutage.us, khon2.com,
@@ -611,8 +641,17 @@ Claude raised one finding — that the 696s-versus-916s comparison was not image
 the hosted image had drifted from `20260927.320.1` to `20261004.327.1` between the two runs,
 leaving part of the increase unattributable. #48's own head run then dissolved that finding: the
 **137-case corpus on the new image cost 679s**, inside the 675–707s band measured on the old one.
-The refresh contributes nothing measurable, so the +237s is corpus growth and the amendment's
-causal claim is better supported than when written.
+No material image-driven slowdown is detected for that corpus, so the amendment's causal claim is
+better supported than when written.
+
+That withdrawal then went one step too far in the other direction, and Codex caught it in #49
+review. 916s is a **censored** observation — the run was cancelled, so it is a lower bound on the
+146-case cost, not the cost. “The +237s is corpus growth” should read **at least 237 additional
+seconds elapsed before cancellation**; “the ceiling runs at 76.3%” should read **the cancelled run
+had already consumed 76.3% of the amended ceiling**; and the controlled runs show **no material
+image-driven slowdown for the 137-case corpus** rather than proving the refresh contributes
+nothing. Reading a run killed at a limit as a completed measurement understates the true cost by
+an unknown amount — the one direction the error can go.
 
 That exchange only happened because the C09 amendment requires recording the concrete image
 version on every run. **This was the first observed hosted-image drift**, and the requirement is
