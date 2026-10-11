@@ -109,8 +109,32 @@ not claim to eliminate GitHub-managed patch drift.
 
 The pre-amendment baseline is post-#42 run `37186546315` on `87ef841`: the mutation job used
 `Image: ubuntu-24.04`, image version `20260927.320.1`, and completed in 700 seconds against the
-unchanged 900-second C12 ceiling. That leaves 200 seconds, or 28.6% relative to the measured run;
-the later implementation measures again rather than treating this as permanent headroom.
+then-current 900-second C12 ceiling. That left 200 seconds, or 28.6% relative to the measured run.
+
+#### C12 amendment — measured capacity after #47
+
+PR #47's exact head `0d479f238b133ef0538152fd927086db00146f53` enlarged the DOM suite from 436
+to 503 assertions and the mutation set from 137 to 146 cases. Of those 146 cases, 81 execute the
+DOM suite, so DOM-suite growth is multiplied across the serial mutation run; case count alone does
+not describe the cost.
+
+Hosted run `38103799949`, attempt 1, used `Image: ubuntu-24.04`, image version
+`20261004.327.1`. Its pure and DOM jobs passed, but required job `mutation coverage` was cancelled
+without a final summary when the 15-minute ceiling fired. GitHub reported approximately 916
+seconds of job duration; the job log runs from `02:01:47.684Z` to `02:16:59.649Z` and records the
+operation cancellation. The local 146-of-146 result is supporting diagnostic evidence only. It
+does not replace the cancelled hosted verdict.
+
+C12 therefore raises only the mutation ceiling to 20 minutes. At the observed cost, 916 seconds
+uses 76.3% of 1,200 seconds, effectively restoring the 75–79% utilization measured when the gate
+was promoted. A 25-minute ceiling would use about 61% and is not supported by this evidence. The
+5-minute pure and 10-minute DOM ceilings remain unchanged.
+
+This amendment restores measured capacity; it does not claim to cure serial cost growth. Mutation
+optimization is separate work requiring its own contract review. The preferred first design to
+evaluate is bounded internal concurrency that retains one aggregating `mutation coverage` job and
+one complete verdict. No optimization may omit cases, weaken isolation, accept a partial summary,
+or change the stable required-check identity without a further amendment and ruleset plan.
 
 ### 6. Permissions are read-only and untrusted pull requests receive no privileged path
 
@@ -140,7 +164,7 @@ runs, but may not exceed these ceilings without a contract amendment:
 
 - pure tests: 5 minutes;
 - DOM behaviour: 10 minutes;
-- mutation coverage: 15 minutes.
+- mutation coverage: 20 minutes.
 
 A timeout, signal, setup failure, nonzero suite exit or missing final summary fails the job. There
 is no `continue-on-error`, retry that replaces the first verdict, or shell construction that masks
@@ -187,7 +211,7 @@ longer reports.
 | C09 | Node is pinned to one full supported-LTS semver, every Action to a full commit SHA with a release comment, and every job to the explicit `ubuntu-24.04` OS-family label; no floating Node alias, mutable Action tag or `*-latest` runner-family alias remains. The hosted image is not represented as immutable. | Exact workflow diff; resolved Node and Action versions; and each job's setup-log `Image`, image `Version` and `Image Release`. |
 | C10 | Workflow and jobs have read-only repository permission, checkout credentials are not persisted, and neither secrets nor `pull_request_target` are used. | Workflow inspection and repository permission summary in the run. |
 | C11 | CI has no live feed, preview, production, browser-layout or deployment dependency. | Search of workflow and invoked test paths; a proving run with no project secret configured. |
-| C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 15 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. |
+| C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 20 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. The 20-minute mutation value is supported by #47 run `38103799949`, where the 15-minute value cancelled the exact hosted run without a summary. |
 | C13 | Mutation passes only when the harness exits zero with one verdict per case, `X of X` caught, and zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. The harness exit code is authoritative; the workflow does not separately grep those categories. | Complete mutation output and one implementation-branch negative probe that makes any one case `ANCHOR LOST`, `AMBIGUOUS` or `MISSED`, proves the job propagates the harness's nonzero exit, and is removed before merge. |
 | C14 | No step uses `continue-on-error`, a masking shell pipeline or an automatic retry that replaces the original verdict. | Workflow inspection. |
 | C15 | The implementation PR records exact job names, head SHA, counts and durations from a first-attempt green run; after merge, the same record is captured for the exact `main` SHA. | PR evidence and subsequent closeout record. |
@@ -214,14 +238,30 @@ not repeat because no checkout, dependency or mutation-gate logic changes. Its s
 owner-authorized implementation claim replaces all three `ubuntu-latest` labels with
 `ubuntu-24.04`; its final PR head and exact merge commit must each pass all three jobs on attempt 1.
 The evidence records every job's image-version string, counts and durations, compares mutation time
-with the 700-second baseline above, and confirms the workflow diff contains no other change. C12's
-15-minute mutation ceiling remains unchanged; changing it requires a separate evidence-backed
-contract amendment.
+with the 700-second baseline above, and confirms the workflow diff contains no other change. That
+correction left C12 unchanged at the time; the later #47 measurement and the amendment above now
+govern the mutation ceiling.
+
+For the C12 ceiling correction, C18 requires a separate owner-authorized workflow claim only after
+this amendment merges. Its final diff changes only the mutation job's `timeout-minutes` from 15 to
+20 and the associated comment, if any; it preserves all three stable job names and every other
+workflow line. The earlier C03, C07 and C13 negative probes do not repeat because checkout,
+dependency, mutation-verdict and summary logic do not change. The final workflow PR head and the
+exact merge commit must each produce all three green jobs on attempt 1, with the tested SHA,
+image-version string, counts and durations recorded. #47 may then rebase and must itself obtain a
+complete hosted mutation verdict under the implemented ceiling before it becomes merge-eligible.
+
+The required-check ruleset does not need to be weakened for this recovery. The contract-amendment
+PR contains documentation only and runs the smaller suite already on `main`; after it merges, the
+separate workflow PR carries the new ceiling while retaining the same `mutation coverage` check
+name. No required check is removed, renamed, bypassed or deferred until after merge.
 
 If the hosted environment exposes an assumption the contract did not settle, implementation stops
-for review rather than weakening a criterion in workflow syntax. In particular, the 15-minute
-mutation ceiling is an assumption to measure on the hosted runner: exceeding it requires contract
-review, not a quiet timeout increase or a partial run presented as evidence.
+for review rather than weakening a criterion in workflow syntax. #47 followed that rule when the
+15-minute mutation ceiling was exceeded: the run stopped, the hosted cancellation remained the
+verdict, and this contract review preceded any workflow change. Exceeding the amended 20-minute
+ceiling requires another contract review, not a quiet timeout increase, split suite or partial run
+presented as evidence.
 
 ## Non-goals
 
@@ -229,6 +269,6 @@ This contract does not create a workflow, modify `.github/`, change the `main` r
 application, upload artifacts, comment on pull requests, run live-source or Vercel checks, replace
 human visual review, change production code or tests, add runtime dependencies, decide the remote-
 branch deletion convention, distinguish active hazards from aftermath, refine visual layout, rename
-the product or clean completed claim blocks from the handoff board. The C09 amendment does not edit
-`.github/`, choose a different runner family, freeze GitHub's weekly hosted-image contents or raise
-the C12 timeout.
+the product or clean completed claim blocks from the handoff board. This amendment does not edit
+`.github/`, optimize or split the mutation harness, change a stable check name, weaken branch
+protection, authorize #47's merge, or treat a local result as hosted evidence.
