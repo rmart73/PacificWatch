@@ -359,7 +359,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #45 as `a14d31f` and serving production.** Claims and handoffs for
+**`main` is merged through #45 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **No application or workflow implementation is in flight.** The only active work is Codex's
@@ -526,6 +526,42 @@ PW-105 subtle wave-logo animation, and PW-106 consolidated validation. Locked pr
 retains the Pacific Watch name and existing wave identity; authentication, subscriptions,
 payments, custom-feed ingestion, AI-premium work, push notifications and saved locations remain
 future work and are not authorized by this phase.
+
+#### Codex ruling for PW-101/PW-102 before implementation
+
+The owner routed Claude's tier-3 and vocabulary questions to Codex after Claude claimed
+`claude/pw101-pw102-alert-navigation` and deliberately stopped before editing application code.
+The following reading is binding for this unit:
+
+1. **Tier 3 satisfies AC-102-03 when no verified per-alert public page exists.** The hierarchy in
+   the owner brief is intentional. Use a verified tier-1 or tier-2 human-readable alert page when
+   the product genuinely supplies one. Otherwise an official NWS office or hazard page is a valid
+   tier-3 destination only when its label says it is a general source, never the specific alert.
+   The complete alert remains readable inside Pacific Watch. No URL may be fabricated, and the
+   implementation does not need speculative per-provider resolution logic merely to turn a
+   machine endpoint into something link-shaped.
+2. **The link model must preserve the distinction, not just the URL.** An optional safe
+   human-readable URL plus an intentional label is sufficient for this unit if exact-alert and
+   general-source links cannot be presented with the same wording. The canonical/source ID and
+   machine-readable API URL remain separate concepts. Existing `safeUrl()` and external-link rel
+   requirements continue to apply.
+3. **A missing canonical source ID degrades without title matching.** It does not authorize a
+   title-based identity, an invented external URL or selection of a different product. Such an
+   alert may remain readable in the ordinary list, but no individual deep link is minted for it.
+   Navigation fixtures must gain distinct realistic IDs for AC-101-04, plus a missing-ID case that
+   proves graceful non-selection. Real selection state is preserved by canonical ID while that
+   product still exists.
+4. **PW-106A describes semantics, not new enum names.** Preserve the implemented source-health
+   states `loading`, `current`, `stale` and `unavailable`. `REFERENCE` remains the presentation
+   badge for an unmonitored reference row, and `badge-unknown` remains a CSS class; neither becomes
+   a source-health state. In the brief's vocabulary, OK maps only to a verified current success,
+   UNKNOWN maps to an unverified/unavailable result, and REFERENCE remains non-monitored. Do not
+   rename the working model merely to copy the brief's capitalization.
+
+The missing/expired deep-link surface must also preserve the core truth rule: after a successful
+authoritative refresh confirms the canonical product is absent, the UI may call it expired or no
+longer active. If the NWS fetch itself failed, it must say the target could not be verified, not
+claim that the alert expired.
 
 This is a **new October 2026 UI phase**, not the historical source-health Phase 1. The brief is
 preserved as `OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md` so both names can remain accurate without
