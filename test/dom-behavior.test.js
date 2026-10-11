@@ -1589,6 +1589,97 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-101 — the URL and the view stay consistent across the whole history lifecycle:');
+  /* Codex's finding, read-only review of the rebased head. The earlier tests drove Back between
+     two alert hashes, which never exercises the transition to NO hash: applyAlertHash() switched
+     to Alerts when a key existed and did nothing when it did not, so Back cleared the selection
+     and stranded the reader in Alerts. Three further failures followed from the same gap, and all
+     four are proven here rather than argued. */
+
+  w.location.hash = '';
+  await settle();
+  w.switchView('overview');
+  await settle();
+  check('the reader starts on Overview', w.eval('S.view'), 'overview');
+  check('  with no alert in the URL', w.location.hash, '');
+
+  /* 1. Overview -> alert A -> Back -> Overview -> Forward -> alert A, driven through history
+     itself rather than by re-applying fragments by hand. */
+  w.location.hash = '#alert=' + KEY_A;
+  await settle();
+  check('following an alert from Overview opens Alerts', w.eval('S.view'), 'alerts');
+  w.history.back();
+  await settle();
+  check('AC-101-06 Back from the first alert returns to Overview', w.eval('S.view'), 'overview');
+  check('  and clears the selection', w.eval('S.selectedAlertKey'), '');
+  check('  and leaves no fragment behind', w.location.hash, '');
+  has('  and no row is left selected', '#nws-alerts-container', 'is-selected', false);
+  w.history.forward();
+  await settle();
+  check('AC-101-06 Forward returns to the alert', w.eval('S.view'), 'alerts');
+  check('  with the same row selected',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* 2. Leaving Alerts by tab, not by Back. The fragment must not survive the view it describes,
+     or re-selecting the same alert is a no-op: an identical fragment fires no hashchange. */
+  w.switchView('overview');
+  await settle();
+  check('leaving Alerts by tab clears the stale fragment', w.location.hash, '');
+  check('  and clears the selection with it', w.eval('S.selectedAlertKey'), '');
+  const reentry = [...d.querySelectorAll('#view-overview a.pri-link')]
+    .find(a => a.getAttribute('href') === '#alert=' + KEY_A);
+  check('  the same alert is still offered on Overview', !!reentry, true);
+  reentry.click();
+  await settle();
+  check('AC-101-06 re-selecting the SAME alert reopens Alerts', w.eval('S.view'), 'alerts');
+  check('  and selects it again',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* 3. A refresh of the state the reader deliberately walked back to. With a stale fragment this
+     reopened Alerts on load; the load-time line is run verbatim rather than paraphrased. */
+  w.switchView('overview');
+  await settle();
+  check('the fragment is clear before the simulated reload', w.location.hash, '');
+  w.eval('S.selectedAlertKey = ""; S.alertHashReturnView = "";');
+  w.switchView('overview');
+  if (w.alertKeyFromHash()) w.applyAlertHash();
+  await settle();
+  check('AC-101-07 a refresh after leaving Alerts stays on Overview', w.eval('S.view'), 'overview');
+  has('  and asserts nothing about a selection', '#nws-alerts-container', 'is-selected', false);
+
+  /* 4. Back is not hardcoded to Overview. A deep link followed from inside Alerts began there, so
+     Back belongs in Alerts — the rule is "return to the origin", not "return to Overview". */
+  w.switchView('alerts');
+  await settle();
+  w.location.hash = '#alert=' + KEY_B;
+  await settle();
+  check('a deep link followed from inside Alerts stays in Alerts', w.eval('S.view'), 'alerts');
+  w.history.back();
+  await settle();
+  check('  and Back returns to Alerts, not Overview', w.eval('S.view'), 'alerts');
+  check('  with the selection cleared all the same', w.eval('S.selectedAlertKey'), '');
+
+  /* 5. Moving between two alerts must not rewrite the origin, or Back after A -> B would return
+     to the wrong place. */
+  w.switchView('overview');
+  await settle();
+  w.location.hash = '#alert=' + KEY_A;
+  await settle();
+  w.location.hash = '#alert=' + KEY_B;
+  await settle();
+  check('the origin survives moving between alerts', w.eval('S.alertHashReturnView'), 'overview');
+  w.history.back();
+  await settle();
+  check('  Back from B reaches A, still inside the session',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+  w.history.back();
+  await settle();
+  check('  and one more Back ends the session at the origin', w.eval('S.view'), 'overview');
+
+  w.location.hash = '';
+  w.switchView('overview');
+  await settle();
+
   console.log('\nPW-101 — a missing provider id gets no deep link, and no title fallback:');
   await feed([mk('Wind Advisory', 'Moderate', 'Expected', 'Maui'),
               mk('Wind Advisory', 'Moderate', 'Expected', 'Oahu')]);

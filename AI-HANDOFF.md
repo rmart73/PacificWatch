@@ -62,7 +62,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
-| October Phase 1 PW-101/PW-102 — alert navigation and source links | **Resumed.** #47 is rebased onto `main` at `73ca4f5` and seeks a complete hosted 146-of-146 mutation verdict under the implemented 20-minute ceiling | Claude implements; Codex reviews read-only and runs the available browser pass; the owner decides merge |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | Rebased onto `main` at `73ca4f5`; first hosted verdict passed complete at 146 of 146 in a 963-second job. Read-only review then found a blocking AC-101-06 lifecycle defect, now fixed, so the corpus is 151 and a fresh hosted verdict is required on the corrected head | Claude implements; Codex reviews read-only and runs the available browser pass; the owner decides merge |
 | C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
 | C12 mutation timeout — workflow implementation | #49 merged as `73ca4f5`; the mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. The remaining contract-wording fix is deferred to a separate claim once #47 supplies a completed duration |
 
@@ -79,7 +79,7 @@ before it.
 job cancelled by C12's 15-minute ceiling, so the unit stopped at the contract boundary rather than
 presenting a partial verdict. C12 was then amended (#48) and implemented (#49), and the mutation
 ceiling on `main` is now 20 minutes. This unit resumes against that ceiling and **requires a
-complete hosted 146-of-146 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. The
+complete hosted 151-of-151 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. The
 earlier cancelled run and any local result are diagnostic only and are not offered as hosted
 evidence. If the hosted run exceeds 20 minutes or arrives without its final summary, this stops
 again rather than reporting success.
@@ -136,6 +136,66 @@ This changes render paths that **137 mutation anchors** sit in, and `AGENTS.md` 
 There were **no active Hawai'i NWS alerts** at claim time, so the id shape could not be sampled
 live and the work is fixture-driven. Baseline before any change: `npm test` 425, `test:dom` 436,
 `test:mutation` 137 of 137.
+
+**Round one of read-only review: a blocking lifecycle defect, and what the first tests missed**
+
+The first hosted verdict passed complete — run `38118022258`, attempt 1, 425 pure, 503 DOM, **146 of
+146 mutations** with 146 verdict lines, all `CAUGHT`, mutation job 963 seconds on image
+`20261004.327.1`. Codex then found a defect the green gate did not: **AC-101-06's view lifecycle**.
+
+`applyAlertHash()` read `if (key) switchView('alerts')` with **no branch for the key being
+cleared**. A fragment with a key meant go to Alerts; a fragment without one meant nothing. So Back
+cleared `S.selectedAlertKey` and stranded the reader in Alerts, and because `switchView()` never
+touched the fragment, three more failures followed from the same gap:
+
+1. Back removed the hash but left the view in Alerts.
+2. Returning to Overview by tab left `#alert=A` in the URL, contradicting the screen.
+3. Re-selecting that same alert changed nothing in the URL, so **no `hashchange` fired** and Alerts
+   never reopened — the alert became unreachable by the route the reader had just used.
+4. A refresh from that Overview state reopened the Alerts view the reader had deliberately left.
+
+**The fix, three changes.** `applyAlertHash()` handles the cleared fragment and restores the view
+the deep-link session began from. `switchView()` strips the fragment when leaving Alerts with a key
+set, through `clearAlertHash()`, which uses `replaceState` — no `hashchange`, no history entry,
+because the URL is being corrected to match a view change the reader already made rather than
+navigated to. `S.alertHashReturnView` records the origin **once per session**, so Back returns the
+reader where they actually were: a link followed from inside Alerts returns to Alerts, not
+unconditionally to Overview.
+
+**Why the original tests did not catch it.** They drove Back between two alert hashes, which never
+exercises the transition to *no* hash. Both states had a key, so both took the one branch that
+existed. A test suite can be thorough along the axis it imagines and blind across the boundary it
+does not.
+
+**The new tests were checked against the unfixed code before being trusted.** Against the previous
+`index.html` the new block fails **nine** assertions, one per symptom above. Tests that pass after
+a fix prove nothing about whether they would have caught the defect, so this direction of the check
+is the one that matters. DOM 503 → **526**; pure unchanged at 425; mutation corpus 146 → **151**
+with five cases restoring each defect separately, and an anchor pre-check reporting zero lost and
+zero ambiguous.
+
+**A mutation-harness lesson, recorded because it is the second occurrence.** One new case was
+reported MISSED although the mutation genuinely broke three assertions. Its `expect` list named
+“and leaves no fragment behind”, which checks the URL after Back — and the **browser** clears the
+fragment whether or not the view logic runs, so it cannot discriminate the mutation. Since `expect`
+is a **conjunction**, one non-discriminating entry fails the whole case. The entry was replaced
+rather than the harness loosened, and the reasoning now sits in a comment above the case. Naming an
+assertion the mutation does not break is the same error recorded against Claude earlier in this
+unit.
+
+**Browser pass, as Codex reported it.** Edge reached production at `pacific-watch.vercel.app` and
+the page loaded normally. The immutable #47 preview redirects to Vercel login; **no authentication
+was attempted and no credentials were created**, and Edge was restored to production. The **#47
+Edge row therefore stays `NOT TESTED`** — a production load is not a preview-head pass, and the
+distinction is kept rather than rounded up.
+
+**The completed duration the C12 correction was waiting for.** 963 seconds is **80.3% of the
+20-minute ceiling**, against the censored ≥916s lower bound and the 76.3% the amendment reasoned
+from. The real figure is worse, as the censored-bound correction warned it might be. That was
+measured at 146 cases and a 503-assertion DOM suite; this head carries 151 and 526, so the next
+hosted job will land higher again. If it exceeds the ceiling the unit stops and reports that rather
+than retrying, and **bounded internal concurrency stops being optional**: 81-plus of 151 cases run
+the full DOM suite, so every assertion added is paid once per case that spawns it.
 
 **Out of scope**
 
@@ -422,7 +482,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL. Rebased onto `main` at `73ca4f5`; seeking a complete hosted 146-of-146 mutation verdict |
+| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL. Rebased onto `main` at `73ca4f5`; carrying the AC-101-06 lifecycle fix and seeking a complete hosted 151-of-151 mutation verdict |
 
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
@@ -456,7 +516,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 **PW-101/PW-102 implementation is open as #47 and has resumed.** The C12 boundary that stopped it
 is cleared: the amendment merged as #48 and its workflow implementation as #49, so the mutation
 ceiling on `main` is 20 minutes. #47 is rebased onto `main` at `73ca4f5` and stays unmergeable
-until a **complete** hosted mutation verdict of 146 of 146 arrives under that ceiling, with zero
+until a **complete** hosted mutation verdict of 151 of 151 arrives under that ceiling, with zero
 `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. A cancelled run, a partial summary or a local result is
 not that evidence. No ruleset change is claimed and no remote branch deletion is authorized.
 

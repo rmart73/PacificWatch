@@ -42,6 +42,56 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- the history lifecycle, from Codex's review of the rebased #47 head --------------
+
+     The original code switched to Alerts when a fragment carried a key and did nothing when it
+     did not, which left four separate defects behind one gap. These cases restore each of them
+     individually, so none can regress under cover of the others. */
+
+  /* The first version of this case also expected 'and leaves no fragment behind'. That assertion
+     checks the URL after Back, which the BROWSER clears whether or not the view follows it — so it
+     cannot discriminate this mutation, and since expect is a conjunction the case was reported
+     MISSED despite genuinely breaking three assertions. Expect only what the mutation breaks. */
+  { name: 'Back to the hashless state strands the reader in Alerts',
+    from: "  } else if (changed && S.view === 'alerts') {",
+    to:   "  } else if (false) {",
+    expect: ['AC-101-06 Back from the first alert returns to Overview',
+             'and one more Back ends the session at the origin'],
+    suite: 'dom' },
+
+  { name: 'leaving Alerts by tab keeps the stale fragment',
+    from: "  if (v !== 'alerts' && S.selectedAlertKey) {",
+    to:   "  if (false) {",
+    expect: ['leaving Alerts by tab clears the stale fragment',
+             'AC-101-06 re-selecting the SAME alert reopens Alerts',
+             'AC-101-07 a refresh after leaving Alerts stays on Overview'],
+    suite: 'dom' },
+
+  /* The fragment is stripped with replaceState. Putting the hash back into the replacement URL
+     is the subtle version of the same bug: the view changes, the URL does not. */
+  { name: 'the fragment survives the replaceState that is meant to strip it',
+    from: "    window.history.replaceState(null, '', location.pathname + location.search);",
+    to:   "    window.history.replaceState(null, '', location.pathname + location.search + location.hash);",
+    expect: ['leaving Alerts by tab clears the stale fragment',
+             'AC-101-06 re-selecting the SAME alert reopens Alerts'],
+    suite: 'dom' },
+
+  /* Back returns to the origin, not unconditionally to Overview. */
+  { name: 'Back always returns to Overview, ignoring where the reader came from',
+    from: "    const back = S.alertHashReturnView || 'overview';",
+    to:   "    const back = 'overview';",
+    expect: ['and Back returns to Alerts, not Overview'],
+    suite: 'dom' },
+
+  /* Recording the origin on every hash application instead of once per session makes A -> B
+     overwrite it with 'alerts', so Back can never leave the session. */
+  { name: 'the origin is overwritten each time the fragment changes',
+    from: "    if (!S.alertHashReturnView) S.alertHashReturnView = S.view;",
+    to:   "    S.alertHashReturnView = S.view;",
+    expect: ['the origin survives moving between alerts',
+             'and one more Back ends the session at the origin'],
+    suite: 'dom' },
+
   { name: 'the Overview card links out to the API again',
     from: "    ? '<a class=\"pri-link\" href=\"#' + ALERT_HASH_PREFIX + key + '\">View alert details</a>'",
     to:   "    ? '<a class=\"pri-link\" href=\"' + alertApiUrl(f) + '\" target=\"_blank\" rel=\"noopener noreferrer\">Official NWS alert</a>'",

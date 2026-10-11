@@ -1025,6 +1025,11 @@ const S = {
      Alerts list can be re-rendered on refresh without re-parsing the URL. */
   selectedAlertKey: '',
 
+  /* PW-101. Where the reader was standing when a deep link took them to Alerts, so Back can put
+     them back there instead of stranding them in Alerts with nothing selected. Only the first
+     hash-driven switch records it; moving between two alert hashes must not overwrite the origin. */
+  alertHashReturnView: '',
+
   alertsCache: []
 };
 
@@ -1236,7 +1241,30 @@ function saveKey(context) {
   showToast('API key saved');
 }
 
+/* PW-101. Strips the alert fragment without firing hashchange and without adding a history entry.
+   replaceState is the point: the URL is being corrected to match a view change the reader already
+   made, not navigated to. */
+function clearAlertHash() {
+  if (!alertKeyFromHash()) return;
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', location.pathname + location.search);
+  } else {
+    location.hash = '';
+  }
+}
+
 function switchView(v) {
+  /* The fragment asserts "an alert is selected". Leaving Alerts by tab or in-app route makes that
+     false, so the URL is corrected to match rather than left contradicting the screen. Skipping
+     this strands a stale fragment with three consequences: re-selecting the same alert changes
+     nothing in the URL, so no hashchange fires and Alerts never reopens; a refresh reopens the
+     view the reader had deliberately left; and Back lands on a fragment that no longer describes
+     anything. */
+  if (v !== 'alerts' && S.selectedAlertKey) {
+    S.selectedAlertKey = '';
+    S.alertHashReturnView = '';
+    clearAlertHash();
+  }
   S.view = v;
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   const t = document.getElementById('view-' + v);
@@ -1565,7 +1593,21 @@ function applyAlertHash() {
   const key = alertKeyFromHash();
   const changed = key !== S.selectedAlertKey;
   S.selectedAlertKey = key;
-  if (key) switchView('alerts');
+  if (key) {
+    /* Record the origin once, when a deep-link session begins. Moving from alert A to alert B must
+       not overwrite it, and a link followed from inside Alerts records Alerts — so Back returns
+       the reader where they actually were, not always to Overview. */
+    if (!S.alertHashReturnView) S.alertHashReturnView = S.view;
+    switchView('alerts');
+  } else if (changed && S.view === 'alerts') {
+    /* Back cleared the fragment, so the selection it described is gone. The URL is the router, so
+       the view follows it home instead of leaving the reader in Alerts with nothing selected and
+       no way to tell that Back did anything. The origin view is restored when one was recorded;
+       a deep link followed from inside Alerts returns to Alerts, which is where it started. */
+    const back = S.alertHashReturnView || 'overview';
+    S.alertHashReturnView = '';
+    switchView(back);
+  }
   if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
   if (key && changed) focusSelectedAlert();
 }
