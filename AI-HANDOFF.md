@@ -62,8 +62,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
-| October Phase 1 PW-101/PW-102 — alert navigation and source links | **Rebased onto `main` at `70cc74d` with both Codex blockers fixed.** 549 DOM assertions and 157 mutation cases; the new tests fail nine assertions against the unfixed file, four for the truthfulness blocker and five for the focus blocker | Seeking a complete hosted 157-of-157 verdict at the final head; Codex reviews read-only; the owner decides merge |
-| C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | **Rebased onto `main` at `70cc74d` with both Codex blockers fixed.** 549 DOM assertions and 157 mutation cases; the new tests fail nine assertions against the unfixed file, four for the truthfulness blocker and five for the focus blocker | Seeking a complete hosted 157-of-157 verdict at the final head; Codex reviews read-only; the owner decides merge || C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
@@ -108,8 +107,7 @@ worth remembering:
 job cancelled by C12's 15-minute ceiling, so the unit stopped at the contract boundary rather than
 presenting a partial verdict. C12 was then amended (#48) and implemented (#49), and the mutation
 ceiling on `main` is now 20 minutes. This unit resumes against that ceiling and **requires a
-complete hosted 157-of-157 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. The
-earlier cancelled run and any local result are diagnostic only and are not offered as hosted
+complete hosted 157-of-157 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. Theearlier cancelled run and any local result are diagnostic only and are not offered as hosted
 evidence. If the hosted run exceeds 20 minutes or arrives without its final summary, this stops
 again rather than reporting success.
 
@@ -510,9 +508,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/c12-mutation-timeout | Workflow-only C12 implementation: the mutation job's `timeout-minutes` 15 → 20, with all three required check names and every other workflow line preserved |
-| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102 implementation; stopped pending an implemented C12 amendment and a clean hosted mutation run |
-
+| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL, plus both Codex review blockers — absolute verdicts now require current authoritative state, and an owed deep-link focus is paid once. Rebased onto `main` at `70cc74d`; seeking a complete hosted 157-of-157 mutation verdict |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -542,11 +538,17 @@ Merged branches are omitted from this active list; this does not imply remote br
 **`main` is merged through #48 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**PW-101/PW-102 implementation is open as #47 but stopped at C12's contract boundary.** Codex's
-only active work is this documentation-only C12 amendment. No workflow implementation or ruleset
-change is claimed; #47 remains unmergeable until the amendment is implemented separately and its
-hosted mutation check passes. No remote branch deletion is authorized.
+**PW-101/PW-102 implementation is open as #47 and has resumed.** Every gate that stopped it is
+cleared: C12 was amended (#48), its workflow implemented (#49), and the serial-cost problem that
+would have timed out the corrected head was fixed by the bounded pool (#50). The mutation ceiling
+on `main` is 20 minutes and a 137-case job now runs about 196 seconds of it.
 
+#47 is rebased onto `main` at `70cc74d` carrying both blockers from Codex's second review —
+absolute verdicts no longer drawn from retained data, and an owed deep-link focus paid once
+without stealing focus on background refreshes. It stays unmergeable until a **complete** hosted
+verdict of 157 of 157 arrives with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. A cancelled run,
+a partial summary or a local result is not that evidence. No ruleset change is claimed and no
+remote branch deletion is authorized.
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
 mutations in 694 seconds on image version `20260927.320.1`. C12 and the ruleset are unchanged.
