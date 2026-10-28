@@ -73,6 +73,32 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
+**Phase 1 closeout — Claude Code, `claude/phase1-closeout`.** Claimed 2026-10-28 before editing the
+board, in its own commit ahead of the work, under the owner's authorization to finish the project.
+Branched from `main` at `1263545`.
+
+**Documentation only.** No `index.html`, `test/`, `api/`, `vercel.json`, workflow, contract,
+`AGENTS.md`, dependency or ruleset change. Nothing in this unit can alter what the application
+does; the CI gate runs because it is required, not because there is code to prove.
+
+**Why it exists.** #55 could not record its own merge, which is the carry-forward this board has
+hit after every board-touching PR. The result is live and wrong: the pointer reads `#53`, and two
+merged units — PW-106 and the OlaPono rename — still sit under *Active claims*, the section whose
+only job is to say what another agent is touching right now.
+
+**Scope**: sweep #54 and #55, close both claim blocks, clear the Active Branches row, rewrite the
+live current-state paragraph whole, and record Phase 1's completion with its final numbers and the
+browser matrix as it actually stands.
+
+**Explicitly not in scope: the closed-claims cleanup.** Eight `Closed:` blocks occupy most of an
+810-line section and the Review Queue's own condition is that their durable content be verified
+elsewhere before removal. That verification is the work, and doing it badly would discard the only
+surviving record of several decisions. It stays open.
+
+**No rename or domain work**: the rename is already merged as #55, and `nechicoa.app` remains
+reserved and unconnected.
+
+
 **OlaPono product rename — ChatGPT Codex, `codex/olapono-rename`.** Claimed 2026-10-28
 before editing any branding, application, test or durable documentation file. Branched from
 `main` at `97e610f`, after #54's exact-`main` attempt-1 run passed at 450 pure, 661 DOM and
