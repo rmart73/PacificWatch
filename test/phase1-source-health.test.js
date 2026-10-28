@@ -62,10 +62,15 @@ const parts = [
 const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, requestPending, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate, newsPublishedAt, NEWS_PUB_SKEW_MS, NEWS_PUB_ISO_RE, tickerSpeedPxPerS, tickerDurationSeconds, TICKER_PX_PER_S_DESKTOP, TICKER_PX_PER_S_MOBILE, TICKER_MOBILE_MAX_W, TICKER_MIN_S, TICKER_MAX_S})');
 const St = api.S;
 
-/* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
-   It used to live in renderAlerts; every alert surface now shares this one copy. */
-const filterSrc = grab(/\.filter\(f => \{\n\s*const exp = f && f\.properties && f\.properties\.expires;\n\s*return !exp \|\| new Date\(exp\)\.getTime\(\) > now;\n\s*\}\)/, 'expiry filter');
-const pickLive = new Function('features', 'now', 'return (features || [])' + filterSrc + ';');
+/* The eligibility predicates, lifted verbatim out of the shared nwsEligible() selector: the
+   malformed-payload guard PW-106 added, then the expiry predicate, with the non-array coercion
+   in front of both. All three are mirrored so this helper stays faithful to production rather
+   than to an older shape of it — lifting only the expiry filter is how it went stale when the
+   guard landed. */
+const guardSrc = grab(/\.filter\(f => f && f\.properties\)/, 'malformed-payload guard');
+const filterSrc = grab(/\.filter\(f => \{\n\s*const exp = f\.properties\.expires;\n\s*return !exp \|\| new Date\(exp\)\.getTime\(\) > now;\n\s*\}\)/, 'expiry filter');
+const pickLive = new Function('features', 'now',
+  'return (Array.isArray(features) ? features : [])' + guardSrc + filterSrc + ';');
 
 let pass = 0, fail = 0;
 function check(label, actual, expected) {
@@ -177,6 +182,23 @@ check('  a measured wrap with a zero track still yields nothing useful',
   api.tickerDurationSeconds(0, 0, MOBILE_VW), null);
 check('  and a missing argument does not throw',
   api.tickerDurationSeconds(undefined, undefined, DESKTOP_VW), null);
+
+console.log('\nPW-106 malformed upstream payload — the guard, in pure form:');
+/* nwsEligible() feeds compareAlerts() and alertMatchesIsland(), which both read f.properties
+   directly. Before PW-106 a non-array, a null entry or a feature without properties threw and
+   took the whole alert render down. The dangerous outcome was never the crash though: it is a
+   garbage payload presenting as an empty, healthy list. */
+check('a non-array payload yields nothing rather than throwing', pickLive('not-an-array', Date.now()).length, 0);
+check('a null payload yields nothing', pickLive(null, Date.now()).length, 0);
+check('an undefined payload yields nothing', pickLive(undefined, Date.now()).length, 0);
+check('a number payload yields nothing', pickLive(42, Date.now()).length, 0);
+check('null entries are dropped', pickLive([null, null], Date.now()).length, 0);
+check('features without properties are dropped', pickLive([{}, { id: 'x' }], Date.now()).length, 0);
+/* And the guard must not be a blanket filter: a well-formed product still survives it. */
+const okFeat = { properties: { event: 'Flood Warning' } };
+check('a well-formed product still passes the guard', pickLive([okFeat], Date.now()).length, 1);
+check('  and mixed garbage leaves exactly the good one',
+  pickLive([null, okFeat, {}, 'junk'], Date.now()).length, 1);
 
 console.log('\nExpired-alert filtering — retained data must not resurrect a lapsed warning:');
 const t = Date.now();

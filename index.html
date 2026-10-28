@@ -1416,9 +1416,18 @@ const HAZARD_ICONS = {
    compareAlerts() on a copy — and the banner, rail, ticker and strip all read from it. */
 function nwsEligible(features) {
   const now = Date.now();
-  return (features || [])
+  /* PW-106. A malformed upstream payload must not reach the comparators. compareAlerts() and
+     alertMatchesIsland() both read f.properties directly, so a non-array, a null entry, or a
+     feature without properties used to throw and take the whole alert render down with it. One
+     guard here covers all three rather than three guards downstream.
+
+     Note what this deliberately does NOT do: an unusable payload yields zero ELIGIBLE products,
+     which is not the same as a verified all-clear. sourceState() still governs what the UI is
+     allowed to claim, so garbage cannot become "no active alerts for Hawaii". */
+  return (Array.isArray(features) ? features : [])
+    .filter(f => f && f.properties)
     .filter(f => {
-      const exp = f && f.properties && f.properties.expires;
+      const exp = f.properties.expires;
       return !exp || new Date(exp).getTime() > now;
     })
     .filter(f => alertMatchesIsland(f, S.island))
@@ -1490,7 +1499,10 @@ function nwsSnapshot() {
   if (state === 'unavailable') { snap.presentation = 'unavailable'; return snap; }
   if (raw == null) { snap.presentation = snap.stale ? 'stale-empty' : 'checking'; return snap; }
 
-  snap.allFeatures = (raw || []).slice();
+  /* PW-106. Array.isArray rather than a truthiness check: a string payload is truthy and has
+     its own .slice(), so "not-an-array" used to survive as allFeatures and then throw on .find()
+     during deep-link resolution. nwsEligible() guards itself the same way. */
+  snap.allFeatures = (Array.isArray(raw) ? raw : []).slice();
   snap.features = nwsEligible(raw);
   snap.total = snap.features.length;
   snap.features.forEach(x => {
