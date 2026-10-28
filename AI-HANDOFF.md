@@ -131,12 +131,15 @@ owner-provided context below.
 
 **Owner-provided infrastructure context, recorded here and authorising nothing**
 
-Relayed 2026-10-28: the Vercel plan is now **Pro**, and the owner has purchased **`nehicoa.app`**.
+Relayed 2026-10-28: the Vercel plan is now **Pro**, and the owner has purchased **`nechicoa.app`**. The
+spelling was first recorded here as `nehicoa.app`, which was wrong and is corrected by the owner;
+the domain is **`nechicoa.app`**. A misspelled domain in a public repository is not a harmless typo
+— it names something the owner does not control.
 The replacement product name is **not settled**.
 
 Both are **available infrastructure only**. Neither authorises, and this claim does not perform:
 a product rename, any branding change, any change to canonical URLs, attaching or redirecting
-`nehicoa.app`, or any Vercel or domain settings change. **Pacific Watch remains the working name
+`nechicoa.app`, or any Vercel or domain settings change. **Pacific Watch remains the working name
 everywhere** until the owner explicitly chooses the name and the deployment relationship. A rename,
 a domain migration, and any Pro-specific architecture are each separate claimed units requiring
 their own authorisation. Recorded now so the information is not lost and so no later unit can treat
@@ -623,7 +626,7 @@ ceiling; the wording correction and the 75%-of-ceiling capacity-review trigger r
 
 **PW-104 is the open unit**, claimed above. PW-103 follows after it merges, then PW-105 and PW-106.
 **No rename, no branding change and no domain work is authorised** — the Vercel Pro plan and
-`nehicoa.app` are recorded as available infrastructure only. No ruleset change is claimed and no
+`nechicoa.app` are recorded as available infrastructure only. No ruleset change is claimed and no
 remote branch deletion is authorized.
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
