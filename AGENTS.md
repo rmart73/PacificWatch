@@ -1,4 +1,4 @@
-# Pacific Watch — Hawaii Situational Awareness
+# OlaPono — Hawaii Situational Awareness
 
 Single-file web app for real-time Hawaii emergency and weather situational awareness.
 Hosted on Vercel. Worked on by two agents — Claude Code and ChatGPT Codex — see the working agreement below.
@@ -8,7 +8,7 @@ Hosted on Vercel. Worked on by two agents — Claude Code and ChatGPT Codex — 
 
 # Working agreement — two agents share this repo
 
-**Claude Code** and **ChatGPT Codex** both work on Pacific Watch. This file is the shared contract;
+**Claude Code** and **ChatGPT Codex** both work on OlaPono. This file is the shared contract;
 read it before your first edit in a session. `CLAUDE.md` is a pointer to this file, not a second copy —
 if you learn something durable about the project, record it **here** so both agents get it.
 

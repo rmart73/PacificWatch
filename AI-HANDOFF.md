@@ -1,4 +1,4 @@
-# Pacific Watch — AI Handoff
+# OlaPono — AI Handoff
 
 Current coordination only. Durable rules live in [AGENTS.md](AGENTS.md); the roadmap is
 [the v2 product plan](Pacific-Watch-v2-Product-and-UX-Plan.md).
@@ -63,7 +63,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
-| October Phase 1 PW-106 — consolidated validation | Claimed on `claude/pw106-consolidated-validation`; the audit found most required coverage already present and **five genuine gaps**, which is what this unit adds | Claude implements; Codex reviews read-only and owns the browser matrix rows; the owner decides merge |
+| October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
+| OlaPono product rename | Claimed on `codex/olapono-rename`; replacement name selected by the owner, with Fira Sans reserved for the header title | Codex implements, verifies the PR preview at desktop and 390px, and opens a PR; owner-authorized merge follows green review evidence |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
@@ -71,6 +72,24 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**OlaPono product rename — ChatGPT Codex, `codex/olapono-rename`.** Claimed 2026-10-28
+before editing any branding, application, test or durable documentation file. Branched from
+`main` at `97e610f`, after #54's exact-`main` attempt-1 run passed at 450 pure, 661 DOM and
+192 of 192 mutations and production was verified byte-identical to the merged HTML blob.
+
+The owner selected **OlaPono** as the replacement product name and requested **Fira Sans for the
+title**. This unit changes the live document title, visible brand, current in-app product copy,
+client identifier, package metadata and current project identity headings. Fira Sans is loaded
+only for `.brand-text-main`; the operational UI keeps Syne and the editorial News roles keep
+Source Serif 4. Tests will pin the name, font import and title-only role, and the Vercel preview
+will be checked at desktop and 390px for loading, clipping, wrapping and header stability.
+
+Historical audit records, completed contracts and archived briefs retain the name they carried
+when authored. Existing GitHub/Vercel project names, production hostname, API routes, localStorage
+keys and internal `pw_*` identifiers are infrastructure and stay unchanged. `nechicoa.app` remains
+reserved infrastructure: this claim authorizes no domain connection, redirect, canonical URL or
+Vercel settings change.
 
 **October Phase 1 PW-106 — consolidated validation — Claude Code,
 `claude/pw106-consolidated-validation`.** Claimed 2026-10-28 before editing any file, in its own

@@ -1,4 +1,4 @@
-# Pacific Watch
+# OlaPono
 
 **The project documentation lives in [`AGENTS.md`](AGENTS.md). Read that file.**
 
