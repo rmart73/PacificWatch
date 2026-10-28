@@ -14,7 +14,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFile } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 /* Cases name the suite that is supposed to catch them. Both suites take an html path. */
@@ -943,43 +943,109 @@ const mutations = [
 ];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
-let missed = 0;
 
-mutations.forEach((m, i) => {
+/* Cases run through a BOUNDED POOL rather than one at a time. The serial harness reached 1104
+   seconds on this corpus — 92% of C12's 20-minute ceiling, about 96 seconds of headroom — because
+   81-plus of these cases spawn the whole DOM suite, so every assertion added is paid once per case
+   that runs it. At roughly 6 seconds per DOM assertion, the next unit would have timed out the
+   job, and a timeout on a required check with no bypass actors blocks every merge including the
+   PR that would record it.
+
+   What does NOT change: one mutant file and one node process per case, so isolation is identical;
+   one aggregating verdict; one line per case; the same `N of M mutations caught` summary the
+   workflow greps for. Concurrency is a scheduling change, not a semantic one.
+
+   The bound matters. Unbounded spawning would thrash memory and make the timing meaningless, so
+   the pool is capped at the core count and at 4 by default, which is what a hosted runner has.
+   MUTATION_CONCURRENCY=1 restores the exact serial behaviour for debugging or bisecting. */
+const CONCURRENCY = (() => {
+  const raw = parseInt(process.env.MUTATION_CONCURRENCY || '', 10);
+  if (Number.isFinite(raw) && raw > 0) return raw;
+  const cores = (os.cpus() || []).length || 1;
+  return Math.max(1, Math.min(4, cores));
+})();
+
+/* Returns the verdict for one case as DATA — the lines it would have printed, plus whether it
+   counts against the gate — so the pool can finish cases in any order while output stays in case
+   order. Printing from inside the worker would interleave two suites' lines and make the log
+   unreadable and unstable run to run. */
+function runCase(m, i) {
   const subject = SUBJECT[m.target || 'html'];
   const src = subject.src;                 /* shadows the page source for this case only */
   if (!src.includes(m.from)) {
-    console.log('  ANCHOR LOST  ' + m.name + '\n               the code it mutates has moved; update this case');
-    missed++;
-    return;
+    return Promise.resolve({ missed: true,
+      lines: ['  ANCHOR LOST  ' + m.name + '\n               the code it mutates has moved; update this case'] });
   }
   /* String.replace rewrites the FIRST match. A case whose anchor appears more than once can
      silently mutate unrelated code, and then CAUGHT and MISSED both mean nothing — that
      happened here with a CSS anchor shared by .sec-head and .nws-strip. */
   if (src.indexOf(m.from) !== src.lastIndexOf(m.from)) {
-    console.log('  AMBIGUOUS  ' + m.name + '\n             its anchor appears more than once; make it unique');
-    missed++;
-    return;
+    return Promise.resolve({ missed: true,
+      lines: ['  AMBIGUOUS  ' + m.name + '\n             its anchor appears more than once; make it unique'] });
   }
   const file = path.join(dir, 'mutant' + i + subject.ext);
   fs.writeFileSync(file, src.replace(m.from, m.to));
   const suite = SUITES[m.suite || 'dom'];
-  let out = '';
-  try { out = execFileSync('node', [suite, file], { encoding: 'utf8' }); }
-  catch (e) { out = (e.stdout || '') + (e.stderr || ''); }
-  fs.unlinkSync(file);
+  return new Promise(resolve => {
+    /* A mutant whose code throws ends its suite early, so stderr carries the evidence and a
+       nonzero exit is expected rather than exceptional — both streams are read either way.
+       maxBuffer is raised because a passing DOM run alone prints hundreds of lines. */
+    execFile('node', [suite, file], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        try { fs.unlinkSync(file); } catch (e) { /* the run matters, not the cleanup */ }
+        const out = (stdout || '') + (stderr || '');
+        const failed = out.split('\n').filter(l => l.trim().startsWith('FAIL')).map(l => l.trim());
+        const caught = m.expect.filter(x => failed.some(l => l.includes(x)));
+        if (caught.length === m.expect.length) {
+          resolve({ missed: false,
+            lines: ['  CAUGHT  ' + m.name + '  [' + (m.suite || 'dom') + ']  (' + failed.length + ' assertion(s) failed)'] });
+        } else {
+          const lines = ['  MISSED  ' + m.name + '\n          nothing asserted this behaviour; ' + failed.length + ' unrelated failure(s)'];
+          failed.slice(0, 5).forEach(l => lines.push('          > ' + l));
+          resolve({ missed: true, lines: lines });
+        }
+      });
+  });
+}
 
-  const failed = out.split('\n').filter(l => l.trim().startsWith('FAIL')).map(l => l.trim());
-  const caught = m.expect.filter(x => failed.some(l => l.includes(x)));
-  if (caught.length === m.expect.length) {
-    console.log('  CAUGHT  ' + m.name + '  [' + (m.suite || 'dom') + ']  (' + failed.length + ' assertion(s) failed)');
-  } else {
-    missed++;
-    console.log('  MISSED  ' + m.name + '\n          nothing asserted this behaviour; ' + failed.length + ' unrelated failure(s)');
-    failed.slice(0, 5).forEach(l => console.log('          > ' + l));
+async function main() {
+  const results = new Array(mutations.length);
+  let next = 0, printed = 0, missed = 0;
+
+  /* Emits every case that has completed AND whose predecessors have all completed, so the log is
+     in case order no matter what order the pool finished in. */
+  function flush() {
+    while (printed < mutations.length && results[printed]) {
+      results[printed].lines.forEach(l => console.log(l));
+      if (results[printed].missed) missed++;
+      printed++;
+    }
   }
-});
 
-fs.rmSync(dir, { recursive: true, force: true });
-console.log('\n' + (mutations.length - missed) + ' of ' + mutations.length + ' mutations caught');
-if (missed) { console.log('An undetected mutation means an assertion is decorative.'); process.exit(1); }
+  async function worker() {
+    for (let i = next++; i < mutations.length; i = next++) {
+      results[i] = await runCase(mutations[i], i);
+      flush();
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, mutations.length) }, worker));
+  flush();
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  /* C12 requires a COMPLETE verdict: a partial summary must never read like a pass. If any case
+     failed to report, say so and fail, rather than printing a total that looks plausible. */
+  if (printed !== mutations.length) {
+    console.log('\nINCOMPLETE: ' + printed + ' of ' + mutations.length + ' cases reported a verdict');
+    process.exit(1);
+  }
+
+  console.log('\n' + (mutations.length - missed) + ' of ' + mutations.length + ' mutations caught');
+  if (missed) { console.log('An undetected mutation means an assertion is decorative.'); process.exit(1); }
+}
+
+/* An unhandled rejection must not be able to exit 0 and be read as a green gate. */
+main().catch(e => {
+  console.log('\nharness error: ' + (e && e.stack ? e.stack : e));
+  process.exit(1);
+});
