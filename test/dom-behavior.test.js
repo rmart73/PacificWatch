@@ -1589,6 +1589,189 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-106 — the five gaps the coverage audit actually found:');
+  /* PW-106 lists 28 required tests and nine source-health fixtures. The audit mapped each to
+     existing coverage from PW-101..PW-105; these are the five that were genuinely missing. Writing
+     the other 23 again would inflate the suite and claim credit for work already done. */
+
+  /* GAP 1. A malformed upstream payload, driven through the real fetch boundary.
+
+     The first version of this test asserted only that rendering did not throw and that no alert
+     row was fabricated. Both passed while the actual hazard sat next to them: `fetchAlerts()`
+     accepted `features: [null, {}]`, called `sourceOk()`, and the source became `current`. The
+     downstream guard then dropped both entries, leaving zero eligible products from a CURRENT
+     source — which every surface renders as "All clear" / "No active NWS alerts". A green
+     corpus therefore did not test the thing the unit was about. Found in review, not by me.
+
+     The copy below is the whole point of the assertions: an all-clear is a claim about the world,
+     and the app may only make it when NWS actually answered with a usable payload. */
+  const ALL_CLEAR = /No active NWS alerts|ALL CLEAR|All clear/i;
+  const SURFACES = ['#nws-alerts-container', '#ticker-track', '#view-overview', '.nws-strip', '.hazard-banner'];
+  const surfaceText = () => SURFACES.map(sel => { const el = $(sel); return el ? el.textContent : ''; }).join(' ~ ');
+
+  w.eval('S.island = "statewide"');
+  const malformedPayloads = [
+    { label: 'a null entry', value: [null, null] },
+    { label: 'an entry with no properties', value: [{}, { id: 'x' }] },
+    { label: 'one good product beside one malformed', value: [{ properties: { event: 'Flood Warning', areaDesc: 'Oahu' } }, null] },
+    { label: 'a string where properties should be', value: [{ properties: 'nope' }] }
+  ];
+  for (const bad of malformedPayloads) {
+    let threw = false;
+    try { await feed(bad.value); } catch (e) { threw = true; }
+    check('GAP1 ' + bad.label + ' does not throw', threw, false);
+    /* The load-bearing assertion: the fetch must be REJECTED, not accepted-then-filtered. */
+    check('GAP1 ' + bad.label + ' leaves the source not current',
+      w.eval("sourceState('nwsAlerts')") !== 'current', true);
+    check('GAP1 ' + bad.label + ' produces no all-clear on any surface',
+      ALL_CLEAR.test(surfaceText()), false);
+  }
+
+  /* The third fixture is the reason the whole snapshot is rejected rather than filtered: a
+     malformed neighbour means the hazardous product may be the one that was lost. Dropping the bad
+     entry and showing the good one would look reasonable and quietly understate the hazard. */
+  await feed([{ properties: { event: 'Tsunami Warning', areaDesc: 'Oahu' } }, null]);
+  check('GAP1 a usable product beside a malformed one does not make the source current',
+    w.eval("sourceState('nwsAlerts')") !== 'current', true);
+  has('GAP1 and the partial snapshot is not presented as the full picture',
+    '#nws-alerts-container', 'ALL CLEAR', false);
+
+  /* A well-formed payload must still be accepted — the guard is not a blanket rejection. */
+  await feed([twin(ID_A, 'Oahu')]);
+  check('GAP1 a well-formed payload is still accepted', w.eval("sourceState('nwsAlerts')"), 'current');
+  /* And a genuinely empty answer from a healthy source is still allowed to say so. That is the
+     distinction the fix preserves: verified-empty is a real state, garbage is not. */
+  await feed([]);
+  check('GAP1 a verified empty answer is still current', w.eval("sourceState('nwsAlerts')"), 'current');
+  check('GAP1 and verified-empty may still state the all-clear',
+    ALL_CLEAR.test(surfaceText()), true);
+
+  /* Defence in depth, kept but no longer load-bearing. Retained or injected data that never went
+     through the fetch boundary must still not crash the comparators. The source is stale here, so
+     showing nothing is correct and no all-clear is claimed either way. */
+  /* Each injected shape reaches a different downstream guard, so each one is named: a non-array
+     reaches the Array.isArray coercions in nwsEligible() and nwsSnapshot(), and a list carrying
+     junk reaches the f && f.properties filter. Without these the guards are unreachable from any
+     test and their mutations are undetectable — which the harness reported as three MISSED cases
+     the moment the fetch boundary started rejecting earlier. */
+  /* 8 minutes, not 45: nwsAlerts has freshMs 6 and staleMs 10, so 45 is past the stale window
+     and nwsSnapshot() returns at its `unavailable` branch before the guards run. The first version
+     of this block used 45 and reached nothing, which is why three mutations came back MISSED with
+     zero failures. A fixture has to land inside the window it is testing. */
+  const injected = [
+    { label: 'a non-array in retained data', data: '"not-an-array"' },
+    { label: 'a list of nulls in retained data', data: '[null, null]' },
+    { label: 'entries without properties in retained data', data: '[{}, { id: "x" }, "junk"]' }
+  ];
+  let injectedThrew = false;
+  for (const inj of injected) {
+    let threw = false;
+    try {
+      w.eval('S.cache.nwsAlerts = { island: "statewide", data: ' + inj.data + ' };');
+      w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = Date.now() - 8*60*1000; S.sourceHealth.nwsAlerts.lastError = "net";');
+      w.renderAlertSurfaces();
+      await settle();
+    } catch (e) { threw = true; injectedThrew = true; }
+    check('GAP1 ' + inj.label + ' does not crash the comparators', threw, false);
+  }
+  check('GAP1 injected malformed retained data does not crash the comparators', injectedThrew, false);
+  check('  and the source is still not current', w.eval("sourceState('nwsAlerts')") !== 'current', true);
+  check('  with no all-clear claimed from it', ALL_CLEAR.test(surfaceText()), false);
+  w.eval('S.sourceHealth.nwsAlerts.lastError = null;');
+
+  /* GAP 2. Partial provider failure. Per-source health is the whole point of the model, and
+     nothing proved that a failed alerts fetch leaves the other sources alone. */
+  await feed([twin(ID_A, 'Oahu')]);
+  w.eval('S.sourceHealth.nwsWeather.lastAttempt = Date.now(); S.sourceHealth.nwsWeather.lastSuccess = Date.now(); S.sourceHealth.nwsWeather.lastError = null;');
+  check('GAP2 both sources start healthy', w.eval("sourceState('nwsAlerts') + '/' + sourceState('nwsWeather')"), 'current/current');
+  w.fetch = makeFetch('/alerts/active');
+  await w.fetchAlerts();
+  await settle();
+  check('GAP2 the failed source degrades', w.eval("sourceState('nwsAlerts') !== 'current'"), true);
+  check('GAP2 and the healthy one is untouched', w.eval("sourceState('nwsWeather')"), 'current');
+  check('GAP2 the failure did not clear the other source last success',
+    w.eval('!!S.sourceHealth.nwsWeather.lastSuccess'), true);
+  w.fetch = makeFetch(null);
+
+  /* GAP 3. An alert updated in place — same id, new values. This is how NWS issues a replacement,
+     and absence-after-refresh (PW-101's `gone`) does not cover it. */
+  const soon = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  const later = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+  const first = twin(ID_A, 'Oahu');
+  first.properties.event = 'Flood Watch';
+  first.properties.expires = soon;
+  await feed([first]);
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  has('GAP3 the original product is shown', '#nws-alerts-container', 'Flood Watch', true);
+  const updated = twin(ID_A, 'Oahu');
+  updated.properties.event = 'Flood Warning';
+  updated.properties.expires = later;
+  await feed([updated]);
+  has('GAP3 an update to the same id replaces the product', '#nws-alerts-container', 'Flood Warning', true);
+  has('  and the superseded product is gone', '#nws-alerts-container', 'Flood Watch', false);
+  check('GAP3 the deep link still resolves to it',
+    ($('#nws-alerts-container .alert-item.is-selected') || { id: '' }).id, 'alert-' + KEY_A);
+  has('  and nothing reports it as no longer active', '#nws-alerts-container', 'no longer active', false);
+  w.location.hash = '';
+  await settle();
+
+  /* GAP 4. Resize updating the ticker duration. PW-103 wired calibrateTicker() into the chrome
+     resize listener and tested the pure model, but never the two together. jsdom has no layout, so
+     the widths are stubbed on the real nodes — that is the only way to drive the measured path at
+     all, and it is stated rather than disguised. */
+  const trackEl = $('#ticker-track');
+  const wrapEl = trackEl.parentNode;
+  Object.defineProperty(wrapEl, 'clientWidth', { value: 300, configurable: true });
+  Object.defineProperty(trackEl, 'scrollWidth', { value: 1700, configurable: true });
+  const setVW = (n) => Object.defineProperty(w, 'innerWidth', { value: n, configurable: true });
+  const durNow = () => w.document.documentElement.style.getPropertyValue('--ticker-dur');
+
+  setVW(390);
+  w.dispatchEvent(new w.Event('resize'));
+  await settle();
+  const mobileDur = durNow();
+  check('GAP4 a resize publishes a duration at phone width', /^[0-9.]+s$/.test(mobileDur), true);
+  setVW(1440);
+  w.dispatchEvent(new w.Event('resize'));
+  await settle();
+  const desktopDur = durNow();
+  check('GAP4 a resize to desktop republishes it', /^[0-9.]+s$/.test(desktopDur), true);
+  check('GAP4 and the duration actually changed', mobileDur !== desktopDur, true);
+  /* Same distance, different speed: the phone is slower per pixel, so its cycle is LONGER. */
+  check('GAP4 the phone takes longer over identical content',
+    parseFloat(mobileDur) > parseFloat(desktopDur), true);
+  check('GAP4 the start offset tracks the measured wrap, not the viewport',
+    w.document.documentElement.style.getPropertyValue('--ticker-from'), '300px');
+
+  /* GAP 5. An empty alert collection reaching the calibration path. */
+  let emptyThrew = false;
+  try {
+    await feed([]);
+    w.dispatchEvent(new w.Event('resize'));
+    await settle();
+  } catch (e) { emptyThrew = true; }
+  check('GAP5 an empty alert collection does not break the ticker', emptyThrew, false);
+  check('GAP5 and the ticker still carries readable text', txt('#ticker-track').length > 20, true);
+  check('GAP5 with a duration still published', /^[0-9.]+s$/.test(durNow()), true);
+  has('GAP5 and it does not read as a confirmed all-clear when nothing was verified',
+    '#ticker-track', 'not current', false);
+
+  /* Leave no trace. The PW-103 section further down asserts that an unmeasured DOM publishes
+     nothing, and these stubs made that assertion fail for the wrong reason. A test that breaks a
+     later test is its own kind of decorative assertion: both then prove only the order they ran
+     in. */
+  Object.defineProperty(wrapEl, 'clientWidth', { value: 0, configurable: true });
+  Object.defineProperty(trackEl, 'scrollWidth', { value: 0, configurable: true });
+  setVW(1024);
+  w.document.documentElement.style.removeProperty('--ticker-from');
+  w.document.documentElement.style.removeProperty('--ticker-dur');
+  w.eval('tickerCalibration = ""');
+  await settle();
+  check('GAP4/5 clean up after themselves',
+    w.document.documentElement.style.getPropertyValue('--ticker-dur'), '');
+
   console.log('\nPW-105 — the brand wave drifts exactly one wavelength, so the loop cannot snap:');
   /* jsdom renders nothing, so none of this witnesses motion. What it can prove is the geometry:
      that the silhouette is untouched, that the drift distance equals the wave's own wavelength,

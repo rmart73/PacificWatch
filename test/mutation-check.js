@@ -42,6 +42,72 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- PW-106, the malformed-payload guard and the resize wiring --------------------
+
+     These four restore the defect the consolidated-validation audit actually found: a malformed
+     upstream payload used to throw out of the alert render. The failure mode that matters is not
+     the crash but what a crash looks like downstream — nothing rendered, which reads as calm. */
+
+  /* THE case for this unit. Removing the fetch-boundary validation restores the exact hazard
+     found in review: a successful HTTP response carrying malformed features is accepted,
+     sourceOk() marks the source current, the downstream guard drops the bad entries, and zero
+     eligible products from a current source render as a verified all-clear. A garbage payload
+     becomes "No active NWS alerts". */
+  { name: 'the fetch boundary accepts malformed features again',
+    from: "    if (badIndex !== -1) throw new Error('malformed alert feature at index ' + badIndex);",
+    to:   "    if (false) throw new Error('malformed alert feature at index ' + badIndex);",
+    expect: ['GAP1 a null entry leaves the source not current',
+             'GAP1 a null entry produces no all-clear on any surface'],
+    suite: 'dom' },
+
+  /* The scan itself, not just the throw: a predicate that never finds a bad feature is the same
+     defect wearing a different shape. */
+  { name: 'the malformed-feature scan never finds anything',
+    from: "      !f || typeof f !== 'object' || !f.properties || typeof f.properties !== 'object');",
+    to:   "      false);",
+    expect: ['GAP1 an entry with no properties leaves the source not current',
+             'GAP1 an entry with no properties produces no all-clear on any surface'],
+    suite: 'dom' },
+
+  { name: 'a non-array payload is treated as a feature list again',
+    from: "  return (Array.isArray(features) ? features : [])",
+    to:   "  return (features || [])",
+    /* Only the DOM assertion. The matching pure assertion lives in the health suite, and a case
+       runs exactly one suite, so naming both made this a guaranteed MISSED even though the
+       mutation genuinely broke the DOM one. expect is a conjunction. */
+    expect: ['GAP1 a non-array in retained data does not crash the comparators'],
+    suite: 'dom' },
+
+  { name: 'the malformed-payload guard is removed',
+    from: "    .filter(f => f && f.properties)\n",
+    to:   "",
+    expect: ['GAP1 a list of nulls in retained data does not crash the comparators',
+             'GAP1 entries without properties in retained data does not crash the comparators'],
+    suite: 'dom' },
+
+  /* A string is truthy and has its own .slice(), so a truthiness check let it through as
+     allFeatures and it then threw on .find() during deep-link resolution. */
+  { name: 'allFeatures accepts a string payload again',
+    from: "  snap.allFeatures = (Array.isArray(raw) ? raw : []).slice();",
+    to:   "  snap.allFeatures = (raw || []).slice();",
+    expect: ['GAP1 a non-array in retained data does not crash the comparators'],
+    suite: 'dom' },
+
+  /* There is deliberately no health-suite case for the guard. That suite builds pickLive by
+     EXTRACTING this exact line by regex, so mutating it breaks the extraction and the suite throws
+     before asserting anything — a crash prints no FAIL line, and the harness scores it MISSED. Any
+     mutation of extracted source is untestable through the suite that extracts it. The DOM case
+     above covers the same guard through the real render path. */
+
+  /* GAP4. The resize path: PW-103 wired calibrateTicker() into the chrome listener, and nothing
+     proved the two worked together until the audit. */
+  { name: 'a resize no longer recalibrates the ticker',
+    from: "  if (typeof calibrateTicker === 'function') calibrateTicker();",
+    to:   "  if (false) calibrateTicker();",
+    expect: ['GAP4 a resize publishes a duration at phone width',
+             'GAP4 and the duration actually changed'],
+    suite: 'dom' },
+
   /* ---- PW-105, the wave logo -----------------------------------------------------------
 
      The loop is seamless only because the drift distance equals the wave's own wavelength. The

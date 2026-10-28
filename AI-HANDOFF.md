@@ -63,13 +63,123 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
-| October Phase 1 PW-105 — wave logo animation | Claimed on `claude/pw105-wave-animation`; the brand mark drifts one full wavelength so the loop cannot snap, and reduced motion returns it to today's static logo exactly | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
+| October Phase 1 PW-106 — consolidated validation | Claimed on `claude/pw106-consolidated-validation`; the audit found most required coverage already present and **five genuine gaps**, which is what this unit adds | Claude implements; Codex reviews read-only and owns the browser matrix rows; the owner decides merge |
+| October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**October Phase 1 PW-106 — consolidated validation — Claude Code,
+`claude/pw106-consolidated-validation`.** Claimed 2026-10-28 before editing any file, in its own
+commit ahead of the work, under the owner's authorization to finish the project. Branched from
+`main` at `2ae2cf6`. **The last Phase 1 unit.**
+
+**Baseline recorded before any change**, as the brief requires:
+
+```
+pure            442 assertions across 4 suites, 0 failed
+DOM behaviour   619 assertions, 0 failed
+mutation        186 cases, 186 of 186 caught
+```
+
+**This unit is an audit first.** PW-106 lists 28 required tests across five areas plus nine
+source-health fixtures. Most of them already exist, because PW-101 through PW-105 each shipped
+their own discriminating coverage. Re-stating that as new tests would inflate the suite, slow the
+gate, and quietly claim credit for work already done. So every required item was mapped to existing
+coverage, and **only genuine gaps are implemented**.
+
+**What the audit found already covered** (representative, not exhaustive)
+
+| required area | where it already lives |
+|---|---|
+| navigation: A opens A, B does not open A, identical headlines distinguishable, direct links restore, browser navigation, expired/removed fallback | PW-101 — including the full history lifecycle and the six resolution states |
+| external links: official HTML accepted, API collection rejected, absent URL yields no link, malformed rejected, unsafe schemes rejected, API vs human URL kept apart | PW-102, plus the `safeUrl` and `javascript:` cases |
+| ticker: duration scales with content, desktop preserved, mobile exceeds baseline, refreshes do not restart, reduced motion | PW-103 — pure speed model and the AC-103-06 comment-node probe |
+| map: precipitation requested, position unchanged, responsive, nonbreaking third-party fallback | PW-104 |
+| logo: animation present, static fallback, reduced motion disables, no layout shift | PW-105 |
+| source-health fixtures 1–5 and 8 | the nine-state strip section and the health suite's retention tests |
+| alert lifecycle: per-product counting is **not** deduplicated by area | already pinned by *“counted per product, not per incident”* — and that is a deliberate decision, so PW-106's “deduplication” item means preserving it, not adding dedup |
+
+**The five genuine gaps this unit fills**
+
+1. **Malformed upstream alerts payload.** `nwsEligible()` guards with `(features || [])` and
+   `f && f.properties`, but nothing exercised it. A payload that is not an array, or carries null
+   entries, or features without `properties`, must not throw and must not read as an all-clear.
+2. **Partial provider failure.** Nothing proved that a failed alerts fetch leaves other sources
+   healthy. Per-source health is the whole point of the model and it was untested across sources.
+3. **An updated alert.** Absence after a successful refresh is covered (PW-101's `gone`), but an
+   alert **updated in place** — same id, new severity or expiry — was not. That is how NWS issues
+   a replacement, and the UI must show the new values and keep the deep link resolving.
+4. **Resize updates the ticker duration.** PW-103 wired `calibrateTicker()` into the chrome resize
+   listener and tested the pure model, but never the two together.
+5. **An empty alert collection must not break the animation.** The no-alerts message is covered;
+   the calibration path over an empty collection was not.
+
+**Evidence this claim commits to**
+
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, image per job.
+2. Each new test verified to **fail against a deliberately broken variant**, since a consolidated
+   validation unit whose own tests cannot fail would be the worst possible outcome here.
+3. The audit table above carried into the PR body, so a reader can check the mapping rather than
+   trust the claim that coverage exists.
+
+**The browser matrix is Codex's to fill, and it is not complete.** Recorded as of this claim:
+
+| platform | state |
+|---|---|
+| Windows / Chrome, Edge | Chromium passes recorded for PW-103 (390px ticker), PW-104 (precipitation layer) and PW-105 (full 9s cycle at 110% zoom) |
+| Firefox desktop | **NOT TESTED** |
+| iPhone / Safari | **NOT TESTED** — no physical device; explicitly not inferred from Chromium emulation |
+| iPad / Safari | **NOT TESTED** |
+| Mobile Chromium | **NOT TESTED** as a device; 390px emulation recorded for the ticker only |
+| genuine reduced-motion rendering | **NOT TESTED** |
+
+PW-106 does not close these rows and this unit will not report Phase 1 as browser-validated. The
+brief's own instruction is to state the absence of a physical iOS environment explicitly rather
+than infer it, and that is what the matrix does.
+
+**Scope change, twice, and both are corrections to this claim rather than additions to it.**
+
+This claim said the unit would change no production behaviour, and that a failing gap test would be
+a defect report rather than a licence to change code. Gap 1 failed, and the claim was amended
+instead — because a failing test cannot ship (the DOM job blocks every merge), because PW-106's
+own fixture list names malformed-payload handling, and because leaving a known crash path in a
+hazard application during an active storm to honour a self-imposed boundary is the wrong trade.
+
+**Round one fixed the crash and left the real hazard in place.** `nwsEligible()` and
+`nwsSnapshot()` gained guards so a malformed payload could not throw. The commit claimed that
+`sourceState()` still prevented a false all-clear. **That was wrong, and Codex found it.**
+
+`fetchAlerts()` rejected a non-array `features` but accepted `features: [null, {}]`, then called
+`sourceOk()`. The source was therefore **`current`**. The new guard dropped both entries, leaving
+zero eligible products from a current source, which every surface renders as **“All clear” / “No
+active NWS alerts.”** A garbage payload produced a verified all-clear — the precise error class
+the observation-truthfulness contract exists to prevent.
+
+The guards could not have prevented it: by the time they run, `sourceOk()` has already made the
+source current. And the GAP1 tests asserted only that rendering did not throw and that no alert row
+was fabricated — **both pass while the hazard is present**, so a green 190-of-190 corpus did not
+test the thing the unit was about. The in-code comment making the false claim is corrected too.
+
+**Round two rejects the snapshot at the fetch boundary, before `sourceOk()`.** Every feature must
+carry a real `properties` object or the whole payload is treated as a failed fetch. Silently
+dropping the malformed entries is the unsafe alternative for a second reason: **the malformed
+product may be the hazardous one**, and nothing can know what was lost. The downstream guards stay
+as defence in depth, explicitly not as the thing that prevents the all-clear.
+
+The tests now drive the real boundary with a successful HTTP response carrying malformed features,
+and assert the source is not current and that **no surface** — Alerts list, strip, ticker, Overview,
+hazard banner — emits an all-clear. A verified-empty answer from a healthy source is still allowed
+to say so, which is the distinction worth keeping: verified-empty is a real state, garbage is not.
+
+**Still out of scope.** No `api/`, `vercel.json`, workflow, contract, `AGENTS.md`, dependency or
+ruleset change. **No rename and no domain work** — the replacement name **OlaPono** is queued
+immediately after this unit merges, as a separate claim; `nechicoa.app` stays reserved
+infrastructure and **Pacific Watch remains the working name** until that unit lands.
+
 
 **October Phase 1 PW-105 — wave logo animation — Claude Code, `claude/pw105-wave-animation`.**
 Claimed 2026-10-28 before editing any application file, in its own commit ahead of the work, under
@@ -755,7 +865,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw105-wave-animation | PW-105: the three-line brand wave drifts by exactly one wavelength on a seamless loop, with the silhouette, thicknesses and colours unchanged and a static fallback under reduced motion |
+| Claude | claude/pw106-consolidated-validation | PW-106: audits every required regression test against existing coverage and fills the five genuine gaps, rather than restating coverage that PW-101 through PW-105 already carry |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -782,7 +892,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #52 and serving production.** Claims and handoffs for
+**`main` is merged through #53 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
