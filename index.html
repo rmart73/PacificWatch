@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a0507" id="meta-theme-color">
-<title>Pacific Watch</title>
+<title>OlaPono</title>
 <script>
 /* Apply the saved theme before first paint so there's no flash of the wrong theme. */
 (function(){
@@ -15,7 +15,7 @@
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@800&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* PALETTE
    ink #0a0507 · azure #1b7bb5 · navy #153a63 · steel #7bb0c6
@@ -107,7 +107,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
    layout: the mark stays 34px and the brand text does not move. */
 @keyframes brand-wave{from{transform:translateX(0)}to{transform:translateX(-20px)}}
 .brand-wave{animation:brand-wave 9s linear infinite;will-change:transform}
-.brand-text-main{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1}
+.brand-text-main{font-family:'Fira Sans','Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1}
 .brand-text-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 .header-right{display:flex;align-items:center;gap:8px}
 .live-pill{display:flex;align-items:center;gap:5px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:20px}
@@ -519,7 +519,7 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
         </svg>
       </div>
       <div>
-        <div class="brand-text-main">Pacific Watch</div>
+        <div class="brand-text-main">OlaPono</div>
         <div class="brand-text-sub">Hawaiʻi Situational Awareness</div>
       </div>
     </div>
@@ -969,7 +969,7 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
             <div style="font-size:10px;color:var(--ink4);text-align:right" id="src-last-refresh">No successful refresh yet</div>
           </div>
           <div id="source-health-list"></div>
-          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows two different things, because they answer different questions. <strong>Checked</strong> is when we last reached the source. <strong>Obs</strong> is when the measurement itself was taken, shown for weather and tides, which report a point in time; other feeds have no measurement clock and show only the check. A recent check of an old measurement is not a recent measurement. Thresholds vary by source based on how often that source actually changes; Pacific Watch refreshes every 5 minutes.</div>
+          <div style="padding:10px 16px 14px;font-size:10px;color:var(--ink4);line-height:1.5">Shows two different things, because they answer different questions. <strong>Checked</strong> is when we last reached the source. <strong>Obs</strong> is when the measurement itself was taken, shown for weather and tides, which report a point in time; other feeds have no measurement clock and show only the check. A recent check of an old measurement is not a recent measurement. Thresholds vary by source based on how often that source actually changes; OlaPono refreshes every 5 minutes.</div>
         </div>
 
         <div class="settings-card">
@@ -1028,7 +1028,7 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
         </div>
 
         <div style="font-size:11px;color:var(--ink4);text-align:center;padding:8px;line-height:1.7">
-          Pacific Watch · Hawaii Situational Awareness<br>
+          OlaPono · Hawaii Situational Awareness<br>
           Data: NWS api.weather.gov · NOAA CO-OPS · poweroutage.us
         </div>
       </div>
@@ -1382,7 +1382,7 @@ async function fetchAlerts() {
   if (container && !S.cache.nwsAlerts) container.innerHTML = `<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div><div class="skeleton tall" style="margin-top:6px"></div><div class="skeleton short" style="margin-top:4px"></div></div>`;
   try {
     const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
-      headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
+      headers: { 'User-Agent': 'OlaPono/2.0 (hawaii-situational-awareness)' }
     });
     if (!res.ok) throw new Error('NWS returned ' + res.status);
     const data = await res.json();
@@ -2145,11 +2145,11 @@ function renderAlerts(snap) {
   const filtered = snap.features;
   const stale = snap.stale;
   const note = stale ? staleNote('nwsAlerts') : '';
-  // This row must never assert a tsunami all-clear: Pacific Watch does not poll PTWC.
+  // This row must never assert a tsunami all-clear: OlaPono does not poll PTWC.
   // It must equally not imply tsunamis are unmonitored — NWS distributes PTWC products
   // through the alerts feed above, so a real Tsunami Warning for Hawaii renders in this
   // same list as a normal alert. The row states both facts and asserts no status.
-  const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · Pacific Watch does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
+  const ptwcNote = `<div class="alert-item"><span class="badge badge-unknown">REFERENCE</span><div class="alert-title">Tsunami status — verify with PTWC</div><div class="alert-meta">NWS tsunami warnings for Hawaii appear in this list · OlaPono does not poll PTWC directly · <a href="https://www.tsunami.gov" target="_blank" rel="noopener noreferrer" style="color:var(--sky)">tsunami.gov ↗</a></div></div>`;
   /* PW-101. Resolved before the empty-list branch on purpose. An island filter can empty the
      visible list while the deep-linked alert is still active in the refreshed data, and an
      earlier version of this returned here without the notice — so a reader following a link to a
@@ -2532,7 +2532,7 @@ async function fetchWeather() {
   const token = beginRequest('nwsWeather');
   try {
     const res = await fetch(`https://api.weather.gov/stations/${sta.id}/observations/latest`, {
-      headers: { 'User-Agent': 'PacificWatch/2.0 (hawaii-situational-awareness)' }
+      headers: { 'User-Agent': 'OlaPono/2.0 (hawaii-situational-awareness)' }
     });
     if (!res.ok) throw new Error('obs ' + res.status);
     const data = await res.json();

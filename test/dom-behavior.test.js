@@ -1772,6 +1772,23 @@ function has(label, sel, needle, expected) {
   check('GAP4/5 clean up after themselves',
     w.document.documentElement.style.getPropertyValue('--ticker-dur'), '');
 
+  console.log('\nOlaPono — the selected name and title face are the live product identity:');
+  const brandTitle = $('.brand-text-main');
+  const brandFontLink = d.querySelector('link[href*="family=Fira+Sans"]');
+  const brandCss = w.document.documentElement.innerHTML;
+  check('the document title is OlaPono', d.title, 'OlaPono');
+  check('the visible header name is OlaPono', brandTitle && brandTitle.textContent.trim(), 'OlaPono');
+  check('Fira Sans is requested from the existing font provider', !!brandFontLink, true);
+  check('only the required Fira Sans 800 weight is requested',
+    /[?&]family=Fira\+Sans:wght@800&family=/.test((brandFontLink || { href: '' }).href), true);
+  check('Fira Sans is scoped to the main brand title with a stable fallback',
+    /\.brand-text-main\{font-family:'Fira Sans','Syne',sans-serif;/.test(brandCss), true);
+  check('the operational interface remains Syne',
+    /body\{font-family:'Syne',sans-serif/.test(brandCss), true);
+  check('the editorial headline role remains Source Serif 4',
+    /\.news-headline\{font-family:'Source Serif 4',serif/.test(brandCss), true);
+  has('the current Settings footer carries the new name', '#view-settings', 'OlaPono · Hawaii Situational Awareness', true);
+
   console.log('\nPW-105 — the brand wave drifts exactly one wavelength, so the loop cannot snap:');
   /* jsdom renders nothing, so none of this witnesses motion. What it can prove is the geometry:
      that the silhouette is untouched, that the drift distance equals the wave's own wavelength,

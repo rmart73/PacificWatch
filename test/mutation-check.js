@@ -108,6 +108,33 @@ const mutations = [
              'GAP4 and the duration actually changed'],
     suite: 'dom' },
 
+  /* ---- OlaPono, the selected product name and title face ------------------------------ */
+
+  { name: 'the visible product name falls back to the retired name',
+    from: '<div class="brand-text-main">OlaPono</div>',
+    to:   '<div class="brand-text-main">Pacific Watch</div>',
+    expect: ['the visible header name is OlaPono'],
+    suite: 'dom' },
+
+  { name: 'the browser title keeps the retired name',
+    from: '<title>OlaPono</title>',
+    to:   '<title>Pacific Watch</title>',
+    expect: ['the document title is OlaPono'],
+    suite: 'dom' },
+
+  { name: 'the selected title face is removed from the brand role',
+    from: ".brand-text-main{font-family:'Fira Sans','Syne',sans-serif;",
+    to:   ".brand-text-main{font-family:'Syne',sans-serif;",
+    expect: ['Fira Sans is scoped to the main brand title with a stable fallback'],
+    suite: 'dom' },
+
+  { name: 'the Fira Sans asset is removed from the font request',
+    from: 'family=Fira+Sans:wght@800&family=Source+Serif+4',
+    to:   'family=Source+Serif+4',
+    expect: ['Fira Sans is requested from the existing font provider',
+             'only the required Fira Sans 800 weight is requested'],
+    suite: 'dom' },
+
   /* ---- PW-105, the wave logo -----------------------------------------------------------
 
      The loop is seamless only because the drift distance equals the wave's own wavelength. The

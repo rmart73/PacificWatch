@@ -1,4 +1,4 @@
-# Pacific Watch — AI Handoff
+# OlaPono — AI Handoff
 
 Current coordination only. Durable rules live in [AGENTS.md](AGENTS.md); the roadmap is
 [the v2 product plan](Pacific-Watch-v2-Product-and-UX-Plan.md).
