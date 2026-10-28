@@ -73,7 +73,19 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed. October 2026 Phase 1 is complete.**
+**Claim-retirement durable-content rule — ChatGPT Codex,
+`codex/claim-retirement-rule`.** Claimed 2026-10-28 before editing `AGENTS.md`, from `main` at
+`ac7afb7` after #56 merged. Documentation only.
+
+**Scope:** add one working-agreement rule: before retiring any claim, verify that its unique
+durable decisions, constraints and evidence survive in the appropriate durable authority; move
+anything unique before removing the claim. Retire this claim on the final documentation head and
+preserve its rationale in the Handoff Log. If review later requires an edit, reclaim first.
+
+Files claimed: `AI-HANDOFF.md` and `AGENTS.md`. No application, test, API, workflow, contract,
+dependency, Vercel, ruleset, domain or remote-branch change.
+
+**October 2026 Phase 1 is complete.**
 
 PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
 blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
