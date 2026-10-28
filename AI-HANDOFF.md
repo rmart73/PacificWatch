@@ -64,7 +64,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
-| OlaPono product rename | Claimed on `codex/olapono-rename`; replacement name selected by the owner, with Fira Sans reserved for the header title | Codex implements, verifies the PR preview at desktop and 390px, and opens a PR; owner-authorized merge follows green review evidence |
+| OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
@@ -99,548 +99,15 @@ surviving record of several decisions. It stays open.
 reserved and unconnected.
 
 
-**OlaPono product rename — ChatGPT Codex, `codex/olapono-rename`.** Claimed 2026-10-28
-before editing any branding, application, test or durable documentation file. Branched from
-`main` at `97e610f`, after #54's exact-`main` attempt-1 run passed at 450 pure, 661 DOM and
-192 of 192 mutations and production was verified byte-identical to the merged HTML blob.
-
-The owner selected **OlaPono** as the replacement product name and requested **Fira Sans for the
-title**. This unit changes the live document title, visible brand, current in-app product copy,
-client identifier, package metadata and current project identity headings. Fira Sans is loaded
-only for `.brand-text-main`; the operational UI keeps Syne and the editorial News roles keep
-Source Serif 4. Tests will pin the name, font import and title-only role, and the Vercel preview
-will be checked at desktop and 390px for loading, clipping, wrapping and header stability.
-
-Historical audit records, completed contracts and archived briefs retain the name they carried
-when authored. Existing GitHub/Vercel project names, production hostname, API routes, localStorage
-keys and internal `pw_*` identifiers are infrastructure and stay unchanged. `nechicoa.app` remains
-reserved infrastructure: this claim authorizes no domain connection, redirect, canonical URL or
-Vercel settings change.
-
-**October Phase 1 PW-106 — consolidated validation — Claude Code,
-`claude/pw106-consolidated-validation`.** Claimed 2026-10-28 before editing any file, in its own
-commit ahead of the work, under the owner's authorization to finish the project. Branched from
-`main` at `2ae2cf6`. **The last Phase 1 unit.**
-
-**Baseline recorded before any change**, as the brief requires:
-
-```
-pure            442 assertions across 4 suites, 0 failed
-DOM behaviour   619 assertions, 0 failed
-mutation        186 cases, 186 of 186 caught
-```
-
-**This unit is an audit first.** PW-106 lists 28 required tests across five areas plus nine
-source-health fixtures. Most of them already exist, because PW-101 through PW-105 each shipped
-their own discriminating coverage. Re-stating that as new tests would inflate the suite, slow the
-gate, and quietly claim credit for work already done. So every required item was mapped to existing
-coverage, and **only genuine gaps are implemented**.
-
-**What the audit found already covered** (representative, not exhaustive)
-
-| required area | where it already lives |
-|---|---|
-| navigation: A opens A, B does not open A, identical headlines distinguishable, direct links restore, browser navigation, expired/removed fallback | PW-101 — including the full history lifecycle and the six resolution states |
-| external links: official HTML accepted, API collection rejected, absent URL yields no link, malformed rejected, unsafe schemes rejected, API vs human URL kept apart | PW-102, plus the `safeUrl` and `javascript:` cases |
-| ticker: duration scales with content, desktop preserved, mobile exceeds baseline, refreshes do not restart, reduced motion | PW-103 — pure speed model and the AC-103-06 comment-node probe |
-| map: precipitation requested, position unchanged, responsive, nonbreaking third-party fallback | PW-104 |
-| logo: animation present, static fallback, reduced motion disables, no layout shift | PW-105 |
-| source-health fixtures 1–5 and 8 | the nine-state strip section and the health suite's retention tests |
-| alert lifecycle: per-product counting is **not** deduplicated by area | already pinned by *“counted per product, not per incident”* — and that is a deliberate decision, so PW-106's “deduplication” item means preserving it, not adding dedup |
-
-**The five genuine gaps this unit fills**
-
-1. **Malformed upstream alerts payload.** `nwsEligible()` guards with `(features || [])` and
-   `f && f.properties`, but nothing exercised it. A payload that is not an array, or carries null
-   entries, or features without `properties`, must not throw and must not read as an all-clear.
-2. **Partial provider failure.** Nothing proved that a failed alerts fetch leaves other sources
-   healthy. Per-source health is the whole point of the model and it was untested across sources.
-3. **An updated alert.** Absence after a successful refresh is covered (PW-101's `gone`), but an
-   alert **updated in place** — same id, new severity or expiry — was not. That is how NWS issues
-   a replacement, and the UI must show the new values and keep the deep link resolving.
-4. **Resize updates the ticker duration.** PW-103 wired `calibrateTicker()` into the chrome resize
-   listener and tested the pure model, but never the two together.
-5. **An empty alert collection must not break the animation.** The no-alerts message is covered;
-   the calibration path over an empty collection was not.
-
-**Evidence this claim commits to**
-
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, image per job.
-2. Each new test verified to **fail against a deliberately broken variant**, since a consolidated
-   validation unit whose own tests cannot fail would be the worst possible outcome here.
-3. The audit table above carried into the PR body, so a reader can check the mapping rather than
-   trust the claim that coverage exists.
-
-**The browser matrix is Codex's to fill, and it is not complete.** Recorded as of this claim:
-
-| platform | state |
-|---|---|
-| Windows / Chrome, Edge | Chromium passes recorded for PW-103 (390px ticker), PW-104 (precipitation layer) and PW-105 (full 9s cycle at 110% zoom) |
-| Firefox desktop | **NOT TESTED** |
-| iPhone / Safari | **NOT TESTED** — no physical device; explicitly not inferred from Chromium emulation |
-| iPad / Safari | **NOT TESTED** |
-| Mobile Chromium | **NOT TESTED** as a device; 390px emulation recorded for the ticker only |
-| genuine reduced-motion rendering | **NOT TESTED** |
-
-PW-106 does not close these rows and this unit will not report Phase 1 as browser-validated. The
-brief's own instruction is to state the absence of a physical iOS environment explicitly rather
-than infer it, and that is what the matrix does.
-
-**Scope change, twice, and both are corrections to this claim rather than additions to it.**
-
-This claim said the unit would change no production behaviour, and that a failing gap test would be
-a defect report rather than a licence to change code. Gap 1 failed, and the claim was amended
-instead — because a failing test cannot ship (the DOM job blocks every merge), because PW-106's
-own fixture list names malformed-payload handling, and because leaving a known crash path in a
-hazard application during an active storm to honour a self-imposed boundary is the wrong trade.
-
-**Round one fixed the crash and left the real hazard in place.** `nwsEligible()` and
-`nwsSnapshot()` gained guards so a malformed payload could not throw. The commit claimed that
-`sourceState()` still prevented a false all-clear. **That was wrong, and Codex found it.**
-
-`fetchAlerts()` rejected a non-array `features` but accepted `features: [null, {}]`, then called
-`sourceOk()`. The source was therefore **`current`**. The new guard dropped both entries, leaving
-zero eligible products from a current source, which every surface renders as **“All clear” / “No
-active NWS alerts.”** A garbage payload produced a verified all-clear — the precise error class
-the observation-truthfulness contract exists to prevent.
-
-The guards could not have prevented it: by the time they run, `sourceOk()` has already made the
-source current. And the GAP1 tests asserted only that rendering did not throw and that no alert row
-was fabricated — **both pass while the hazard is present**, so a green 190-of-190 corpus did not
-test the thing the unit was about. The in-code comment making the false claim is corrected too.
-
-**Round two rejects the snapshot at the fetch boundary, before `sourceOk()`.** Every feature must
-carry a real `properties` object or the whole payload is treated as a failed fetch. Silently
-dropping the malformed entries is the unsafe alternative for a second reason: **the malformed
-product may be the hazardous one**, and nothing can know what was lost. The downstream guards stay
-as defence in depth, explicitly not as the thing that prevents the all-clear.
-
-The tests now drive the real boundary with a successful HTTP response carrying malformed features,
-and assert the source is not current and that **no surface** — Alerts list, strip, ticker, Overview,
-hazard banner — emits an all-clear. A verified-empty answer from a healthy source is still allowed
-to say so, which is the distinction worth keeping: verified-empty is a real state, garbage is not.
-
-**Still out of scope.** No `api/`, `vercel.json`, workflow, contract, `AGENTS.md`, dependency or
-ruleset change. **No rename and no domain work** — the replacement name **OlaPono** is queued
-immediately after this unit merges, as a separate claim; `nechicoa.app` stays reserved
-infrastructure and **Pacific Watch remains the working name** until that unit lands.
-
-
-**October Phase 1 PW-105 — wave logo animation — Claude Code, `claude/pw105-wave-animation`.**
-Claimed 2026-10-28 before editing any application file, in its own commit ahead of the work, under
-the owner's authorization to finish the project and Codex's accepted ordering. Branched from `main`
-at `170ef17`.
-
-Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
-**AC-105-01 through AC-105-08**.
-
-**What the inspection found, before any code**
-
-The mark is three `<path>` elements sharing one wave shape, inside a 24→24 viewBox:
-
-```
-middle  M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3      (no opacity: full white)
-top     M2 7 — same curve, opacity .4
-bottom  M2 17 — same curve, opacity .4
-```
-
-Reading the curve's endpoints gives the number this unit depends on: `(2,12)` → `(7,9)` →
-`(12,12)` → `(17,15)` → `(22,12)`. **One full wavelength is exactly 20 user units**, peak at
-x=7 and trough at x=17.
-
-**That is what makes a seamless loop possible without touching the artwork.** The three paths are
-duplicated verbatim, the copy offset 20 units right, and the pair drifts from `translateX(0)` to
-`translateX(-20px)`. At the end of a cycle the copy sits exactly where the original began, so the
-frame is pixel-identical to frame zero and there is nothing to snap — AC-105-02. The viewBox
-clips whichever copy is outside, so nothing escapes the mark.
-
-**No bezier arithmetic.** An earlier approach would extend each path with two more `s` segments to
-cover the extra wavelength, which means hand-deriving reflected control points and risking a subtle
-change to a shape the brief says to preserve. Duplicating the exact `d` string cannot change the
-silhouette, and it satisfies “reuse existing markup where possible” literally.
-
-**All three lines drift in one phase, on purpose.** Per-line speeds would read more like water, and
-were rejected: the lines sit 5 units apart with 3 units of amplitude, so independent phases let the
-top and middle cross. Crossing would break “preserve the recognizable three-line silhouette”, which
-outranks realism here. One shared transform also means one animation rather than three.
-
-**The logo appears twice in the markup, and only one of them is the logo.** The same wave `d` is
-reused as the **NOAA Tides** map-tile icon — a single line in a grid of static tile glyphs, not the
-brand mark. The brief asks for the animated version “wherever the current application header/logo
-is displayed”; a tide icon is not that, and animating one tile in a static grid would be noise.
-**It stays static**, and that is a decision rather than an oversight.
-
-**Reduced motion returns today's logo exactly.** `animation:none` with `transform:none` leaves the
-original three paths in place and the duplicate clipped outside the viewBox — not an approximation
-of the static mark, the same markup in the same position. That serves AC-105-06 and AC-105-08
-together.
-
-**Evidence this claim commits to**
-
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, image per job.
-2. DOM assertions that the silhouette is intact — three visible wave lines, the middle one with no
-   opacity attribute so it stays dominant, unchanged stroke width and colour — each verified to
-   **fail against `main`'s `index.html`** before being trusted.
-3. Arithmetic proof of the seamless loop: the drift distance must equal the measured wavelength,
-   asserted against the path data itself rather than a hard-coded 20, so a future artwork change
-   that alters the wavelength fails loudly instead of quietly snapping.
-4. Mutation cases for the wavelength, the duplicate offset, the reduced-motion rule and the
-   middle line's dominance.
-
-**Out of scope.** No change to the mark's geometry, stroke width, colours, opacities or size. No
-change to `.brand-mark`, the header layout or any text. The NOAA Tides tile icon stays static. No
-favicon or home-screen icon work — the brief says not to assume those animate and there are none
-defined in `index.html` to change. No animation library, no network dependency, no `api/`,
-`vercel.json`, workflow, contract, `AGENTS.md`, dependency or ruleset change. PW-106 is a separate
-unit. **No rename and no domain work**: `nechicoa.app` stays reserved infrastructure and **Pacific
-Watch remains the working name**.
-
-**AC-105-05 cannot be satisfied from my side.** It names Chromium, Firefox and Safari explicitly.
-jsdom renders nothing at all, so it cannot witness an animation; a passing DOM suite here proves
-the markup and rules exist, not that the motion looks right. Those rows stay `NOT TESTED` and the
-browser pass is where AC-105-05 is actually decided.
-
-
-**October Phase 1 PW-103 — mobile ticker — Claude Code, `claude/pw103-mobile-ticker`.** Claimed
-2026-10-28 under the owner's authorization to finish the project and Codex's accepted
-storm-priority ordering. Branched from `main` at `fb3d77c`.
-
-**A process note, stated rather than tidied away.** The agreement is that a claim is published in
-its own commit *ahead* of the work. For this unit the code was written before the claim text was.
-Nothing had been pushed, so the published history still carries the claim first and no other agent
-could have collided with an unannounced edit — but the order of my own work was wrong, and
-recording that is cheaper than the habit of not noticing.
-
-Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
-**AC-103-01 through AC-103-08**.
-
-**What the inspection found, before any change. The brief asked which of eight candidate causes
-it was, and it is two of them, not one.**
-
-```
-@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
-.ticker-track{ ... animation:ticker 70s linear infinite}
-```
-
-Travel distance is `100vw + track width` while the duration is pinned at 70s, so speed fell out of
-two things it should never have depended on:
-
-1. **Viewport width.** A 390px phone travels about 1050px less than a 1440px desktop for identical
-   content, so at a fixed 70s the phone moves roughly **30% slower**. That is the reported defect.
-2. **Content length.** More alerts make the track longer, which makes the distance longer, which
-   at a fixed duration makes the ticker move **faster**. Across the real range of ticker content
-   the desktop speed varies roughly **39–94 px/s**. Nobody asked for that either.
-
-The brief's other candidates were checked and are not causes: the content *is* duplicated, but
-deliberately, to cover the loop; the transform is already GPU-friendly; there are no ticker-specific
-breakpoints; the font does not scale; and `updateTicker()` does not restart the animation, because
-assigning `textContent` has no effect on a running CSS animation.
-
-**Two defects nobody had reported, found while reading the code for this one**
-
-**Reduced motion produced an empty ticker, not a calm one.** The blanket rule
-`animation-duration:.01ms; animation-iteration-count:1` does not *stop* an animation, it
-**finishes** it — every element lands on its final keyframe. The ticker's final keyframe is
-`translateX(-100%)`, off to the left and clipped away, so a reader who asked for less movement got
-a blank strip where the alerts should be. That is AC-103-07 failing today, and it fails silently.
-
-**The animation began off-screen behind its own tag.** `100vw` is the viewport, but the track is
-clipped by `.ticker-wrap`, which is narrower by the ALERTS tag. The first stretch of every cycle
-was spent invisible, a small dead pause each loop — AC-103-05. Measuring the wrap removes it.
-
-**What this changes**
-
-Speed is stated in **pixels per second** and the duration is derived from the measured distance,
-which is what AC-103-04 asks for: content length changes how long a cycle takes, not how fast the
-text moves. `tickerSpeedPxPerS()` and `tickerDurationSeconds()` are pure, so they are tested as
-arithmetic in the health suite rather than through a layout engine jsdom does not have.
-`calibrateTicker()` measures and publishes two custom properties; the CSS keeps `100vw` and `70s`
-as fallbacks, so a script-less or non-rendering page behaves exactly as it does today.
-
-**The calibration, and the assumption inside it.** The constants are anchored to the most common
-on-screen state, the no-active-alerts message, whose doubled track measures about 1700px. At a
-1440px desktop that is `(1380 + 1700) / 70s —` about **45 px/s**, preserved. At a 390px phone the
-old speed was about **29 px/s**, and the brief asks for roughly 25% faster, giving **37 px/s**.
-
-Mobile stays deliberately below desktop. The brief asks for 25% faster than the phone's *own*
-baseline, not parity; matching 45 px/s would be a 55% jump and harder to read on a small screen.
-
-**A caveat on AC-103-01 that is better said than discovered later.** Because the old speed depended
-on content length, “the desktop baseline” was a range rather than a number. These constants
-reproduce it at the reference content length and **deliberately diverge** for much shorter or much
-longer content. That divergence is the fix, not a regression — but it does mean AC-103-01 is
-satisfied *at a stated reference*, not universally, and no measurement can make it universal while
-the old behaviour was content-dependent.
-
-**Evidence this claim commits to**
-
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, with each
-   job's image recorded **per job**.
-2. Pure tests for the speed model, including that the old rule really was viewport- and
-   content-dependent, so the defect cannot return unnoticed.
-3. DOM tests for the wiring, the reduced-motion fallback and the no-op refresh, each verified to
-   **fail against `main`'s `index.html`** before being trusted.
-
-**Out of scope.** No change to alert content, filtering, ordering or truncation. No JavaScript
-animation loop and no `requestAnimationFrame`: the transform stays CSS. No `aria-live` region — the
-brief rules out announcing every cycle, and the text is already real DOM text. No `api/`,
-`vercel.json`, workflow, contract, `AGENTS.md`, dependency or ruleset change. PW-105 and PW-106 are
-separate units. **No rename and no domain work**: `nechicoa.app` stays reserved infrastructure and
-**Pacific Watch remains the working name**.
-
-**iOS Safari stays `NOT TESTED`.** AC-103-03 asks for smoothness on iOS Safari and I have no device.
-jsdom computes no layout and a headless Chromium is not iOS Safari, so neither is offered as
-evidence. The browser matrix rows stay `NOT TESTED` from my side.
-
-
-**October Phase 1 PW-104 — Ventusky precipitation default — Claude Code,
-`claude/pw104-ventusky-precipitation`.** Claimed 2026-10-28 before editing any application file, in
-its own commit ahead of the work, under the owner's authorization to make the changes needed to
-finish the project and Codex's accepted storm-priority ordering. Branched from `main` at `93afdee`.
-
-Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
-**AC-104-01 through AC-104-07**.
-
-**What the inspection found, before any code.** Four touch points, all in static markup, all in one
-tile:
-
-1. The iframe `src`, `l=radar`.
-2. The outbound anchor `href`, also `l=radar`.
-3. The visible tile name, “Live Radar — Ventusky”.
-4. The iframe `title`, “Ventusky live radar — Hawaii”.
-
-Changing only the parameters would leave two labels promising radar while the map showed something
-else, so labels are part of this unit rather than a follow-up.
-
-**The parameter is validated, and the validation has a finding the brief did not anticipate.**
-
-The brief asked whether `l=rain-3h` “corresponds to the intended precipitation presentation”.
-Ventusky's own pages answer it: a URL carrying `l=rain-3h` is titled **Precipitation – 3 hours**, and
-its help describes the layer as a **total in millimetres accumulated over the previous one or three
-hours**. The same help states that **intensity in mm/h is displayed only on the radar layer**.
-
-So `rain-3h` is genuinely the precipitation layer, and the change is faithful to the brief. But it
-is worth recording plainly that this **trades live intensity for modelled accumulation**, which in
-an app whose purpose is an active hazard is a real tradeoff rather than a neutral default swap:
-during a storm the radar layer is the nowcast and `rain-3h` is a forecast total. Ventusky also
-notes its model “does not allow for accurate calculations of the formation of local storm cells”.
-
-Implemented as specified, because the owner and the brief both say precipitation. **Flagged for the
-owner and for Codex's browser pass**, which can see the rendered layers and judge whether a
-three-hour accumulation is the view wanted as a default with heavy rain forecast. Reverting to
-radar, or choosing an hourly accumulation, is a one-parameter change on top of this.
-
-**Deliberately not changed**
-
-The `.radar-frame` CSS class keeps its name. It carries only geometry — display, width, height,
-border, background — and renaming it would touch the stylesheet and the markup for no behavioural
-gain, which is churn against the project's rule about not reformatting untouched code. The
-misnomer is noted here instead. The separate map tile described as “Weather, radar, marine & surf”
-is a different provider whose page really does offer radar, so it is accurate and untouched.
-
-**Evidence this claim commits to**
-
-1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, with each
-   job's `Image`, image `Version` and `Image Release` recorded **per job** — three runs have now
-   shown jobs landing on different weekly images, twice out of three.
-2. Discriminating DOM coverage for AC-104-01 through AC-104-07, including the two criteria that
-   are easy to assert without testing: that unrelated UI updates do not reload the iframe, and
-   that the app does not depend on the third-party frame to render.
-3. Mutation cases for the parameter and for each label, so a silent revert to radar fails.
-
-**Out of scope.** No change to any other map integration, no new mapping dependency, no API key, no
-map configuration backend. No `api/`, `vercel.json`, workflow, contract, `AGENTS.md`, dependency or
-ruleset change. No PW-103, PW-105 or PW-106 work. **No rename and no domain change** — see the
-owner-provided context below.
-
-**Owner-provided infrastructure context, recorded here and authorising nothing**
-
-Relayed 2026-10-28: the Vercel plan is now **Pro**, and the owner has purchased **`nechicoa.app`**. The
-spelling was first recorded here as `nehicoa.app`, which was wrong and is corrected by the owner;
-the domain is **`nechicoa.app`**. A misspelled domain in a public repository is not a harmless typo
-— it names something the owner does not control.
-The replacement product name is **not settled**.
-
-Both are **available infrastructure only**. Neither authorises, and this claim does not perform:
-a product rename, any branding change, any change to canonical URLs, attaching or redirecting
-`nechicoa.app`, or any Vercel or domain settings change. **Pacific Watch remains the working name
-everywhere** until the owner explicitly chooses the name and the deployment relationship. A rename,
-a domain migration, and any Pro-specific architecture are each separate claimed units requiring
-their own authorisation. Recorded now so the information is not lost and so no later unit can treat
-its availability as permission.
-
-
-**October Phase 1 PW-101/PW-102 — alert navigation and source links — Claude Code,
-`claude/pw101-pw102-alert-navigation`.** Claimed 2026-10-10 before editing any application file,
-in its own commit ahead of the work, on the owner's explicit authorization. **Rebased onto `main`
-at `70cc74d` after #50 merged**, with the board overlap resolved on this branch. The application
-diff is carried across unchanged: `index.html` and `test/dom-behavior.test.js` keep the same blob
-hashes as before the rebase, and `test/mutation-check.js` takes `main`'s bounded pool while
-keeping this unit's 157 cases.
-
-**Codex's second review round raised two blockers. Both are fixed.**
-
-The first head was green at 151 of 151 and neither blocker was caught by it, which is the part
-worth remembering:
-
-1. **An absolute verdict drawn from retained data.** `resolveSelectedAlert()` guarded `gone` with
-   `sourceState === 'current'` but left `expired` and `filtered` ungated, so after a failed
-   refresh the app could report “that alert has expired” or “active but hidden by your island
-   filter” from last-known-good data. This is the mirror of the error the observation-truthfulness
-   contract already guards, and the more dangerous direction here, because “expired” reads as
-   all-clear. An expiry timestamp looks self-certifying and is not: NWS can extend or supersede a
-   product, so a retained copy expiring at T proves nothing when the refresh carrying T+2h never
-   arrived. Stale and unavailable now report unverified; loading reports checking.
-
-   **Why 526 assertions missed it:** every one of them fed data successfully first, so the source
-   was always `current`. The branch was thorough along the axis it imagined.
-
-2. **An owed focus never paid.** On a cold load the fragment is applied while NWS is still
-   loading, so `focusSelectedAlert()` found no row and fell back to scrolling the notice — and
-   nothing re-focused once the row rendered. The row was selected and styled but never focused,
-   which is invisible to exactly the keyboard and screen-reader users a deep link exists to serve.
-   `focusSelectedAlert()` now reports whether it reached a real row, `S.alertFocusPending` records
-   the debt, and `renderAlertSurfaces()` pays it once. The constraint is two-sided: the flag is
-   cleared before the attempt and set only by an explicit fragment application, because paying it
-   on every render would yank the page away from a reader during ordinary background refreshes.
-   Both sides have their own assertion and their own mutation case.
-
-**Why this stopped and what released it.** The first hosted attempt had its `mutation coverage`
-job cancelled by C12's 15-minute ceiling, so the unit stopped at the contract boundary rather than
-presenting a partial verdict. C12 was then amended (#48) and implemented (#49), and the mutation
-ceiling on `main` is now 20 minutes. This unit resumes against that ceiling and **requires a
-complete hosted 157-of-157 verdict with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`**. Theearlier cancelled run and any local result are diagnostic only and are not offered as hosted
-evidence. If the hosted run exceeds 20 minutes or arrives without its final summary, this stops
-again rather than reporting success.
-
-Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
-**AC-101-01 through AC-101-08 and AC-102-01 through AC-102-08**, plus the owner's binding decisions
-recorded below.
-
-**What the mandatory inspection found, before any code**
-
-1. **One function is the root cause of both tickets.** `alertUrl(f)` returns `f.id`, which for NWS
-   *is* the machine-readable API product URL, and `priorityCard()` renders it as an outbound
-   `Official NWS alert` link.
-2. **The Alerts rows carry no external link at all.** So PW-102 is partly **additive**, and
-   AC-102-05 holds today by accident rather than by design.
-3. **There is no routing layer.** Navigation is `switchView()` on tab buttons; nothing reads or
-   writes `location.hash` or `history`. AC-101-06 and AC-101-07 therefore add history surface.
-4. **Existing alert fixtures carry no `id`.** Every fixture is `{ properties: {...} }`, so
-   `alertUrl()` returns null under test and the outbound API link is **unexercised by any current
-   test**.
-
-**Binding decisions this unit implements** (owner, relayed through Codex)
-
-- **Tier 3 satisfies AC-102-03** when no verified per-alert HTML page exists: an official NWS
-  office or hazard page, **labelled as a general source, never as the specific alert**.
-- The full alert stays readable inside Pacific Watch.
-- Verified tier-1/tier-2 links are used when genuinely supplied. **Nothing is fabricated.**
-- **No speculative per-provider resolution layer.**
-- The link model distinguishes an exact-alert link from a general-source link **by an intentional
-  label**, not by hoping the reader infers it.
-- **Canonical/source ID, machine API URL and human-readable URL stay three separate concepts.**
-- **A missing source ID produces no individual deep link** and never falls back to title matching.
-  Navigation fixtures gain realistic distinct IDs; a graceful missing-ID case is retained.
-- Health states stay `loading`, `current`, `stale`, `unavailable`. **`REFERENCE` remains a
-  presentation badge, not a health state.**
-- **Only a successful authoritative refresh confirming absence may call a deep-linked alert expired
-  or inactive. A failed NWS fetch must say the target could not be verified** — the distinction
-  between "gone" and "unverified" is the same truthfulness rule the observation contract enforces.
-- **iOS Safari stays `NOT TESTED`** absent a real device.
-
-**Preserved, explicitly**
-
-Last-known-good retention and its per-source policies, the eligibility filter, dedupe, sort and the
-no-display-truncation rule, the observation clock and T01-T17, the news pipeline and hazard
-classifier, `esc()` and `safeUrl()`, cache identity, and the CI workflow.
-
-**Expected cost that is not a surprise**
-
-This changes render paths that **137 mutation anchors** sit in, and `AGENTS.md` requires zero
-`ANCHOR LOST`. Anchor revalidation is part of this unit, not cleanup after it.
-
-**Evidence limits stated up front**
-
-There were **no active Hawai'i NWS alerts** at claim time, so the id shape could not be sampled
-live and the work is fixture-driven. Baseline before any change: `npm test` 425, `test:dom` 436,
-`test:mutation` 137 of 137.
-
-**Round one of read-only review: a blocking lifecycle defect, and what the first tests missed**
-
-The first hosted verdict passed complete — run `38118022258`, attempt 1, 425 pure, 503 DOM, **146 of
-146 mutations** with 146 verdict lines, all `CAUGHT`, mutation job 963 seconds on image
-`20261004.327.1`. Codex then found a defect the green gate did not: **AC-101-06's view lifecycle**.
-
-`applyAlertHash()` read `if (key) switchView('alerts')` with **no branch for the key being
-cleared**. A fragment with a key meant go to Alerts; a fragment without one meant nothing. So Back
-cleared `S.selectedAlertKey` and stranded the reader in Alerts, and because `switchView()` never
-touched the fragment, three more failures followed from the same gap:
-
-1. Back removed the hash but left the view in Alerts.
-2. Returning to Overview by tab left `#alert=A` in the URL, contradicting the screen.
-3. Re-selecting that same alert changed nothing in the URL, so **no `hashchange` fired** and Alerts
-   never reopened — the alert became unreachable by the route the reader had just used.
-4. A refresh from that Overview state reopened the Alerts view the reader had deliberately left.
-
-**The fix, three changes.** `applyAlertHash()` handles the cleared fragment and restores the view
-the deep-link session began from. `switchView()` strips the fragment when leaving Alerts with a key
-set, through `clearAlertHash()`, which uses `replaceState` — no `hashchange`, no history entry,
-because the URL is being corrected to match a view change the reader already made rather than
-navigated to. `S.alertHashReturnView` records the origin **once per session**, so Back returns the
-reader where they actually were: a link followed from inside Alerts returns to Alerts, not
-unconditionally to Overview.
-
-**Why the original tests did not catch it.** They drove Back between two alert hashes, which never
-exercises the transition to *no* hash. Both states had a key, so both took the one branch that
-existed. A test suite can be thorough along the axis it imagines and blind across the boundary it
-does not.
-
-**The new tests were checked against the unfixed code before being trusted.** Against the previous
-`index.html` the new block fails **nine** assertions, one per symptom above. Tests that pass after
-a fix prove nothing about whether they would have caught the defect, so this direction of the check
-is the one that matters. DOM 503 → **526**; pure unchanged at 425; mutation corpus 146 → **151**
-with five cases restoring each defect separately, and an anchor pre-check reporting zero lost and
-zero ambiguous.
-
-**A mutation-harness lesson, recorded because it is the second occurrence.** One new case was
-reported MISSED although the mutation genuinely broke three assertions. Its `expect` list named
-“and leaves no fragment behind”, which checks the URL after Back — and the **browser** clears the
-fragment whether or not the view logic runs, so it cannot discriminate the mutation. Since `expect`
-is a **conjunction**, one non-discriminating entry fails the whole case. The entry was replaced
-rather than the harness loosened, and the reasoning now sits in a comment above the case. Naming an
-assertion the mutation does not break is the same error recorded against Claude earlier in this
-unit.
-
-**Browser pass, as Codex reported it.** Edge reached production at `pacific-watch.vercel.app` and
-the page loaded normally. The immutable #47 preview redirects to Vercel login; **no authentication
-was attempted and no credentials were created**, and Edge was restored to production. The **#47
-Edge row therefore stays `NOT TESTED`** — a production load is not a preview-head pass, and the
-distinction is kept rather than rounded up.
-
-**The completed duration the C12 correction was waiting for.** 963 seconds is **80.3% of the
-20-minute ceiling**, against the censored ≥916s lower bound and the 76.3% the amendment reasoned
-from. The real figure is worse, as the censored-bound correction warned it might be. That was
-measured at 146 cases and a 503-assertion DOM suite; this head carries 151 and 526, so the next
-hosted job will land higher again. If it exceeds the ceiling the unit stops and reports that rather
-than retrying, and **bounded internal concurrency stops being optional**: 81-plus of 151 cases run
-the full DOM suite, so every assertion added is paid once per case that spawns it.
-
-**Out of scope**
-
-PW-103, PW-104, PW-105 and the PW-106 consolidated validation are separate units. No
-authentication, subscription, payment, premium, saved-location, notification or AI work. No product
-rename or branding change. No `api/`, `vercel.json`, dependency, `AGENTS.md`, contract or workflow
-edit. No ruleset change. No remote branch deletion.
-
-**Absorbed into this claim**
-
-#46's self-close when this claim was first published, and now **#49's self-close as well**, since a
-board PR cannot record its own merge: the attribution header, Current Work rows, Active claims
-block, Active Branches row and the `main` pointer, plus the Handoff Log entry for each merge. The
-stale current-state paragraph describing this unit as stopped at the contract boundary is rewritten
-whole rather than patched sentence by sentence, which is the failure mode this board has recorded
-against Claude before.
+**No unit is claimed. October 2026 Phase 1 is complete.**
+
+PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
+blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
+Current Work and the Handoff Log. Leaving merged work under *Active claims* is exactly what stops
+this section working as a concurrency lock, which is the one job it has.
+
+Nothing below this line is an active claim. The eight `Closed:` blocks that follow are historical
+and are the subject of the still-open closed-claims cleanup item in the Review Queue.
 
 **Closed: October 9 Phase 1 engineering brief intake — ChatGPT Codex,
 `codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
@@ -910,7 +377,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw106-consolidated-validation | PW-106: audits every required regression test against existing coverage and fills the five genuine gaps, rather than restating coverage that PW-101 through PW-105 already carry |
+| — | — | No branch is claimed. Merged branches are omitted from this list, which does not imply remote branch deletion — 36 remote branches remain and none has been deleted |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -937,7 +404,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #53 and serving production.** Claims and handoffs for
+**`main` is merged through #55 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -948,10 +415,38 @@ link model, deep links and both review blockers are implemented and proven hoste
 seconds, roughly 26% of C12's unchanged 20-minute ceiling, against 92% before. C12 keeps its hard
 ceiling; the wording correction and the 75%-of-ceiling capacity-review trigger remain Codex's.
 
-**PW-104 is the open unit**, claimed above. PW-103 follows after it merges, then PW-105 and PW-106.
-**No rename, no branding change and no domain work is authorised** — the Vercel Pro plan and
-`nechicoa.app` are recorded as available infrastructure only. No ruleset change is claimed and no
-remote branch deletion is authorized.
+**October 2026 Phase 1 is complete and production verified.** Six units merged in the agreed order,
+each with its own claim, read-only review and attempt-1 hosted evidence:
+
+| unit | merged | what it changed |
+|---|---|---|
+| PW-101 / PW-102 | #47 `93afdee` | alert identity, inward navigation, deep links, labelled source links |
+| PW-104 | #51 `fb3d77c` | the weather map opens on precipitation, labelled for what it shows |
+| PW-103 | #52 `170ef17` | ticker speed derived from measured distance, not a fixed duration |
+| PW-105 | #53 `2ae2cf6` | the brand wave drifts one wavelength, seamlessly |
+| PW-106 | #54 `97e610f` | the coverage audit, its five gaps, and the malformed-payload fix |
+| rename | #55 `1263545` | Pacific Watch becomes **OlaPono** |
+
+Two supporting units made the rest possible: #50 `70cc74d` replaced the serial mutation harness
+with a bounded pool after it reached 92% of its ceiling, and #49 `73ca4f5` raised that ceiling
+under an amended C12.
+
+**The suites grew from 425 pure / 436 DOM / 137 mutations to 450 / 669 / 196.** Every unit's new
+tests were checked against the unfixed file before being trusted, which is the only reason any of
+those numbers mean anything.
+
+**Four defects were found by read-only review rather than by the suites.** The AC-101-06 lifecycle
+gap; absolute verdicts drawn from retained data; a deep link's focus never paid; and — the most
+serious — a malformed upstream payload producing a verified all-clear, which passed a green
+190-of-190 corpus because the tests asserted only that nothing crashed.
+
+**The browser matrix is not closed.** Chromium passes are recorded for the ticker at 390px, the
+precipitation layer, the wave cycle at 110% zoom and the rename at both widths. **Firefox, iPhone
+Safari, iPad Safari, mobile Chromium as a device, and genuine reduced-motion rendering remain
+`NOT TESTED`.** Phase 1 is not reported as browser-validated.
+
+**`nechicoa.app` remains reserved and unconnected.** No ruleset change is claimed and no remote
+branch deletion is authorized.
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
 mutations in 694 seconds on image version `20260927.320.1`. C12 and the ruleset are unchanged.
@@ -1115,6 +610,51 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-28 — Phase 1 closed out; #54 and #55 swept
+
+A board-only reconciliation. #55 could not record its own merge, so the pointer still read `#53`
+while two merged units sat under *Active claims* — the section meant to answer "what is someone
+else touching right now".
+
+#### The rename, verified against the repository rather than from the report
+
+`main` is `1263545`, the `index.html` blob matches production at `38bfbc3`, and the exact-`main`
+run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations.
+
+Unchanged on purpose, and each would have been a real defect if touched. The `localStorage` keys
+stay `pw_api_key`, `pw_news_sources` and `pw_theme`, so no reader loses their settings or their API
+key to a rename. `nechicoa.app` appears in no code path. Historical board and log entries keep the
+old name, because rewriting history to match a new brand would make every earlier record subtly
+false. The outbound `User-Agent` did change to `OlaPono/2.0`, which is a client identifier rather
+than an infrastructure one, and api.weather.gov asks only that a client identify itself.
+
+Fira Sans 800 joins the **existing** Google Fonts request rather than adding a connection, and is
+scoped to the brand title; Syne and Source Serif keep their roles.
+
+#### The pattern worth keeping from Phase 1
+
+Read-only review found four defects the suites did not, and twice the suites were green precisely
+because the assertions were weak: "does not throw" and "no row rendered" both pass while a garbage
+payload is presented as an all-clear. The safety property in this application is not whether code
+crashes but **what the interface is willing to claim**, and tests have to be written against the
+claim.
+
+The mutation harness earned its place twice. It caught a decorative assertion when PW-105 added a
+second `transform:none!important` rule and an unscoped regex stopped discriminating, and it caught
+three cases that silently became unreachable when PW-106 moved validation to the fetch boundary.
+Both were visible only in the **full** run — every case passed individually.
+
+#### Still open, and deliberately not closed here
+
+**Closed-claims cleanup** remains open. Eight `Closed:` blocks occupy most of an 810-line section,
+and the Review Queue's own condition is that their durable content be verified elsewhere first.
+That verification is the work; deleting them without it would discard the only surviving record of
+several decisions. It is not urgent, and a closeout commit is the wrong place to rush it.
+
+Also open: the narrow C12 evidence-wording correction, which is Codex's and now has its completed
+figures; the aftermath-versus-active-hazard classifier question; and the browser matrix rows above.
+
 
 ### 2026-10-28 — #50 and #47 merged; PW-104 claimed
 
