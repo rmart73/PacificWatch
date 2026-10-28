@@ -62,11 +62,80 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
-| October Phase 1 PW-101/PW-102 — alert navigation and source links | #47 is open from `claude/pw101-pw102-alert-navigation`; pure and DOM passed, but hosted mutation was cancelled after exceeding C12 | Claude is stopped at the contract boundary; no merge until hosted mutation passes under an implemented amendment |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | Rebased onto `main` at `73ca4f5` and green once at 151 of 151 in a 1104-second job. Codex read-only review then raised two blockers — absolute verdicts drawn from retained data, and a deep-link focus never paid after the loading state — both now fixed locally at 157 cases and 549 DOM assertions | Waiting on this PR: at 157 cases the serial harness projects past the ceiling, so #47 rebases onto `main` after #50 merges and runs once |
 | C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
-| C12 mutation timeout — workflow implementation | Claimed on `claude/c12-mutation-timeout`; one line, `timeout-minutes: 15 → 20` on the mutation job | Claude implements; Codex reviews read-only; the owner decides merge |
+| Mutation harness concurrency | Claimed on `claude/mutation-concurrency-main`. The serial harness reached 92% of its ceiling and #47's required extra coverage would time it out, so this lands first | Claude implements; Codex reviews read-only and owns any C12 wording; the owner decides merge |
+| C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**Mutation harness concurrency — Claude Code, `claude/mutation-concurrency-main`.** Claimed
+2026-10-27 before editing `test/`, in its own commit ahead of the work, under the owner's
+authorization to make the changes needed to finish the project, and on Codex's ruling to proceed
+after a negative MISSED probe.
+
+**Branched from `main`, not from #47, and that is the whole point of this unit's ordering.**
+
+Codex sequenced concurrency after #47. Measurement reversed it. #47's hosted mutation job runs
+**1104s, 92.0% of the 20-minute ceiling, 96 seconds of headroom**, and Codex's own review then
+required discriminating DOM and mutation coverage for two further blockers. The cost is measured,
+not guessed — **~6.1 seconds per DOM assertion** at this corpus size, from two hosted heads that
+differ by 23 assertions and 141 seconds:
+
+```
++  8 DOM assertions  ->  ~1153s   96.1%
++ 12 DOM assertions  ->  ~1178s   98.1%
++ 16 DOM assertions  ->  ~1202s   TIMES OUT
+```
+
+Two blockers with honest coverage exceed 16 assertions. So #47's corrected head could not
+reliably pass CI, and a mutation timeout is a required-check failure with zero bypass actors — it
+would block **every** merge, including the PR that recorded the problem, during a weather event.
+Codex's ruling allowed concurrency to be "sequenced where it causes the least delay"; this is that
+judgment, made on arithmetic rather than preference, and it is flagged rather than quietly taken.
+
+**What this changes.** Cases run through a bounded pool instead of one at a time. Nothing about
+what a case *is* changes: one mutant file and one node process per case, so isolation is identical.
+Measured on #47's 151-case corpus, where the problem actually bites: **1193s serial → 326s
+concurrent, 3.7x, identical verdict at 151 of 151 with 151 verdict lines and zero output-order
+mismatches.** This branch carries `main`'s 137-case corpus, so its own hosted figure will be lower
+and is the one that counts as hosted evidence.
+
+**The properties Codex required, each deliberate**
+
+1. One bounded aggregating `mutation coverage` job and one complete verdict — no sharding, no
+   per-case check, no partial summary.
+2. Deterministic output: verdict lines are emitted in case order whatever order the pool finishes
+   in, so the workflow's verdict-line count and its `N of M mutations caught` grep keep working
+   with **no workflow edit at all**.
+3. Complete-verdict guard: the summary prints only if every case reported; a shortfall prints
+   `INCOMPLETE: n of m cases reported a verdict` and exits nonzero.
+4. Nonzero rejection handling: `main().catch()` exits 1, because an unhandled rejection that
+   exited 0 would read as a passing gate.
+5. Stable check identity: the job name is untouched, so the required-check ruleset keeps pointing
+   at a check that reports — the C16 failure mode.
+6. Per-case isolation: one process, one file, no shared jsdom.
+7. `MUTATION_CONCURRENCY=1` restores exact serial behaviour for bisecting.
+
+**Evidence this claim commits to**
+
+1. The same verdict as the serial harness on the same corpus, locally and hosted, with wall-clock
+   stated for both.
+2. **The negative probe Codex required:** a deliberately broken case must still be reported MISSED
+   and must still exit nonzero **under concurrency**. A scheduler that converts MISSED into CAUGHT
+   would be quietly catastrophic — it is the one failure mode that makes every future green
+   meaningless, so it is proven rather than asserted.
+3. Attempt-1 green on the final PR head and again on the exact `main` merge commit, with each
+   job's `Image`, image `Version` and `Image Release` read from the image line.
+
+**Out of scope.** No production code: `index.html`, `api/` and `vercel.json` untouched. No test
+assertion and no mutation case added, removed or weakened — the corpus is `main`'s same 137
+cases, so the verdict is directly comparable. **No workflow edit**: ceilings stay 5, 10 and 20 and
+job names stay as they are. **No contract edit** — Codex keeps C12's hard 20-minute ceiling and
+owns the wording, including the capacity-review trigger at 75% of ceiling it has asked for. No
+ruleset, Vercel settings or WAF change. No remote branch deletion. **No product rename**: the owner
+has not settled on a name and nothing here anticipates one.
+
 
 **C12 mutation timeout — workflow implementation — Claude Code, `claude/c12-mutation-timeout`.**
 Claimed 2026-10-11 before editing `.github/`, in its own commit ahead of the work, on the owner's
