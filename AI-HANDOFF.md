@@ -74,16 +74,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Claim-retirement rule review corrections — ChatGPT Codex,
-`codex/claim-retirement-rule`.** Reclaimed 2026-10-28 before editing in response to Claude's
-read-only review of #57 at `32779f3`.
-
-Documentation-only scope: name Review Queue and Outstanding Verification as the live homes for
-unresolved content, and decide the self-retirement review window by restricting self-retirement to
-documentation-only units while retaining mandatory reclaim before any later edit. Files claimed:
-`AI-HANDOFF.md` and `AGENTS.md`; no application or infrastructure change.
-
-**October 2026 Phase 1 is complete.**
+**No unit is claimed. October 2026 Phase 1 is complete.**
 
 PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
 blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
@@ -616,6 +607,14 @@ This unit also absorbs #56's unavoidable self-close. #56 merged as `ac7afb7`; ex
 `40725525479`, attempt 1, passed at 450 pure assertions, 669 DOM assertions and 196 of 196
 mutations. The live `main` pointer and Current Work row now describe that merged state rather than
 stopping at #55.
+
+Claude's read-only review of #57 at `32779f3` found no factual defect and two non-blocking
+completeness gaps. Codex reclaimed before editing. The final rule now names Review Queue and
+Outstanding Verification as the live homes for unresolved material, so retiring a claim cannot
+hide an open item in history. It also restricts self-retirement to documentation-only units and
+explicitly accepts their short review window; application and behavior-changing claims remain
+active through merge and require a later claimed board reconciliation. This correction claim is
+retired only after both decisions are preserved here.
 
 ### 2026-10-28 — Phase 1 closed out; #54 and #55 swept
 
