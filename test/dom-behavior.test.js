@@ -1589,6 +1589,73 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-103 — the ticker is driven by measurement, and degrades to something readable:');
+  /* The speed arithmetic is pure and lives in the health suite; jsdom computes no layout, so what
+     is testable here is the wiring: that the CSS reads measured values with the old behaviour as
+     its fallback, that a zero-layout DOM publishes nothing rather than a zero, that a refresh
+     carrying no change rewrites nothing, and that reduced motion leaves text a reader can read. */
+
+  const css103 = w.document.documentElement.innerHTML;
+
+  /* The fallbacks matter more than the variables: a script-less or non-rendering page must behave
+     exactly as it did before this unit. */
+  check('the keyframe start is a variable with the old 100vw as fallback',
+    /@keyframes ticker\{0%\{transform:translateX\(var\(--ticker-from,100vw\)\)\}/.test(css103), true);
+  check('the duration is a variable with the old 70s as fallback',
+    /animation:ticker var\(--ticker-dur,70s\) linear infinite/.test(css103), true);
+  check('no fixed 70s duration is left on the track',
+    /\.ticker-track\{[^}]*animation:ticker 70s/.test(css103), false);
+
+  /* AC-103-07. The blanket reduced-motion rule FINISHES animations rather than stopping them, and
+     the ticker's last keyframe is off-screen left, so reduced-motion users saw an empty strip. */
+  const rm = (css103.match(/@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\n\}/) || [''])[0];
+  check('AC-103-07 reduced motion stops the ticker animation outright',
+    /\.ticker-track\{animation:none!important/.test(rm), true);
+  check('AC-103-07 and clears the transform that hid it off-screen',
+    /transform:none!important/.test(rm), true);
+  check('AC-103-07 and lets the text wrap into view instead of staying on one line',
+    /white-space:normal/.test(rm), true);
+  check('AC-103-07 and stops the wrapper clipping the wrapped lines',
+    /\.ticker,\.ticker-wrap\{overflow:visible\}/.test(rm), true);
+
+  /* A zero-layout DOM is the same situation as a hidden header: publish nothing, keep the CSS
+     fallback. Writing '0px' here would freeze the ticker on a real but briefly-unmeasured page. */
+  /* Assert it exists rather than calling blind: a missing function would throw and kill the
+     suite, and a crash prints no FAIL line, so the mutation harness would read it as MISSED. */
+  check("calibrateTicker is wired up", typeof w.calibrateTicker, "function");
+  if (typeof w.calibrateTicker === "function") w.calibrateTicker();
+  const rootStyle = w.document.documentElement.style;
+  check('an unmeasured DOM publishes no start offset', rootStyle.getPropertyValue('--ticker-from'), '');
+  check('  and no duration', rootStyle.getPropertyValue('--ticker-dur'), '');
+
+  /* AC-103-06. A refresh that changes nothing must not rewrite the node. A comment node is the
+     probe: assigning textContent would remove it, leaving it there proves no assignment ran. */
+  await feed([twin(ID_A, 'Oahu')]);
+  const track103 = $('#ticker-track');
+  const textBefore = track103.textContent;
+  track103.appendChild(w.document.createComment('pw103-probe'));
+  const hasProbe = () => [...track103.childNodes].some(n => n.nodeType === 8 && n.nodeValue === 'pw103-probe');
+  check('the probe is in place', hasProbe(), true);
+  w.updateTicker();
+  check('AC-103-06 an unchanged refresh does not rewrite the ticker', hasProbe(), true);
+  check('  and the text is unchanged', track103.textContent, textBefore);
+  /* The converse: real new content must still reach the reader. */
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('AC-103-06 but changed data does rewrite it', hasProbe(), false);
+  check('  and the new alert is in the text', track103.textContent.indexOf('Kauai') > -1, true);
+
+  /* AC-103-05. Without layout this cannot measure a gap, so it asserts the mechanism that avoids
+     one: the text is duplicated, so a second copy follows the first across the window. */
+  const half = track103.textContent.slice(0, Math.floor(track103.textContent.length / 2)).trim();
+  check('AC-103-05 the track content is duplicated to cover the loop',
+    half.length > 0 && track103.textContent.indexOf(half) !== track103.textContent.lastIndexOf(half), true);
+
+  /* Screen readers: the text is real DOM text, which is what makes it reachable. An aria-live
+     region would announce every cycle, which the brief explicitly rules out. */
+  check('the ticker text is readable by assistive tech', track103.textContent.length > 20, true);
+  check('and is not an intrusive live region', track103.getAttribute('aria-live'), null);
+  check('  nor is its wrapper', ($('.ticker-wrap') || {}).getAttribute('aria-live'), null);
+
   console.log('\nPW-104 — the weather map opens on precipitation, and says so:');
   /* AC-104-01..07. The embed is static markup, so most of this is about not lying to the reader
      and not reloading a third-party frame. The two criteria easiest to wave through without

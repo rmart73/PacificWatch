@@ -42,6 +42,108 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- PW-103, the mobile ticker -----------------------------------------------------
+
+     The speed model is pure, so its cases aim at the health suite. The wiring, the reduced-motion
+     fallback and the no-op refresh are DOM. The two most valuable cases here restore the two
+     defects that a green suite would not have noticed: a reduced-motion ticker that is empty
+     rather than calm, and a refresh that rewrites the node for no reason. */
+
+  { name: 'the ticker duration goes back to one fixed value for every viewport',
+    from: "animation:ticker var(--ticker-dur,70s) linear infinite",
+    to:   "animation:ticker 70s linear infinite",
+    expect: ['the duration is a variable with the old 70s as fallback',
+             'no fixed 70s duration is left on the track'],
+    suite: 'dom' },
+
+  { name: 'the keyframe start stops being measured',
+    from: "@keyframes ticker{0%{transform:translateX(var(--ticker-from,100vw))}",
+    to:   "@keyframes ticker{0%{transform:translateX(100vw)}",
+    expect: ['the keyframe start is a variable with the old 100vw as fallback'],
+    suite: 'dom' },
+
+  /* Reduced motion: the blanket rule finishes the animation on its last keyframe, which is
+     off-screen left. Removing the override restores an empty ticker for those readers. */
+  { name: 'reduced motion leaves the ticker finished off-screen and empty',
+    from: "  .ticker-track{animation:none!important;transform:none!important;white-space:normal;display:block}",
+    to:   "  .ticker-track{display:block}",
+    expect: ['AC-103-07 reduced motion stops the ticker animation outright',
+             'AC-103-07 and clears the transform that hid it off-screen'],
+    suite: 'dom' },
+
+  { name: 'reduced motion keeps the single-line clipping that hides the text',
+    from: "  .ticker,.ticker-wrap{overflow:visible}",
+    to:   "  .ticker,.ticker-wrap{overflow:hidden}",
+    expect: ['AC-103-07 and stops the wrapper clipping the wrapped lines'],
+    suite: 'dom' },
+
+  /* AC-103-06. Rewriting identical text on every refresh is the unnecessary reset. */
+  { name: 'an unchanged refresh rewrites the ticker node anyway',
+    from: "  const next = prefix + items.join(' \\u00b7 ') + ' \\u00b7 ' + prefix + items.join(' \\u00b7 ');\n  if (track.textContent !== next) track.textContent = next;",
+    to:   "  const next = prefix + items.join(' \\u00b7 ') + ' \\u00b7 ' + prefix + items.join(' \\u00b7 ');\n  track.textContent = next;",
+    expect: ['AC-103-06 an unchanged refresh does not rewrite the ticker'],
+    suite: 'dom' },
+
+  /* There is deliberately no case for 'calibrateTicker is wired up'. Renaming the declaration
+     breaks updateTicker's call site, and a thrown ReferenceError prints no FAIL line, so the
+     harness would read a crash as MISSED. That assertion is a crash-guard for the suite rather
+     than a behaviour, and inventing a contrived mutant to cover it would be worse than saying so. */
+
+  /* A zero measurement must not be published: freezing --ticker-dur at 0s would stop the ticker
+     dead on a page that simply had not laid out yet. */
+  { name: 'the measurement is published before it is known to be real',
+    from: "  const secs = tickerDurationSeconds(wrapW, trackW, window.innerWidth || 0);",
+    to:   "  document.documentElement.style.setProperty('--ticker-from', wrapW + 'px');\n  const secs = tickerDurationSeconds(wrapW, trackW, window.innerWidth || 0);",
+    expect: ['an unmeasured DOM publishes no start offset'],
+    suite: 'dom' },
+
+  /* ---- the pure speed model, aimed at the health suite ---- */
+
+  { name: 'mobile scrolls at the desktop rate, erasing the calibration',
+    from: "const TICKER_PX_PER_S_MOBILE = 37;",
+    to:   "const TICKER_PX_PER_S_MOBILE = 45;",
+    expect: ['and the gain is near the 25% calibration target',
+             'mobile stays below desktop speed on purpose'],
+    suite: 'health' },
+
+  { name: 'mobile keeps its old slow rate',
+    from: "const TICKER_PX_PER_S_MOBILE = 37;",
+    to:   "const TICKER_PX_PER_S_MOBILE = 29;",
+    expect: ['AC-103-02 mobile is faster than the old mobile baseline'],
+    suite: 'health' },
+
+  { name: 'desktop speed drifts off its baseline',
+    from: "const TICKER_PX_PER_S_DESKTOP = 45;",
+    to:   "const TICKER_PX_PER_S_DESKTOP = 70;",
+    expect: ['AC-103-01 desktop duration stays within 5% of the 70s baseline'],
+    suite: 'health' },
+
+  /* The whole point of the unit: duration must follow distance, not sit fixed. */
+  { name: 'duration stops following content length',
+    from: "  const secs = distance / tickerSpeedPxPerS(viewportW);",
+    to:   "  const secs = 70;",
+    expect: ['AC-103-04 longer content takes longer'],
+    suite: 'health' },
+
+  { name: 'the mobile breakpoint moves off the stylesheet boundary',
+    from: "const TICKER_MOBILE_MAX_W = 767;",
+    to:   "const TICKER_MOBILE_MAX_W = 768;",
+    expect: ['and 768 is already desktop'],
+    suite: 'health' },
+
+  { name: 'an unmeasured track is treated as a real distance',
+    from: "  if (!distance) return null;",
+    to:   "  if (false) return null;",
+    expect: ['an unmeasured track yields no duration'],
+    suite: 'health' },
+
+  { name: 'the duration clamp is removed',
+    from: "  return Math.min(TICKER_MAX_S, Math.max(TICKER_MIN_S, secs));",
+    to:   "  return secs;",
+    expect: ['a tiny track is clamped to the floor',
+             'an enormous track is clamped to the ceiling'],
+    suite: 'health' },
+
   /* ---- PW-104, the Ventusky precipitation default -------------------------------------
 
      The parameter and the two labels are one unit: a map showing three-hour accumulation under a

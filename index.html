@@ -87,7 +87,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+/* PW-103. The start offset is published by calibrateTicker() as a measured pixel width. The
+   100vw fallback is the old behaviour exactly, so a non-rendering or script-less page is
+   unchanged. 100vw was also slightly wrong: the track is clipped by .ticker-wrap, which is
+   narrower than the viewport by the ALERTS tag, so the first stretch of every cycle was spent
+   invisible behind the tag. Measuring the wrap removes that dead time. */
+@keyframes ticker{0%{transform:translateX(var(--ticker-from,100vw))}100%{transform:translateX(-100%)}}
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
 
 /* HEADER */
@@ -124,7 +129,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .ticker{display:flex;align-items:center;overflow:hidden;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.06);min-height:32px}
 .ticker-tag{flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--warn);padding:0 12px;border-right:1px solid rgba(255,255,255,.08);white-space:nowrap}
 .ticker-wrap{flex:1;overflow:hidden;padding:7px 0}
-.ticker-track{display:inline-block;white-space:nowrap;font-size:11px;color:rgba(255,255,255,.65);animation:ticker 70s linear infinite}
+.ticker-track{display:inline-block;white-space:nowrap;font-size:11px;color:rgba(255,255,255,.65);animation:ticker var(--ticker-dur,70s) linear infinite}
 
 .island-tabs{display:flex;gap:4px;padding:8px 14px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,.06)}
 .island-tabs::-webkit-scrollbar{display:none}
@@ -411,6 +416,15 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .hazard-pulse{box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+  /* PW-103 / AC-103-07. The blanket rule above does not stop an animation, it finishes it:
+     .01ms and one iteration land every element on its FINAL keyframe. The ticker's final
+     keyframe is translateX(-100%), off to the left and clipped away, so reduced motion gave
+     an EMPTY ticker rather than a calm one — the alert text was unreachable for exactly the
+     readers who asked for less movement. These rules stop it instead, and let the text sit
+     still and wrap into view. */
+  .ticker-track{animation:none!important;transform:none!important;white-space:normal;display:block}
+  .ticker,.ticker-wrap{overflow:visible}
+  .ticker{align-items:flex-start}
 }
 .stale-note{display:flex;align-items:center;gap:7px;padding:9px 16px;font-size:10.5px;color:var(--ink3);background:var(--surf);border-bottom:1px solid var(--rule)}
 .toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
@@ -2127,6 +2141,77 @@ function renderAlerts(snap) {
   }).join('') + ptwcNote;
 }
 
+/* PW-103. THE TICKER SPEED MODEL.
+
+   The old rule was `animation: ticker 70s` over a distance of `100vw + track width`. Duration was
+   fixed while distance was not, so speed fell out of two things it should not depend on:
+
+     viewport width — a 390px phone travels ~1050px less than a 1440px desktop for the same
+       content, so at a fixed 70s the phone moved about 30% slower. That is the reported defect.
+     content length — more alerts meant a longer track, more distance, and therefore a FASTER
+       scroll at the same 70s. Measured across the real range of ticker content the desktop speed
+       varied roughly 39–94 px/s.
+
+   So speed is now stated in pixels per second and the duration is derived from the measured
+   distance, which is what AC-103-04 asks for: content length changes how long a cycle takes, not
+   how fast the text moves.
+
+   CALIBRATION, and the assumption in it. The constants are anchored to the most common on-screen
+   state, the no-active-alerts message, whose doubled track measures about 1700px. At a 1440px
+   desktop that is (1380 + 1700) / 70s ≈ 45 px/s, which is preserved. At a 390px phone the old
+   speed was (330 + 1700) / 70s ≈ 29 px/s, and the brief asks for about 25% faster, giving 37.
+
+   Mobile stays a little slower than desktop on purpose. The brief asks for 25% faster than the
+   phone's OWN baseline, not parity with desktop; matching 45 px/s would be a 55% jump and harder
+   to read on a small screen.
+
+   One consequence worth stating rather than hiding: because the old speed depended on content
+   length, "the desktop baseline" was a range, not a number. These constants reproduce it at the
+   reference content length and deliberately diverge for much shorter or longer content — that
+   divergence IS the fix, not a regression against AC-103-01. */
+const TICKER_PX_PER_S_DESKTOP = 45;
+const TICKER_PX_PER_S_MOBILE = 37;
+/* One below the 768px breakpoint the rest of the stylesheet already uses. */
+const TICKER_MOBILE_MAX_W = 767;
+/* A very short track must not whip past, and a very long one must not look frozen. */
+const TICKER_MIN_S = 20, TICKER_MAX_S = 240;
+
+function tickerSpeedPxPerS(viewportW) {
+  return viewportW <= TICKER_MOBILE_MAX_W ? TICKER_PX_PER_S_MOBILE : TICKER_PX_PER_S_DESKTOP;
+}
+
+/* Pure: pixels in, seconds out. Returns null when nothing has been measured, so the caller keeps
+   the CSS fallback instead of animating across a zero-width distance. */
+function tickerDurationSeconds(wrapW, trackW, viewportW) {
+  const distance = (wrapW || 0) + (trackW || 0);
+  if (!distance) return null;
+  const secs = distance / tickerSpeedPxPerS(viewportW);
+  return Math.min(TICKER_MAX_S, Math.max(TICKER_MIN_S, secs));
+}
+
+/* Last applied calibration, so an unchanged refresh writes nothing. AC-103-06. */
+let tickerCalibration = '';
+
+function calibrateTicker() {
+  const track = document.getElementById('ticker-track');
+  const wrap = track && track.parentNode;
+  if (!track || !wrap) return;
+  /* clientWidth and scrollWidth are 0 in a non-rendering DOM and while the header is hidden.
+     Keep the CSS fallback rather than publish a zero, the same rule syncChromeOffsets() follows. */
+  const wrapW = wrap.clientWidth || 0;
+  const trackW = track.scrollWidth || 0;
+  const secs = tickerDurationSeconds(wrapW, trackW, window.innerWidth || 0);
+  if (secs == null) return;
+  const next = wrapW + '|' + secs.toFixed(2);
+  /* Re-publishing identical values would be pointless work on every refresh and every resize
+     tick, and the point of AC-103-06 is that a refresh carrying no change changes nothing. */
+  if (next === tickerCalibration) return;
+  tickerCalibration = next;
+  const root = document.documentElement;
+  root.style.setProperty('--ticker-from', wrapW + 'px');
+  root.style.setProperty('--ticker-dur', secs.toFixed(2) + 's');
+}
+
 function updateTicker(snap) {
   const track = document.getElementById('ticker-track');
   if (!track) return;
@@ -2138,7 +2223,11 @@ function updateTicker(snap) {
     const msg = snap.sourceState === 'current'
       ? '\u2713 No active NWS alerts for ' + snap.areaLabel + ' \u00b7 Tsunami alerts appear here when NWS issues them — verify at tsunami.gov \u00b7 Visit NWS HFO for latest forecasts'
       : 'Alert data not current — last verified ' + snap.verifiedAge + ' \u00b7 Check NWS HFO and HIEMA directly';
-    track.textContent = msg + ' \u00b7 ' + msg;
+    /* Writing identical text on every refresh is the "unnecessary reset" AC-103-06 names:
+       it churns the node and forces a re-measure for no change the reader can see. */
+    const next = msg + ' \u00b7 ' + msg;
+    if (track.textContent !== next) track.textContent = next;
+    calibrateTicker();
     return;
   }
   const items = live.map(f => {
@@ -2147,7 +2236,9 @@ function updateTicker(snap) {
     return '\u26A0 ' + (p.event || 'Alert') + ' — ' + truncate(p.areaDesc || '', 60) + exp + ' - NWS';
   });
   const prefix = stale ? 'STALE (last verified ' + snap.verifiedAge + ') \u00b7 ' : '';
-  track.textContent = prefix + items.join(' \u00b7 ') + ' \u00b7 ' + prefix + items.join(' \u00b7 ');
+  const next = prefix + items.join(' \u00b7 ') + ' \u00b7 ' + prefix + items.join(' \u00b7 ');
+  if (track.textContent !== next) track.textContent = next;
+  calibrateTicker();
 }
 
 /* Statewide and Molokaʻi have no station of their own and borrow Honolulu's. Presenting a
@@ -3224,6 +3315,10 @@ setInterval(renderSourceHealth, 30000);
    chrome and publishing it as custom properties keeps the view tabs below the header and
    the last row of content above the bottom nav at any zoom level. */
 function syncChromeOffsets() {
+  /* The ticker's travel distance is chrome measurement too: it changes with viewport width and
+     when the header rewraps, so it rides the same listener and observer rather than adding a
+     second set. */
+  if (typeof calibrateTicker === 'function') calibrateTicker();
   const root = document.documentElement;
   const hdr = document.querySelector('.app-header');
   const nav = document.querySelector('.bottom-nav');
