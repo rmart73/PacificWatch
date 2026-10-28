@@ -35,6 +35,11 @@ const apiSrc = fs.readFileSync(path.join(ROOT, 'api', 'news.js'), 'utf8').replac
 const SUBJECT = { html: { src: src, ext: '.html' }, api: { src: apiSrc, ext: '.js' } };
 
 const mutations = [
+  { name: 'PROBE: a mutation nothing can catch',
+    from: "function renderAlertSurfaces() {",
+    to:   "function renderAlertSurfaces()  {",
+    expect: ['AN ASSERTION NO SUITE EVER PRINTS'],
+    suite: 'dom' },
   { name: 'island filter dropped from nwsEligible',
     from: '    .filter(f => alertMatchesIsland(f, S.island))',
     to:   '    .filter(f => true)',
