@@ -944,12 +944,18 @@ const mutations = [
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-mutation-'));
 
-/* Cases run through a BOUNDED POOL rather than one at a time. The serial harness reached 1104
-   seconds on this corpus — 92% of C12's 20-minute ceiling, about 96 seconds of headroom — because
-   81-plus of these cases spawn the whole DOM suite, so every assertion added is paid once per case
-   that runs it. At roughly 6 seconds per DOM assertion, the next unit would have timed out the
-   job, and a timeout on a required check with no bypass actors blocks every merge including the
-   PR that would record it.
+/* Cases run through a BOUNDED POOL rather than one at a time.
+
+   Each figure below belongs to a specific corpus, and conflating them is how a comment stops
+   being evidence. On THIS corpus — 137 cases — the serial harness ran 698 seconds hosted. On the
+   151-case corpus of the PW-101/PW-102 branch it ran 1104 seconds, 92% of C12's 20-minute ceiling,
+   leaving about 96 seconds of headroom.
+
+   The cost is driven by how many cases spawn the whole DOM suite — 81-plus of that 151 — so every
+   assertion added is paid once per case that runs it, measured at roughly 6 seconds per assertion.
+   That branch then needed coverage for two more review findings, which projected past the ceiling,
+   and a timeout on a required check with no bypass actors blocks every merge including the PR that
+   would record it. Hence a pool rather than a larger budget.
 
    What does NOT change: one mutant file and one node process per case, so isolation is identical;
    one aggregating verdict; one line per case; the same `N of M mutations caught` summary the
