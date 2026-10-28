@@ -42,6 +42,67 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- PW-105, the wave logo -----------------------------------------------------------
+
+     The loop is seamless only because the drift distance equals the wave's own wavelength. The
+     most valuable case here breaks that equality by one unit: it would snap once every nine
+     seconds, which is exactly the kind of defect a green suite misses and an eye catches. */
+
+  { name: 'the drift no longer equals one wavelength, so the loop snaps',
+    from: "@keyframes brand-wave{from{transform:translateX(0)}to{transform:translateX(-20px)}}",
+    to:   "@keyframes brand-wave{from{transform:translateX(0)}to{transform:translateX(-19px)}}",
+    expect: ['AC-105-02 the drift distance equals that same wavelength'],
+    suite: 'dom' },
+
+  { name: 'the duplicate set is offset by the wrong distance',
+    from: "<g class=\"brand-wave-set\" transform=\"translate(20 0)\" aria-hidden=\"true\">",
+    to:   "<g class=\"brand-wave-set\" transform=\"translate(24 0)\" aria-hidden=\"true\">",
+    expect: ['AC-105-02 the second set is offset by one wavelength'],
+    suite: 'dom' },
+
+  /* Easing is what makes a seam visible: the two copies hand over at a changing rate. */
+  { name: 'the drift gains an easing curve',
+    from: ".brand-wave{animation:brand-wave 9s linear infinite;will-change:transform}",
+    to:   ".brand-wave{animation:brand-wave 9s ease-in-out infinite;will-change:transform}",
+    expect: ['AC-105-02 the drift is linear and endless'],
+    suite: 'dom' },
+
+  /* AC-105-03. Fading the middle line destroys the dominance that reads as the logo. */
+  { name: 'the middle wave loses its dominance',
+    /* Anchored on the FIRST set's opening tag, which is the one without a transform: the three
+       paths are identical in both sets, so the path text alone appears twice and the harness
+       rightly refuses an ambiguous anchor. */
+    from: "<g class=\"brand-wave-set\">\n              <path d=\"M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3\"/>",
+    to:   "<g class=\"brand-wave-set\">\n              <path d=\"M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3\" opacity=\".4\"/>",
+    expect: ['AC-105-03 set 0 keeps one line fully opaque',
+             '  set 0 fades exactly two of them'],
+    suite: 'dom' },
+
+  /* AC-105-06 / AC-105-08. Removing the override lets the blanket rule FINISH the animation,
+     leaving the mark a wavelength left: the duplicate shown in place of the shipped paths. */
+  { name: 'reduced motion finishes the wave instead of stopping it',
+    from: "  .brand-wave{animation:none!important;transform:none!important}",
+    to:   "  .brand-wave{opacity:1}",
+    expect: ['AC-105-06 reduced motion stops the wave outright',
+             'AC-105-08 and clears the drift so the shipped paths are what is shown'],
+    suite: 'dom' },
+
+  /* The duplicate is the same three lines again; announcing it twice is a real regression for a
+     screen reader even though nothing visual changes. */
+  { name: 'the duplicated wave set is exposed to assistive tech',
+    from: "transform=\"translate(20 0)\" aria-hidden=\"true\"",
+    to:   "transform=\"translate(20 0)\"",
+    expect: ['the duplicated set is hidden from assistive tech'],
+    suite: 'dom' },
+
+  /* AC-105-04. Moving the animation onto the mark itself would animate a laid-out box rather
+     than a composited group inside a clipped viewBox. */
+  { name: 'the animation moves onto the laid-out mark',
+    from: ".brand-wave{animation:brand-wave 9s linear infinite",
+    to:   ".brand-mark{animation:brand-wave 9s linear infinite",
+    expect: ['AC-105-04 the animation targets a group, not the svg or the mark'],
+    suite: 'dom' },
+
   /* ---- PW-103, the mobile ticker -----------------------------------------------------
 
      The speed model is pure, so its cases aim at the health suite. The wiring, the reduced-motion
