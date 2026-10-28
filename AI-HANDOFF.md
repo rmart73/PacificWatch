@@ -632,6 +632,36 @@ than an infrastructure one, and api.weather.gov asks only that a client identify
 Fira Sans 800 joins the **existing** Google Fonts request rather than adding a connection, and is
 scoped to the brand title; Syne and Source Serif keep their roles.
 
+#### PW-106's audit mapping, preserved because the claim block carrying it was removed
+
+Retiring that claim deleted 526 lines, and the condition this board applies to the closed-claims
+cleanup — durable content must be verified elsewhere first — applies to my own claims too. The
+unique artifact was the mapping from each PW-106 requirement to its coverage, so it is recorded
+here rather than left only in a pull-request body:
+
+| required area | where the coverage lives |
+|---|---|
+| navigation: A opens A, B not A, identical headlines distinguishable, direct links restore, browser navigation, expired/removed fallback | PW-101 — the history lifecycle and six resolution states |
+| external links: official HTML accepted, API collection rejected, absent URL no link, malformed rejected, unsafe schemes rejected, API vs human URL distinct | PW-102, plus the `safeUrl` and `javascript:` cases |
+| ticker: duration scales with content, desktop preserved, mobile exceeds baseline, refreshes do not restart, reduced motion | PW-103 — pure speed model and the AC-103-06 comment-node probe |
+| map: precipitation requested, position unchanged, responsive, nonbreaking third-party fallback | PW-104 |
+| logo: animation present, static fallback, reduced motion disables, no layout shift | PW-105 |
+| source-health fixtures 1–5 and 8 | the nine-state strip section and the health suite retention tests |
+| alert lifecycle: counting is **not** deduplicated by area | pinned by “counted per product, not per incident” — a deliberate decision, so the brief's “deduplication” item means preserving it |
+
+The five gaps the audit found, now covered: a malformed upstream payload; partial provider failure
+with other sources healthy; an alert updated in place with the same id; resize updating the ticker
+duration; and an empty alert collection reaching the calibration path.
+
+And the finding that mattered most, kept in full because it is the sharpest lesson here. Round one
+guarded `nwsEligible()` and `nwsSnapshot()` so a malformed payload could not throw, and claimed
+`sourceState()` still prevented a false all-clear. That was wrong. `fetchAlerts()` accepted
+`features: [null, {}]` and called `sourceOk()`, so the source was **current**; the new guard then
+dropped both entries, leaving zero eligible products from a current source, which every surface
+renders as “All clear”. Validation moved to the fetch boundary, before `sourceOk()`, and the whole
+payload is now rejected rather than filtered — because the malformed product may be the hazardous
+one and nothing can know what was lost.
+
 #### The pattern worth keeping from Phase 1
 
 Read-only review found four defects the suites did not, and twice the suites were green precisely
