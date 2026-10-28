@@ -1565,7 +1565,7 @@ function has(label, sel, needle, expected) {
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
   has('  the selected row expands in place', '#nws-alerts-container', 'alert-detail', false);
   check('  selection is exposed to assistive tech',
-    ($('#nws-alerts-container .alert-item.is-selected') || {}).getAttribute('aria-current'), 'true');
+    ($('#nws-alerts-container .alert-item.is-selected') || { getAttribute: () => null }).getAttribute('aria-current'), 'true');
 
   w.location.hash = '#alert=' + KEY_B;
   await settle();
@@ -1589,6 +1589,88 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-105 — the brand wave drifts exactly one wavelength, so the loop cannot snap:');
+  /* jsdom renders nothing, so none of this witnesses motion. What it can prove is the geometry:
+     that the silhouette is untouched, that the drift distance equals the wave's own wavelength,
+     and that reduced motion returns the shipped mark. AC-105-05 needs real browsers and stays
+     NOT TESTED. */
+
+  const mark = $('.brand-mark svg');
+  check('AC-105-01 the brand mark is still an inline svg', !!mark, true);
+  const marked = [...d.querySelectorAll('.brand-mark svg .brand-wave-set')];
+  check('the three waves appear twice, once per wavelength', marked.length, 2);
+
+  /* AC-105-01 and AC-105-03. Each set is the original three lines: one at full strength and two
+     at .4. The middle line carrying NO opacity attribute is what keeps it dominant, so that
+     absence is asserted rather than assumed. */
+  marked.forEach((set, i) => {
+    const paths = [...set.querySelectorAll('path')];
+    check('  set ' + i + ' has three wave lines', paths.length, 3);
+    const faded = paths.filter(pa => pa.getAttribute('opacity') === '.4');
+    check('  set ' + i + ' fades exactly two of them', faded.length, 2);
+    const solid = paths.filter(pa => !pa.hasAttribute('opacity'));
+    check('  AC-105-03 set ' + i + ' keeps one line fully opaque', solid.length, 1);
+    check('  AC-105-03 and it is the middle one', (solid[0] || { getAttribute: () => null }).getAttribute('d').indexOf('M2 12') === 0, true);
+  });
+
+  /* AC-105-01. The silhouette is the artwork: stroke weight, cap and colour are identity. */
+  check('the stroke weight is unchanged', mark.getAttribute('stroke-width'), '2.2');
+  check('the stroke colour is unchanged', mark.getAttribute('stroke'), '#fff');
+  check('the caps are unchanged', mark.getAttribute('stroke-linecap'), 'round');
+  check('the viewBox is unchanged', mark.getAttribute('viewBox'), '0 0 24 24');
+
+  /* AC-105-02, the real content of this unit. The loop is seamless only if the drift distance
+     equals one wavelength. Both numbers are read from the document — the wavelength from the
+     path's own endpoints, the drift from the keyframes — so artwork or timing drifting apart in
+     future fails here instead of snapping in front of a reader. */
+  const css105 = w.document.documentElement.innerHTML;
+  const dAttr = (d.querySelector('.brand-wave-set path') || { getAttribute: () => null }).getAttribute('d');
+  /* The curve runs M2 .. and each of its four segments advances 5 units: 2 -> 7 -> 12 -> 17 -> 22. */
+  const segs = ((dAttr || '').match(/5 ?-?3/g) || []).length;
+  const startX = parseFloat((dAttr || '').replace(/^M/, '').split(' ')[0]);
+  const wavelength = 4 * 5;
+  check('the curve still starts at x=2', startX, 2);
+  check('  and still has four 5-unit segments', segs >= 4, true);
+  const offsetAttr = ([...d.querySelectorAll('.brand-wave-set')][1] || { getAttribute: () => null }).getAttribute('transform');
+  check('AC-105-02 the second set is offset by one wavelength', offsetAttr, 'translate(' + wavelength + ' 0)');
+  const kf = (css105.match(/@keyframes brand-wave\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-(\d+)px\)\}\}/) || [])[1];
+  check('AC-105-02 the drift distance equals that same wavelength', Number(kf), wavelength);
+
+  /* Linear, or the handover between the two copies becomes a visible pause at the seam. */
+  check('AC-105-02 the drift is linear and endless',
+    /\.brand-wave\{animation:brand-wave \d+s linear infinite/.test(css105), true);
+
+  /* AC-105-04. The animation must not be able to move layout: it is a transform on a <g> inside a
+     fixed viewBox, and the mark's box is untouched. */
+  check('AC-105-04 the mark keeps its fixed size', /\.brand-mark\{width:34px;height:34px/.test(css105), true);
+  check('AC-105-04 and the svg keeps its fixed size', /\.brand-mark svg\{width:18px;height:18px\}/.test(css105), true);
+  check('AC-105-04 the animation targets a group, not the svg or the mark',
+    /\.brand-wave\{animation/.test(css105) && !/\.brand-mark\{animation/.test(css105), true);
+
+  /* AC-105-06 and AC-105-08. Stopping beats finishing: the blanket reduced-motion rule would land
+     the mark a whole wavelength left, showing the duplicate instead of the shipped paths. */
+  const rm105 = (css105.match(/@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\n\}/) || [''])[0];
+  check('AC-105-06 reduced motion stops the wave outright',
+    /\.brand-wave\{animation:none!important/.test(rm105), true);
+  check('AC-105-08 and clears the drift so the shipped paths are what is shown',
+    /\.brand-wave\{animation:none!important;transform:none!important\}/.test(rm105), true);
+
+  /* AC-105-07. No network dependency and no library: the motion is CSS over inline SVG. */
+  check('AC-105-07 the wave needs no network request',
+    /<img[^>]*brand|url\((?!#)[^)]*wave/i.test(css105), false);
+  check('AC-105-07 and no animation library is referenced',
+    /gsap|anime\.js|lottie|velocity\.js/i.test(css105), false);
+
+  /* The duplicate is decorative — it is the same three lines again, so it must not be announced
+     twice to a screen reader. */
+  check('the duplicated set is hidden from assistive tech',
+    ([...d.querySelectorAll('.brand-wave-set')][1] || { getAttribute: () => null }).getAttribute('aria-hidden'), 'true');
+
+  /* Deliberately unchanged: the same wave `d` is reused as the NOAA Tides tile glyph. It is a tile
+     icon in a grid of static icons, not the brand mark, and animating one of them would be noise. */
+  const tideIcon = $('.map-tile-icon svg');
+  check('the tides tile glyph is left static', !!tideIcon && !tideIcon.querySelector('.brand-wave'), true);
+
   console.log('\nPW-103 — the ticker is driven by measurement, and degrades to something readable:');
   /* The speed arithmetic is pure and lives in the health suite; jsdom computes no layout, so what
      is testable here is the wiring: that the CSS reads measured values with the old behaviour as
@@ -1611,8 +1693,11 @@ function has(label, sel, needle, expected) {
   const rm = (css103.match(/@media \(prefers-reduced-motion: reduce\)\{[\s\S]*?\n\}/) || [''])[0];
   check('AC-103-07 reduced motion stops the ticker animation outright',
     /\.ticker-track\{animation:none!important/.test(rm), true);
+  /* Scoped to .ticker-track on purpose. An unscoped /transform:none!important/ matched any such
+     rule in the block, so when PW-105 added one for the brand wave this assertion silently stopped
+     discriminating and the mutation harness reported its case MISSED. */
   check('AC-103-07 and clears the transform that hid it off-screen',
-    /transform:none!important/.test(rm), true);
+    /.ticker-track{[^}]*transform:none!important/.test(rm), true);
   check('AC-103-07 and lets the text wrap into view instead of staying on one line',
     /white-space:normal/.test(rm), true);
   check('AC-103-07 and stops the wrapper clipping the wrapped lines',
@@ -1654,7 +1739,7 @@ function has(label, sel, needle, expected) {
      region would announce every cycle, which the brief explicitly rules out. */
   check('the ticker text is readable by assistive tech', track103.textContent.length > 20, true);
   check('and is not an intrusive live region', track103.getAttribute('aria-live'), null);
-  check('  nor is its wrapper', ($('.ticker-wrap') || {}).getAttribute('aria-live'), null);
+  check('  nor is its wrapper', ($('.ticker-wrap') || { getAttribute: () => null }).getAttribute('aria-live'), null);
 
   console.log('\nPW-104 — the weather map opens on precipitation, and says so:');
   /* AC-104-01..07. The embed is static markup, so most of this is about not lying to the reader

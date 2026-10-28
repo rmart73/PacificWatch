@@ -101,6 +101,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-mark{width:34px;height:34px;border-radius:8px;background:var(--sky2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-mark svg{width:18px;height:18px}
+/* PW-105. Exactly one wavelength per cycle, linear so the two copies hand over at a constant
+   rate — any easing would make the handover visible as a pause. 9s is slow enough to read as a
+   swell rather than a scroll. The transform is on a <g>, so it is composited and never touches
+   layout: the mark stays 34px and the brand text does not move. */
+@keyframes brand-wave{from{transform:translateX(0)}to{transform:translateX(-20px)}}
+.brand-wave{animation:brand-wave 9s linear infinite;will-change:transform}
 .brand-text-main{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1}
 .brand-text-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 .header-right{display:flex;align-items:center;gap:8px}
@@ -425,6 +431,12 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
   .ticker-track{animation:none!important;transform:none!important;white-space:normal;display:block}
   .ticker,.ticker-wrap{overflow:visible}
   .ticker{align-items:flex-start}
+  /* PW-105 / AC-105-06 and AC-105-08. The blanket rule above would finish this animation on its
+     final keyframe, leaving the mark shifted a whole wavelength left — the original paths clipped
+     out and the duplicate standing in their place. Visually identical, but it is not the same
+     markup in the same position, and "static fallback" should mean the logo as shipped. Stopping
+     the animation outright returns exactly today's mark. */
+  .brand-wave{animation:none!important;transform:none!important}
 }
 .stale-note{display:flex;align-items:center;gap:7px;padding:9px 16px;font-size:10.5px;color:var(--ink3);background:var(--surf);border-bottom:1px solid var(--rule)}
 .toggle{width:40px;height:24px;border-radius:12px;background:var(--rule);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
@@ -481,10 +493,29 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
   <div class="header-bar">
     <div class="brand">
       <div class="brand-mark">
+        <!-- PW-105. One full wavelength of this curve is exactly 20 user units: its endpoints
+             run (2,12) (7,9) (12,12) (17,15) (22,12). So the three paths appear twice, the copy
+             offset by that wavelength, and the pair drifts a wavelength per cycle. At the end of
+             a cycle the copy stands precisely where the original started, which makes the loop
+             seamless by construction rather than by a tuned easing curve. The viewBox clips
+             whichever copy is outside, so nothing escapes the 34px mark and no layout moves.
+
+             The `d` strings are duplicated verbatim. Extending each path with further bezier
+             segments would mean hand-deriving reflected control points, and a silhouette the
+             brief says to preserve is not worth that risk. -->
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-          <path d="M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3"/>
-          <path d="M2 7c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
-          <path d="M2 17c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+          <g class="brand-wave">
+            <g class="brand-wave-set">
+              <path d="M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3"/>
+              <path d="M2 7c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+              <path d="M2 17c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+            </g>
+            <g class="brand-wave-set" transform="translate(20 0)" aria-hidden="true">
+              <path d="M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3"/>
+              <path d="M2 7c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+              <path d="M2 17c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3" opacity=".4"/>
+            </g>
+          </g>
         </svg>
       </div>
       <div>
