@@ -1589,6 +1589,100 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-104 — the weather map opens on precipitation, and says so:');
+  /* AC-104-01..07. The embed is static markup, so most of this is about not lying to the reader
+     and not reloading a third-party frame. The two criteria easiest to wave through without
+     testing — no reload on unrelated updates, and no dependence on the frame — are the two that
+     would be noticed last in production, so they get real assertions. */
+
+  w.switchView('maps');
+  await settle();
+  const frame = $('.radar-frame');
+  check('AC-104-01 the weather frame is present', !!frame, true);
+  const src = frame ? frame.getAttribute('src') : '';
+  check('AC-104-01 the initial layer is precipitation', /[?&]l=rain-3h(&|$)/.test(src), true);
+  check('AC-104-01 and radar is no longer the default', /[?&]l=radar(&|$)/.test(src), false);
+
+  /* AC-104-02. The Pacific-centred position and zoom are the reason this tile is useful at all. */
+  check('AC-104-02 the map position and zoom are preserved', src.indexOf('p=20.7;-157.5;7') > -1, true);
+  check('AC-104-02 and the soft basemap is preserved', src.indexOf('w=soft') > -1, true);
+
+  /* AC-104-04. Responsiveness lives in the stylesheet, not in script: a percentage width and a
+     height that changes at the tablet breakpoint. Asserting the rule exists is the honest limit of
+     jsdom here — it computes no layout — so this does not claim a device was tested. */
+  const css = w.document.documentElement.innerHTML;
+  check('AC-104-04 the frame is fluid-width', /\.radar-frame\{[^}]*width:100%/.test(css), true);
+  check('AC-104-04 and has a responsive height rule', /min-width:768px\)\{\.radar-frame\{height:/.test(css), true);
+
+  /* The labels. A map showing three-hour accumulation under a name promising live radar is the
+     same class of defect as PW-102's source links: the words have to match the thing. */
+  const tileName = txt('.map-tile-dark .map-tile-name');
+  check('the visible name no longer promises radar', /radar/i.test(tileName), false);
+  check('  and names precipitation instead', /precipitation/i.test(tileName), true);
+  const title = frame ? frame.getAttribute('title') : '';
+  check('the accessible title no longer promises live radar', /live radar/i.test(title), false);
+  check('  and names precipitation', /precipitation/i.test(title), true);
+  check('  and states the accumulation window, because a total is not an intensity',
+    /three-hour|3 ?h/i.test(title), true);
+
+  /* AC-104-03. Other layers stay reachable through Ventusky's own menu, which means the embed must
+     not be locked down. The outbound link is the escape hatch to the full site. */
+  const out = $('.map-tile-dark a.map-tile-arrow');
+  check('AC-104-03 an outbound link to the full map exists', !!out, true);
+  check('AC-104-03 and it agrees with the embed on the layer',
+    (out ? out.getAttribute('href') : '').indexOf('l=rain-3h') > -1, true);
+  check('  it opens in a new tab safely',
+    (out ? out.getAttribute('rel') : ''), 'noopener noreferrer');
+
+  /* AC-104-07. No key, no paid service, no config backend: the frame talks to Ventusky directly
+     and nothing else was introduced. */
+  check('AC-104-07 the embed carries no API key', /key=|token=|apikey/i.test(src), false);
+  check('AC-104-07 and points at Ventusky, not a new provider',
+    src.indexOf('https://embed.ventusky.com/') === 0, true);
+
+  /* AC-104-05. The frame is static markup and no render path rewrites it. Proving that means
+     holding the NODE and the src across unrelated state changes — a view switch, an island
+     change, and a full alerts refresh — because a re-created iframe reloads the third party even
+     when the src string is identical. */
+  const before = $('.radar-frame');
+  const srcBefore = before.getAttribute('src');
+  w.switchView('overview');
+  w.eval('S.island = "maui"');
+  await settle();
+  w.fetch = makeFetch(null);
+  await w.fetchAlerts();
+  await settle();
+  w.renderAlertSurfaces();
+  w.switchView('maps');
+  await settle();
+  const after = $('.radar-frame');
+  check('AC-104-05 unrelated UI updates do not replace the iframe node', after === before, true);
+  check('AC-104-05 and do not change its src', after.getAttribute('src'), srcBefore);
+  w.eval('S.island = "statewide"');
+  await settle();
+
+  /* AC-104-06. The app must not depend on the third-party frame. jsdom never loads it, which is
+     exactly the unavailable case, so this asserts the surrounding view still renders and that no
+     script reads into the frame — a contentWindow access would throw cross-origin in a browser. */
+  check('AC-104-06 the Maps view renders without the frame having loaded',
+    (($('#view-maps') || {}).className || '').indexOf('active') > -1, true);
+  check('  other map tiles are present regardless of the embed',
+    d.querySelectorAll('#view-maps .map-tile').length > 1, true);
+  check('  no script reaches into the frame',
+    /\.contentWindow|\.contentDocument/.test(css), false);
+  /* Removing the frame entirely stands in for a blocked or failed third party. */
+  const parent = before.parentNode;
+  parent.removeChild(before);
+  w.renderAlertSurfaces();
+  w.switchView('maps');
+  await settle();
+  check('AC-104-06 losing the frame does not break rendering',
+    d.querySelectorAll('#view-maps .map-tile').length > 1, true);
+  parent.insertBefore(before, parent.firstChild ? parent.firstChild.nextSibling : null);
+
+  w.switchView('overview');
+  await settle();
+
   console.log('\nPW-101 — an absolute verdict requires current authoritative state:');
   /* Codex blocker 1, read-only review of the rebased head. resolveSelectedAlert() guarded `gone`
      with sourceState === 'current' but left `expired` and `filtered` ungated, so after a failed

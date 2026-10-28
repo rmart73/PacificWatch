@@ -62,11 +62,89 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C09 runner-family workflow correction | #44 merged in `6e5a94e`; exact-`main` run passed attempt 1 at 425 pure, 436 DOM and 137 of 137 mutations on image `ubuntu-24.04` version `20260927.320.1` | Closed; amended C09 implemented, C12 unchanged |
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
-| October Phase 1 PW-101/PW-102 — alert navigation and source links | **Rebased onto `main` at `70cc74d` with both Codex blockers fixed.** 549 DOM assertions and 157 mutation cases; the new tests fail nine assertions against the unfixed file, four for the truthfulness blocker and five for the focus blocker | Seeking a complete hosted 157-of-157 verdict at the final head; Codex reviews read-only; the owner decides merge || C12 mutation-ceiling amendment | #48 merged; C12 is authoritative at 5/10/20 minutes. Reviewed read-only: scope, measurement claims and recovery ordering verified, and the exact-`main` run passed the unchanged gate at 137 of 137 | Closed. The workflow still reads 15 and is corrected by the claim below |
+| October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
+| October Phase 1 PW-104 — Ventusky precipitation default | Claimed on `claude/pw104-ventusky-precipitation`; the embed's initial layer becomes precipitation and the labels stop promising radar | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**October Phase 1 PW-104 — Ventusky precipitation default — Claude Code,
+`claude/pw104-ventusky-precipitation`.** Claimed 2026-10-28 before editing any application file, in
+its own commit ahead of the work, under the owner's authorization to make the changes needed to
+finish the project and Codex's accepted storm-priority ordering. Branched from `main` at `93afdee`.
+
+Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
+**AC-104-01 through AC-104-07**.
+
+**What the inspection found, before any code.** Four touch points, all in static markup, all in one
+tile:
+
+1. The iframe `src`, `l=radar`.
+2. The outbound anchor `href`, also `l=radar`.
+3. The visible tile name, “Live Radar — Ventusky”.
+4. The iframe `title`, “Ventusky live radar — Hawaii”.
+
+Changing only the parameters would leave two labels promising radar while the map showed something
+else, so labels are part of this unit rather than a follow-up.
+
+**The parameter is validated, and the validation has a finding the brief did not anticipate.**
+
+The brief asked whether `l=rain-3h` “corresponds to the intended precipitation presentation”.
+Ventusky's own pages answer it: a URL carrying `l=rain-3h` is titled **Precipitation – 3 hours**, and
+its help describes the layer as a **total in millimetres accumulated over the previous one or three
+hours**. The same help states that **intensity in mm/h is displayed only on the radar layer**.
+
+So `rain-3h` is genuinely the precipitation layer, and the change is faithful to the brief. But it
+is worth recording plainly that this **trades live intensity for modelled accumulation**, which in
+an app whose purpose is an active hazard is a real tradeoff rather than a neutral default swap:
+during a storm the radar layer is the nowcast and `rain-3h` is a forecast total. Ventusky also
+notes its model “does not allow for accurate calculations of the formation of local storm cells”.
+
+Implemented as specified, because the owner and the brief both say precipitation. **Flagged for the
+owner and for Codex's browser pass**, which can see the rendered layers and judge whether a
+three-hour accumulation is the view wanted as a default with heavy rain forecast. Reverting to
+radar, or choosing an hourly accumulation, is a one-parameter change on top of this.
+
+**Deliberately not changed**
+
+The `.radar-frame` CSS class keeps its name. It carries only geometry — display, width, height,
+border, background — and renaming it would touch the stylesheet and the markup for no behavioural
+gain, which is churn against the project's rule about not reformatting untouched code. The
+misnomer is noted here instead. The separate map tile described as “Weather, radar, marine & surf”
+is a different provider whose page really does offer radar, so it is accurate and untouched.
+
+**Evidence this claim commits to**
+
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, with each
+   job's `Image`, image `Version` and `Image Release` recorded **per job** — three runs have now
+   shown jobs landing on different weekly images, twice out of three.
+2. Discriminating DOM coverage for AC-104-01 through AC-104-07, including the two criteria that
+   are easy to assert without testing: that unrelated UI updates do not reload the iframe, and
+   that the app does not depend on the third-party frame to render.
+3. Mutation cases for the parameter and for each label, so a silent revert to radar fails.
+
+**Out of scope.** No change to any other map integration, no new mapping dependency, no API key, no
+map configuration backend. No `api/`, `vercel.json`, workflow, contract, `AGENTS.md`, dependency or
+ruleset change. No PW-103, PW-105 or PW-106 work. **No rename and no domain change** — see the
+owner-provided context below.
+
+**Owner-provided infrastructure context, recorded here and authorising nothing**
+
+Relayed 2026-10-28: the Vercel plan is now **Pro**, and the owner has purchased **`nechicoa.app`**. The
+spelling was first recorded here as `nehicoa.app`, which was wrong and is corrected by the owner;
+the domain is **`nechicoa.app`**. A misspelled domain in a public repository is not a harmless typo
+— it names something the owner does not control.
+The replacement product name is **not settled**.
+
+Both are **available infrastructure only**. Neither authorises, and this claim does not perform:
+a product rename, any branding change, any change to canonical URLs, attaching or redirecting
+`nechicoa.app`, or any Vercel or domain settings change. **Pacific Watch remains the working name
+everywhere** until the owner explicitly chooses the name and the deployment relationship. A rename,
+a domain migration, and any Pro-specific architecture are each separate claimed units requiring
+their own authorisation. Recorded now so the information is not lost and so no later unit can treat
+its availability as permission.
+
 
 **October Phase 1 PW-101/PW-102 — alert navigation and source links — Claude Code,
 `claude/pw101-pw102-alert-navigation`.** Claimed 2026-10-10 before editing any application file,
@@ -508,7 +586,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw101-pw102-alert-navigation | October Phase 1 PW-101/PW-102: canonical alert identity, inward Overview navigation, deep links with history, and a human-readable source link kept distinct from the API URL, plus both Codex review blockers — absolute verdicts now require current authoritative state, and an owed deep-link focus is paid once. Rebased onto `main` at `70cc74d`; seeking a complete hosted 157-of-157 mutation verdict |
+| Claude | claude/pw104-ventusky-precipitation | PW-104: the Ventusky embed's initial layer changes from radar to precipitation, with the visible name and accessible title corrected to match what the layer actually shows |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -535,19 +613,20 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #48 and serving production.** Claims and handoffs for
+**`main` is merged through #47 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
-**PW-101/PW-102 implementation is open as #47 and has resumed.** Every gate that stopped it is
-cleared: C12 was amended (#48), its workflow implemented (#49), and the serial-cost problem that
-would have timed out the corrected head was fixed by the bounded pool (#50). The mutation ceiling
-on `main` is 20 minutes and a 137-case job now runs about 196 seconds of it.
+**PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
+549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. The alert identity,
+link model, deep links and both review blockers are implemented and proven hosted.
 
-#47 is rebased onto `main` at `70cc74d` carrying both blockers from Codex's second review —
-absolute verdicts no longer drawn from retained data, and an owed deep-link focus paid once
-without stealing focus on background refreshes. It stays unmergeable until a **complete** hosted
-verdict of 157 of 157 arrives with zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. A cancelled run,
-a partial summary or a local result is not that evidence. No ruleset change is claimed and no
+**The mutation gate has headroom again.** #50's bounded pool runs the 157-case corpus in about 316
+seconds, roughly 26% of C12's unchanged 20-minute ceiling, against 92% before. C12 keeps its hard
+ceiling; the wording correction and the 75%-of-ceiling capacity-review trigger remain Codex's.
+
+**PW-104 is the open unit**, claimed above. PW-103 follows after it merges, then PW-105 and PW-106.
+**No rename, no branding change and no domain work is authorised** — the Vercel Pro plan and
+`nechicoa.app` are recorded as available infrastructure only. No ruleset change is claimed and no
 remote branch deletion is authorized.
 **The workflow now names `ubuntu-24.04` explicitly in all three jobs.** #44 merged as `6e5a94e`;
 its exact-`main` run passed attempt 1 at 425 pure assertions, 436 DOM assertions and 137 of 137
@@ -712,6 +791,57 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-28 — #50 and #47 merged; PW-104 claimed
+
+Two merges, and the order between them was decided by arithmetic rather than preference.
+
+#### #50, the bounded pool, merged as `70cc74d`
+
+Exact-`main` run attempt 1, all three jobs green, mutation 137 of 137 in a **196-second** job
+against 698 seconds serial. Codex sequenced this unit *after* #47; measurement reversed it. #47's
+job stood at **1104s, 92% of the ceiling with 96 seconds of headroom**, and Codex's own review then
+required coverage for two more blockers. At the measured ~6.1 seconds per DOM assertion, 16 added
+assertions would have timed the job out — and a mutation timeout is a required-check failure with
+zero bypass actors, so it would have blocked **every** merge including the PR recording it, during
+a weather event. The reversal was flagged in the claim rather than taken quietly.
+
+Codex required a negative MISSED probe, and asked for it hosted rather than claimed locally. That
+was the right call: the hosted probe (run `40611017951`, reverted in the next commit) produced
+`MISSED  PROBE: a mutation nothing can catch`, `137 of 138 mutations caught`, the decorative-
+assertion warning, **and `##[error]Process completed with exit code 1.`** That last line is what a
+local run cannot produce — it shows the workflow propagating the harness's nonzero exit to a
+failed required check under concurrency, so C13 is demonstrated rather than inherited by assumption.
+
+#### #47, PW-101/PW-102, merged as `93afdee`
+
+Exact-`main` run attempt 1: 425 pure, 549 DOM, **157 of 157** mutations, production serving the
+merged blob. Final PR head ran 157 of 157 in **316 seconds**, 26% of ceiling; the same head
+projected to ~1289s serial and could not have passed before #50.
+
+**Four defects were found by read-only review across two rounds, and none of them was in a diff.**
+Round one found the AC-101-06 lifecycle gap: the fragment and the view could disagree, so Back
+stranded the reader in Alerts and a stale fragment made re-selecting the same alert a no-op. Round
+two found two more: `expired` and `filtered` were absolute verdicts drawn from retained data after
+a failed refresh, the mirror of the error the observation-truthfulness contract already guards; and
+a deep link's focus was never paid once the row arrived, invisible to exactly the keyboard and
+screen-reader users the feature exists to serve.
+
+The lesson worth keeping: **the head was green at 151 of 151 when the last two were found.** Every
+existing test fed data successfully before asserting, so the source was always `current`, and
+nothing exercised the loading→resolved transition. A passing gate measures what its suite
+imagined. Each fix now carries tests verified to fail against the unfixed file — nine assertions
+for round two, one per symptom.
+
+#### A C09 observation worth more than it looks
+
+Three runs in this window reported **different runner images across jobs of a single run**: mixed
+in `40608978239` with `DOM behaviour` the outlier, uniform in `40611438019`, and mixed differently
+in `40614445742` with `mutation coverage` the outlier. Every earlier run in this project was
+uniform, which made C09's per-job recording look redundant. It is not: divergence is intermittent,
+so a single image line per run is unsafe **precisely because it is usually correct**. Two of these
+three runs would have been misreported.
+
 
 ### 2026-10-11 — #48 merged; the C12 workflow correction claimed
 

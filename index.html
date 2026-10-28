@@ -805,10 +805,17 @@ button.pri-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;t
       <div class="map-section">
         <div class="map-tile map-tile-full map-tile-dark" style="margin-bottom:10px">
           <div class="map-tile-head">
-            <div class="map-tile-name">Live Radar — Ventusky</div>
-            <a href="https://www.ventusky.com/?p=20.7;-157.5;7&amp;l=radar" target="_blank" rel="noopener noreferrer" class="map-tile-arrow">&#8599;</a>
+            <!-- PW-104. l=rain-3h is Ventusky's precipitation layer, and it is an accumulated
+                 TOTAL in millimetres over the previous three hours, not an intensity. Ventusky's
+                 own help states mm/h intensity is shown only on the radar layer, so the name and
+                 title below say precipitation and give the window, rather than carrying over
+                 "Live Radar" for a view that is neither live nor radar. Position p=20.7;-157.5;7
+                 and w=soft are unchanged, and the layer menu inside the embed still reaches every
+                 other layer including radar. -->
+            <div class="map-tile-name">Precipitation &middot; 3 h — Ventusky</div>
+            <a href="https://www.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h" target="_blank" rel="noopener noreferrer" class="map-tile-arrow">&#8599;</a>
           </div>
-          <iframe class="radar-frame" src="https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=radar&amp;w=soft" title="Ventusky live radar — Hawaii" loading="lazy" allowfullscreen></iframe>
+          <iframe class="radar-frame" src="https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h&amp;w=soft" title="Ventusky precipitation map — Hawaii, three-hour totals" loading="lazy" allowfullscreen></iframe>
         </div>
         <div class="map-grid" id="volcano-cams-grid">
           <a class="map-tile" href="https://www.usgs.gov/volcanoes/kilauea/webcams" target="_blank" rel="noopener noreferrer">
