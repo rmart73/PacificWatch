@@ -74,7 +74,16 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed. October 2026 Phase 1 is complete.**
+**Claim-retirement rule review corrections — ChatGPT Codex,
+`codex/claim-retirement-rule`.** Reclaimed 2026-10-28 before editing in response to Claude's
+read-only review of #57 at `32779f3`.
+
+Documentation-only scope: name Review Queue and Outstanding Verification as the live homes for
+unresolved content, and decide the self-retirement review window by restricting self-retirement to
+documentation-only units while retaining mandatory reclaim before any later edit. Files claimed:
+`AI-HANDOFF.md` and `AGENTS.md`; no application or infrastructure change.
+
+**October 2026 Phase 1 is complete.**
 
 PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
 blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
