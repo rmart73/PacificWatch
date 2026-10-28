@@ -65,6 +65,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
+| October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks remain for their separately claimed durable-content audit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
@@ -73,19 +74,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Claim-retirement durable-content rule — ChatGPT Codex,
-`codex/claim-retirement-rule`.** Claimed 2026-10-28 before editing `AGENTS.md`, from `main` at
-`ac7afb7` after #56 merged. Documentation only.
-
-**Scope:** add one working-agreement rule: before retiring any claim, verify that its unique
-durable decisions, constraints and evidence survive in the appropriate durable authority; move
-anything unique before removing the claim. Retire this claim on the final documentation head and
-preserve its rationale in the Handoff Log. If review later requires an edit, reclaim first.
-
-Files claimed: `AI-HANDOFF.md` and `AGENTS.md`. No application, test, API, workflow, contract,
-dependency, Vercel, ruleset, domain or remote-branch change.
-
-**October 2026 Phase 1 is complete.**
+**No unit is claimed. October 2026 Phase 1 is complete.**
 
 PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
 blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
@@ -390,7 +379,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed. Eight** `Closed:` blocks remain under Active claims — the count was six when this row was written and was not updated as units closed. They occupy most of an 810-line section, which weakens it as a concurrency lock. Their durable content must be verified elsewhere before removal, and that verification is the work rather than a precondition to it | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #55 and serving production.** Claims and handoffs for
+**`main` is merged through #56 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -599,6 +588,25 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-28 — claim-retirement durable-content rule completed
+
+Codex claimed `codex/claim-retirement-rule` from `main` at `ac7afb7` before editing `AGENTS.md`.
+The working agreement now treats claim retirement as a content change: an agent must check for
+unique durable decisions, constraints and evidence, verify that each survives in the appropriate
+repository authority, and move anything unique before removing or closing the claim. A PR body
+alone is not the durable project record.
+
+This unit also exercises the rule on itself. Its scope and rationale survive here, so its Active
+Claims block is retired on the final documentation head rather than left for a follow-up sweep. If
+review requires another edit, Codex must reclaim before editing. The unit changes only
+`AGENTS.md` and `AI-HANDOFF.md`; it makes no application, test, API, workflow, contract,
+dependency, Vercel, ruleset, domain or remote-branch change.
+
+This unit also absorbs #56's unavoidable self-close. #56 merged as `ac7afb7`; exact-`main` run
+`40725525479`, attempt 1, passed at 450 pure assertions, 669 DOM assertions and 196 of 196
+mutations. The live `main` pointer and Current Work row now describe that merged state rather than
+stopping at #55.
 
 ### 2026-10-28 — Phase 1 closed out; #54 and #55 swept
 
