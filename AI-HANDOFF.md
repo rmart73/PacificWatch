@@ -63,11 +63,104 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
-| October Phase 1 PW-104 — Ventusky precipitation default | Claimed on `claude/pw104-ventusky-precipitation`; the embed's initial layer becomes precipitation and the labels stop promising radar | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
+| October Phase 1 PW-103 — mobile ticker | Claimed on `claude/pw103-mobile-ticker`; duration is derived from measured distance at a calibrated pixels-per-second, and reduced motion gets readable text rather than an empty strip | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
+| October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**October Phase 1 PW-103 — mobile ticker — Claude Code, `claude/pw103-mobile-ticker`.** Claimed
+2026-10-28 under the owner's authorization to finish the project and Codex's accepted
+storm-priority ordering. Branched from `main` at `fb3d77c`.
+
+**A process note, stated rather than tidied away.** The agreement is that a claim is published in
+its own commit *ahead* of the work. For this unit the code was written before the claim text was.
+Nothing had been pushed, so the published history still carries the claim first and no other agent
+could have collided with an unannounced edit — but the order of my own work was wrong, and
+recording that is cheaper than the habit of not noticing.
+
+Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
+**AC-103-01 through AC-103-08**.
+
+**What the inspection found, before any change. The brief asked which of eight candidate causes
+it was, and it is two of them, not one.**
+
+```
+@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+.ticker-track{ ... animation:ticker 70s linear infinite}
+```
+
+Travel distance is `100vw + track width` while the duration is pinned at 70s, so speed fell out of
+two things it should never have depended on:
+
+1. **Viewport width.** A 390px phone travels about 1050px less than a 1440px desktop for identical
+   content, so at a fixed 70s the phone moves roughly **30% slower**. That is the reported defect.
+2. **Content length.** More alerts make the track longer, which makes the distance longer, which
+   at a fixed duration makes the ticker move **faster**. Across the real range of ticker content
+   the desktop speed varies roughly **39–94 px/s**. Nobody asked for that either.
+
+The brief's other candidates were checked and are not causes: the content *is* duplicated, but
+deliberately, to cover the loop; the transform is already GPU-friendly; there are no ticker-specific
+breakpoints; the font does not scale; and `updateTicker()` does not restart the animation, because
+assigning `textContent` has no effect on a running CSS animation.
+
+**Two defects nobody had reported, found while reading the code for this one**
+
+**Reduced motion produced an empty ticker, not a calm one.** The blanket rule
+`animation-duration:.01ms; animation-iteration-count:1` does not *stop* an animation, it
+**finishes** it — every element lands on its final keyframe. The ticker's final keyframe is
+`translateX(-100%)`, off to the left and clipped away, so a reader who asked for less movement got
+a blank strip where the alerts should be. That is AC-103-07 failing today, and it fails silently.
+
+**The animation began off-screen behind its own tag.** `100vw` is the viewport, but the track is
+clipped by `.ticker-wrap`, which is narrower by the ALERTS tag. The first stretch of every cycle
+was spent invisible, a small dead pause each loop — AC-103-05. Measuring the wrap removes it.
+
+**What this changes**
+
+Speed is stated in **pixels per second** and the duration is derived from the measured distance,
+which is what AC-103-04 asks for: content length changes how long a cycle takes, not how fast the
+text moves. `tickerSpeedPxPerS()` and `tickerDurationSeconds()` are pure, so they are tested as
+arithmetic in the health suite rather than through a layout engine jsdom does not have.
+`calibrateTicker()` measures and publishes two custom properties; the CSS keeps `100vw` and `70s`
+as fallbacks, so a script-less or non-rendering page behaves exactly as it does today.
+
+**The calibration, and the assumption inside it.** The constants are anchored to the most common
+on-screen state, the no-active-alerts message, whose doubled track measures about 1700px. At a
+1440px desktop that is `(1380 + 1700) / 70s —` about **45 px/s**, preserved. At a 390px phone the
+old speed was about **29 px/s**, and the brief asks for roughly 25% faster, giving **37 px/s**.
+
+Mobile stays deliberately below desktop. The brief asks for 25% faster than the phone's *own*
+baseline, not parity; matching 45 px/s would be a 55% jump and harder to read on a small screen.
+
+**A caveat on AC-103-01 that is better said than discovered later.** Because the old speed depended
+on content length, “the desktop baseline” was a range rather than a number. These constants
+reproduce it at the reference content length and **deliberately diverge** for much shorter or much
+longer content. That divergence is the fix, not a regression — but it does mean AC-103-01 is
+satisfied *at a stated reference*, not universally, and no measurement can make it universal while
+the old behaviour was content-dependent.
+
+**Evidence this claim commits to**
+
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, with each
+   job's image recorded **per job**.
+2. Pure tests for the speed model, including that the old rule really was viewport- and
+   content-dependent, so the defect cannot return unnoticed.
+3. DOM tests for the wiring, the reduced-motion fallback and the no-op refresh, each verified to
+   **fail against `main`'s `index.html`** before being trusted.
+
+**Out of scope.** No change to alert content, filtering, ordering or truncation. No JavaScript
+animation loop and no `requestAnimationFrame`: the transform stays CSS. No `aria-live` region — the
+brief rules out announcing every cycle, and the text is already real DOM text. No `api/`,
+`vercel.json`, workflow, contract, `AGENTS.md`, dependency or ruleset change. PW-105 and PW-106 are
+separate units. **No rename and no domain work**: `nechicoa.app` stays reserved infrastructure and
+**Pacific Watch remains the working name**.
+
+**iOS Safari stays `NOT TESTED`.** AC-103-03 asks for smoothness on iOS Safari and I have no device.
+jsdom computes no layout and a headless Chromium is not iOS Safari, so neither is offered as
+evidence. The browser matrix rows stay `NOT TESTED` from my side.
+
 
 **October Phase 1 PW-104 — Ventusky precipitation default — Claude Code,
 `claude/pw104-ventusky-precipitation`.** Claimed 2026-10-28 before editing any application file, in
@@ -586,7 +679,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw104-ventusky-precipitation | PW-104: the Ventusky embed's initial layer changes from radar to precipitation, with the visible name and accessible title corrected to match what the layer actually shows |
+| Claude | claude/pw103-mobile-ticker | PW-103: ticker speed becomes pixels per second derived from measured distance, so it stops depending on viewport width and content length; reduced-motion users get stationary readable text instead of an empty strip |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -613,7 +706,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #47 and serving production.** Claims and handoffs for
+**`main` is merged through #51 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
