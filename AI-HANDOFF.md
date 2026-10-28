@@ -73,32 +73,6 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Phase 1 closeout — Claude Code, `claude/phase1-closeout`.** Claimed 2026-10-28 before editing the
-board, in its own commit ahead of the work, under the owner's authorization to finish the project.
-Branched from `main` at `1263545`.
-
-**Documentation only.** No `index.html`, `test/`, `api/`, `vercel.json`, workflow, contract,
-`AGENTS.md`, dependency or ruleset change. Nothing in this unit can alter what the application
-does; the CI gate runs because it is required, not because there is code to prove.
-
-**Why it exists.** #55 could not record its own merge, which is the carry-forward this board has
-hit after every board-touching PR. The result is live and wrong: the pointer reads `#53`, and two
-merged units — PW-106 and the OlaPono rename — still sit under *Active claims*, the section whose
-only job is to say what another agent is touching right now.
-
-**Scope**: sweep #54 and #55, close both claim blocks, clear the Active Branches row, rewrite the
-live current-state paragraph whole, and record Phase 1's completion with its final numbers and the
-browser matrix as it actually stands.
-
-**Explicitly not in scope: the closed-claims cleanup.** Eight `Closed:` blocks occupy most of an
-810-line section and the Review Queue's own condition is that their durable content be verified
-elsewhere before removal. That verification is the work, and doing it badly would discard the only
-surviving record of several decisions. It stays open.
-
-**No rename or domain work**: the rename is already merged as #55, and `nechicoa.app` remains
-reserved and unconnected.
-
-
 **No unit is claimed. October 2026 Phase 1 is complete.**
 
 PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
@@ -396,13 +370,13 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
 | October 9 Phase 1 engineering brief (PW-101–PW-106) | #46 merged; the disambiguated brief and current-code mapping are preserved on `main` | Closed; implementation proceeds only under later, non-overlapping claims |
-| PW-101/PW-102 implementation | #47 open at its published head; pure and DOM green, hosted mutation cancelled after exceeding C12's 900-second ceiling | Hold. A local 146/146 result is supporting evidence only; hosted confirmation remains required before merge |
-| C12 mutation-ceiling amendment | **Claimed, documentation only.** The proposed 20-minute ceiling gives the measured 916-second hosted workload 23.7% headroom | Codex drafts; Claude reviews read-only; owner decides merge. Workflow implementation remains separate under C18 |
+| PW-101/PW-102 implementation | **#47 merged as `93afdee`.** The hosted mutation run that was cancelled by C12's old ceiling was superseded: #49 raised the ceiling and #50 replaced the serial harness, and the corrected head then passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations in a 316-second job. Two read-only review rounds found four defects first, all in behaviour rather than in any diff | Closed. The browser rows stay `NOT TESTED` |
+| C12 mutation-ceiling amendment | **Closed as a contract and workflow change.** The amendment merged as #48 and its implementation as #49, so C12 is authoritative at 5/10/20 minutes and `main` carries the 20-minute mutation ceiling. The row previously described "the measured 916-second hosted workload" with "23.7% headroom" — that framing is retracted: 916s was a **censored lower bound** from a run killed at the old ceiling, not a measurement. **Still open:** the narrow evidence-wording correction and the capacity-review trigger at 75% of ceiling. Both now have completed figures to use — 963s for the 146-case corpus, and about 507s for today's 196 cases under the bounded pool, roughly 42% of ceiling | Codex owns the contract text. No further workflow or ruleset change is implied |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented; C12 remains unchanged |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
-| Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
+| Closed-claims cleanup | **Open, unclaimed. Eight** `Closed:` blocks remain under Active claims — the count was six when this row was written and was not updated as units closed. They occupy most of an 810-line section, which weakens it as a concurrency lock. Their durable content must be verified elsewhere before removal, and that verification is the work rather than a precondition to it | Separate claimed board-maintenance pass; off the application critical path |
 
 **`main` is merged through #55 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
@@ -616,6 +590,25 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 A board-only reconciliation. #55 could not record its own merge, so the pointer still read `#53`
 while two merged units sat under *Active claims* — the section meant to answer "what is someone
 else touching right now".
+
+#### This unit retired its own claim, which is the rule it was arguing for
+
+A board-only closeout that leaves its own claim under *Active claims* recreates the exact defect it
+exists to fix, and the stale state would be what merged. So the claim was retired on the final
+documentation head and its substance recorded here instead: the unit was **documentation only**,
+touching no `index.html`, `test/`, `api/`, `vercel.json`, workflow, contract, `AGENTS.md`,
+dependency or ruleset file, and it deliberately left the closed-claims cleanup open. It would be
+reclaimed if further edits became necessary.
+
+The claim had already done its job by the time it was retired — it was published before the work
+and announced the edit while it was in progress, which is what the agreement is for. Keeping it
+afterwards would advertise a lock on a branch that is about to disappear.
+
+**The rule this generalises to, agreed with Codex:** retiring any claim should require verifying
+that its unique durable decisions and evidence survive in the appropriate authority first. It
+applies to a unit's own claim as much as to the eight historical ones, which is what made the
+inconsistency above worth fixing rather than explaining away. Codex will add it to `AGENTS.md`
+under a separate claim, keeping this unit board-only.
 
 #### The rename, verified against the repository rather than from the report
 
