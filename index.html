@@ -1025,6 +1025,15 @@ const S = {
      Alerts list can be re-rendered on refresh without re-parsing the URL. */
   selectedAlertKey: '',
 
+  /* PW-101. Set when a deep link asked for a row that did not exist yet — the cold-load case,
+     where the fragment is applied while NWS is still loading. The focus is owed, not abandoned:
+     the render that first produces the row consumes this and moves focus there once.
+
+     It is deliberately one-shot and set only by an explicit fragment application. An ordinary
+     background refresh re-renders the same selected row constantly, and focusing on those would
+     yank the page out from under someone reading it. */
+  alertFocusPending: false,
+
   /* PW-101. Where the reader was standing when a deep link took them to Alerts, so Back can put
      them back there instead of stranding them in Alerts with nothing selected. Only the first
      hash-driven switch records it; moving between two alert hashes must not overwrite the origin. */
@@ -1263,6 +1272,7 @@ function switchView(v) {
   if (v !== 'alerts' && S.selectedAlertKey) {
     S.selectedAlertKey = '';
     S.alertHashReturnView = '';
+    S.alertFocusPending = false;
     clearAlertHash();
   }
   S.view = v;
@@ -1547,9 +1557,25 @@ function resolveSelectedAlert(snap) {
   if (hit) return { state: 'found', feature: hit };
   const anywhere = (snap.allFeatures || []).find(f => alertKey(f) === key);
   if (anywhere) {
-    const exp = anywhere.properties && anywhere.properties.expires;
-    const expired = exp ? new Date(exp).getTime() <= Date.now() : false;
-    return { state: expired ? 'expired' : 'filtered', feature: anywhere };
+    /* Retained data proves the alert EXISTED. It cannot establish what is true now, and both
+       verdicts available here are absolute: `expired` says it is over, `filtered` says it is
+       active and merely hidden. After a failed or stale refresh this is last-known-good, not
+       current authoritative state, so neither may be asserted.
+
+       The `gone` branch below was already written this way. These two were not, which is the
+       same truthfulness error pointed in the opposite direction — and the more dangerous
+       direction in an emergency app, because "that alert has expired" reads as all-clear.
+
+       An expiry timestamp looks self-certifying, and is not: NWS can extend or supersede a
+       product, so a retained copy expiring at T proves nothing if the refresh that would have
+       carried T+2h never arrived. */
+    if (snap.sourceState === 'current') {
+      const exp = anywhere.properties && anywhere.properties.expires;
+      const expired = exp ? new Date(exp).getTime() <= Date.now() : false;
+      return { state: expired ? 'expired' : 'filtered', feature: anywhere };
+    }
+    if (snap.sourceState === 'loading') return { state: 'checking', feature: anywhere };
+    return { state: 'unverified', feature: anywhere };
   }
   if (snap.sourceState === 'current') return { state: 'gone' };
   /* Nothing has been attempted yet. That is not the same as a failed fetch, and saying "could
@@ -1609,15 +1635,25 @@ function applyAlertHash() {
     switchView(back);
   }
   if (typeof renderAlertSurfaces === 'function') renderAlertSurfaces();
-  if (key && changed) focusSelectedAlert();
+  if (key && changed) {
+    /* If the row is not there yet the focus is owed, not lost: renderAlertSurfaces() pays it
+       when the fetch resolves. Without this a pasted or refreshed link lands on a row that is
+       selected and styled but never focused or scrolled to, which is invisible to a keyboard or
+       screen-reader user — the case the deep link exists to serve. */
+    S.alertFocusPending = !focusSelectedAlert();
+  }
+  if (!key) S.alertFocusPending = false;
 }
 
+/* Returns true when it reached the requested row, false when it could only fall back to the
+   notice. The caller needs to know the difference: a false here during loading means the focus
+   is still owed once the row arrives. */
 function focusSelectedAlert() {
   const el = document.querySelector('#nws-alerts-container .alert-item.is-selected');
   if (!el) {
     const notice = document.getElementById('alert-deeplink-notice');
     if (notice && notice.scrollIntoView) notice.scrollIntoView({ block: 'center' });
-    return;
+    return false;
   }
   if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
   /* The header is sticky, so scrollIntoView({block:'start'}) tucks the row underneath it.
@@ -1633,6 +1669,7 @@ function focusSelectedAlert() {
     window.scrollTo({ top: top < 0 ? 0 : top, behavior: 'auto' });
   }
   if (el.focus) el.focus({ preventScroll: true });
+  return true;
 }
 
 function priorityCard(f) {
@@ -1834,6 +1871,14 @@ function renderAlertSurfaces() {
   renderAlerts(snap);
   updateHazardBanner(snap);
   updateTicker(snap);
+  /* Pay an owed deep-link focus, once. This is the loading -> resolved transition: the fragment
+     was applied before NWS answered, so the row did not exist to focus. Clearing the flag before
+     the attempt means a row that still is not there does not leave the debt outstanding forever,
+     and an ordinary refresh never enters here because nothing sets the flag. */
+  if (S.alertFocusPending && S.selectedAlertKey) {
+    S.alertFocusPending = false;
+    focusSelectedAlert();
+  }
   return snap;
 }
 

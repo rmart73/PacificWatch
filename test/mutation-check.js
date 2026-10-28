@@ -42,6 +42,53 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- absolute verdicts and owed focus, from Codex's second review round ---------------
+
+     Blocker 1 is the mirror of the truthfulness error the observation contract already guards:
+     `gone` required current state, `expired` and `filtered` did not. Blocker 2 is an
+     accessibility failure that no visual check would surface, since the row looked right.
+     Each case restores one defect on its own. */
+
+  { name: 'expired is asserted from retained data after a failed refresh',
+    from: "    if (snap.sourceState === 'current') {\n      const exp = anywhere.properties && anywhere.properties.expires;",
+    to:   "    if (true) {\n      const exp = anywhere.properties && anywhere.properties.expires;",
+    expect: ['AC-101-08 a stale source may NOT call the alert expired',
+             'it reports the status unverified instead'],
+    suite: 'dom' },
+
+  { name: 'a stale source still reports checking instead of unverified',
+    from: "    if (snap.sourceState === 'loading') return { state: 'checking', feature: anywhere };",
+    to:   "    if (snap.sourceState !== 'current') return { state: 'checking', feature: anywhere };",
+    expect: ['it reports the status unverified instead'],
+    suite: 'dom' },
+
+  { name: 'a deep link never records that its focus is owed',
+    from: "    S.alertFocusPending = !focusSelectedAlert();",
+    to:   "    focusSelectedAlert();",
+    expect: ['and the focus is recorded as owed',
+             'AC-101-07 the row is focused once it arrives'],
+    suite: 'dom' },
+
+  { name: 'the owed focus is never paid when the row arrives',
+    from: "  if (S.alertFocusPending && S.selectedAlertKey) {",
+    to:   "  if (false) {",
+    expect: ['AC-101-07 the row is focused once it arrives'],
+    suite: 'dom' },
+
+  /* Paying the debt without clearing it turns every later background refresh into a focus
+     steal — the opposite failure, and the reason the flag is cleared before the attempt. */
+  { name: 'the owed focus is paid on every refresh instead of once',
+    from: "    S.alertFocusPending = false;\n    focusSelectedAlert();",
+    to:   "    focusSelectedAlert();",
+    expect: ['a background refresh does NOT steal focus back'],
+    suite: 'dom' },
+
+  { name: 'leaving Alerts leaves the owed focus outstanding',
+    from: "    S.alertHashReturnView = '';\n    S.alertFocusPending = false;",
+    to:   "    S.alertHashReturnView = '';",
+    expect: ['leaving Alerts cancels it'],
+    suite: 'dom' },
+
   /* ---- the history lifecycle, from Codex's review of the rebased #47 head --------------
 
      The original code switched to Alerts when a fragment carried a key and did nothing when it

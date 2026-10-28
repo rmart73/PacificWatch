@@ -1589,6 +1589,122 @@ function has(label, sel, needle, expected) {
   check('AC-101-07 a reload of a deep link restores the alert',
     ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
 
+  console.log('\nPW-101 — an absolute verdict requires current authoritative state:');
+  /* Codex blocker 1, read-only review of the rebased head. resolveSelectedAlert() guarded `gone`
+     with sourceState === 'current' but left `expired` and `filtered` ungated, so after a failed
+     refresh the app could report "that alert has expired" or "active but hidden" from retained
+     last-known-good data. The earlier tests never caught it because every one of them fed data
+     successfully first, so the source was always current. These drive the real failure. */
+
+  /* EXPIRED. First with NWS answering, which is the one case where the verdict is true — this
+     doubles as the regression guard that the fix did not simply suppress the state. */
+  const pastExp = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const expiredTwin = twin(ID_A, 'Oahu');
+  expiredTwin.properties.expires = pastExp;
+  w.eval('S.island = "statewide"');
+  await feed([expiredTwin]);
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  check('the source is current to begin with', w.eval("sourceState('nwsAlerts')"), 'current');
+  has('a current source may call it expired', '#nws-alerts-container', 'has expired', true);
+
+  /* Now the refresh fails. Same retained data, same expiry, different epistemic position. */
+  w.eval("S.sourceHealth.nwsAlerts.lastError = 'network';");
+  w.renderAlertSurfaces();
+  await settle();
+  check('  the source is now stale, not current', w.eval("sourceState('nwsAlerts')"), 'stale');
+  has('AC-101-08 a stale source may NOT call the alert expired', '#nws-alerts-container', 'has expired', false);
+  has('  it reports the status unverified instead', '#nws-alerts-container', 'could not be verified', true);
+  has('  and still never claims it is no longer active', '#nws-alerts-container', 'no longer active', false);
+
+  /* FILTERED. "Active but hidden by your island filter" asserts the alert is ACTIVE, which a
+     failed refresh cannot support. The island filter is local and knowable; the activity is not. */
+  w.eval("S.sourceHealth.nwsAlerts.lastError = null;");
+  await feed([twin(ID_A, 'Kauai')]);
+  w.eval('S.island = "maui"');
+  w.location.hash = '';
+  await settle();
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  has('a current source may call it hidden by the island filter', '#nws-alerts-container', 'hidden by your island filter', true);
+  w.eval("S.sourceHealth.nwsAlerts.lastError = 'network';");
+  w.renderAlertSurfaces();
+  await settle();
+  has('AC-101-08 a stale source may NOT call the alert active but hidden', '#nws-alerts-container', 'hidden by your island filter', false);
+  has('  it reports unverified instead', '#nws-alerts-container', 'could not be verified', true);
+
+  /* UNAVAILABLE is the harder failure and must behave the same way. */
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = null;');
+  w.renderAlertSurfaces();
+  await settle();
+  check('  the source is unavailable', w.eval("sourceState('nwsAlerts')"), 'unavailable');
+  has('an unavailable source may not call it hidden either', '#nws-alerts-container', 'hidden by your island filter', false);
+  has('  and says unverified', '#nws-alerts-container', 'could not be verified', true);
+
+  w.eval('S.island = "statewide"');
+  w.eval("S.sourceHealth.nwsAlerts.lastError = null;");
+  w.location.hash = '';
+  await settle();
+
+  console.log('\nPW-101 — a deep link focuses its row when the row finally arrives:');
+  /* Codex blocker 2. applyAlertHash() focused on a cold load while NWS was still loading, found
+     no row, scrolled the notice, and nothing re-focused once the row rendered — so a pasted or
+     refreshed link produced a row that was selected and styled but never focused, which is
+     invisible to exactly the keyboard and screen-reader users the deep link exists to serve.
+     The constraint is two-sided: pay the owed focus once, and never steal focus on a refresh. */
+
+  /* A cold start: the shipped loading skeleton restored and health reset, so nothing has been
+     attempted — a link pasted into a fresh tab. The later history section declares its own
+     `coldLoad`; this block cannot borrow it, because a `const` is not initialised yet when read
+     from above. */
+  const coldStart = (key) => {
+    $('#nws-alerts-container').innerHTML = '<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>'
+    + '<div class="skeleton tall" style="margin-top:6px"></div>'
+    + '<div class="skeleton short" style="margin-top:4px"></div></div>';
+    w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null; S.cache.nwsAlerts = null;');
+    w.location.hash = '#alert=' + key;
+    w.applyAlertHash();
+  };
+
+  coldStart(KEY_A);
+  await settle();
+  check('the deep link is pending while NWS loads', w.eval('S.selectedAlertKey'), KEY_A);
+  check('  and the focus is recorded as owed', w.eval('S.alertFocusPending'), true);
+  check('  no row exists to focus yet',
+    d.querySelectorAll('#nws-alerts-container .alert-item.is-selected').length, 0);
+
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('AC-101-07 the row is focused once it arrives', (d.activeElement || {}).id, 'alert-' + KEY_A);
+  check('  and the debt is cleared', w.eval('S.alertFocusPending'), false);
+
+  /* An ordinary background refresh re-renders the same selected row. Focusing there would yank
+     the page away from whatever the reader had moved to. */
+  const heading = $('#nws-alerts-heading');
+  if (heading) { if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1'); heading.focus(); }
+  check('focus has been moved away by the reader', (d.activeElement || {}).id, 'nws-alerts-heading');
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('a background refresh does NOT steal focus back', (d.activeElement || {}).id, 'nws-alerts-heading');
+  check('  the row is still selected all the same',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* Leaving Alerts before the fetch resolves cancels the debt: focus must not jump into a view
+     the reader has already walked out of. */
+  coldStart(KEY_B);
+  await settle();
+  check('a second cold load owes a focus again', w.eval('S.alertFocusPending'), true);
+  w.switchView('overview');
+  await settle();
+  check('  leaving Alerts cancels it', w.eval('S.alertFocusPending'), false);
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('  and the arriving row does not grab focus',
+    ((d.activeElement || {}).id || '').indexOf('alert-') === 0, false);
+
+  w.location.hash = '';
+  w.switchView('overview');
+  await settle();
+
   console.log('\nPW-101 — the URL and the view stay consistent across the whole history lifecycle:');
   /* Codex's finding, read-only review of the rebased head. The earlier tests drove Back between
      two alert hashes, which never exercises the transition to NO hash: applyAlertHash() switched
