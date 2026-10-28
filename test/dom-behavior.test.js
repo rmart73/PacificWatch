@@ -1594,30 +1594,90 @@ function has(label, sel, needle, expected) {
      existing coverage from PW-101..PW-105; these are the five that were genuinely missing. Writing
      the other 23 again would inflate the suite and claim credit for work already done. */
 
-  /* GAP 1. A malformed upstream payload. nwsEligible() guards with (features || []) and
-     f && f.properties, and nothing exercised those guards. The dangerous outcome is not a crash
-     but a false all-clear: garbage in, "no active alerts" out. */
+  /* GAP 1. A malformed upstream payload, driven through the real fetch boundary.
+
+     The first version of this test asserted only that rendering did not throw and that no alert
+     row was fabricated. Both passed while the actual hazard sat next to them: `fetchAlerts()`
+     accepted `features: [null, {}]`, called `sourceOk()`, and the source became `current`. The
+     downstream guard then dropped both entries, leaving zero eligible products from a CURRENT
+     source — which every surface renders as "All clear" / "No active NWS alerts". A green
+     corpus therefore did not test the thing the unit was about. Found in review, not by me.
+
+     The copy below is the whole point of the assertions: an all-clear is a claim about the world,
+     and the app may only make it when NWS actually answered with a usable payload. */
+  const ALL_CLEAR = /No active NWS alerts|ALL CLEAR|All clear/i;
+  const SURFACES = ['#nws-alerts-container', '#ticker-track', '#view-overview', '.nws-strip', '.hazard-banner'];
+  const surfaceText = () => SURFACES.map(sel => { const el = $(sel); return el ? el.textContent : ''; }).join(' ~ ');
+
   w.eval('S.island = "statewide"');
-  const badPayloads = [
-    { label: 'a payload that is not an array', value: 'not-an-array' },
-    { label: 'a null feature list', value: null },
-    { label: 'a list of nulls', value: [null, null] },
-    { label: 'features with no properties', value: [{}, { id: 'x' }] }
+  const malformedPayloads = [
+    { label: 'a null entry', value: [null, null] },
+    { label: 'an entry with no properties', value: [{}, { id: 'x' }] },
+    { label: 'one good product beside one malformed', value: [{ properties: { event: 'Flood Warning', areaDesc: 'Oahu' } }, null] },
+    { label: 'a string where properties should be', value: [{ properties: 'nope' }] }
   ];
-  for (const bad of badPayloads) {
+  for (const bad of malformedPayloads) {
+    let threw = false;
+    try { await feed(bad.value); } catch (e) { threw = true; }
+    check('GAP1 ' + bad.label + ' does not throw', threw, false);
+    /* The load-bearing assertion: the fetch must be REJECTED, not accepted-then-filtered. */
+    check('GAP1 ' + bad.label + ' leaves the source not current',
+      w.eval("sourceState('nwsAlerts')") !== 'current', true);
+    check('GAP1 ' + bad.label + ' produces no all-clear on any surface',
+      ALL_CLEAR.test(surfaceText()), false);
+  }
+
+  /* The third fixture is the reason the whole snapshot is rejected rather than filtered: a
+     malformed neighbour means the hazardous product may be the one that was lost. Dropping the bad
+     entry and showing the good one would look reasonable and quietly understate the hazard. */
+  await feed([{ properties: { event: 'Tsunami Warning', areaDesc: 'Oahu' } }, null]);
+  check('GAP1 a usable product beside a malformed one does not make the source current',
+    w.eval("sourceState('nwsAlerts')") !== 'current', true);
+  has('GAP1 and the partial snapshot is not presented as the full picture',
+    '#nws-alerts-container', 'ALL CLEAR', false);
+
+  /* A well-formed payload must still be accepted — the guard is not a blanket rejection. */
+  await feed([twin(ID_A, 'Oahu')]);
+  check('GAP1 a well-formed payload is still accepted', w.eval("sourceState('nwsAlerts')"), 'current');
+  /* And a genuinely empty answer from a healthy source is still allowed to say so. That is the
+     distinction the fix preserves: verified-empty is a real state, garbage is not. */
+  await feed([]);
+  check('GAP1 a verified empty answer is still current', w.eval("sourceState('nwsAlerts')"), 'current');
+  check('GAP1 and verified-empty may still state the all-clear',
+    ALL_CLEAR.test(surfaceText()), true);
+
+  /* Defence in depth, kept but no longer load-bearing. Retained or injected data that never went
+     through the fetch boundary must still not crash the comparators. The source is stale here, so
+     showing nothing is correct and no all-clear is claimed either way. */
+  /* Each injected shape reaches a different downstream guard, so each one is named: a non-array
+     reaches the Array.isArray coercions in nwsEligible() and nwsSnapshot(), and a list carrying
+     junk reaches the f && f.properties filter. Without these the guards are unreachable from any
+     test and their mutations are undetectable — which the harness reported as three MISSED cases
+     the moment the fetch boundary started rejecting earlier. */
+  /* 8 minutes, not 45: nwsAlerts has freshMs 6 and staleMs 10, so 45 is past the stale window
+     and nwsSnapshot() returns at its `unavailable` branch before the guards run. The first version
+     of this block used 45 and reached nothing, which is why three mutations came back MISSED with
+     zero failures. A fixture has to land inside the window it is testing. */
+  const injected = [
+    { label: 'a non-array in retained data', data: '"not-an-array"' },
+    { label: 'a list of nulls in retained data', data: '[null, null]' },
+    { label: 'entries without properties in retained data', data: '[{}, { id: "x" }, "junk"]' }
+  ];
+  let injectedThrew = false;
+  for (const inj of injected) {
     let threw = false;
     try {
-      w.eval('S.cache.nwsAlerts = { island: "statewide", data: ' + JSON.stringify(bad.value) + ' };');
-      w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = Date.now(); S.sourceHealth.nwsAlerts.lastError = null;');
+      w.eval('S.cache.nwsAlerts = { island: "statewide", data: ' + inj.data + ' };');
+      w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = Date.now() - 8*60*1000; S.sourceHealth.nwsAlerts.lastError = "net";');
       w.renderAlertSurfaces();
       await settle();
-    } catch (e) { threw = true; }
-    check('GAP1 ' + bad.label + ' does not throw', threw, false);
-    /* The honest reading of a malformed payload is zero eligible products, which the app may state
-     as an empty list. What it must never do is present it as a confirmed all-clear from NWS when
-     the payload was garbage — so the assertion is on the absence of a false claim, not on silence. */
-    has('  and no alert row is fabricated from it', '#nws-alerts-container', 'alert-title', false);
+    } catch (e) { threw = true; injectedThrew = true; }
+    check('GAP1 ' + inj.label + ' does not crash the comparators', threw, false);
   }
+  check('GAP1 injected malformed retained data does not crash the comparators', injectedThrew, false);
+  check('  and the source is still not current', w.eval("sourceState('nwsAlerts')") !== 'current', true);
+  check('  with no all-clear claimed from it', ALL_CLEAR.test(surfaceText()), false);
+  w.eval('S.sourceHealth.nwsAlerts.lastError = null;');
 
   /* GAP 2. Partial provider failure. Per-source health is the whole point of the model, and
      nothing proved that a failed alerts fetch leaves the other sources alone. */

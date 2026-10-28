@@ -1388,6 +1388,21 @@ async function fetchAlerts() {
     const data = await res.json();
     if (!data || !Array.isArray(data.features)) throw new Error('malformed alerts payload');
     const features = data.features;
+    /* PW-106, round two. An array is not enough, and this check has to happen BEFORE sourceOk().
+
+       Once sourceOk() runs the source is `current`, and every downstream guard that merely DROPS
+       malformed entries then yields zero eligible products from a current source — which the
+       surfaces render as "All clear" and "No active NWS alerts". A garbage payload would have
+       produced a verified all-clear. An earlier comment in nwsEligible() claimed sourceState()
+       prevented that; it did not, because sourceOk() had already run.
+
+       Dropping the bad entries silently is the unsafe option for a second reason: the malformed
+       product may be the hazardous one. There is no way to know what was lost, so the honest
+       response is to reject the whole snapshot and treat the fetch as failed. The app then shows
+       last-known-good or an explicit unavailable state — never an all-clear it has not earned. */
+    const badIndex = features.findIndex(f =>
+      !f || typeof f !== 'object' || !f.properties || typeof f.properties !== 'object');
+    if (badIndex !== -1) throw new Error('malformed alert feature at index ' + badIndex);
     sourceOk('nwsAlerts', features);
     S.alertsCache = features;
   } catch(e) {
@@ -1421,9 +1436,12 @@ function nwsEligible(features) {
      feature without properties used to throw and take the whole alert render down with it. One
      guard here covers all three rather than three guards downstream.
 
-     Note what this deliberately does NOT do: an unusable payload yields zero ELIGIBLE products,
-     which is not the same as a verified all-clear. sourceState() still governs what the UI is
-     allowed to claim, so garbage cannot become "no active alerts for Hawaii". */
+     These guards are defence in depth, NOT the thing that prevents a false all-clear. That claim
+     was made here once and it was wrong: by the time a payload reaches this function sourceOk()
+     has already marked the source `current`, so dropping entries here yields zero eligible
+     products from a current source, which the surfaces render as "No active NWS alerts". The
+     snapshot is rejected at the fetch boundary instead, before sourceOk() is called. What these
+     guards still buy is that retained or injected data cannot crash the comparators. */
   return (Array.isArray(features) ? features : [])
     .filter(f => f && f.properties)
     .filter(f => {

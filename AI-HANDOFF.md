@@ -141,11 +141,44 @@ PW-106 does not close these rows and this unit will not report Phase 1 as browse
 brief's own instruction is to state the absence of a physical iOS environment explicitly rather
 than infer it, and that is what the matrix does.
 
-**Out of scope.** No production behaviour change: this unit adds tests and board text. If a gap
-test fails against current `main`, that is a **defect report**, not a licence to change behaviour —
-it would be raised and claimed separately. No `api/`, `vercel.json`, workflow, contract,
-`AGENTS.md`, dependency or ruleset change. **No rename and no domain work**: `nechicoa.app` stays
-reserved infrastructure and **Pacific Watch remains the working name**.
+**Scope change, twice, and both are corrections to this claim rather than additions to it.**
+
+This claim said the unit would change no production behaviour, and that a failing gap test would be
+a defect report rather than a licence to change code. Gap 1 failed, and the claim was amended
+instead — because a failing test cannot ship (the DOM job blocks every merge), because PW-106's
+own fixture list names malformed-payload handling, and because leaving a known crash path in a
+hazard application during an active storm to honour a self-imposed boundary is the wrong trade.
+
+**Round one fixed the crash and left the real hazard in place.** `nwsEligible()` and
+`nwsSnapshot()` gained guards so a malformed payload could not throw. The commit claimed that
+`sourceState()` still prevented a false all-clear. **That was wrong, and Codex found it.**
+
+`fetchAlerts()` rejected a non-array `features` but accepted `features: [null, {}]`, then called
+`sourceOk()`. The source was therefore **`current`**. The new guard dropped both entries, leaving
+zero eligible products from a current source, which every surface renders as **“All clear” / “No
+active NWS alerts.”** A garbage payload produced a verified all-clear — the precise error class
+the observation-truthfulness contract exists to prevent.
+
+The guards could not have prevented it: by the time they run, `sourceOk()` has already made the
+source current. And the GAP1 tests asserted only that rendering did not throw and that no alert row
+was fabricated — **both pass while the hazard is present**, so a green 190-of-190 corpus did not
+test the thing the unit was about. The in-code comment making the false claim is corrected too.
+
+**Round two rejects the snapshot at the fetch boundary, before `sourceOk()`.** Every feature must
+carry a real `properties` object or the whole payload is treated as a failed fetch. Silently
+dropping the malformed entries is the unsafe alternative for a second reason: **the malformed
+product may be the hazardous one**, and nothing can know what was lost. The downstream guards stay
+as defence in depth, explicitly not as the thing that prevents the all-clear.
+
+The tests now drive the real boundary with a successful HTTP response carrying malformed features,
+and assert the source is not current and that **no surface** — Alerts list, strip, ticker, Overview,
+hazard banner — emits an all-clear. A verified-empty answer from a healthy source is still allowed
+to say so, which is the distinction worth keeping: verified-empty is a real state, garbage is not.
+
+**Still out of scope.** No `api/`, `vercel.json`, workflow, contract, `AGENTS.md`, dependency or
+ruleset change. **No rename and no domain work** — the replacement name **OlaPono** is queued
+immediately after this unit merges, as a separate claim; `nechicoa.app` stays reserved
+infrastructure and **Pacific Watch remains the working name** until that unit lands.
 
 
 **October Phase 1 PW-105 — wave logo animation — Claude Code, `claude/pw105-wave-animation`.**
