@@ -775,13 +775,18 @@ function has(label, sel, needle, expected) {
   newsItems = null;
 
   /* Both rel values are required: noopener alone still leaks the referrer, and noreferrer
-     alone does not stop window.opener in older engines. The fixture carries a real product
-     URL so the priority card's own outbound link is among the links checked — without one
-     this section passed no matter what the card rendered. */
+     alone does not stop window.opener in older engines. This section needs at least one
+     new-tab link present or it passes no matter what is rendered. PW-101 removed the priority
+     card's outbound link, so the guarantee now comes from the Alerts row's source link, which
+     the same fixture produces. */
   w.switchView('overview');
   await feed([mkUrl('Tropical Storm Warning', 'https://api.weather.gov/alerts/urn:oid:2.49.0.1')]);
-  check('the priority card rendered its outbound link',
-    $('#priority-first').querySelectorAll('a.pri-link[target="_blank"]').length, 1);
+  /* PW-101/AC-101-03. The Overview control routes INWARD. It used to be an outbound link to the
+     API product URL — JSON labelled "Official NWS alert" — which is the bug this ticket filed. */
+  check('AC-101-03 the priority card links inward, not to the API',
+    $('#priority-first').querySelectorAll('a.pri-link[href^="#alert="]').length, 1);
+  check('AC-101-03 and no Overview control points at api.weather.gov',
+    [...$('#priority-first').querySelectorAll('a')].filter(a => (a.getAttribute('href') || '').indexOf('api.weather.gov') !== -1).length, 0);
   const blanks = [...d.querySelectorAll('a[target="_blank"]')];
   check('there are new-tab links to check', blanks.length > 0, true);
   check('every one carries noopener AND noreferrer',
@@ -1531,6 +1536,462 @@ function has(label, sel, needle, expected) {
   has('N11   and the stale note is gone again',
     '#news-headlines', 'Showing data last verified', false);
   newsItems = null;
+
+  console.log('\nPW-101 — alert identity, inward navigation and deep links:');
+  /* Realistic distinct NWS ids, per the owner's binding decision that navigation fixtures carry
+     them. Two share an event name on purpose: AC-101-04 is the case where title matching would
+     send both links to the same row. */
+  const ID_A = 'https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.aaa111.1.1';
+  const ID_B = 'https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.bbb222.2.1';
+  const KEY_A = encodeURIComponent('urn:oid:2.49.0.1.840.0.aaa111.1.1');
+  const KEY_B = encodeURIComponent('urn:oid:2.49.0.1.840.0.bbb222.2.1');
+  const twin = (id, area) => { const f = mk('Flood Warning', 'Severe', 'Immediate', area); f.id = id; return f; };
+
+  w.switchView('overview');
+  await feed([twin(ID_A, 'Kauai'), twin(ID_B, 'Oahu')]);
+  const priLinks = [...d.querySelectorAll('#view-overview a.pri-link')].map(a => a.getAttribute('href'));
+  check('AC-101-04 identically titled alerts get DIFFERENT inward links',
+    priLinks.length === 2 && priLinks[0] !== priLinks[1], true);
+  check('  and each names its own provider id',
+    priLinks.filter(h => h === '#alert=' + KEY_A || h === '#alert=' + KEY_B).length, 2);
+
+  /* Drive the real path the browser drives: change the fragment and let hashchange resolve it. */
+  w.location.hash = '#alert=' + KEY_A;
+  await settle();
+  check('AC-101-01 the Alerts view is open', w.eval('S.view'), 'alerts');
+  check('AC-101-02 the matching row is selected',
+    d.querySelectorAll('#nws-alerts-container .alert-item.is-selected').length, 1);
+  check('  and it is the one addressed, not merely the first',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+  has('  the selected row expands in place', '#nws-alerts-container', 'alert-detail', false);
+  check('  selection is exposed to assistive tech',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).getAttribute('aria-current'), 'true');
+
+  w.location.hash = '#alert=' + KEY_B;
+  await settle();
+  check('AC-101-02 selecting B does not leave A selected',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_B);
+  check('  exactly one row is ever selected',
+    d.querySelectorAll('#nws-alerts-container .alert-item.is-selected').length, 1);
+
+  /* AC-101-06. Back and Forward reach the app as hashchange, which is the same entry point the
+     assertions above exercise; this drives it through history itself rather than assuming. */
+  w.history.back();
+  await settle();
+  check('AC-101-06 Back returns to the previously selected alert',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* AC-101-07. A refresh is a fresh resolve of the same fragment. S is reset the way a reload
+     would reset it, then the fragment is re-applied. */
+  w.eval('S.selectedAlertKey = ""');
+  w.applyAlertHash();
+  await settle();
+  check('AC-101-07 a reload of a deep link restores the alert',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  console.log('\nPW-101 — an absolute verdict requires current authoritative state:');
+  /* Codex blocker 1, read-only review of the rebased head. resolveSelectedAlert() guarded `gone`
+     with sourceState === 'current' but left `expired` and `filtered` ungated, so after a failed
+     refresh the app could report "that alert has expired" or "active but hidden" from retained
+     last-known-good data. The earlier tests never caught it because every one of them fed data
+     successfully first, so the source was always current. These drive the real failure. */
+
+  /* EXPIRED. First with NWS answering, which is the one case where the verdict is true — this
+     doubles as the regression guard that the fix did not simply suppress the state. */
+  const pastExp = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const expiredTwin = twin(ID_A, 'Oahu');
+  expiredTwin.properties.expires = pastExp;
+  w.eval('S.island = "statewide"');
+  await feed([expiredTwin]);
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  check('the source is current to begin with', w.eval("sourceState('nwsAlerts')"), 'current');
+  has('a current source may call it expired', '#nws-alerts-container', 'has expired', true);
+
+  /* Now the refresh fails. Same retained data, same expiry, different epistemic position. */
+  w.eval("S.sourceHealth.nwsAlerts.lastError = 'network';");
+  w.renderAlertSurfaces();
+  await settle();
+  check('  the source is now stale, not current', w.eval("sourceState('nwsAlerts')"), 'stale');
+  has('AC-101-08 a stale source may NOT call the alert expired', '#nws-alerts-container', 'has expired', false);
+  has('  it reports the status unverified instead', '#nws-alerts-container', 'could not be verified', true);
+  has('  and still never claims it is no longer active', '#nws-alerts-container', 'no longer active', false);
+
+  /* FILTERED. "Active but hidden by your island filter" asserts the alert is ACTIVE, which a
+     failed refresh cannot support. The island filter is local and knowable; the activity is not. */
+  w.eval("S.sourceHealth.nwsAlerts.lastError = null;");
+  await feed([twin(ID_A, 'Kauai')]);
+  w.eval('S.island = "maui"');
+  w.location.hash = '';
+  await settle();
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  has('a current source may call it hidden by the island filter', '#nws-alerts-container', 'hidden by your island filter', true);
+  w.eval("S.sourceHealth.nwsAlerts.lastError = 'network';");
+  w.renderAlertSurfaces();
+  await settle();
+  has('AC-101-08 a stale source may NOT call the alert active but hidden', '#nws-alerts-container', 'hidden by your island filter', false);
+  has('  it reports unverified instead', '#nws-alerts-container', 'could not be verified', true);
+
+  /* UNAVAILABLE is the harder failure and must behave the same way. */
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = null;');
+  w.renderAlertSurfaces();
+  await settle();
+  check('  the source is unavailable', w.eval("sourceState('nwsAlerts')"), 'unavailable');
+  has('an unavailable source may not call it hidden either', '#nws-alerts-container', 'hidden by your island filter', false);
+  has('  and says unverified', '#nws-alerts-container', 'could not be verified', true);
+
+  w.eval('S.island = "statewide"');
+  w.eval("S.sourceHealth.nwsAlerts.lastError = null;");
+  w.location.hash = '';
+  await settle();
+
+  console.log('\nPW-101 — a deep link focuses its row when the row finally arrives:');
+  /* Codex blocker 2. applyAlertHash() focused on a cold load while NWS was still loading, found
+     no row, scrolled the notice, and nothing re-focused once the row rendered — so a pasted or
+     refreshed link produced a row that was selected and styled but never focused, which is
+     invisible to exactly the keyboard and screen-reader users the deep link exists to serve.
+     The constraint is two-sided: pay the owed focus once, and never steal focus on a refresh. */
+
+  /* A cold start: the shipped loading skeleton restored and health reset, so nothing has been
+     attempted — a link pasted into a fresh tab. The later history section declares its own
+     `coldLoad`; this block cannot borrow it, because a `const` is not initialised yet when read
+     from above. */
+  const coldStart = (key) => {
+    $('#nws-alerts-container').innerHTML = '<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>'
+    + '<div class="skeleton tall" style="margin-top:6px"></div>'
+    + '<div class="skeleton short" style="margin-top:4px"></div></div>';
+    w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null; S.cache.nwsAlerts = null;');
+    w.location.hash = '#alert=' + key;
+    w.applyAlertHash();
+  };
+
+  coldStart(KEY_A);
+  await settle();
+  check('the deep link is pending while NWS loads', w.eval('S.selectedAlertKey'), KEY_A);
+  check('  and the focus is recorded as owed', w.eval('S.alertFocusPending'), true);
+  check('  no row exists to focus yet',
+    d.querySelectorAll('#nws-alerts-container .alert-item.is-selected').length, 0);
+
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('AC-101-07 the row is focused once it arrives', (d.activeElement || {}).id, 'alert-' + KEY_A);
+  check('  and the debt is cleared', w.eval('S.alertFocusPending'), false);
+
+  /* An ordinary background refresh re-renders the same selected row. Focusing there would yank
+     the page away from whatever the reader had moved to. */
+  const heading = $('#nws-alerts-heading');
+  if (heading) { if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1'); heading.focus(); }
+  check('focus has been moved away by the reader', (d.activeElement || {}).id, 'nws-alerts-heading');
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('a background refresh does NOT steal focus back', (d.activeElement || {}).id, 'nws-alerts-heading');
+  check('  the row is still selected all the same',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* Leaving Alerts before the fetch resolves cancels the debt: focus must not jump into a view
+     the reader has already walked out of. */
+  coldStart(KEY_B);
+  await settle();
+  check('a second cold load owes a focus again', w.eval('S.alertFocusPending'), true);
+  w.switchView('overview');
+  await settle();
+  check('  leaving Alerts cancels it', w.eval('S.alertFocusPending'), false);
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('  and the arriving row does not grab focus',
+    ((d.activeElement || {}).id || '').indexOf('alert-') === 0, false);
+
+  w.location.hash = '';
+  w.switchView('overview');
+  await settle();
+
+  console.log('\nPW-101 — the URL and the view stay consistent across the whole history lifecycle:');
+  /* Codex's finding, read-only review of the rebased head. The earlier tests drove Back between
+     two alert hashes, which never exercises the transition to NO hash: applyAlertHash() switched
+     to Alerts when a key existed and did nothing when it did not, so Back cleared the selection
+     and stranded the reader in Alerts. Three further failures followed from the same gap, and all
+     four are proven here rather than argued. */
+
+  w.location.hash = '';
+  await settle();
+  w.switchView('overview');
+  await settle();
+  check('the reader starts on Overview', w.eval('S.view'), 'overview');
+  check('  with no alert in the URL', w.location.hash, '');
+
+  /* 1. Overview -> alert A -> Back -> Overview -> Forward -> alert A, driven through history
+     itself rather than by re-applying fragments by hand. */
+  w.location.hash = '#alert=' + KEY_A;
+  await settle();
+  check('following an alert from Overview opens Alerts', w.eval('S.view'), 'alerts');
+  w.history.back();
+  await settle();
+  check('AC-101-06 Back from the first alert returns to Overview', w.eval('S.view'), 'overview');
+  check('  and clears the selection', w.eval('S.selectedAlertKey'), '');
+  check('  and leaves no fragment behind', w.location.hash, '');
+  has('  and no row is left selected', '#nws-alerts-container', 'is-selected', false);
+  w.history.forward();
+  await settle();
+  check('AC-101-06 Forward returns to the alert', w.eval('S.view'), 'alerts');
+  check('  with the same row selected',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* 2. Leaving Alerts by tab, not by Back. The fragment must not survive the view it describes,
+     or re-selecting the same alert is a no-op: an identical fragment fires no hashchange. */
+  w.switchView('overview');
+  await settle();
+  check('leaving Alerts by tab clears the stale fragment', w.location.hash, '');
+  check('  and clears the selection with it', w.eval('S.selectedAlertKey'), '');
+  const reentry = [...d.querySelectorAll('#view-overview a.pri-link')]
+    .find(a => a.getAttribute('href') === '#alert=' + KEY_A);
+  check('  the same alert is still offered on Overview', !!reentry, true);
+  reentry.click();
+  await settle();
+  check('AC-101-06 re-selecting the SAME alert reopens Alerts', w.eval('S.view'), 'alerts');
+  check('  and selects it again',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+
+  /* 3. A refresh of the state the reader deliberately walked back to. With a stale fragment this
+     reopened Alerts on load; the load-time line is run verbatim rather than paraphrased. */
+  w.switchView('overview');
+  await settle();
+  check('the fragment is clear before the simulated reload', w.location.hash, '');
+  w.eval('S.selectedAlertKey = ""; S.alertHashReturnView = "";');
+  w.switchView('overview');
+  if (w.alertKeyFromHash()) w.applyAlertHash();
+  await settle();
+  check('AC-101-07 a refresh after leaving Alerts stays on Overview', w.eval('S.view'), 'overview');
+  has('  and asserts nothing about a selection', '#nws-alerts-container', 'is-selected', false);
+
+  /* 4. Back is not hardcoded to Overview. A deep link followed from inside Alerts began there, so
+     Back belongs in Alerts — the rule is "return to the origin", not "return to Overview". */
+  w.switchView('alerts');
+  await settle();
+  w.location.hash = '#alert=' + KEY_B;
+  await settle();
+  check('a deep link followed from inside Alerts stays in Alerts', w.eval('S.view'), 'alerts');
+  w.history.back();
+  await settle();
+  check('  and Back returns to Alerts, not Overview', w.eval('S.view'), 'alerts');
+  check('  with the selection cleared all the same', w.eval('S.selectedAlertKey'), '');
+
+  /* 5. Moving between two alerts must not rewrite the origin, or Back after A -> B would return
+     to the wrong place. */
+  w.switchView('overview');
+  await settle();
+  w.location.hash = '#alert=' + KEY_A;
+  await settle();
+  w.location.hash = '#alert=' + KEY_B;
+  await settle();
+  check('the origin survives moving between alerts', w.eval('S.alertHashReturnView'), 'overview');
+  w.history.back();
+  await settle();
+  check('  Back from B reaches A, still inside the session',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+  w.history.back();
+  await settle();
+  check('  and one more Back ends the session at the origin', w.eval('S.view'), 'overview');
+
+  w.location.hash = '';
+  w.switchView('overview');
+  await settle();
+
+  console.log('\nPW-101 — a missing provider id gets no deep link, and no title fallback:');
+  await feed([mk('Wind Advisory', 'Moderate', 'Expected', 'Maui'),
+              mk('Wind Advisory', 'Moderate', 'Expected', 'Oahu')]);
+  w.switchView('overview');
+  check('no id means no per-alert link',
+    d.querySelectorAll('#view-overview a.pri-link[href^="#alert="]').length, 0);
+  /* One per card: an id-less alert still offers a way into the section, it just cannot be
+     addressed individually. Two cards here, because the fixture is two identically titled
+     alerts — the case a title-derived key would collapse onto one address. */
+  check('  but the reader can still reach the section',
+    d.querySelectorAll('#view-overview button.pri-link').length, 2);
+  check('  and the row carries no address',
+    d.querySelectorAll('#nws-alerts-container .alert-item[data-alert-key]').length, 0);
+  check('  the alert itself is still listed and readable',
+    txt('#nws-alerts-container').indexOf('Wind Advisory') !== -1, true);
+  /* The collision a title-derived key would cause: both rows sharing one address. */
+  check('  two identically titled id-less alerts produce no addresses at all',
+    d.querySelectorAll('#nws-alerts-container .alert-item[data-alert-key]').length, 0);
+  check('  and both are still listed, so nothing was dropped',
+    [...d.querySelectorAll('#nws-alerts-container .alert-title')].filter(e => e.textContent.indexOf('Wind Advisory') !== -1).length, 2);
+
+  console.log('\nPW-101 — AC-101-08: absence and ignorance are different answers:');
+  /* The truthfulness rule the owner made binding: only a successful authoritative refresh may
+     call a deep-linked alert gone. These four states must read differently. */
+  await feed([twin(ID_A, 'Kauai')]);
+  w.location.hash = '#alert=' + KEY_B;   /* never present, and NWS answered */
+  await settle();
+  has('a refreshed source that does not list it says NOT ACTIVE', '#nws-alerts-container', 'no longer active', true);
+  has('  and does not claim it expired', '#nws-alerts-container', 'has expired', false);
+
+  /* Same missing key, but the fetch failed: the answer must change from gone to unverified. */
+  w.fetch = makeFetch('/alerts/active');
+  await w.fetchAlerts();
+  await settle();
+  has('a failed fetch says it could not be verified', '#nws-alerts-container', 'could not be verified', true);
+  has('  and never says it is no longer active', '#nws-alerts-container', 'no longer active', false);
+  has('  and never reads as an all clear', '#nws-alerts-container', 'All clear', false);
+  w.fetch = makeFetch(null);
+
+  /* An alert hidden only by the island filter is active. Reporting it as expired would be false. */
+  await feed([twin(ID_A, 'Kauai')]);
+  w.eval('S.island = "maui"');
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  has('an island-filtered alert is reported hidden, not expired', '#nws-alerts-container', 'hidden by your island filter', true);
+  has('  and explicitly says it has not expired', '#nws-alerts-container', 'has not expired', true);
+  w.eval('S.island = "statewide"');
+  w.location.hash = '';
+  await settle();
+
+  console.log('\nPW-101 — the remaining resolution states, each proved on its own:');
+
+  /* EXPIRED. The alert is in the refreshed data but past its expiry, so eligibility drops it
+     from the visible list. That is the one case where saying "expired" is true. */
+  const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const staleAlert = twin(ID_A, 'Oahu');
+  staleAlert.properties.expires = past;
+  await feed([staleAlert]);
+  w.location.hash = '#alert=' + KEY_A;
+  w.applyAlertHash();
+  await settle();
+  has('EXPIRED is stated only when the product actually expired', '#nws-alerts-container', 'has expired', true);
+  has('  and it is not reported as merely hidden', '#nws-alerts-container', 'hidden by your island filter', false);
+  has('  nor as unverified, because NWS did answer', '#nws-alerts-container', 'could not be verified', false);
+
+  /* UNAVAILABLE. renderAlerts() is skipped entirely on this path — it has one call site and
+     renderAlertSurfaces() routes around it — so this proves the deep-link answer survives the
+     early return rather than being replaced by a generic outage row. */
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = Date.now(); S.sourceHealth.nwsAlerts.lastSuccess = null;');
+  w.renderAlertSurfaces();
+  await settle();
+  check('the source really is unavailable, not stale', w.eval('sourceState("nwsAlerts")'), 'unavailable');
+  has('a deep link still gets an answer when NWS is unreachable', '#nws-alerts-container', 'could not be verified', true);
+  has('  the outage row is still shown too', '#nws-alerts-container', 'temporarily unavailable', true);
+  has('  and nothing claims the alert is gone', '#nws-alerts-container', 'no longer active', false);
+
+  /* CHECKING. This state deliberately has no DOM surface: while nothing has been attempted the
+     Alerts container keeps its loading skeleton, and renderAlertSurfaces() returns before
+     renderAlerts() is reached. Asserting it at the resolver proves the logic is right without
+     pretending a notice renders that cannot. */
+  w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null;');
+  check('loading resolves to checking, not to unverified',
+    w.eval('resolveSelectedAlert(nwsSnapshot()).state'), 'checking');
+  check('  and the snapshot agrees nothing has been attempted',
+    w.eval('nwsSnapshot().presentation'), 'checking');
+
+  /* Restore a healthy source for the sections that follow. */
+  w.location.hash = '';
+  w.fetch = makeFetch(null);
+  await w.fetchAlerts();
+  await settle();
+  check('health restored for the following sections', w.eval('sourceState("nwsAlerts")'), 'current');
+
+  console.log('\nPW-101 — a deep link entered BEFORE the first fetch, end to end:');
+  /* Codex's condition: prove the TRANSITION, not just the resolver. The container is restored to
+     the shipped loading skeleton and health is reset so nothing has been attempted — a cold load
+     with a pasted link. Testing the resolver alone would not show that the key survives the
+     loading window and then resolves. */
+  const coldLoad = (key) => {
+    $('#nws-alerts-container').innerHTML = '<div class="alert-item"><div class="skeleton" style="width:64px;height:18px;border-radius:3px"></div>'
+    + '<div class="skeleton tall" style="margin-top:6px"></div>'
+    + '<div class="skeleton short" style="margin-top:4px"></div></div>';
+    w.eval('S.sourceHealth.nwsAlerts.lastAttempt = null; S.sourceHealth.nwsAlerts.lastSuccess = null; S.cache.nwsAlerts = null;');
+    w.location.hash = '#alert=' + key;
+    w.applyAlertHash();
+  };
+
+  coldLoad(KEY_A);
+  await settle();
+  check('the requested key survives initial loading', w.eval('S.selectedAlertKey'), KEY_A);
+  check('  and the Alerts view is already open', w.eval('S.view'), 'alerts');
+  check('  the loading skeleton still stands rather than being replaced',
+    d.querySelectorAll('#nws-alerts-container .skeleton').length > 0, true);
+  /* Accessibility of the loading window: the skeleton is decorative, so the state has to be
+     readable as text somewhere. The strip carries it. */
+  check('  and the loading state is stated in text, not only as a skeleton',
+    txt('#strip-state'), 'Checking NWS alerts');
+  has('  no verdict is asserted while loading — not gone', '#nws-alerts-container', 'no longer active', false);
+  has('  and not unverified either', '#nws-alerts-container', 'could not be verified', false);
+
+  /* The first fetch completes and the link resolves to the real alert. */
+  await feed([twin(ID_A, 'Oahu'), twin(ID_B, 'Kauai')]);
+  check('AC-101-07 a pre-fetch deep link resolves to its alert once NWS answers',
+    ($('#nws-alerts-container .alert-item.is-selected') || {}).id, 'alert-' + KEY_A);
+  check('  and the key is unchanged across the transition', w.eval('S.selectedAlertKey'), KEY_A);
+
+  /* The same transition where the alert turns out NOT to exist. "Correct final state" has to
+     cover the unhappy path too, or this only proves the happy one. */
+  const GHOST = encodeURIComponent('urn:oid:2.49.0.1.840.0.ghost.9.9');
+  coldLoad(GHOST);
+  await settle();
+  has('a pre-fetch link to a ghost asserts nothing while loading', '#nws-alerts-container', 'no longer active', false);
+  await feed([twin(ID_A, 'Oahu')]);
+  has('  and becomes NOT ACTIVE once NWS answers and does not list it',
+    '#nws-alerts-container', 'no longer active', true);
+  has('  without ever claiming it expired', '#nws-alerts-container', 'has expired', false);
+
+  /* And where the first fetch FAILS: checking must become unverified, never gone. */
+  coldLoad(GHOST);
+  await settle();
+  w.fetch = makeFetch('/alerts/active');
+  await w.fetchAlerts();
+  await settle();
+  has('a failed first fetch ends at unverified', '#nws-alerts-container', 'could not be verified', true);
+  has('  and never at no-longer-active', '#nws-alerts-container', 'no longer active', false);
+  w.fetch = makeFetch(null);
+  w.location.hash = '';
+  await settle();
+
+  console.log('\nPW-102 — the source link is labelled for what it actually is:');
+  /* Tier 3: NWS products have no reliable per-alert public page, so the issuing office is
+     offered and LABELLED as a general source. AC-102-02/AC-102-04. */
+  await feed([twin(ID_A, 'Oahu')]);
+  const rowLink = $('#nws-alerts-container .alert-item[data-alert-key] a');
+  check('AC-102-04 an NWS alert offers the office as a general source',
+    rowLink ? rowLink.getAttribute('href') : '(none)', 'https://www.weather.gov/hfo');
+  check('AC-102-01 and says so in the label rather than implying the exact alert',
+    rowLink ? rowLink.textContent.indexOf('general source') !== -1 : false, true);
+  check('  the label is machine-readable too, so callers cannot confuse the two',
+    rowLink ? rowLink.getAttribute('data-exact') : '(none)', 'false');
+  check('AC-102-02 no alert row links to an api.weather.gov destination',
+    [...d.querySelectorAll('#nws-alerts-container a')].filter(a => (a.getAttribute('href') || '').indexOf('api.weather.gov') !== -1).length, 0);
+
+  /* Tier 1: a genuine human-readable page is used, and marked exact. */
+  const withWeb = (web) => { const f = twin(ID_A, 'Oahu'); f.properties.web = web; return f; };
+  await feed([withWeb('https://www.weather.gov/hfo/alert-12345')]);
+  const exactLink = $('#nws-alerts-container .alert-item[data-alert-key] a');
+  check('AC-102-03 a supplied human-readable page is used',
+    exactLink ? exactLink.getAttribute('href') : '(none)', 'https://www.weather.gov/hfo/alert-12345');
+  check('  and is marked exact rather than general',
+    exactLink ? exactLink.getAttribute('data-exact') : '(none)', 'true');
+
+  /* AC-102-06/07. A collection URL, an api host, a malformed value and an unsafe scheme must all
+     fall back to the labelled general source rather than becoming the alert's destination. */
+  for (const [bad, why] of [['https://api.weather.gov/alerts', 'a collection endpoint'],
+                            ['https://api.weather.gov/alerts/active?area=HI', 'a collection query'],
+                            ['javascript:alert(1)', 'an unsafe scheme'],
+                            ['not a url at all', 'a malformed value'],
+                            ['', 'an empty value']]) {
+    await feed([withWeb(bad)]);
+    const a = $('#nws-alerts-container .alert-item[data-alert-key] a');
+    check('AC-102-06 ' + why + ' never becomes the destination',
+      a ? a.getAttribute('href') : '(none)', 'https://www.weather.gov/hfo');
+    check('  and it is still labelled general',
+      a ? a.getAttribute('data-exact') : '(none)', 'false');
+  }
+  check('AC-102-07 no javascript: URL reaches the DOM',
+    [...d.querySelectorAll('#nws-alerts-container a')].filter(a => (a.getAttribute('href') || '').indexOf('javascript:') !== -1).length, 0);
+
+  /* AC-102-08. None of the above touched source health or freshness. */
+  check('AC-102-08 source health is untouched by the link work', w.eval('sourceState("nwsAlerts")'), 'current');
+  check('  and the fetch is not stale', w.eval('isStale("nwsAlerts")'), false);
+  alertFeatures = null;
+  w.location.hash = '';
+  await settle();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
   w.close();
