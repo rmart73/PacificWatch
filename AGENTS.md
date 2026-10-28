@@ -27,6 +27,18 @@ and nothing lands without a pull request.
   same item at the same time and neither had opened a PR yet, so there was nothing to see.
   If the board already shows a claim overlapping your scope, coordinate in the handoff log
   instead of starting.
+- **Retiring a claim is a content change, not bookkeeping.** Before removing or closing any claim,
+  check it for unique durable decisions, constraints and evidence. Verify that each item already
+  survives in the appropriate repository authority — for example this file for lasting working
+  rules, the governing contract or specification for requirements, or the Handoff Log for
+  historical evidence. Anything still unresolved stays live in the Review Queue or Outstanding
+  Verification section rather than being filed only in a historical entry. Move anything unique
+  before retiring the claim; a PR body alone is not the project's durable record. Only a
+  documentation-only unit may retire its own claim on its final documentation head, after the
+  claimed work is complete and its rationale is preserved. This deliberately accepts the short
+  review window in which that documentation branch remains open without an active claim; if review
+  later requires another edit, reclaim before editing. Application or behavior-changing units keep
+  their claims active through merge and are retired by a later claimed board reconciliation.
 - **Agreed split for the v2 overview (2026-09-07):** ChatGPT Codex owns layout and acceptance
   criteria; Claude Code owns implementation; Codex reviews. This mirrors Phase 1, where the
   spec-then-implement split produced the strongest work in the project once the two stopped
