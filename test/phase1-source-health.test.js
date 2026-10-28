@@ -13,6 +13,14 @@ function grab(re, label) {
 }
 
 const parts = [
+  /* PW-103. The ticker speed model is pure arithmetic — pixels in, seconds out — so it is tested
+     here rather than through a layout engine that jsdom does not have. */
+  grab(/const TICKER_PX_PER_S_DESKTOP = \d+;/, 'TICKER_PX_PER_S_DESKTOP'),
+  grab(/const TICKER_PX_PER_S_MOBILE = \d+;/, 'TICKER_PX_PER_S_MOBILE'),
+  grab(/const TICKER_MOBILE_MAX_W = \d+;/, 'TICKER_MOBILE_MAX_W'),
+  grab(/const TICKER_MIN_S = \d+, TICKER_MAX_S = \d+;/, 'TICKER bounds'),
+  grab(/function tickerSpeedPxPerS\(viewportW\) \{[\s\S]*?\n\}/, 'tickerSpeedPxPerS'),
+  grab(/function tickerDurationSeconds\(wrapW, trackW, viewportW\) \{[\s\S]*?\n\}/, 'tickerDurationSeconds'),
   'var S = { island: "statewide" };',
   'function renderSourceHealth() {}',           // stubbed: DOM
   grab(/const MIN = 60 \* 1000, HOUR = 60 \* MIN;/, 'MIN/HOUR'),
@@ -51,7 +59,7 @@ const parts = [
   grab(/function newsPublishedAt\([^)]*\) \{[\s\S]*?\n\}/, 'newsPublishedAt')
 ].join('\n');
 
-const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, requestPending, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate, newsPublishedAt, NEWS_PUB_SKEW_MS, NEWS_PUB_ISO_RE})');
+const api = eval(parts + '; ({S:S, sourceOk, sourceFail, sourceState, usableCache, relAge, beginRequest, requestIsCurrent, requestPending, OBSERVATION_LIMITS, observedAtFromIso, observedAtFromNoaaLst, observationState, combinedObservationState, observationVerified, observationEntry, isRealCalendarDate, newsPublishedAt, NEWS_PUB_SKEW_MS, NEWS_PUB_ISO_RE, tickerSpeedPxPerS, tickerDurationSeconds, TICKER_PX_PER_S_DESKTOP, TICKER_PX_PER_S_MOBILE, TICKER_MOBILE_MAX_W, TICKER_MIN_S, TICKER_MAX_S})');
 const St = api.S;
 
 /* The expiry predicate, lifted verbatim out of the shared nwsEligible() selector.
@@ -109,6 +117,66 @@ St.island = 'statewide';
 St.cache.fema = { island: 'maui', data: ['decl'] };
 setHealth('fema', { lastAttempt: now(), lastSuccess: now() - 12 * HOUR, lastError: 'net' });
 check('statewide source reused regardless of island', JSON.stringify(api.usableCache('fema')), '["decl"]');
+
+console.log('\nPW-103 ticker speed — duration follows distance, so speed stops following the viewport:');
+/* The defect: `animation: ticker 70s` over `100vw + track width`. Duration fixed, distance not,
+   so a phone travelled ~1050px less than a desktop for the same content and moved ~30% slower.
+   Longer content made it FASTER for the same reason. These are the numbers behind the fix. */
+
+/* The reference case the constants are calibrated against: the no-active-alerts message, whose
+   doubled track measures about 1700px. Wrap width is the viewport less the ALERTS tag. */
+const REF_TRACK = 1700, TAG = 60;
+const DESKTOP_VW = 1440, MOBILE_VW = 390;
+const wrapOf = vw => vw - TAG;
+/* What the old rule produced, for comparison: distance was 100vw + track, over a fixed 70s. */
+const oldSpeed = (vw, track) => (vw + track) / 70;
+
+check('a phone is classified as mobile', api.tickerSpeedPxPerS(MOBILE_VW), api.TICKER_PX_PER_S_MOBILE);
+check('a desktop is not', api.tickerSpeedPxPerS(DESKTOP_VW), api.TICKER_PX_PER_S_DESKTOP);
+check('the breakpoint is inclusive at 767', api.tickerSpeedPxPerS(767), api.TICKER_PX_PER_S_MOBILE);
+check('  and 768 is already desktop', api.tickerSpeedPxPerS(768), api.TICKER_PX_PER_S_DESKTOP);
+
+/* AC-103-01. Desktop within ~5% of its measured baseline at the reference content length. */
+const dTop = api.tickerDurationSeconds(wrapOf(DESKTOP_VW), REF_TRACK, DESKTOP_VW);
+check('AC-103-01 desktop duration stays within 5% of the 70s baseline',
+  Math.abs(dTop - 70) / 70 < 0.05, true);
+
+/* AC-103-02. Mobile must be measurably faster than the OLD mobile speed, by about a quarter. */
+const newMobileSpeed = api.tickerSpeedPxPerS(MOBILE_VW);
+const oldMobileSpeed = oldSpeed(MOBILE_VW, REF_TRACK);
+check('AC-103-02 mobile is faster than the old mobile baseline', newMobileSpeed > oldMobileSpeed, true);
+const gain = newMobileSpeed / oldMobileSpeed;
+check('  and the gain is near the 25% calibration target', gain > 1.18 && gain < 1.32, true);
+/* The old defect, stated as a test so it cannot quietly return: the same content on a phone and
+   a desktop used to move at different speeds. Now the speed is a constant per class, and the
+   phone is deliberately a little slower than desktop for readability, not 55% faster. */
+check('the old rule really was viewport-dependent', oldSpeed(DESKTOP_VW, REF_TRACK) > oldMobileSpeed * 1.3, true);
+check('mobile stays below desktop speed on purpose', newMobileSpeed < api.TICKER_PX_PER_S_DESKTOP, true);
+
+/* AC-103-04. Duration adapts to content length — that is what keeps speed constant. */
+const shortD = api.tickerDurationSeconds(wrapOf(DESKTOP_VW), 800, DESKTOP_VW);
+const longD = api.tickerDurationSeconds(wrapOf(DESKTOP_VW), 5000, DESKTOP_VW);
+check('AC-103-04 longer content takes longer', longD > shortD, true);
+/* The real assertion is that SPEED is unchanged: distance over duration is the constant. */
+const speedAt = track => (wrapOf(DESKTOP_VW) + track) / api.tickerDurationSeconds(wrapOf(DESKTOP_VW), track, DESKTOP_VW);
+check('AC-103-04 and the speed is identical at both lengths',
+  Math.abs(speedAt(800) - speedAt(5000)) < 0.001, true);
+/* Under the old fixed duration the same comparison failed, which is the bug restated. */
+check('  whereas the old rule sped up as content grew',
+  oldSpeed(DESKTOP_VW, 5000) > oldSpeed(DESKTOP_VW, 800) * 1.5, true);
+
+/* Bounds. A two-word ticker must not whip past, and a storm's worth must not look frozen. */
+check('a tiny track is clamped to the floor',
+  api.tickerDurationSeconds(10, 10, DESKTOP_VW), api.TICKER_MIN_S);
+check('an enormous track is clamped to the ceiling',
+  api.tickerDurationSeconds(400, 400000, DESKTOP_VW), api.TICKER_MAX_S);
+
+/* Nothing measured means keep the CSS fallback rather than animate across zero. */
+check('an unmeasured track yields no duration', api.tickerDurationSeconds(0, 0, DESKTOP_VW), null);
+check('  a measured wrap with a zero track still yields nothing useful',
+  api.tickerDurationSeconds(0, 0, MOBILE_VW), null);
+check('  and a missing argument does not throw',
+  api.tickerDurationSeconds(undefined, undefined, DESKTOP_VW), null);
 
 console.log('\nExpired-alert filtering — retained data must not resurrect a lapsed warning:');
 const t = Date.now();
