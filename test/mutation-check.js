@@ -42,6 +42,71 @@ const mutations = [
      check" is the same error the observation contract exists to prevent, now reachable through
      a deep link instead of a measurement. */
 
+  /* ---- PW-104, the Ventusky precipitation default -------------------------------------
+
+     The parameter and the two labels are one unit: a map showing three-hour accumulation under a
+     name promising live radar is the same class of defect as an alert link labelled as the alert
+     itself. Each is restored separately so a silent revert of any one of them fails. */
+
+  { name: 'the embed falls back to the radar layer',
+    from: "src=\"https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h&amp;w=soft\"",
+    to:   "src=\"https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=radar&amp;w=soft\"",
+    expect: ['AC-104-01 the initial layer is precipitation',
+             'AC-104-01 and radar is no longer the default'],
+    suite: 'dom' },
+
+  { name: 'the Pacific map position is lost',
+    from: "src=\"https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h&amp;w=soft\"",
+    to:   "src=\"https://embed.ventusky.com/?p=0;0;3&amp;l=rain-3h&amp;w=soft\"",
+    expect: ['AC-104-02 the map position and zoom are preserved'],
+    suite: 'dom' },
+
+  { name: 'the soft basemap parameter is dropped',
+    from: "src=\"https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h&amp;w=soft\"",
+    to:   "src=\"https://embed.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h\"",
+    expect: ['AC-104-02 and the soft basemap is preserved'],
+    suite: 'dom' },
+
+  /* The outbound link and the embed must not disagree about what the reader is being shown. */
+  { name: 'the outbound link still points at radar while the embed shows precipitation',
+    from: "https://www.ventusky.com/?p=20.7;-157.5;7&amp;l=rain-3h",
+    to:   "https://www.ventusky.com/?p=20.7;-157.5;7&amp;l=radar",
+    expect: ['AC-104-03 and it agrees with the embed on the layer'],
+    suite: 'dom' },
+
+  { name: 'the visible name promises radar again',
+    from: "<div class=\"map-tile-name\">Precipitation &middot; 3 h \u2014 Ventusky</div>",
+    to:   "<div class=\"map-tile-name\">Live Radar \u2014 Ventusky</div>",
+    expect: ['the visible name no longer promises radar',
+             'and names precipitation instead'],
+    suite: 'dom' },
+
+  { name: 'the accessible title promises live radar again',
+    from: "title=\"Ventusky precipitation map \u2014 Hawaii, three-hour totals\"",
+    to:   "title=\"Ventusky live radar \u2014 Hawaii\"",
+    expect: ['the accessible title no longer promises live radar',
+             'and names precipitation'],
+    suite: 'dom' },
+
+  /* A total is not an intensity, and the title is where that distinction reaches a screen reader. */
+  { name: 'the title drops the accumulation window',
+    from: "title=\"Ventusky precipitation map \u2014 Hawaii, three-hour totals\"",
+    to:   "title=\"Ventusky precipitation map \u2014 Hawaii\"",
+    expect: ['and states the accumulation window, because a total is not an intensity'],
+    suite: 'dom' },
+
+  { name: 'the weather frame stops being fluid-width',
+    from: ".radar-frame{display:block;width:100%;height:330px",
+    to:   ".radar-frame{display:block;width:900px;height:330px",
+    expect: ['AC-104-04 the frame is fluid-width'],
+    suite: 'dom' },
+
+  { name: 'the responsive height breakpoint is removed',
+    from: "@media(min-width:768px){.radar-frame{height:440px}}",
+    to:   "@media(min-width:768px){.radar-frame-x{height:440px}}",
+    expect: ['AC-104-04 and has a responsive height rule'],
+    suite: 'dom' },
+
   /* ---- absolute verdicts and owed focus, from Codex's second review round ---------------
 
      Blocker 1 is the mirror of the truthfulness error the observation contract already guards:
