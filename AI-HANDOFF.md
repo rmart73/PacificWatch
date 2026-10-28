@@ -63,12 +63,88 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Remote-branch verification convention | #45 merged in `a14d31f`; durable squash-safe proof rules now live in `AGENTS.md` | Closed; no remote branch deletion was or is authorized |
 | October 9 Phase 1 engineering brief | #46 merged; the brief is preserved on `main` as the shared authority for PW-101 through PW-106 | Closed. Implementation proceeds unit by unit under separate claims |
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
-| October Phase 1 PW-103 — mobile ticker | Claimed on `claude/pw103-mobile-ticker`; duration is derived from measured distance at a calibrated pixels-per-second, and reduced motion gets readable text rather than an empty strip | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
+| October Phase 1 PW-105 — wave logo animation | Claimed on `claude/pw105-wave-animation`; the brand mark drifts one full wavelength so the loop cannot snap, and reduced motion returns it to today's static logo exactly | Claude implements; Codex reviews read-only and runs the browser pass; the owner decides merge |
+| October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 
 ### Active claims
+
+**October Phase 1 PW-105 — wave logo animation — Claude Code, `claude/pw105-wave-animation`.**
+Claimed 2026-10-28 before editing any application file, in its own commit ahead of the work, under
+the owner's authorization to finish the project and Codex's accepted ordering. Branched from `main`
+at `170ef17`.
+
+Governed by [OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md](OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md),
+**AC-105-01 through AC-105-08**.
+
+**What the inspection found, before any code**
+
+The mark is three `<path>` elements sharing one wave shape, inside a 24→24 viewBox:
+
+```
+middle  M2 12c1.5-2 3-3 5-3s3.5 1 5 3 3.5 3 5 3 3.5-1 5-3      (no opacity: full white)
+top     M2 7 — same curve, opacity .4
+bottom  M2 17 — same curve, opacity .4
+```
+
+Reading the curve's endpoints gives the number this unit depends on: `(2,12)` → `(7,9)` →
+`(12,12)` → `(17,15)` → `(22,12)`. **One full wavelength is exactly 20 user units**, peak at
+x=7 and trough at x=17.
+
+**That is what makes a seamless loop possible without touching the artwork.** The three paths are
+duplicated verbatim, the copy offset 20 units right, and the pair drifts from `translateX(0)` to
+`translateX(-20px)`. At the end of a cycle the copy sits exactly where the original began, so the
+frame is pixel-identical to frame zero and there is nothing to snap — AC-105-02. The viewBox
+clips whichever copy is outside, so nothing escapes the mark.
+
+**No bezier arithmetic.** An earlier approach would extend each path with two more `s` segments to
+cover the extra wavelength, which means hand-deriving reflected control points and risking a subtle
+change to a shape the brief says to preserve. Duplicating the exact `d` string cannot change the
+silhouette, and it satisfies “reuse existing markup where possible” literally.
+
+**All three lines drift in one phase, on purpose.** Per-line speeds would read more like water, and
+were rejected: the lines sit 5 units apart with 3 units of amplitude, so independent phases let the
+top and middle cross. Crossing would break “preserve the recognizable three-line silhouette”, which
+outranks realism here. One shared transform also means one animation rather than three.
+
+**The logo appears twice in the markup, and only one of them is the logo.** The same wave `d` is
+reused as the **NOAA Tides** map-tile icon — a single line in a grid of static tile glyphs, not the
+brand mark. The brief asks for the animated version “wherever the current application header/logo
+is displayed”; a tide icon is not that, and animating one tile in a static grid would be noise.
+**It stays static**, and that is a decision rather than an oversight.
+
+**Reduced motion returns today's logo exactly.** `animation:none` with `transform:none` leaves the
+original three paths in place and the duplicate clipped outside the viewBox — not an approximation
+of the static mark, the same markup in the same position. That serves AC-105-06 and AC-105-08
+together.
+
+**Evidence this claim commits to**
+
+1. Attempt-1 green on the final PR head and again on the exact `main` merge commit, image per job.
+2. DOM assertions that the silhouette is intact — three visible wave lines, the middle one with no
+   opacity attribute so it stays dominant, unchanged stroke width and colour — each verified to
+   **fail against `main`'s `index.html`** before being trusted.
+3. Arithmetic proof of the seamless loop: the drift distance must equal the measured wavelength,
+   asserted against the path data itself rather than a hard-coded 20, so a future artwork change
+   that alters the wavelength fails loudly instead of quietly snapping.
+4. Mutation cases for the wavelength, the duplicate offset, the reduced-motion rule and the
+   middle line's dominance.
+
+**Out of scope.** No change to the mark's geometry, stroke width, colours, opacities or size. No
+change to `.brand-mark`, the header layout or any text. The NOAA Tides tile icon stays static. No
+favicon or home-screen icon work — the brief says not to assume those animate and there are none
+defined in `index.html` to change. No animation library, no network dependency, no `api/`,
+`vercel.json`, workflow, contract, `AGENTS.md`, dependency or ruleset change. PW-106 is a separate
+unit. **No rename and no domain work**: `nechicoa.app` stays reserved infrastructure and **Pacific
+Watch remains the working name**.
+
+**AC-105-05 cannot be satisfied from my side.** It names Chromium, Firefox and Safari explicitly.
+jsdom renders nothing at all, so it cannot witness an animation; a passing DOM suite here proves
+the markup and rules exist, not that the motion looks right. Those rows stay `NOT TESTED` and the
+browser pass is where AC-105-05 is actually decided.
+
 
 **October Phase 1 PW-103 — mobile ticker — Claude Code, `claude/pw103-mobile-ticker`.** Claimed
 2026-10-28 under the owner's authorization to finish the project and Codex's accepted
@@ -679,7 +755,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/pw103-mobile-ticker | PW-103: ticker speed becomes pixels per second derived from measured distance, so it stops depending on viewport width and content length; reduced-motion users get stationary readable text instead of an empty strip |
+| Claude | claude/pw105-wave-animation | PW-105: the three-line brand wave drifts by exactly one wavelength on a seamless loop, with the silhouette, thicknesses and colours unchanged and a static fallback under reduced motion |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -706,7 +782,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **Open, unclaimed.** Six pre-existing `Closed:` blocks remain under Active claims, weakening that section as a concurrency lock. Their durable content must be verified elsewhere before removal | Separate claimed board-maintenance pass; off the application critical path |
 
-**`main` is merged through #51 and serving production.** Claims and handoffs for
+**`main` is merged through #52 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
