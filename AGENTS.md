@@ -39,6 +39,22 @@ and nothing lands without a pull request.
   review window in which that documentation branch remains open without an active claim; if review
   later requires another edit, reclaim before editing. Application or behavior-changing units keep
   their claims active through merge and are retired by a later claimed board reconciliation.
+- **Working on another agent's branch does not transfer ownership.** The owner named in the active
+  claim remains responsible for the unit even when the other agent is authorized to inspect,
+  commit to or help repair that branch. Ownership changes only when `AI-HANDOFF.md` explicitly
+  records the transfer; branch access, authorship and commit history do not imply it. Coordinate
+  with the claimed owner rather than opening an overlapping claim.
+- **Security reports separate evidence from inference.** Report verified protections, concrete
+  gaps and unverified items separately, and scope every finding to the checks actually performed.
+  A green test suite proves only its assertions, and an HTTP success proves only that request; neither
+  is security clearance. Do not present an unchecked control as absent or a passing proxy as proof
+  of a broader property.
+- **Date and source external state.** When adding or updating a claim about state that can change
+  without a repository commit — for example a production deployment, dashboard configuration,
+  published firewall rule, account plan or current platform limit — name when it was verified and
+  the source observed. Record it as an observation at that time, not as timeless present state.
+  This applies equally when a contract relies on an external fact: cite the dated evidence,
+  distinguish it from the requirement itself, and reverify it before using it for a new decision.
 - **Agreed split for the v2 overview (2026-09-07):** ChatGPT Codex owns layout and acceptance
   criteria; Claude Code owns implementation; Codex reviews. This mirrors Phase 1, where the
   spec-then-implement split produced the strongest work in the project once the two stopped
