@@ -80,13 +80,51 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**Hazard-classifier event-assertion implementation — Claude Code,
+`claude/hazard-event-assertion`. CLAIMED 2026-10-29.**
+
+Implements H19–H24 from [HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md), merged as
+#64. Scope is exactly the contract's implementation boundary:
+
+- `api/news.js` — classifier semantics only.
+- `test/news-api.test.js` — the named News corpus.
+- `test/mutation-check.js` — mutation cases for the new gate.
+- `AI-HANDOFF.md` — this claim and its evidence.
+
+**Out of scope and not touched:** feeds, canonical routing, edge query normalization, WAF, response
+shape, client presentation, `timeAgo()`, runtime dependencies, the workflow, and any Vercel or
+domain setting. H01–H18 are preserved, not re-litigated.
+
+**Two fixtures on `main` contradict the merged amendment and are corrected here, not worked
+around.** The bulk-feed fixture title `Tsunami advisory lifted for Hawaii County` is required
+negative 2's shape and must now classify false, and the two mutation cases anchored on
+`return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);` lose their anchor when that
+line becomes three gates. Both are recorded as contract-driven corrections rather than as
+incidental test edits.
+
+**Evidence owed before merge,** per H19–H24:
+
+1. The nine amendment negatives and six amendment positives green, with each negative additionally
+   proved to pass gates 1 and 2 — so the third gate is demonstrably the thing rejecting it, not a
+   vocabulary accident.
+2. A focused mutation per negative family and per surviving positive family, with zero `MISSED`,
+   `ANCHOR LOST` or `AMBIGUOUS`.
+3. Contemporaneous H15/H16 ledgers over one five-feed capture: every changed label with title,
+   source, old and new result and contract rationale, plus the separate
+   `hazard evidence = true / locality = false` list resolved item by item.
+
+**Stated in advance, because it decides how the ledger may be read:** a live capture cannot prove a
+consequence family is handled. If the capture contains no instance of one of the four production
+consequence families, that will be reported as an absence of evidence for that family, not as
+evidence the family is handled.
 
 ## Active Branches
 
-No active branches are claimed. #64's two contract clarifications are complete on
-`codex/active-hazard-contract` and the documentation-only claim is retired again; any further edit
-requires another reclaim.
+| Agent | Branch | Purpose |
+|---|---|---|
+| Claude | `claude/hazard-event-assertion` | The H19–H24 classifier implementation claimed above. Code and tests, so it is not in the documentation-only self-retirement window: the claim stays live until the owner merges |
+
+`codex/active-hazard-contract` merged as #64 and is no longer in a review window.
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -111,13 +149,14 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **#64 passed Claude's read-only review with no blockers; both observations are clarified on the corrected documentation head. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude verifies the corrected final head, then the owner may merge. **No classifier change is authorized until the amendment is merged**; implementation is a later Claude claim |
+| Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #63.** Its exact-`main` run `40956767354` passed attempt 1 at head
-`e17acc0` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 516 seconds. Claims and handoffs for
+**`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
+`b746dd9` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 503 seconds. The
+figure cited here previously was run `40956767354`, which is #63's at `e17acc0`. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -358,6 +397,30 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — the H19–H24 implementation claimed; #64 absorbed
+
+#64 merged as `b746dd9` and could not record its own merge, so this claim advances the pointer and
+closes the amendment row. The contract row previously carried #63's run beside a pointer that had
+already moved, which is the same pointer/evidence mismatch #60 corrected; it is fixed here rather
+than left for a later sweep.
+
+**What the third gate has to be, and what it must not be.** H23 forbids an opaque replacement
+expression, an age cutoff and a global stop-word list, and the reason is visible in the corpus: six
+of the amendment's own required positives contain resolved or negated language. A record-wide veto
+on `lifted`, `contained` or `no` would score well on the negatives and delete an evacuation order
+that is still in effect. The gate therefore has to be scoped to the clause that carries each claim,
+which is a structural decision, not a vocabulary one.
+
+**Recorded in advance as a known residual, so it is not discovered as a finding later.** Locality
+is taken from any clause that is not a denial, which is what H22 requires: a resolved title's
+anchor may compose with an active summary, a denied local impact may not localize a remote event.
+A record whose only anchor sits inside a denial while a *different* active claim appears in another
+clause — `No tsunami threat to Hawaii; flash flood warning remains in effect` with no second anchor
+— will classify false. The contract's required positive 5 carries `O‘ahu` in its active clause, so
+the corpus does not decide this case. It is recorded as ambiguous for Codex to rule on rather than
+tuned silently in either direction.
+
 
 ### 2026-10-29 — event-aware hazard contract drafted; implementation remains separate
 
