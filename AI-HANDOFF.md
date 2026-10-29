@@ -66,6 +66,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
+| Durable working rules follow-through | **Claimed by ChatGPT Codex on `codex/durable-working-rules`.** Documentation-only scope: place the two rules preserved by #58 and the external-state dating rule in `AGENTS.md`, then reconcile the board and advance its merged pointer through #58 | Codex owns the text; Claude reviews. The two remaining closed-claim blocks are deliberately not retired in this unit |
 | October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks remain for their separately claimed durable-content audit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
@@ -75,13 +76,14 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed.**
-
-The closed-claims cleanup retired its own claim on this final documentation head, as #57's rule
-permits for a documentation-only unit. It was reclaimed twice for review corrections and retired
-again each time, which is the path the rule prescribes rather than an exception to it. Its
-preservation map, its reasons for keeping two blocks and the items it moved live are in the Handoff
-Log entry for 2026-10-28.
+**Claimed: durable working rules follow-through — ChatGPT Codex,
+`codex/durable-working-rules`.** Documentation-only scope: add three rules to `AGENTS.md` — working
+on another agent's branch does not transfer ownership, security assessments separate verified
+protections from concrete gaps and unverified items, and external-state claims carry their
+verification date and source instead of appearing as timeless present state. Reconcile
+`AI-HANDOFF.md`, including #58's merged pointer, without retiring the two source blocks; their
+removal remains a later, separately claimed board unit after this authority merges. No application,
+test, workflow, contract, dependency, Vercel setting or remote-branch change is in scope.
 
 **Two blocks are kept deliberately.** Each carries a prospective working rule whose authority is
 [AGENTS.md](AGENTS.md), which this unit may not edit. Filing a live rule into the Handoff Log would
@@ -139,7 +141,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| — | — | No branch is claimed. Merged branches are omitted from this list, which does not imply remote branch deletion — 36 remote branches remain and none has been deleted |
+| ChatGPT Codex | `codex/durable-working-rules` | Place the three durable working rules preserved or identified by #58; reconcile the board without retiring the two source blocks |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
