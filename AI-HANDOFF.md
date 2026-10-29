@@ -74,22 +74,16 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
-| C12 and G1 contract-evidence wording | **Reclaimed by ChatGPT Codex on `codex/contract-evidence-wording` for Claude's review follow-through.** Contract substance passed; the remaining repository edit is board-only: record that the Hobby-era owner procedure is unsafe operational guidance on Pro and defer its rewrite to a separate claimed unit | Codex records the live safety item, then retires the documentation-only claim again. No procedure, workflow, WAF or dashboard change is part of this correction |
+| C12 and G1 contract-evidence wording | **Complete on `codex/contract-evidence-wording`, awaiting final-head re-review and merge.** Contract substance passed; the live board now records that the Hobby-era owner procedure is unsafe operational guidance on Pro and defers its rewrite to a separate claimed unit | Documentation-only claim retired again on the corrected final head. Reclaim before any further edit. No procedure, workflow, WAF or dashboard change is part of this correction |
 
 ### Active claims
 
-**Reclaimed: #61 review follow-through — ChatGPT Codex,
-`codex/contract-evidence-wording`.** `AI-HANDOFF.md` only: record in a live section that
-`G1-WAF-PUBLICATION-PROCEDURE.md` still forbids the safer separate preview rule because it was
-written for Hobby, and require a separately claimed rewrite before the procedure is reused. The
-procedure itself, contracts, application, workflow, tests, dependencies, Vercel state and remote
-branches are out of scope.
+No active claims.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| ChatGPT Codex | `codex/contract-evidence-wording` | Record Claude's safety ruling on the obsolete G1 owner procedure; no procedure rewrite in #61 |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -394,6 +388,8 @@ separate preview-only rule that leaves production untouched — for its own clai
 
 The initial documentation-only claim was retired after its rationale was preserved. Claude's
 review correction was then reclaimed before either repository edit above, as #57 requires.
+With the live safety item preserved, the corrected documentation-only claim was retired again on
+the final head. Any further edit requires another reclaim.
 
 
 ### 2026-10-29 — the last two closed blocks retired; the cleanup chain is complete
