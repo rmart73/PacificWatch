@@ -75,6 +75,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 | C12 and G1 contract-evidence wording | **#61 merged as `6335c20`.** Exact-`main` run `40938272982` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 525-second mutation job. The C12 evidence wording and Pro plan premises are corrected, and the unsafe Hobby-era owner procedure was reserved for this separate claimed rewrite | Closed. `G1-WAF-PUBLICATION-PROCEDURE.md` and `AGENTS.md` were untouched by #61 |
+| G1 Pro-safe owner WAF procedure | **#62 merged as `45fb2e4`.** Exact-`main` run `40950076631` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 492-second mutation job. Revision 6 uses a separately created and removed preview-only rule and never edits production | Closed as a reviewed procedure. It was not executed, no dashboard state was verified, and the owner-only re-verification remains outstanding below |
 
 ### Active claims
 
@@ -109,7 +110,8 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
-| G1 owner-only WAF procedure after the Pro upgrade | **Complete on `codex/pro-waf-procedure`, awaiting Claude's read-only review.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 now dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Documentation-only claim retired on the final documentation head. Reclaim before any correction. No dashboard action or procedure execution is part of this unit; do not use the branch text operationally before review and merge |
+| G1 owner-only WAF procedure after the Pro upgrade | **#62 merged as `45fb2e4`; review closed with no defects.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Closed as documentation. The procedure has not been executed and current dashboard state remains unverified; execution requires fresh owner authorization |
+| G1 unpublished temporary-rule draft cleanup | **Open, low-severity future-touch clarification.** Revision 6 removes a published temporary rule on every exit, but a rule created and abandoned before Publish could remain as an unenforcing draft and trigger a confusing leftover-rule stop in a later Phase 0 | When the procedure is next edited, explicitly discard an unpublished temporary-rule draft too. This is not a current enforcement hazard and does not authorize a standalone procedure edit or dashboard action |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
@@ -123,8 +125,8 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #61.** Its exact-`main` run `40938272982` passed attempt 1 at head
-`6335c20` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 525 seconds. Claims and handoffs for
+**`main` is merged through #62.** Its exact-`main` run `40950076631` passed attempt 1 at head
+`45fb2e4` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 492 seconds. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -200,6 +202,13 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **Revision 6 of the owner WAF procedure exists but has not been executed.** #62 was a
+  documentation-only rewrite: no Vercel dashboard or WAF state was inspected or changed, no test
+  traffic was generated, and G11/G12 were not re-verified. Any run remains owner-only external work
+  requiring fresh authorization and the procedure's Phase 0. In particular, Phase 0 must derive the
+  current project plan, complete rule inventory, preview identity and Deployment Protection scope;
+  it must not promote the 2026-09-28 closeout observation into a claim about current state.
 
 - **The G1 contract's public plan premises are corrected for Pro; dashboard state remains
   unverified.** [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md) originally recorded
@@ -358,6 +367,27 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — #62 merged; procedure review closed without execution
+
+#62 merged as `45fb2e4`. Exact-`main` run `40950076631` passed attempt 1 at 450 pure,
+669 DOM and 196 of 196 mutations with 196 verdict lines; the mutation job ran 492 seconds.
+Claude's read-only review found no defects and recommended merging the reviewed head unchanged.
+Application code and the production WAF rule were untouched, no procedure step was executed, and
+no remote branch was deleted.
+
+The board now distinguishes the completed specification from its unperformed owner action. Revision
+6 is reviewed and merged; current dashboard state and a fresh G11/G12 run remain owner-only external
+verification. The prior pointer, Current Work omission and pre-review Review Queue wording are all
+reconciled to the merged state.
+
+One review observation is retained live. A temporary rule created but never Published would not
+enforce and is therefore not a current safety hazard, but leaving the draft would cause a confusing
+Phase 0 leftover-rule stop during a later owner run. The next edit to the procedure should explicitly
+discard an unpublished draft as well as remove a published rule. This does not authorize a
+standalone procedure change. Claude's second observation — stating the capture date in Phase 0 when
+Phase 5 already requires the dated inventory — is deliberately not retained as work; it was a
+non-blocking clarity preference rather than a known operational gap.
 
 ### 2026-10-29 — G1's owner procedure rewritten around an isolated Pro test rule
 
