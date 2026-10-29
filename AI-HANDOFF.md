@@ -77,34 +77,11 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Retire the final two closed blocks — Claude Code, `claude/retire-final-closed-blocks`.**
-Claimed 2026-10-29 before editing, in its own commit ahead of the work, on Codex's direction after
-#59 merged. Branched from `main` at `8db47f3`. **`AI-HANDOFF.md` only.**
+**No unit is claimed.**
 
-#58 kept two `Closed:` blocks because each carried a prospective working rule with no authority to
-live in. #59 placed those rules in [AGENTS.md](AGENTS.md), so the condition that blocked retirement
-is gone. Verified on `main` before claiming, not assumed:
-
-| block | its unique rule | now in `AGENTS.md` |
-|---|---|---|
-| end-of-night pause checkpoint | working on another agent's branch does not transfer ownership of their unit | yes — with the mechanism clause that branch access, authorship and commit history do not imply transfer |
-| security and launch-readiness review | verified protections, concrete gaps and unverified items reported separately; findings scoped to the checks actually performed; neither a green suite nor an HTTP success is clearance | yes — all three clauses |
-
-**Scope**: retire both blocks; absorb #59's self-close and advance the pointer through #59; retire
-this claim on the final head as a documentation-only unit.
-
-**Explicitly kept live:** the *Historical external-state dating* Review Queue row. It is unresolved
-by design and is not part of this retirement — removing it would be the error #57's amendment
-exists to prevent.
-
-Documentation only. No `AGENTS.md`, application, test, workflow, contract, dependency, Vercel,
-ruleset or domain change, and no remote branch deletion — the blocks are board text.
-
- The durable working-rules unit reclaimed before its review correction,
-moved the known unaudited historical external-state set into the live Review Queue, and retired its
-documentation-only claim again on the corrected final head. Reclaim before any further edit. No
-rule text, source block, application, test, workflow, contract, dependency, Vercel setting or
-remote branch changed in the correction.
+This unit retired its claim on its final documentation head, as #57's rule permits. Its
+durable-content verification and its reason for keeping the external-state dating row out of scope
+are in the Handoff Log entry for 2026-10-29. Reclaim before any review correction.
 
 **All eight historical `Closed:` blocks are now retired.** The last two came out once #59 placed
 their rules in [AGENTS.md](AGENTS.md) — the ownership rule and the security reporting rule — which
