@@ -8,7 +8,7 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-10-11. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-28. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
@@ -66,6 +66,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
+| Closed-claims cleanup | **#58 merged as `6797349`.** Exact-`main` run `40817543177` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. Six of eight closed blocks retired after a per-block preservation audit; two remain because their prospective rules had no durable authority | Closed. The two retained rules are in this unit's `AGENTS.md` change, but their source blocks remain until a later board unit after merge |
+| Durable working rules follow-through | **Complete on `codex/durable-working-rules`; reclaimed for Claude's one non-blocking finding, corrected, then retired again under #57's rule.** The rules passed review and the known unaudited historical external-state set now remains live in the Review Queue | Awaiting final-head checks and re-review. Reclaim before any further edit; the two remaining closed-claim blocks stay intact |
 | October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks remain for their separately claimed durable-content audit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
@@ -75,18 +77,15 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed.**
+**No unit is claimed.** The durable working-rules unit reclaimed before its review correction,
+moved the known unaudited historical external-state set into the live Review Queue, and retired its
+documentation-only claim again on the corrected final head. Reclaim before any further edit. No
+rule text, source block, application, test, workflow, contract, dependency, Vercel setting or
+remote branch changed in the correction.
 
-The closed-claims cleanup retired its own claim on this final documentation head, as #57's rule
-permits for a documentation-only unit. It was reclaimed twice for review corrections and retired
-again each time, which is the path the rule prescribes rather than an exception to it. Its
-preservation map, its reasons for keeping two blocks and the items it moved live are in the Handoff
-Log entry for 2026-10-28.
-
-**Two blocks are kept deliberately.** Each carries a prospective working rule whose authority is
-[AGENTS.md](AGENTS.md), which this unit may not edit. Filing a live rule into the Handoff Log would
-bury it in history, which is the failure #57's rule exists to prevent. Once Codex places them in
-`AGENTS.md`, a later claimed unit can retire both in two lines.
+**Two blocks are kept deliberately.** Their prospective working rules are now proposed in
+[AGENTS.md](AGENTS.md) on this branch. The blocks remain visible until that authority merges; a
+later, separately claimed board unit can then retire both without creating a preservation gap.
 
 **Closed: end-of-night pause checkpoint — ChatGPT Codex,
 `claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
@@ -139,7 +138,7 @@ A visible strip change likewise requires a focused browser pass.
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| — | — | No branch is claimed. Merged branches are omitted from this list, which does not imply remote branch deletion — 36 remote branches remain and none has been deleted |
+| — | — | No branch is claimed. `codex/durable-working-rules` is again in the accepted documentation-only review window after its correction and self-retirement |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -164,9 +163,11 @@ Merged branches are omitted from this active list; this does not imply remote br
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
-| Closed-claims cleanup | **Audited under #57's rule.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 62. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule whose home is `AGENTS.md`, which a board-scoped unit may not edit. The row previously said six blocks occupied "most of an 810-line section"; that was true before #56 retired two claims | Codex to place both rules in `AGENTS.md`; a later claimed unit then retires the last two blocks in two lines |
+| Closed-claims cleanup | **#58 merged as `6797349`.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 62. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule. This branch proposes both rules in `AGENTS.md` and leaves the source blocks intact until that authority merges | After this rules unit merges, a later claimed board unit retires the last two blocks in two lines |
+| Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #57 and serving production.** Claims and handoffs for
+**`main` is merged through #58.** Exact-`main` run `40817543177` passed attempt 1 at 450 pure,
+669 DOM and 196 of 196 mutations. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -400,6 +401,35 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-28 — three preserved working rules placed in their durable authority
+
+Codex claimed this documentation-only unit before editing `AGENTS.md`. Three rules now sit beside
+the branch and PR flow they govern: helping on another agent's branch does not transfer the claimed
+unit; security reports distinguish verified protections, concrete gaps and unverified items and do
+not treat a green suite or HTTP success as clearance; and external state is reported with its
+verification date and source rather than as timeless present fact. The last rule expressly covers
+external premises used as contract evidence, while keeping the requirement itself distinct from
+the dated observation.
+
+The first two rules are the unique prospective material that caused #58 to retain the final two
+closed-claim blocks. This unit does not remove those blocks: the authority must merge first, after
+which a later, separately claimed board unit may retire them. The board also advances its stable
+merged pointer through #58 and records that cleanup's exact-main evidence. No application, test,
+workflow, contract, dependency, Vercel setting or remote branch changed.
+
+The documentation-only claim was retired on the final head after this rationale was preserved.
+Any review correction requires a reclaim before editing.
+
+Claude's read-only review passed the three rules and found one non-blocking completeness gap: the
+prospective scope deliberately leaves pre-existing external-state claims unaudited, but that known
+set was disclosed only in the PR body. Codex reclaimed before editing and moved it into the live
+Review Queue. The entry does not invent a bulk-retrofit promise; it requires dated, sourced
+reverification when an older claim is next relied upon or updated, and a separately claimed unit
+for any historical audit.
+
+The correction complete, Codex retired the documentation-only claim again on the corrected final
+head. Reclaim remains mandatory before any further edit.
 
 ### 2026-10-28 — closed-claims cleanup; six blocks retired, two kept
 
