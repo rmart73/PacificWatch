@@ -79,12 +79,24 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**CLAIMED 2026-10-29 by ChatGPT Codex — event-aware hazard-classifier contract amendment.**
+
+- **Branch:** `codex/active-hazard-contract`
+- **Scope:** amend `HAZARD-CLASSIFIER-CONTRACT.md` to decide and specify whether the hazard News
+  view requires an asserted current/recent hazard event rather than hazard vocabulary alone;
+  distinguish active events from aftermath/consequence reporting, permanent background features
+  and explicit no-threat/negated statements; define independently testable acceptance criteria and
+  implementation boundaries. Update this board and absorb #63's self-close.
+- **Out of scope:** changing `api/news/hazard.js`, `api/news.js`, `index.html`, tests, workflow,
+  dependencies, WAF/Vercel state, existing production classification or any remote branch.
+- **Ownership:** Codex owns the contract decision; Claude performs read-only contract review, then
+  claims any later implementation separately under the established split.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
+| ChatGPT Codex | `codex/active-hazard-contract` | Specify event-aware hazard classification before any implementation |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
