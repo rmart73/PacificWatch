@@ -95,12 +95,13 @@ load or filter change and on the five-minute refresh cycle, while even a shared 
 hundred requests per minute before enforcement. The code-level finite-key and no-fan-out rules do
 the expensive-work bounding; WAF bounds repeated Function access from one source.
 
-Official Vercel documentation currently states that WAF rate limiting is available on Hobby, with
-one rate-limit rule per project, IP and JA4 counting keys, fixed windows from 10 seconds to 10
-minutes, and 1,000,000 included allowed requests. It also states that counters are **per region**,
-so traffic reaching multiple regions can exceed a single configured limit. The acceptance claim is
-therefore precise: this closes the demonstrated single-source arbitrary-key vector and establishes
-a per-IP, per-region bound. It is not a claim of global DDoS immunity.
+The public platform premises were reverified against Vercel's documentation on **2026-10-29**, after
+the project moved to Pro. Pro permits 40 rate-limit rules per project and bills allowed requests on
+a usage basis. IP and JA4 remain the included counting keys, fixed windows remain 10 seconds to 10
+minutes, and counters remain **per region**, so traffic matching one key in multiple regions can
+exceed the configured limit in aggregate. The acceptance claim therefore remains precise: this
+closes the demonstrated single-source arbitrary-key vector and establishes a per-IP, per-region
+bound. It is not a claim of global DDoS immunity.
 
 Publishing the WAF rule is external project state, takes effect independently of a Git deploy, and
 requires accepting Vercel's rate-limiting pricing acknowledgement. The owner must explicitly
@@ -200,7 +201,7 @@ After authorization, verify with a controlled test that avoids 101 production re
 5. capture the final dashboard rule and one permitted request; and
 6. record the official per-region limitation beside the result.
 
-If the Hobby rule builder cannot isolate the preview hostname, stop and obtain a revised test plan
+If the Pro rule builder cannot isolate the preview hostname, stop and obtain a revised test plan
 and explicit owner approval; do not test a five-request threshold against production. The temporary
 setting must not be left active. A screenshot alone proves configuration, not enforcement; response
 evidence and the final rule record are both required.
@@ -255,13 +256,20 @@ After this contract is reviewed, accepted and merged:
 4. Codex reviews code and evidence; the owner decides the production merge.
 5. G1 is closed only after production and the final WAF state are verified.
 
-If canonical cache convergence or managed enforcement cannot be demonstrated on the actual Hobby
+If canonical cache convergence or managed enforcement cannot be demonstrated on the actual Pro
 project, implementation pauses and the contract is amended. Stage 2 does not begin while G1 remains
 the declared launch blocker.
 
-## Primary platform sources checked 2026-09-26
+## Primary platform sources
+
+Rate-limit plan premises and pricing rechecked **2026-10-29**:
 
 - [Vercel WAF rate limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)
+- [Vercel WAF usage and pricing](https://vercel.com/docs/vercel-firewall/vercel-waf/usage-and-pricing)
+- [Vercel regional pricing](https://vercel.com/docs/pricing/regional-pricing)
+
+Implementation sources checked **2026-09-26**:
+
 - [Vercel CDN cache](https://vercel.com/docs/caching/cdn-cache)
 - [Vercel Cache-Control headers](https://vercel.com/docs/caching/cache-control-headers)
 - [Vercel project configuration and request transforms](https://vercel.com/docs/project-configuration/vercel-json)

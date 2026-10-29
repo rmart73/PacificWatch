@@ -111,7 +111,7 @@ The pre-amendment baseline is post-#42 run `37186546315` on `87ef841`: the mutat
 `Image: ubuntu-24.04`, image version `20260927.320.1`, and completed in 700 seconds against the
 then-current 900-second C12 ceiling. That left 200 seconds, or 28.6% relative to the measured run.
 
-#### C12 amendment — measured capacity after #47
+#### C12 amendment — censored trigger and completed capacity evidence
 
 PR #47's exact head `0d479f238b133ef0538152fd927086db00146f53` enlarged the DOM suite from 436
 to 503 assertions and the mutation set from 137 to 146 cases. Of those 146 cases, 81 execute the
@@ -125,16 +125,30 @@ seconds of job duration; the job log runs from `02:01:47.684Z` to `02:16:59.649Z
 operation cancellation. The local 146-of-146 result is supporting diagnostic evidence only. It
 does not replace the cancelled hosted verdict.
 
-C12 therefore raises only the mutation ceiling to 20 minutes. At the observed cost, 916 seconds
-uses 76.3% of 1,200 seconds, effectively restoring the 75–79% utilization measured when the gate
-was promoted. A 25-minute ceiling would use about 61% and is not supported by this evidence. The
-5-minute pure and 10-minute DOM ceilings remain unchanged.
+The 916 seconds are a **censored lower bound**, not a completed cost measurement: the job had
+already consumed 76.3% of a prospective 1,200-second ceiling when the old ceiling killed it, and
+its remaining cost was unknown. The cancellation nevertheless proved that 15 minutes was
+insufficient. C12 therefore raised only the mutation ceiling to the next recovery value, 20
+minutes; pure remained 5 minutes and DOM remained 10 minutes.
 
-This amendment restores measured capacity; it does not claim to cure serial cost growth. Mutation
-optimization is separate work requiring its own contract review. The preferred first design to
-evaluate is bounded internal concurrency that retains one aggregating `mutation coverage` job and
-one complete verdict. No optimization may omit cases, weaken isolation, accept a partial summary,
-or change the stable required-check identity without a further amendment and ruleset plan.
+Completed hosted evidence subsequently measured the capacity the cancelled run could not:
+
+| Harness / corpus | Hosted evidence | Mutation job | Share of then-current ceiling |
+|---|---|---:|---:|
+| serial, 137 cases | run `37186546315`, head `87ef841` | 700s | 77.8% of 900s |
+| serial, 146 cases | run `38118022258`, head `2ebfbe6eccefbdddf62883c37005aa6e09ee54af`, 146 of 146 | 963s | 80.3% of 1,200s |
+| bounded pool, 196 cases | run `40715252122`, head `28215b9`, 196 of 196 | 492s (480s suite step) | 41.0% of 1,200s |
+
+These are observations of named corpora and harnesses, not a per-case cost formula. In particular,
+the bounded-pool result is not directly comparable to serial growth by case count alone.
+
+The hard mutation ceiling remains 20 minutes. A **completed hosted mutation job at or above 75%
+of its ceiling** (900 seconds under the current ceiling) is a capacity-review trigger, not a new
+pass/fail threshold. If a cost-increasing PR crosses it, review the measured corpus, harness design
+and remaining headroom before that PR merges; if an unchanged or cost-reducing PR exposes it,
+perform the review before the next cost-increasing change merges. A timeout, incomplete verdict or
+nonzero exit still fails normally. Raising the ceiling, splitting the required check, or accepting
+a partial verdict still requires a contract amendment; the trigger does not authorize any of them.
 
 ### 6. Permissions are read-only and untrusted pull requests receive no privileged path
 
@@ -211,7 +225,7 @@ longer reports.
 | C09 | Node is pinned to one full supported-LTS semver, every Action to a full commit SHA with a release comment, and every job to the explicit `ubuntu-24.04` OS-family label; no floating Node alias, mutable Action tag or `*-latest` runner-family alias remains. The hosted image is not represented as immutable. | Exact workflow diff; resolved Node and Action versions; and each job's setup-log `Image`, image `Version` and `Image Release`. |
 | C10 | Workflow and jobs have read-only repository permission, checkout credentials are not persisted, and neither secrets nor `pull_request_target` are used. | Workflow inspection and repository permission summary in the run. |
 | C11 | CI has no live feed, preview, production, browser-layout or deployment dependency. | Search of workflow and invoked test paths; a proving run with no project secret configured. |
-| C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 20 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. The 20-minute mutation value is supported by #47 run `38103799949`, where the 15-minute value cancelled the exact hosted run without a summary. |
+| C12 | Pure, DOM and mutation jobs have ceilings of 5, 10 and 20 minutes respectively; timeout, setup failure, missing summary or nonzero exit fails its job. A completed hosted mutation job at or above 75% of its ceiling triggers capacity review before the crossing cost-increasing PR, or the next cost-increasing change, merges; it does not change the job verdict. | Workflow inspection plus the normal proving runs; no intentional production-branch timeout is required. The 20-minute value was triggered by cancelled run `38103799949` (a censored lower bound, not a completed measurement), then measured by completed 146-case run `38118022258`; bounded-pool headroom is recorded by 196-case run `40715252122`. |
 | C13 | Mutation passes only when the harness exits zero with one verdict per case, `X of X` caught, and zero `MISSED`, `ANCHOR LOST` and `AMBIGUOUS`. The harness exit code is authoritative; the workflow does not separately grep those categories. | Complete mutation output and one implementation-branch negative probe that makes any one case `ANCHOR LOST`, `AMBIGUOUS` or `MISSED`, proves the job propagates the harness's nonzero exit, and is removed before merge. |
 | C14 | No step uses `continue-on-error`, a masking shell pipeline or an automatic retry that replaces the original verdict. | Workflow inspection. |
 | C15 | The implementation PR records exact job names, head SHA, counts and durations from a first-attempt green run; after merge, the same record is captured for the exact `main` SHA. | PR evidence and subsequent closeout record. |
