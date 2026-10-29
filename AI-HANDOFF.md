@@ -65,7 +65,8 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-101/PW-102 — alert navigation and source links | **#47 merged as `93afdee`.** Exact-`main` run passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations, and production serves the merged HTML blob. Two read-only review rounds found four defects, all in behaviour rather than in the one-line-per-fix diffs | Closed. Browser rows remain `NOT TESTED` |
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
-| October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks remain for their separately claimed durable-content audit |
+| Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
+| October Phase 1 board closeout |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
@@ -132,79 +133,10 @@ this section working as a concurrency lock, which is the one job it has.
 Nothing below this line is an active claim. The eight `Closed:` blocks that follow are historical
 and are the subject of the still-open closed-claims cleanup item in the Review Queue.
 
-**Closed: October 9 Phase 1 engineering brief intake — ChatGPT Codex,
-`codex/oct9-phase1-intake`.** Owner-authorized 2026-10-10 documentation-only claim, published
-before editing any other file. Merged as #46; the brief is the shared authority for PW-101 through
-PW-106.
-
-Scope:
-
-1. Preserve the owner-approved October 9 brief in the repository as the shared authority for
-   PW-101 through PW-106, with a filename that distinguishes this new UI phase from the historical
-   source-health Phase 1 already recorded in this project.
-2. Record the concrete current-code baseline for the five requested improvements and map the
-   approved Codex-specification / Claude-implementation split onto the recommended delivery order.
-3. Absorb #45's unavoidable self-close: it merged as `a14d31f`, so the remote-branch convention is
-   no longer active work. No remote branch deletion is authorized.
-4. Identify conflicts or verification dependencies without changing the owner's locked product
-   decisions or silently weakening existing architecture and source-truthfulness contracts.
-
-Files claimed: `AI-HANDOFF.md` and a new documentation-only copy of the October 9 implementation
-brief. No edit to `AGENTS.md`, `index.html`, `api/`, tests, workflow, configuration, dependencies,
-ruleset, Vercel settings or production. This claim does not implement PW-101 through PW-106 and
-does not authorize a merge; Claude may review this intake read-only.
-
-**Closed: remote-branch verification convention — ChatGPT Codex,
-`codex/remote-branch-verification`.** Owner-authorized 2026-10-04 documentation-only claim,
-published before editing `AGENTS.md`. Merged as #45 in `a14d31f`; the durable convention is now in
-`AGENTS.md`. The claim authorized no remote branch deletion, and the merge did not broaden that.
-
-Scope:
-
-1. Absorb #44's self-close across the attribution header, Current Work, Active claims, Active
-   Branches, Review Queue, stable `main` pointer and in-flight paragraph, plus its Handoff Log entry.
-2. Add a durable squash-safe remote-branch verification convention to `AGENTS.md`: capture the
-   remote tip before deletion; prove incorporation through a merged PR plus ancestry on both sides
-   of the squash boundary, or by exact tree equality with a historical `main` commit; record the
-   evidence; otherwise stop and investigate.
-3. State the negative rule explicitly: `git branch -r --merged main` is insufficient under squash
-   merging, and current-file equality is never accepted as proof in either direction.
-4. Preserve the existing rule that omission from Active Branches is not deletion authority.
-
-Files claimed: `AGENTS.md` and `AI-HANDOFF.md` only. No application, API, test, workflow, ruleset,
-dependency, configuration or production change. **No remote branch deletion is authorized by this
-claim or by the owner's authorization for this documentation.** Claude reviews read-only; the owner
-decides merge.
-
-**Closed: G1 abuse/cost bounding contract — ChatGPT Codex,
-`codex/g1-abuse-bounding-contract`.** *(Merged as #25 in `fcaf55a`; documentation-only deploy
-verified, application, API, configuration, dependencies and tests byte-identical to `22686bb`. The
-contract it produced is authoritative and governs this implementation.)* Owner-authorized 2026-09-26
-under the approved sequence **G1 → observation Stage 2 → Stage 3**. Documentation and design only.
-This claim absorbed the current-board closeout that #24 could not record about its own merge.
-
-Draft governed by [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md). Claude holds with
-nothing claimed and reviews the contract read-only when the PR opens.
-
-Scope:
-
-1. Close #24 in Current Work, Active Branches and Review Queue; update `main` to `22686bb` and record
-   the independently verified production deployment.
-2. Write `G1-ABUSE-BOUNDING-CONTRACT.md`: settle canonical cache behaviour, the accepted request
-   variants and rejection behaviour, the managed rate-limit design, preserved partial-feed
-   behaviour, and testable local/preview/production evidence.
-3. Resolve the rate-limit state question explicitly: no in-process counter and no runtime
-   dependency exception. The proposed control is Vercel WAF's managed fixed-window rate limiting,
-   which official documentation says is available on Hobby. The contract must disclose that its
-   counters are per region, Hobby permits one rule, and publishing the rule requires a pricing
-   acknowledgement and separate owner authorization during implementation.
-4. State explicitly that CORS controls who can read a browser response, not who can invoke the
-   route, and earns no G1 acceptance credit.
-
-Out of scope: no edit to `api/news.js`, `index.html`, `vercel.json`, tests, `package.json` or
-`AGENTS.md`; no WAF/dashboard mutation; no implementation PR or production traffic test; no Stage 2,
-Stage 3 or other launch-readiness remediation. Claude reviews this contract read-only. Only after
-the contract is accepted and merged may Claude publish a separate implementation claim.
+**Two blocks are kept deliberately.** Each carries a prospective working rule whose authority is
+[AGENTS.md](AGENTS.md), which this unit may not edit. Filing a live rule into the Handoff Log would
+bury it in history, which is the failure #57's rule exists to prevent. Once Codex places them in
+`AGENTS.md`, a later claimed unit can retire both in two lines.
 
 **Closed: end-of-night pause checkpoint — ChatGPT Codex,
 `claude/stage1-observation-metadata`.** Owner-authorized 2026-09-25 documentation-only claim to
@@ -213,156 +145,13 @@ No implementation, test, contract, or PR-status change was in scope. This used C
 because the mutation-anchor correction being recorded was present there; Claude was paused and this
 did not transfer ownership of Stage 1. Claim commit `d982878`; checkpoint commit follows it.
 
-**Closed: Q007/Q008 Stage 1 — observation metadata and pure state selection — Claude Code,
-`claude/stage1-observation-metadata`.** Claim published 2026-09-26 before editing, in its own commit
-ahead of the work, on the owner's explicit authorization. Branched from `main` at `a3f9897`, with
-`git log main..HEAD` and content equality verified before starting.
-
-Merged as #24 in `22686bb`; production HTML was verified byte-identical to merged `main`
-independently by both agents. The scope and evidence below are retained as the completed record.
-
-Governed by [OBSERVATION-TRUTHFULNESS-CONTRACT.md](OBSERVATION-TRUTHFULNESS-CONTRACT.md), stage 1 of
-the three implementation boundaries it defines.
-
-**FINAL SCOPE, as merged-ready.** Logic, tests, and **one narrow render-path change**: the weather
-and tide fetch paths now render the reading `sourceOk()` accepted rather than the response that
-happened to arrive, so a refused older observation cannot reach the card. Ordinary rendering is
-unaffected — live captures produce byte-identical output to `main` on both islands — and the
-magnitude-driven dot thresholds are untouched, so no dot behaviour changes in this stage.
-
-**Items 1-4 below are the ORIGINAL SCOPE as claimed before review**, retained so the expansion is
-visible rather than smoothed over. Items 5 and 6 were added by review corrections.
-
-
-1. **Observation metadata.** Store a normalized `observedAt` beside the island-scoped cached weather
-   and tide data, captured from the source response that produced that exact reading.
-2. **Timestamp parsing.** A parser that accepts the source's own timestamp and rejects missing,
-   malformed and future-skewed values, with the contract's five-minute positive clock-skew
-   tolerance. Never substitutes `Date.now()`, fetch time or render time for a source timestamp.
-3. **Combined-state helpers.** Pure functions returning the observation-age state and the combined
-   fetch-plus-measurement state, using the contract's boundaries — weather current through 75
-   minutes and retained through 180; tide current through 18 and retained through 60; `>` crosses,
-   equality stays younger.
-4. **Controlled-time tests** for the above, including both sides of every boundary and exact
-   equality.
-
-**Added by review corrections, first round (`89111c7`):** island scoping, loading precedence and
-value usability in `combinedObservationState()`; T11 cache ordering in `sourceOk()`, reassigned to
-this stage from unassigned; and an explicit-zone requirement on the ISO parser.
-
-**Added by review corrections, second round (`8d57e71`):** the T11 render-boundary fix described
-above; real-calendar-date validation in both parsers; and explicit component range checks.
-
-**Functions and regions touched — FINAL**, named per the coordination rule, since this is the first
-change to `index.html` in this sequence:
-
-- `index.html` JS: `sourceOk()` (now returns the entry it settled on) and the `S.cache` entry shape;
-  `usableCache()`; `sourceState()` (optional injected clock, existing callers unchanged);
-  `updateLivePill()` (one line, arity); **`fetchWeather()` and `fetchTides()` at their cache-write
-  points *and* at the render call that follows** — the original claim said cache-write points only,
-  which stopped being true at `8d57e71`; plus new pure helpers near the source-health registry.
-- `test/`: all three suites — `phase1-source-health.test.js` (pure and controlled-time),
-  `dom-behavior.test.js` (render-boundary), `mutation-check.js` (cases, plus the health suite
-  registered as a mutation target).
-- **No CSS and no markup.** `renderWeather()`, `renderTide()` and `renderQuakeCard()` themselves are
-  untouched — none of their bodies changed.
-
-**Scope expansion, disclosed: this claim no longer holds "no render-path changes."** The T11
-correction in `8d57e71` deliberately changes *what the weather and tide fetch paths pass to* those
-renderers. `sourceOk()` now returns the reading it settled on and both callers render from that
-return value instead of from the response that happened to arrive, so a refused older observation
-cannot reach the card. That is a render-path change and the original wording was false once it
-landed.
-
-What remains true, and is the part the "no visual change" promise was protecting: **ordinary
-rendering is unaffected and the magnitude-driven dot thresholds are untouched.** In the normal case
-the returned entry *is* the response that just arrived, so the same values reach the renderers as
-before — verified by rendering live captures against `main` and getting byte-identical output on both
-islands, re-checked after this change specifically because it altered what the render calls receive.
-The only behavioural difference is in the case the correction exists for: a refused older
-observation, which previously reached the card and now does not.
-
-**Three regions touched beyond the list above, disclosed rather than absorbed quietly:**
-
-- `sourceState()` gained an **optional** injected clock. Every existing caller passes nothing and
-  gets `Date.now()`, so no behaviour changes — but without it only half of each combined-state
-  assertion was controllable, and the observation clock was being compared against a fixed instant
-  while fetch health silently used the real wall time. A "controlled-time" test with one
-  uncontrolled clock passes for the wrong reason.
-- `updateLivePill()` — one line, forced by the above. See the defect note below.
-- `test/mutation-check.js` and the header of `test/phase1-source-health.test.js`: the pure health
-  suite now accepts an html path like the other two suites, so the mutation harness can aim at it.
-  Without that, the whole observation clock would have shipped with no mutation coverage, since it
-  has no DOM surface in stage 1.
-
-**Out of scope, explicitly:** wiring helpers into the cards or Source details, and removing the
-magnitude-driven dot thresholds — both are stage 2. Earthquake alignment is stage 3. No G1
-remediation, no layout work, no new dependency or serverless route, and nothing in `api/` or
-`vercel.json`. Per the contract, **no stage may temporarily label old or untimestamped data `ok`** —
-this stage ships no dot change at all, so the current dots keep their present behaviour until
-stage 2 replaces it.
-
-**Evidence — FINAL, all Claude-reported** (Codex's shell has no Node or npm, so no suite result here
-has been independently reproduced):
-
-- `npm test` **222** (150 + 35 + 37)
-- `npm run test:dom` **281**
-- `npm run test:mutation` **61 of 61 caught**, with no `MISSED`, `ANCHOR LOST` or `AMBIGUOUS`
-- the pure suites pass in an empty directory with nothing installed, so the dependency-free rule
-  still holds
-- rendering verified byte-identical to `main` on both islands from live captures, re-checked after
-  each review round
-
-The figures this claim carried before review — 164 / 267 / 50-of-50 — are superseded; the
-intermediate results are preserved in the handoff entries below rather than overwritten.
-The T16 record is below. Per Codex's ruling, T16 does not require a nonzero rainfall
-accumulation for stage 1; if rainfall is zero, null or trace-only, **the nonzero mm-to-inches
-conversion is recorded as separately unverified** under the existing evidence item rather than
-omitted or implied verified.
-
-**Closeout absorbed into this claim**, per the owner's direction and Codex's handoff — five items,
-all consequences of #23 merging and of a board PR being unable to record its own merge:
-
-1. Codex's contract claim closed under Active claims (below).
-2. Its merged branch replaced under Active Branches.
-3. Its open Review Queue row updated.
-4. The `main` commit corrected from `410777d` to `a3f9897`.
-5. `OBSERVATION-TRUTHFULNESS-CONTRACT.md` line 3 changed from "proposed for review" to accepted and
-   authoritative — a merged, governing contract that still called itself proposed.
-
-**Closed: observation-truthfulness contract — ChatGPT Codex,
-`codex/observation-truthfulness-contract`.** *(Merged as #23 in `a3f9897`; documentation-only deploy
-verified, application HTML byte-identical. The contract it produced is now authoritative and governs
-this stage.)* Claimed 2026-09-25 after #22 merged, with the owner's
-direction that this opening claim also close #22's now-stale current-board entries. Documentation
-and design only.
-
-Scope:
-
-1. **Close #22 on the current board:** remove its merged claim from Active claims, replace its
-   merged branch in Active Branches, and correct the Review Queue entries that still call #22 open
-   or put G1 "after this PR."
-2. **Write the Q007/Q008 observation-truthfulness contract:** define what observation dots mean;
-   separate source-fetch health from measurement age; preserve and render authoritative observation
-   timestamps, including NOAA tide `t`; define stale, unavailable and missing-measurement behavior;
-   and state acceptance criteria for a later implementation PR.
-3. **Update coordination links and next actions** so Claude can implement only after the contract is
-   reviewed and merged.
-
-**Out of scope:** no `index.html`, API, test or configuration changes; no threshold, freshness-clock
-or tide implementation; no G1 remediation; no layout work; and no new `AGENTS.md` rule. Claude's
-suggested durable rule for closing a merged board claim remains an owner decision, not assumed scope.
-
-**Closed: board and AGENTS reconciliation — Claude Code + ChatGPT Codex,
-`claude/board-and-agents-reconciliation`.** Merged as #22 in `410777d`; the documentation-only
-deploy was verified, and the retained source branch is content-identical to merged `main` despite
-its pre-squash commits not being ancestors of `main`.
-
 **Closed: security and launch-readiness review — Claude Code, `claude/launch-readiness-review`.**
 Merged as #21 in `648db0f` after Codex's re-review found no report blocker, with the owner's
 explicit merge permission. It was a report only and contained no remediation; its full record is in
 the Handoff Log below and in [LAUNCH-READINESS.md](LAUNCH-READINESS.md). **The findings it raised
-are not closed by its merge** — G1 in particular is an unclaimed launch blocker.
+were not closed by its merge**, and that sentence once named G1 as an unclaimed launch blocker —
+G1 has since been contracted (#25), implemented (#26) and closed, so the example is updated rather
+than left reading as an open blocker.
 
 The reporting rule agreed with Codex for that work is worth keeping for any future assessment:
 verified protections, concrete gaps and unverified items are reported separately, findings are
@@ -425,9 +214,9 @@ Merged branches are omitted from this active list; this does not imply remote br
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
-| Closed-claims cleanup | **Open, unclaimed. Eight** `Closed:` blocks remain under Active claims — the count was six when this row was written and was not updated as units closed. They occupy most of an 810-line section, which weakens it as a concurrency lock. Their durable content must be verified elsewhere before removal, and that verification is the work rather than a precondition to it | Separate claimed board-maintenance pass; off the application critical path |
+| Closed-claims cleanup | **Audited under #57's rule.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 113. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule whose home is `AGENTS.md`, which a board-scoped unit may not edit. The row previously said six blocks occupied "most of an 810-line section"; that was true before #56 retired two claims | Codex to place both rules in `AGENTS.md`; a later claimed unit then retires the last two blocks in two lines |
 
-**`main` is merged through #56 and serving production.** Claims and handoffs for
+**`main` is merged through #57 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -503,6 +292,25 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **The G1 rate-limit constraints were written for Vercel Hobby, and the plan is now Pro.**
+  [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md) records, from Vercel's
+  documentation at the time, that WAF rate limiting allows **one rule per project**, counts
+  **per region** so multi-region traffic can exceed a single configured limit, and that publishing
+  the rule requires a **pricing acknowledgement** and separate owner authorization. The published
+  rule itself is unchanged and still enforcing at 100-per-60.
+
+  What is unverified is whether those *constraints* still describe a Pro project. If Pro permits
+  more than one rule, or changes the included allowance, then the contract's stated bound and the
+  reasoning behind accepting a per-IP, per-region limit are both describing a plan the project is
+  no longer on. **This is a security control, so it is recorded live rather than retired as
+  settled history** — which is why the closed-claims cleanup moved it here instead of deleting it
+  with the block that carried it.
+
+  Checking it needs the Vercel dashboard and current Vercel documentation, both owner-side. No
+  agent should infer the answer from the contract's own text, which is what being written against
+  the older plan means. Nothing in the application depends on the outcome; the contract's accuracy
+  does.
 
 - **Narrow evidence correction owed to the merged C12 amendment text.**
   [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md) and the #48 Handoff Log entry below carry
@@ -636,6 +444,57 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-28 — closed-claims cleanup; six blocks retired, two kept
+
+The audit required by #57's rule, with the per-block preservation map recorded in the claim. Six
+blocks retired after verifying every unique item survives in its authority; two were kept, which
+is the rule working rather than failing.
+
+#### Preserved here from the Q007/Q008 Stage 1 block (#24), which had nowhere else to go
+
+Stage 1 merged as #24 in `22686bb`, production verified byte-identical by both agents. Its suite
+figures at merge: **222 pure** (150 + 35 + 37), **281 DOM**, **61 of 61 mutations** with no
+`MISSED`, `ANCHOR LOST` or `AMBIGUOUS`, and the pure suites passing in an empty directory with
+nothing installed.
+
+**Its disclosed scope expansion is the part worth keeping.** The claim originally promised no
+render-path changes. The second round of review corrections (`8d57e71`) made `sourceOk()` return
+the reading it settled on, and both `fetchWeather()` and `fetchTides()` render from that return
+value rather than from whatever response arrived — so a refused older observation cannot reach the
+card. That is a render-path change, and the claim said so explicitly rather than quietly absorbing
+it: the original scope items were left visible beside the final ones so the expansion could be
+seen. Three further regions were disclosed the same way, including an optional injected clock on
+`sourceState()` that left every existing caller unchanged.
+
+That practice — when scope grows, state it and keep the original visible — is not yet a written
+rule. It is recorded here as history; whether it belongs in `AGENTS.md` is Codex's call.
+
+#### Why two blocks were kept
+
+The end-of-night checkpoint carries one durable point: **working on another agent's branch does not
+transfer ownership of their unit.** The launch-readiness block carries the **reporting rule** — verified protections, concrete gaps and unverified items reported separately, findings scoped to
+the checks actually performed, and neither a green suite nor an HTTP 200 offered as security
+clearance. Neither appears in `AGENTS.md` or `LAUNCH-READINESS.md`, and both are prospective
+guidance rather than history, so filing them in this log would bury live rules in a historical
+entry — the exact failure #57's rule was amended to prevent. They stay until Codex can place them
+in `AGENTS.md`.
+
+#### What the audit turned up beyond the blocks
+
+The G1 rate-limit constraints were written against **Vercel Hobby**. The plan is now **Pro**, so
+whether one-rule-per-project, the included-request allowance and the pricing acknowledgement still
+describe the published rule is unverified. It is a security control, so it moved to Outstanding
+Verification rather than retiring as settled history.
+
+The observation-contract block carried an open question — whether a durable rule should govern
+closing a merged board claim. **#57 answered it.** Recorded because the thread closing is the
+reason that block could retire at all.
+
+Two of my own greps during the audit suggested blocks 2 and 3 had gaps. They were wrong: the
+patterns missed `fixed window` and `per region` on hyphenation. A count is not a reading, and this
+unit would have deleted preserved content on the strength of one.
+
 
 ### 2026-10-28 — claim-retirement durable-content rule completed
 
