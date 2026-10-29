@@ -31,9 +31,10 @@ const FEEDS = [
 /* Star-Advertiser 403s a bare "Mozilla/5.0", so send a realistic UA. */
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
-/* HAZARD CLASSIFICATION — see HAZARD-CLASSIFIER-CONTRACT.md, H01-H18.
+/* HAZARD CLASSIFICATION — see HAZARD-CLASSIFIER-CONTRACT.md, H01-H24.
  *
- * Two gates, both required: actionable hazard evidence AND explicit Hawai'i relevance.
+ * Three gates, all required: actionable hazard evidence, an asserted event or ongoing operational
+ * impact, AND explicit Hawai'i relevance.
  *
  * The predecessor was one broad alternation tested against title+summary. It could not tell
  * "gunfire erupted" from a volcanic eruption, a fund that "swells" from ocean swells, Honolulu
@@ -123,10 +124,17 @@ const HAWAII_ANCHORS = [
 
 /* DIRECT HAZARD EVIDENCE -- qualifies alone. */
 const HAZARD_DIRECT = [
-  'hurricane', 'tropical storm', 'tropical depression', 'tsunami',
+  /* Plurals of the direct terms. Without them amendment negative 7, "Tourism spending rebounds
+     after hurricanes and major storms in Hawaii", failed the EVIDENCE gate and would have looked
+     like a third-gate rejection it never reached. */
+  'hurricane', 'hurricanes', 'tropical storm', 'tropical storms', 'tropical depression', 'tsunami',
   'earthquake', 'earthquakes', 'quake', 'quakes',
   'flash flood', 'flash flooding', 'flooding', 'flood warning', 'flood watch',
   'flood advisory', 'flood conditions',
+  /* Bare 'flood' stays out -- it is the idiom token. 'flood damage' is a physical construction
+     and required positive 3 turns on it: "Honoapi'ilani Highway remains closed by flood damage"
+     is an active closure whose only in-clause evidence is those two words. */
+  'flood damage',
   'wildfire', 'wildfires', 'brush fire', 'brush fires', 'wildland fire',
   'volcano', 'volcanic', 'lava', 'vog',
   'high surf', 'storm surge', 'landslide', 'mudslide', 'rockfall',
@@ -182,9 +190,239 @@ const HAZARD_IDIOMS = [
   'flood of', 'flooded with', 'swept the', 'perfect storm'
 ];
 
-/* 'closed'/'closure' are never independent: the contract says the story must carry other hazard
-   evidence, so they are deliberately absent from both lists above. A road closed BY a brush fire
-   qualifies on the brush fire, which is the point. */
+/* 'closed'/'closure' are never independent EVIDENCE: the contract says the story must carry other
+   hazard evidence, so they are deliberately absent from both lists above. A road closed BY a brush
+   fire qualifies on the brush fire, which is the point. They appear below in ACTIVE_CONSEQUENCE,
+   which is a different question -- not "is this a hazard" but "does this hazard still have an open
+   operational consequence" -- and that test still requires the evidence above in the same clause. */
+
+/* EVENT ASSERTION — H19-H24.
+ *
+ * The first two gates answer "is a hazard subject named, and is it local". Neither answers what
+ * the record CLAIMS is happening, which is why H01-H18 labelled a wildfire fee-cap hearing and a
+ * tsunami anniversary as hazards. H19 adds a third gate: the text must assert onset, approach,
+ * forecast, observation, continuation or escalation of a hazard; a protective action that is
+ * issued, open, ordered or still in effect; or a direct operational consequence still active for
+ * the public.
+ *
+ * H23 forbids an age cutoff and a global stop-word list, and the contract's own corpus shows why:
+ * five of its six required positives contain resolved or negated language. "Maui brush fire is
+ * contained, but the evacuation order remains in effect" must stay TRUE. A record-wide veto on
+ * `contained`, `lifted` or `no` would score perfectly on the negatives and delete an evacuation
+ * order that is still in force, and a publication-time cutoff would keep that day's anniversary
+ * piece while dropping a week-old closure that is still closed.
+ *
+ * So the decision is made per CLAUSE. Negation and resolution cancel only the claim they reach,
+ * and a different clause may still carry an active one.
+ */
+
+/* Clause boundaries — H20. Sentence punctuation plus the conjunctions that join a resolved claim
+   to an active one. Two deliberate choices:
+     - A COMMA IS NOT A BOUNDARY. "The evacuation order, lifted for Lahaina, remains in effect for
+       Olowalu" would split the persistence away from the order it governs and lose a live order.
+     - A single-letter abbreviation does not end a clause, so "U.S. Coast Guard" stays whole.
+   Title and summary are split independently and concatenated: they are separate assertions, and
+   joining them first would let a negation in the title reach into the summary. */
+const CLAUSE_BREAK_RE = /(?<!\b[a-z])[.!?;:]+(?=\s|$)|\s(?:but|while|however|although|though|as|and|meanwhile|after|despite)\s/;
+
+function splitClauses(text) {
+  return String(text == null ? '' : text)
+    .toLowerCase()
+    .split(CLAUSE_BREAK_RE)
+    .map(part => hazardNormalize(part))
+    .filter(part => part.length > 0);
+}
+
+/* Permanent geography and background conditions — H21. These name a standing feature, not an
+   event, so they are removed before a clause is asked whether it carries hazard evidence for its
+   own assertion. Without this, "a Hawaii lava field trail remains closed for trail repairs" reads
+   as an active hazard closure: `remains closed` is a real consequence construction and `lava`
+   would supply the cause. */
+const PERMANENT_FEATURES = [
+  'lava field', 'lava fields', 'lava rock', 'lava tube', 'lava tubes',
+  'volcanoes national park', 'volcano national park',
+  'tsunami zone', 'tsunami zones', 'tsunami evacuation zone', 'tsunami evacuation zones',
+  'flood zone', 'flood zones', 'floodplain', 'floodplains', 'flood plain',
+  'dormant volcano', 'extinct volcano'
+];
+
+/* Explicit negation — H20. SCOPED: a marker cancels only an assertion that follows it within a
+   few tokens of the same clause. Applied record-wide it would delete required positive 5, where
+   "No tsunami threat" sits beside a flash flood warning that is still in effect. */
+const NEGATION = [
+  'no', 'not', 'none', 'never', 'nor', 'without', 'unlikely', 'no threat', 'not expected',
+  'ruled out', 'denies', 'denied', 'dismissed'
+];
+
+/* Resolved states — H20. Same scoping, and PERSISTENCE below overrides them inside one clause. */
+const RESOLUTION = [
+  'cancelled', 'canceled', 'cancels', 'lifted', 'lifts', 'expired', 'expires', 'ended', 'ends',
+  'called off', 'contained', 'extinguished', 'under control', 'all clear', 'downgraded',
+  'rescinded', 'resolved', 'restored', 'reopened', 'reopens', 'no longer', 'has passed',
+  'have passed', 'passed', 'passes', 'subsided', 'receded', 'cleared', 'stood down'
+];
+
+/* Persistence — H20/H21. These assert that a state continues, and they override a resolution
+   marker in the SAME clause, which is the comma case above: an order lifted for one place and
+   still in effect for another is a live order. */
+const PERSISTENCE = [
+  'remains', 'remain', 'remaining', 'remains in effect', 'still', 'continues', 'continue',
+  'continuing', 'ongoing', 'in effect', 'stays', 'stay', 'active', 'persists', 'persist'
+];
+
+/* Group A — onset, approach, forecast, observation, continuation or escalation of the hazard
+   itself. Tense is not the test: "lava erupted from the Kilauea vent" is an observation of an
+   event, which is why H19 says past-tense grammar cannot decide the label by itself. */
+const EVENT_ONSET = [
+  'approaches', 'approaching', 'nears', 'nearing', 'heads', 'heading', 'moves', 'moving',
+  'tracks', 'tracking', 'forecast', 'forecasts', 'forecasted', 'expected', 'anticipated',
+  'predicted', 'continues', 'continuing', 'ongoing', 'underway', 'in progress',
+  'intensifies', 'intensifying', 'strengthens', 'strengthening', 'escalates', 'escalating',
+  'grows', 'growing', 'spreads', 'spreading', 'develops', 'developing', 'forms', 'forming',
+  'erupts', 'erupted', 'erupting', 'eruption', 'eruptions',
+  'sends', 'sent', 'hits', 'hit', 'hitting', 'strikes', 'struck', 'striking',
+  'batters', 'battered', 'threatens', 'threatening', 'threat', 'threatened',
+  'prompts', 'prompted', 'triggers', 'triggered', 'sparks', 'sparked',
+  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning',
+  'reported', 'observed', 'recorded', 'detected'
+];
+
+/* Group B — a protective action. A warning, advisory, evacuation order or shelter named in a
+   hazard clause is in effect unless that clause resolves or negates it, which is what makes
+   "High surf warning for north shores of Kauai" qualify with no verb at all. */
+const PROTECTIVE_ACTION = [
+  'warning', 'warnings', 'watch', 'watches', 'advisory', 'advisories',
+  'evacuation', 'evacuations', 'evacuation order', 'evacuation orders',
+  'evacuate', 'evacuated', 'evacuees', 'evacuee',
+  'order', 'orders', 'ordered', 'mandatory',
+  'shelter', 'shelters', 'emergency shelter', 'emergency shelters',
+  'declaration', 'proclamation', 'declared', 'declares', 'signs',
+  'curfew', 'curfews', 'issued', 'issues', 'activated',
+  'opens', 'opened', 'urged', 'urges', 'advised', 'advises',
+  'boil water notice', 'boil water order', 'siren', 'sirens'
+];
+
+/* Group C — a direct operational consequence still active for the public. `damaged` and
+   `destroyed` are deliberately absent: harm already done is not a state that remains active, and
+   including them would relabel every rebuilding story. */
+const ACTIVE_CONSEQUENCE = [
+  'closed', 'closes', 'closure', 'closures', 'shut', 'shut down',
+  'blocked', 'blocks', 'impassable', 'inaccessible', 'cut off', 'off limits',
+  'outage', 'outages', 'without power', 'lost power', 'no water', 'boil water',
+  'unsafe', 'displaced', 'displaces', 'stranded', 'trapped', 'grounded',
+  'affects', 'affecting', 'disrupts', 'disrupting'
+];
+
+/* History and preparedness — H21. These disqualify a clause outright, including its consequence
+   claims: the 1946 tsunami closed the harbor, and that is not an open closure today. */
+const HISTORICAL_FRAME = [
+  'anniversary', 'anniversaries', 'commemorates', 'commemoration', 'commemorating',
+  'remembers', 'remembrance', 'in memory', 'years ago', 'decades ago', 'a decade ago',
+  'looks back', 'retrospective', 'historical', 'documentary', 'archive', 'archives',
+  'museum', 'exhibit', 'recalls', 'recounts', 'last year'
+];
+const EXERCISE_FRAME = [
+  'preparedness', 'preparedness month', 'awareness week', 'awareness month',
+  'drill', 'drills', 'preparedness exercise', 'training exercise', 'emergency exercise',
+  'tabletop', 'simulation', 'simulated', 'hypothetical', 'scenario', 'scenarios', 'mock'
+];
+
+/* Indirect aftermath — H21. This disqualifies groups A and B but NOT group C, because H21 says
+   direct public-safety consequences that remain active still qualify: "Lahaina rebuilding funds
+   are delayed and the highway remains closed" is still a closed highway.
+
+   RECORDED OMISSION: the contract names `research` among the indirect families and this list does
+   not carry it. USGS and HVO status copy is written in research voice -- "HVO researchers report
+   lava continues at Kilauea" -- and a clause-level `researchers` token would delete real volcano
+   updates. Research stories that are genuinely indirect carry no group-A verb and fail anyway. */
+const INDIRECT_FRAME = [
+  'attorney', 'attorneys', 'lawyer', 'lawyers', 'lawsuit', 'lawsuits', 'litigation',
+  'settlement', 'settlements', 'fee', 'fees', 'court', 'courts', 'judge', 'jury', 'trial',
+  'insurance', 'insurer', 'insurers', 'premiums',
+  'aid', 'federal aid', 'relief funds', 'grant', 'grants', 'reimbursement', 'reimbursements',
+  'spending', 'tourism', 'tourist', 'tourists', 'visitor arrivals', 'bookings',
+  'prices', 'price', 'supply', 'supplies', 'shortage', 'economy', 'economic', 'revenue',
+  'profits', 'sales', 'audit', 'rebuilding funds', 'recovery funds', 'recovery plan',
+  'legislature', 'lawmakers', 'politics', 'political', 'campaign', 'election', 'ballot',
+  'poll', 'polls', 'debated', 'debate'
+];
+
+/* Phrase subtraction, shared by the idiom strip and the permanent-feature strip: removing the
+   phrase that produced a match leaves any OTHER evidence in the clause intact, so a story
+   carrying both an idiom and real hazard language still qualifies on the real language. */
+function stripPhrases(norm, phrases) {
+  let out = norm;
+  for (const phrase of phrases) {
+    out = (' ' + out + ' ').split(' ' + phrase + ' ').join(' ').trim();
+  }
+  return out;
+}
+
+/* How far back a negation reaches. Four tokens covers "no tsunami threat" and "not expected to
+   bring flooding" without crossing into the next claim; the clause boundary is the hard limit. */
+const NEGATION_REACH = 4;
+
+/* True when at least ONE occurrence of some phrase is not preceded by a negation inside its
+   reach. Written per-occurrence on purpose: "no tsunami threat; flood warning in effect" has a
+   negated and an unnegated assertion in the same record, and only the second decides. */
+function hasUnnegated(norm, phrases) {
+  const tokens = norm.split(' ');
+  for (const phrase of phrases) {
+    const parts = phrase.split(' ');
+    for (let i = 0; i + parts.length <= tokens.length; i++) {
+      let hit = true;
+      for (let k = 0; k < parts.length; k++) {
+        if (tokens[i + k] !== parts[k]) { hit = false; break; }
+      }
+      if (!hit) continue;
+      const before = tokens.slice(Math.max(0, i - NEGATION_REACH), i).join(' ');
+      if (!hasAny(before, NEGATION)) return true;
+    }
+  }
+  return false;
+}
+
+/* Gate 2 for one clause: hazard evidence, with idioms and permanent features subtracted first.
+   Named and separate so the suite can assert on the SAME expression the gate uses rather than on
+   a copy of it -- the two subtractions are only observable here, because a clause they empty out
+   asserts nothing afterwards and the boolean alone cannot say which subtraction did it. */
+function clauseHazardEvidence(clause) {
+  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));
+}
+
+/* The one place the third gate is decided, for one clause. Returns the group that qualified, or
+   '' -- a named result rather than a bare boolean so the ledgers can say WHICH group fired. */
+function clauseEventState(clause) {
+  /* The assertion has to be about a hazard. */
+  if (!clauseHazardEvidence(clause)) return '';
+  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';
+  /* Resolution is cancelled by persistence in the same clause, never record-wide. */
+  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';
+  const indirect = hasAny(clause, INDIRECT_FRAME);
+  if (!indirect && hasUnnegated(clause, EVENT_ONSET)) return 'onset';
+  if (!indirect && hasUnnegated(clause, PROTECTIVE_ACTION)) return 'protective';
+  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';
+  return '';
+}
+
+/* H22: the anchor has to support the qualifying assertion. A clause that carries hazard evidence,
+   a negation and no surviving assertion is a DENIAL, and its anchor cannot localize a remote
+   event -- "No tsunami threat to Hawaii after a Japan earthquake" is not a Hawaii hazard. A
+   RESOLVED clause is different and its anchor still counts, which is what H07 and H22 require of
+   "Evacuation lifted for one Maui neighborhood" beside an active order in the summary. */
+function isDenialClause(clause) {
+  if (!hasAny(clause, NEGATION)) return false;
+  if (clauseEventState(clause)) return false;
+  return clauseHazardEvidence(clause);
+}
+
+function hasLocalAnchor(clauses) {
+  for (const clause of clauses) {
+    if (isDenialClause(clause)) continue;
+    if (hasHawaiiAnchor(clause)) return true;
+  }
+  return false;
+}
 
 function hasHazardEvidence(norm) {
   if (hasAny(norm, HAZARD_DIRECT)) return true;
@@ -203,18 +441,20 @@ function hasHawaiiAnchor(norm) {
 }
 
 /* The ONE producer of the item-level hazard boolean -- H01. Pure: same input, same answer, no
-   clock, no network, no outlet identity. Publisher name is not part of the evidence record, so a
-   Hawai'i outlet carrying national wire copy cannot pass the locality gate on its masthead. */
+   clock, no network, no outlet identity, and H19 adds that publication time cannot reach it
+   either. Publisher name is not part of the evidence record, so a Hawai'i outlet carrying
+   national wire copy cannot pass the locality gate on its masthead.
+
+   All three gates are answered INSIDE the clause that makes the claim. There is no record-wide
+   evidence test any more: a clause-scoped one implies it, and keeping both would have left two
+   redundant checks where neither could be shown to be load-bearing. */
 function classifyHazard(title, summary) {
-  const norm = hazardNormalize(String(title || '') + ' ' + String(summary || ''));
-  if (!norm) return false;
-  /* An idiom removes the phrase that produced it, so a story carrying BOTH an idiom and real
-     hazard language still qualifies on the real language. */
-  let evidenceText = norm;
-  for (const idiom of HAZARD_IDIOMS) {
-    evidenceText = (' ' + evidenceText + ' ').split(' ' + idiom + ' ').join(' ').trim();
-  }
-  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);
+  const clauses = splitClauses(title).concat(splitClauses(summary));
+  /* Gates 1 and 2, per clause: hazard evidence plus an asserted event, protective action or
+     active operational consequence. */
+  if (!clauses.some(clause => clauseEventState(clause))) return false;
+  /* Gate 3: locality, from a clause that does not deny the only local impact. */
+  return hasLocalAnchor(clauses);
 }
 
 /* Entities are decoded BEFORE tags are stripped, and stripping repeats until

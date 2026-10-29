@@ -977,15 +977,18 @@ const mutations = [
   /* H03: the locality gate is the half that makes this a LOCAL hazard feed rather than a keyword
      search. Removing it restores the predecessor's behaviour on the two mainland stories. */
   { name: 'the locality gate removed',
-    from: "  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);",
-    to:   "  return hasHazardEvidence(evidenceText);",
+    from: "  return hasLocalAnchor(clauses);",
+    to:   "  return true;",
     expect: ['false: California wildfire forces thousands to evacuate.'],
     suite: 'news', target: 'api' },
 
   /* The converse: evidence alone must not be droppable either, or every local story qualifies. */
+  /* The evidence gate moved INTO the clause test when the record-wide duplicate was removed, so
+     this case follows it. Without it "closed" is an active consequence on its own and the DMV
+     comes back. */
   { name: 'the hazard-evidence gate removed',
-    from: "  return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);",
-    to:   "  return hasHawaiiAnchor(norm);",
+    from: "  if (!clauseHazardEvidence(clause)) return '';",
+    to:   "",
     expect: ['false: Honolulu DMV closed for holiday.'],
     suite: 'news', target: 'api' },
 
@@ -994,7 +997,10 @@ const mutations = [
   { name: 'word boundaries loosened to substring containment',
     from: "  return (' ' + norm + ' ').indexOf(' ' + phrase + ' ') !== -1;",
     to:   "  return norm.indexOf(phrase) !== -1;",
-    expect: ['vog does not match inside vogue'],
+    /* The original expectation stopped discriminating: with loose containment "Vogue photoshoot in
+       Honolulu" gains evidence but still asserts no event, so it stays false and the mutation
+       survived. The twin fixture asserts continuation. */
+    expect: ['vog still does not match inside vogue when the record asserts continuation'],
     suite: 'news', target: 'api' },
 
   /* H05, one per context-dependent family: each must require its context, not just its term. */
@@ -1007,19 +1013,22 @@ const mutations = [
   { name: 'swell qualifies without ocean context',
     from: "            ['ocean', 'surf', 'shore', 'shores', 'waves', 'coastal', 'sea', 'beaches']] },",
     to:   "            ['ocean', 'surf', 'shore', 'shores', 'waves', 'coastal', 'sea', 'beaches', 'record']] },",
-    expect: ['swell needs a qualifier AND ocean context, not either'],
+    expect: ['a swelling fund still needs ocean context when the record is a forecast'],
     suite: 'news', target: 'api' },
 
   { name: 'emergency qualifies without declaration context',
     from: "    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
     to:   "    context: ['services', 'declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
-    expect: ['emergency WITHOUT declaration context'],
+    expect: ['Emergency Medical Services still is not a declared emergency when a report is asserted'],
     suite: 'news', target: 'api' },
 
   { name: 'warning qualifies without a named hazard',
     from: "    context: ['hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',",
-    to:   "    context: ['economic', 'hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',",
-    expect: ['warning WITHOUT a named hazard'],
+    /* 'sign' rather than 'economic': an "economic warning" is independently rejected by the
+       indirect-aftermath frame, so loosening the vocabulary with that token changes no answer and
+       the mutation would survive for a reason unrelated to the vocabulary under test. */
+    to:   "    context: ['sign', 'hurricane', 'tropical storm', 'tsunami', 'flood', 'flooding', 'flash flood',",
+    expect: ['a warning sign is still not a hazard warning when it is posted'],
     suite: 'news', target: 'api' },
 
   { name: 'shelter qualifies without emergency context',
@@ -1036,17 +1045,168 @@ const mutations = [
 
   /* The idiom strip is what separates "a flood of donations" from a flood. */
   { name: 'idiom stripping removed',
-    from: "  for (const idiom of HAZARD_IDIOMS) {",
-    to:   "  for (const idiom of []) {",
-    expect: ['political storm with damage context is still a metaphor'],
+    from: "  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));",
+    to:   "  return hasHazardEvidence(stripPhrases(clause, PERMANENT_FEATURES));",
+    expect: ['an idiom supplies no hazard evidence to the clause gate'],
     suite: 'news', target: 'api' },
 
   /* "closed" must never be independent evidence. Adding it back to the direct list is the
      single-word change that would resurrect the DMV false positive. */
   { name: 'closed restored as direct hazard evidence',
-    from: "const HAZARD_DIRECT = [\n  'hurricane',",
-    to:   "const HAZARD_DIRECT = [\n  'closed', 'closure',\n  'hurricane',",
+    from: "  'hurricane', 'hurricanes', 'tropical storm', 'tropical storms', 'tropical depression', 'tsunami',",
+    to:   "  'closed', 'closure',\n  'hurricane', 'hurricanes', 'tropical storm', 'tropical storms', 'tropical depression', 'tsunami',",
     expect: ['false: Honolulu DMV closed for holiday.'],
+    suite: 'news', target: 'api' },
+
+  /* ---- Event assertion, H19-H24. One case per negative family and per surviving positive
+       family, which is what H23 requires instead of a single opaque expression. ---- */
+
+  /* H19: the gate itself. Removing it restores the behaviour the amendment was written against:
+     hazard vocabulary plus a Hawaii anchor labelled a fee-cap hearing as a hazard. */
+  { name: 'the event-assertion gate removed',
+    from: "  if (!clauses.some(clause => clauseEventState(clause))) return false;",
+    to:   "",
+    expect: ['false: Maui wildfire attorney fee caps debated.'],
+    suite: 'news', target: 'api' },
+
+  /* The other direction: a gate that answers yes unconditionally is not a gate. */
+  { name: 'the event gate passes every clause',
+    from: "function clauseEventState(clause) {",
+    to:   "function clauseEventState(clause) {\n  return 'onset';",
+    expect: ['false: Hilo marks the anniversary of the 1946 tsunami.'],
+    suite: 'news', target: 'api' },
+
+  /* H20: negation record-wide is the mistake that looks like a fix. It scores every negative and
+     deletes a flash flood warning that is in effect beside a denied tsunami. */
+  { name: 'negation becomes a record-wide veto',
+    from: "  if (!clauses.some(clause => clauseEventState(clause))) return false;",
+    to:   "  if (clauses.some(clause => hasAny(clause, NEGATION))) return false;\n  if (!clauses.some(clause => clauseEventState(clause))) return false;",
+    expect: ['true:  negated claim beside an independent active one'],
+    suite: 'news', target: 'api' },
+
+  /* H20, the converse: negation ignored entirely brings back the denied-threat false positive. */
+  { name: 'negation ignored',
+    from: "      if (!hasAny(before, NEGATION)) return true;",
+    to:   "      return true;",
+    expect: ['false: No tsunami threat to Hawai\u02BBi after Japan eart'],
+    suite: 'news', target: 'api' },
+
+  /* H20: the negation window. Widened to the whole clause, a denial of injuries cancels the
+     evacuation mentioned after it. */
+  { name: 'the negation window widened to the whole clause',
+    from: "      const before = tokens.slice(Math.max(0, i - NEGATION_REACH), i).join(' ');",
+    to:   "      const before = tokens.slice(0, i).join(' ');",
+    expect: ['a denial of injuries does not cancel the evacuation in the same clause'],
+    suite: 'news', target: 'api' },
+
+  /* H20: resolution record-wide deletes the contained fire whose evacuation order stands. */
+  { name: 'resolution becomes a record-wide veto',
+    from: "  /* Gate 3: locality, from a clause that does not deny the only local impact. */",
+    to:   "  if (clauses.some(clause => hasAny(clause, RESOLUTION))) return false;",
+    expect: ['true:  resolved hazard, active protective action'],
+    suite: 'news', target: 'api' },
+
+  /* H20, the converse: resolution ignored brings back the cancelled advisory. */
+  { name: 'a resolved state no longer disqualifies its clause',
+    from: "  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';",
+    to:   "",
+    expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
+    suite: 'news', target: 'api' },
+
+  /* H20: persistence has to beat resolution inside one clause, or an order lifted for one place
+     and still in force for another is lost. */
+  { name: 'persistence no longer overrides resolution in the same clause',
+    from: "  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';",
+    to:   "  if (hasAny(clause, RESOLUTION)) return '';",
+    expect: ['persistence beats resolution in the same clause'],
+    suite: 'news', target: 'api' },
+
+  /* H21: permanent terrain. Without the subtraction, `lava` vouches for a trail closure. */
+  { name: 'the permanent-feature subtraction removed',
+    from: "  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));",
+    to:   "  return hasHazardEvidence(stripPhrases(clause, HAZARD_IDIOMS));",
+    expect: ['a lava field is terrain, not an event',
+             'a permanent feature supplies no hazard evidence to the clause gate'],
+    suite: 'news', target: 'api' },
+
+  /* H21: history. The anniversary piece is the case publication recency cannot decide. */
+  { name: 'the historical frame removed',
+    from: "  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';",
+    to:   "  if (hasAny(clause, EXERCISE_FRAME)) return '';",
+    expect: ['an anniversary is not an event, however recently published'],
+    suite: 'news', target: 'api' },
+
+  /* H21: preparedness. A drill that `continues` is not a hazard that continues. */
+  { name: 'the preparedness frame removed',
+    from: "  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';",
+    to:   "  if (hasAny(clause, HISTORICAL_FRAME)) return '';",
+    expect: ['a preparedness drill is not an event'],
+    suite: 'news', target: 'api' },
+
+  /* H21: indirect aftermath, the family that prompted the amendment. */
+  { name: 'the indirect-aftermath frame removed',
+    from: "  const indirect = hasAny(clause, INDIRECT_FRAME);",
+    to:   "  const indirect = false;",
+    expect: ['litigation aftermath is not an event'],
+    suite: 'news', target: 'api' },
+
+  /* H21 in the other direction, which is the easy thing to get wrong: the indirect guard must not
+     reach a direct consequence, or a highway still closed by flood damage is deleted because the
+     same sentence mentions rebuilding funds. */
+  { name: 'the indirect frame also suppresses active consequences',
+    from: "  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
+    to:   "  if (!indirect && hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
+    expect: ['indirect aftermath does not suppress a still-open closure'],
+    suite: 'news', target: 'api' },
+
+  /* H22: a denied local impact must not localize a remote event. */
+  { name: 'the denial-scoped anchor rule removed',
+    from: "    if (isDenialClause(clause)) continue;",
+    to:   "",
+    expect: ['an anchor inside the denial of the only local impact does not localize a remote quake'],
+    suite: 'news', target: 'api' },
+
+  /* H22/H07, the converse: treating a RESOLVED clause as a denial would refuse the anchor that
+     the contract explicitly says may compose with an active summary. */
+  { name: 'a resolved clause treated as a denial',
+    from: "function isDenialClause(clause) {",
+    to:   "function isDenialClause(clause) {\n  if (hasAny(clause, RESOLUTION)) return true;",
+    expect: ['a resolved TITLE anchor composes with an active summary'],
+    suite: 'news', target: 'api' },
+
+  /* H23: clause splitting is the structure the whole gate rests on. Collapse it and a storm that
+     has passed resolves an outage story that is still about outages. */
+  { name: 'clause splitting collapsed to one clause per field',
+    from: "    .split(CLAUSE_BREAK_RE)",
+    to:   "    .split(/\\u0000/)",
+    expect: ['\"Hawaiian Electric\" anchors'],
+    suite: 'news', target: 'api' },
+
+  /* H23: and the opposite error, splitting too eagerly. A comma boundary strands a continuation
+     from the storm it continues. */
+  { name: 'a comma treated as a clause boundary',
+    from: "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)",
+    to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:,]+(?=\\s|$)",
+    expect: ['a parenthetical comma does not break a storm away from its continuation'],
+    suite: 'news', target: 'api' },
+
+  /* H19: each of the three assertion groups carries records the other two do not. */
+  { name: 'the hazard-onset group removed',
+    from: "  if (!indirect && hasUnnegated(clause, EVENT_ONSET)) return 'onset';",
+    to:   "",
+    expect: ['true:  hazard continuation'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the protective-action group removed',
+    from: "  if (!indirect && hasUnnegated(clause, PROTECTIVE_ACTION)) return 'protective';",
+    to:   "",
+    expect: ['while an advisory in effect does'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the active-consequence group removed',
+    from: "  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
+    to:   "",
+    expect: ['true:  resolved hazard, active closure'],
     suite: 'news', target: 'api' },
 
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
@@ -1084,7 +1244,7 @@ const mutations = [
   { name: 'compound context collapses back to a single list',
     from: "    if (g.allOf) { if (g.allOf.every(group => hasAny(norm, group))) return true; }",
     to:   "    if (g.allOf) { if (g.allOf.some(group => hasAny(norm, group))) return true; }",
-    expect: ['swell needs a qualifier AND ocean context, not either'],
+    expect: ['a swelling fund still needs ocean context when the record is a forecast'],
     suite: 'news', target: 'api' },
 
   { name: 'summit restored as volcanic context',

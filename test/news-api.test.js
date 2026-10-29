@@ -9,7 +9,8 @@
    not derived by calling the module's own HAZARD_RE. The user agent is asserted as a complete
    literal rather than as "some UA is present".
 
-   Governed by G1-ABUSE-BOUNDING-CONTRACT.md, G01-G18. */
+   Governed by G1-ABUSE-BOUNDING-CONTRACT.md, G01-G18, and HAZARD-CLASSIFIER-CONTRACT.md,
+   H01-H24. */
 const path = require('path');
 /* Takes an api/news.js path so test/mutation-check.js can aim it at a mutant, exactly as the DOM
    and contrast suites take an html path. Defaults to the real file. */
@@ -24,10 +25,26 @@ const hazardEntry = require(HAZARD_PATH);
 /* classifyHazard is module-private, so it is lifted out of the SAME source text the handler is
    loaded from. Requiring the module would not expose it, and re-implementing it here would make
    the corpus agree with a copy rather than with the shipped code. */
-const classify = (() => {
+const lifted = (() => {
   const src = require('fs').readFileSync(API_PATH, 'utf8').replace(/module\.exports[\s\S]*$/, '');
-  return new Function(src + '; return classifyHazard;')();
+  return new Function(src + '; return { classifyHazard: classifyHazard, ' +
+    'hazardNormalize: hazardNormalize, hasHazardEvidence: hasHazardEvidence, ' +
+    'hasHawaiiAnchor: hasHawaiiAnchor, HAZARD_IDIOMS: HAZARD_IDIOMS, ' +
+    'clauseHazardEvidence: clauseHazardEvidence };')();
 })();
+const classify = lifted.classifyHazard;
+/* H19 is a claim about WHICH gate rejects a record, and that cannot be tested through the boolean
+   alone: a negative that failed the hazard or locality gate would pass the amendment corpus while
+   proving nothing about the third gate. These two expose the first two gates so each amendment
+   negative can be shown to REACH the third one. */
+const reachesThirdGate = (text) => {
+  const norm = lifted.hazardNormalize(text);
+  let evidence = norm;
+  for (const idiom of lifted.HAZARD_IDIOMS) {
+    evidence = (' ' + evidence + ' ').split(' ' + idiom + ' ').join(' ').trim();
+  }
+  return lifted.hasHazardEvidence(evidence) && lifted.hasHawaiiAnchor(norm);
+};
 
 let pass = 0, fail = 0;
 function check(label, actual, expected) {
@@ -47,8 +64,13 @@ function check(label, actual, expected) {
    Every ordinary title carries an anchor on purpose. Under the two-gate contract a fixture whose
    negatives lacked locality would pass for the wrong reason -- the locality gate would be doing
    the work and the hazard gate would never be tested. These isolate the hazard gate. */
+/* CONTRACT-DRIVEN CORRECTION, not a convenience edit. This fixture used to read "Tsunami advisory
+   LIFTED for Hawaii County" and was counted as a hazard item. That is the exact shape of the
+   amendment's required negative 2, so under H19/H20 it must now classify FALSE and could no longer
+   stand as a hazard fixture. It is restated as an advisory that is in effect, which is what the
+   fixture was always for -- five hazard items, one per feed, decided by reading the title. */
 const HAZARD_TITLES = ['Flood warning issued for Oahu', 'Hurricane nears Maui',
-                       'Tsunami advisory lifted for Hawaii County', 'Evacuation ordered on Kauai',
+                       'Tsunami advisory in effect for Hawaii County', 'Evacuation ordered on Kauai',
                        'Storm surge expected on Molokai'];
 const PLAIN_TITLES  = ['Bake sale Saturday in Hilo', 'Museum opening in downtown Honolulu',
                        'Jazz festival lineup announced on Maui', 'Library hours change on Kauai',
@@ -499,6 +521,164 @@ async function main() {
   check('undefined inputs', classify(undefined, undefined), false);
   check('locality alone is not hazard', classify('Maui', ''), false);
   check('hazard alone is not local', classify('Hurricane', ''), false);
+
+
+  console.log('\nH19 — hazard language and locality are NOT a label without an asserted event:');
+  /* The nine required negatives of the event-assertion amendment. Each one passes the hazard and
+     locality gates, which is asserted immediately below: without that, a negative could be false
+     because of a vocabulary accident and the corpus would prove nothing about the third gate. */
+  const EVENT_NEGATIVES = [
+    ['No tsunami threat to Hawai\u02BBi after Japan earthquake.', 'negation of the only local impact'],
+    ['Tsunami advisory for Hawai\u02BBi has been cancelled.', 'a resolved alert'],
+    ['Fatal shooting investigated in a Hawai\u02BBi lava field.', 'permanent terrain, no event'],
+    ['Maui wildfire attorney fee caps debated.', 'litigation aftermath'],
+    ["Hawai\u02BBi pumpkin supply remains tight after last year's severe storms.", 'supply aftermath'],
+    ['Kaua\u02BBi businesses await federal aid after Tropical Storm Lowell.', 'aid administration'],
+    ['Tourism spending rebounds after hurricanes and major storms in Hawai\u02BBi.', 'economic aftermath'],
+    ['Hilo marks the anniversary of the 1946 tsunami.', 'history, however recently published'],
+    ['O\u02BBahu schools hold a hurricane preparedness exercise.', 'preparedness, not an event']
+  ];
+  for (const [t, why] of EVENT_NEGATIVES) {
+    check('false: ' + t.slice(0, 48), classify(t, ''), false);
+    check('  and it REACHED the third gate (' + why + ')', reachesThirdGate(t), true);
+  }
+
+  console.log('\nH19/H20/H21/H22 — the required positives, so the gate is not blanket suppression:');
+  /* Five of these six carry resolved or negated language. A record-wide stop-word veto passes
+     every negative above and fails here, which is the whole reason H23 forbids one. */
+  const EVENT_POSITIVES = [
+    ['K\u012Blauea lava activity continues across the summit region.', '', 'hazard continuation'],
+    ['Maui brush fire is contained, but the evacuation order remains in effect.', '',
+     'resolved hazard, active protective action'],
+    ['Storm has passed Maui; Honoapi\u02BBilani Highway remains closed by flood damage.', '',
+     'resolved hazard, active closure'],
+    ['Power outage after severe weather still affects Hilo residents.', '', 'active outage'],
+    ['No tsunami threat; flash flood warning remains in effect for O\u02BBahu.', '',
+     'negated claim beside an independent active one'],
+    ['Evacuation lifted for one Maui neighborhood',
+     'Brush fire threatens a second neighborhood and its evacuation order remains active.',
+     'resolved title, active summary, anchor composes across the two']
+  ];
+  for (const [t, d, why] of EVENT_POSITIVES) {
+    check('true:  ' + why, classify(t, d), true);
+  }
+
+  console.log('\nH20 — negation and resolution are scoped to the claim, never record-wide:');
+  /* Each pair is the rejection and the active record that must survive it. A mutation that makes
+     either marker a record-wide veto fails the right-hand side; one that ignores the marker fails
+     the left. */
+  check('a negated threat does not qualify',
+    classify('No tsunami threat to Hawaii after Japan earthquake.', ''), false);
+  check('  while an independently asserted warning in the same record does',
+    classify('No tsunami threat to Hawaii; flood warning in effect for Oahu.', ''), true);
+  check('a cancelled advisory does not qualify',
+    classify('Tsunami advisory for Hawaii has been cancelled.', ''), false);
+  check('  while an advisory in effect does',
+    classify('Tsunami advisory in effect for Hawaii.', ''), true);
+  /* The comma case the clause splitter exists for: persistence overrides a resolution marker
+     inside ONE clause, so an order lifted for one place and still in force for another survives. */
+  check('persistence beats resolution in the same clause',
+    classify('The evacuation order, lifted for Lahaina, remains in effect for Olowalu.', ''), true);
+
+  console.log('\nH21 — permanent terrain, history, preparedness and indirect aftermath:');
+  /* Each guard is paired with a record that would qualify WITHOUT it, so removing the guard
+     changes an answer here rather than passing silently. */
+  check('a lava field is terrain, not an event',
+    classify('A Hawaii lava field trail remains closed for trail repairs.', ''), false);
+  check('  while lava activity that continues is an event',
+    classify('Lava activity continues at Kilauea.', ''), true);
+  check('an anniversary is not an event, however recently published',
+    classify('Hilo commemorates the 1946 tsunami that struck the harbor.', ''), false);
+  check('  while an approaching hurricane is',
+    classify('Hurricane approaches Hilo.', ''), true);
+  check('a preparedness drill is not an event',
+    classify('Oahu hurricane preparedness drill continues this week.', ''), false);
+  check('  while a hurricane that continues to batter Oahu is',
+    classify('Hurricane continues to batter Oahu.', ''), true);
+  check('litigation aftermath is not an event',
+    classify('Maui wildfire litigation continues in court.', ''), false);
+  check('  while the brush fire itself spreading is',
+    classify('Maui brush fire spreads toward Lahaina.', ''), true);
+  /* H21 explicitly keeps direct public-safety consequences eligible, so the indirect-aftermath
+     guard must NOT suppress an active closure that shares a clause with recovery funding. */
+  check('indirect aftermath does not suppress a still-open closure',
+    classify('Rebuilding funds for Honoapiilani Highway, still closed by flood damage, are delayed.', ''), true);
+  /* RECORDED OMISSION, asserted rather than described: `research` is named as an indirect family
+     by the contract and is deliberately absent from the implementation list, because USGS and HVO
+     status copy is written in research voice. This is the case that omission protects. */
+  check('research voice does not delete a real volcano update',
+    classify('HVO researchers report lava continues at Kilauea.', ''), true);
+
+  console.log('\nH22 — the anchor must support the assertion, and a denial cannot localize:');
+  check('an anchor inside the denial of the only local impact does not localize a remote quake',
+    classify('No tsunami threat to Hawaii after a magnitude 7 earthquake struck Japan.', ''), false);
+  check('  while a remote quake with a stated Hawaii advisory does',
+    classify('Japan quake prompts tsunami advisory for Hawaii.', ''), true);
+  /* H07 composition in both directions, with the resolved half in each field in turn. */
+  check('a resolved TITLE anchor composes with an active summary',
+    classify('Evacuation lifted for Maui', 'The brush fire evacuation order remains in effect.'), true);
+  check('  and a resolved SUMMARY composes with an active title',
+    classify('Flood warning remains in effect for Maui', 'The earlier high surf advisory was cancelled.'), true);
+
+  console.log('\nH23 — the idiom strip now also protects the event gate:');
+  /* The first corpus pass tested the idiom strip with a sentence that was already false for other
+     reasons. This one turns on it in BOTH gates: strip `political storm` and nothing asserts an
+     event; keep it and `storm` plus `damage` is evidence and `continues` is an assertion. */
+  check('a political storm whose damage continues is still a metaphor',
+    classify('Political storm damage continues for the Hawaii governor.', ''), false);
+  check('  while real storm damage that closes roads qualifies',
+    classify('Storm damage closes roads across Maui.', ''), true);
+
+  console.log('\nH23 — gate 2 inside the clause, where the two subtractions are observable:');
+  /* The idiom and permanent-feature subtractions empty a clause of evidence, and a clause with no
+     evidence asserts nothing -- so through the boolean alone both look identical to "no event".
+     These assert the gate the implementation actually calls, which is why it is a named helper. */
+  const clauseEvidence = (text) => lifted.clauseHazardEvidence(lifted.hazardNormalize(text));
+  check('an idiom supplies no hazard evidence to the clause gate',
+    clauseEvidence("Political storm damages the Hawaii governor's standing"), false);
+  check('  while real storm damage in the same construction does',
+    clauseEvidence('Storm damage closes roads across Maui'), true);
+  check('a permanent feature supplies no hazard evidence to the clause gate',
+    clauseEvidence('A Hawaii lava field trail remains closed for trail repairs'), false);
+  check('  while lava activity does',
+    clauseEvidence('Lava activity continues at Kilauea'), true);
+
+  console.log('\nH05 — gate 2 held open by an asserted event, so the third gate cannot shield it:');
+  /* Each of these pairs a gate-2 defect with an ASSERTION, which the original fixtures lacked.
+     Without that, every one of these records failed the event gate for an unrelated reason and a
+     mutation loosening the vocabulary changed no answer -- the suite was green because the fixture
+     had stopped discriminating, not because the vocabulary held. */
+  check('vog still does not match inside vogue when the record asserts continuation',
+    classify('Vogue photoshoot continues in Honolulu', ''), false);
+  check('a swelling fund still needs ocean context when the record is a forecast',
+    classify('Fund swelling is expected to reach a record high in Hawaii', ''), false);
+  check('Emergency Medical Services still is not a declared emergency when a report is asserted',
+    classify('Honolulu Emergency Medical Services responds to a reported stabbing', ''), false);
+  check('a warning sign is still not a hazard warning when it is posted',
+    classify('Warning sign posted for Oahu drivers', ''), false);
+
+  console.log('\nH23 — the two clause-scoping decisions, each with the record that discriminates it:');
+  /* A COMMA IS NOT a clause boundary. Splitting on one would strand `continues to batter Maui`
+     away from the storm it continues, and a live hurricane would classify false. This is the
+     record that makes that choice load-bearing rather than a matter of taste. */
+  check('a parenthetical comma does not break a storm away from its continuation',
+    classify('Hurricane Nolo, now a tropical storm, continues to batter Maui.', ''), true);
+  /* A negation reaches a few tokens, not the whole clause. Here the injuries are denied and the
+     evacuation is not, so a clause-wide veto would delete a real evacuation. */
+  check('a denial of injuries does not cancel the evacuation in the same clause',
+    classify('No injuries in the Maui brush fire evacuation.', ''), true);
+
+  console.log('\nH19 — publication time and source identity cannot supply the third gate:');
+  /* H01 purity restated for the new gate: the classifier takes two strings and nothing else, so
+     there is no clock and no feed identity for it to consult. Same text, same answer, and the
+     anniversary stays false no matter how fresh the item is. */
+  check('the classifier still takes exactly two arguments', classify.length, 2);
+  check('the same text gives the same answer on a repeat call',
+    classify('Hilo marks the anniversary of the 1946 tsunami.', ''),
+    classify('Hilo marks the anniversary of the 1946 tsunami.', ''));
+  check('an empty summary cannot borrow an event from anywhere',
+    classify('Maui wildfire attorney fee caps debated.', ''), false);
+  check('null fields still cannot gain a label', classify(null, null), false);
 
   console.log('\nN02 — the handler emits publication time as null or canonical ISO, nothing else:');
   const CANON_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
