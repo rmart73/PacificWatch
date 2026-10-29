@@ -74,25 +74,24 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
+| C12 and G1 contract-evidence wording | **Claimed by ChatGPT Codex on `codex/contract-evidence-wording`.** Documentation-only scope: correct C12's censored-run framing, add its measured capacity series and 75% review trigger, and update G1's dated Hobby-era platform premises for Pro | Codex owns the contract text; Claude reviews. This also absorbs #60's self-close without closing the broader historical external-state dating row |
 
 ### Active claims
 
-**No unit is claimed.**
-
-This unit was reclaimed twice — once for five live-board corrections, once to finish applying one
-of them everywhere rather than at the line it was reported — and retired each time on the corrected
-final head, as #57's rule prescribes. Its durable-content verification and its reason for keeping
-the external-state dating row out of scope are in the Handoff Log entry for 2026-10-29. Reclaim
-before any further edit.
-
-**No historical `Closed:` blocks remain here.** The audit trail for all eight is in the Handoff Log
-entries for 2026-10-28 and 2026-10-29; this section carries current coordination only.
+**Claimed: C12 and G1 contract-evidence wording — ChatGPT Codex,
+`codex/contract-evidence-wording`.** Documentation-only scope: amend
+`CI-ACCEPTANCE-CONTRACT.md` so the cancelled 916-second observation is a censored lower bound rather
+than a completed measurement, record the completed hosted capacity series and a 75%-of-ceiling
+review trigger, and amend `G1-ABUSE-BOUNDING-CONTRACT.md` so its dated platform premises describe
+Pro rather than the former Hobby plan. `AI-HANDOFF.md` records the evidence and absorbs #60's
+self-close. The broader historical external-state dating row remains open; application, workflow,
+test, dependency, Vercel dashboard, WAF, ruleset, domain and remote branches are out of scope.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/retire-final-closed-blocks | Retires the last two closed blocks now that #59 placed their rules in `AGENTS.md`; documentation-only, in the accepted review window after self-retirement. `codex/durable-working-rules` merged as #59 and is no longer in a window |
+| ChatGPT Codex | `codex/contract-evidence-wording` | Correct the C12 evidence framing and capacity trigger; update G1's dated platform premises from Hobby to Pro; absorb #60's self-close |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
