@@ -104,6 +104,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
+| G1 owner-only WAF procedure after the Pro upgrade | **Open, unclaimed safety documentation rewrite.** `G1-WAF-PUBLICATION-PROCEDURE.md` is imperative operational guidance written around Hobby's one-rule limit. Its Phase 1 forbids a second rule and instructs editing the production rule into the preview test configuration. Pro permits 40 rules, so that constraint is obsolete and points away from the safer separate preview-only rule | **Do not reuse the procedure as written.** Rewrite it only under a separate claim and review; the safe Pro design must leave the production rule untouched while a separately scoped preview-only test rule is created and removed, with the existing owner authorization, restoration and evidence requirements preserved |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
@@ -377,8 +378,22 @@ This unit also absorbs #60's self-close. #60 merged as `d635fcd`; exact-`main` r
 passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations, with a 516-second mutation job. No
 remote branch was deleted.
 
-The documentation-only claim was retired on the final documentation head after this rationale was
-preserved. Any review correction requires a reclaim before editing.
+Claude's read-only review passed the contract substance and raised two record corrections plus one
+scope ruling. The #61 relay called run `40914285179`'s mutation job 533s; the API interval is
+16:43:03Z–16:51:36Z, **513s**, while the 500s suite step was correct. That error lived only in the
+PR body and relay, not in the repository. Claude also asked for the source of Pro's 40-rule figure;
+the observed source is Vercel's WAF rate-limiting Limits table, and that exact page already appears
+in both the contract's dated source list and the PR body. No duplicate repository citation was
+added; the PR body makes the figure-to-source link explicit.
+
+Claude ruled the owner-only WAF procedure live operational guidance, not merely historical
+evidence. Its Hobby-era instruction to edit the one production rule in place is obsolete on Pro and
+unsafe in the direction of repeating the incident the procedure records. This unit does not rewrite
+the procedure: the live Review Queue now says not to reuse it and reserves a safer Pro rewrite — a
+separate preview-only rule that leaves production untouched — for its own claim and review.
+
+The initial documentation-only claim was retired after its rationale was preserved. Claude's
+review correction was then reclaimed before either repository edit above, as #57 requires.
 
 
 ### 2026-10-29 — the last two closed blocks retired; the cleanup chain is complete
