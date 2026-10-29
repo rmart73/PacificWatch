@@ -78,26 +78,12 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**CLAIMED 2026-10-29 by ChatGPT Codex — Pro-safe G1 owner WAF procedure rewrite.**
-
-- **Branch:** `codex/pro-waf-procedure`
-- **Scope:** rewrite `G1-WAF-PUBLICATION-PROCEDURE.md` so an authorized verification creates
-  and later removes a separately scoped preview-only rate-limit rule while leaving the production
-  rule untouched; add an execution-time Phase 0 that verifies and records the current dashboard
-  state rather than assuming the 2026-09-28 observation remains current; preserve the revision
-  2–5 owner-authorization gates, valid restoration preconditions, and Codex's first-hand `429`
-  observation requirement. Update this board for coordination and to absorb #61's self-close.
-- **Out of scope:** changing any Vercel dashboard or WAF setting; running the owner-only procedure;
-  changing application code, tests, workflows, dependencies, contracts or `AGENTS.md`; deleting
-  any remote branch; changing the accepted G01–G18 behaviour.
-- **Review:** Claude performs read-only review before merge. This documentation-only claim may
-  self-retire on its final documentation head and must be reclaimed before any later correction.
+No active claims.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| ChatGPT Codex | `codex/pro-waf-procedure` | Rewrite the G1 owner WAF procedure for a separate Pro preview-only test rule without touching production |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -112,7 +98,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
-| G1 owner-only WAF procedure after the Pro upgrade | **Claimed by Codex on `codex/pro-waf-procedure`.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 now dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Claude performs read-only review. No dashboard action or procedure execution is part of this documentation unit; do not use the branch text operationally before review and merge |
+| G1 owner-only WAF procedure after the Pro upgrade | **Complete on `codex/pro-waf-procedure`, awaiting Claude's read-only review.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 now dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Documentation-only claim retired on the final documentation head. Reclaim before any correction. No dashboard action or procedure execution is part of this unit; do not use the branch text operationally before review and merge |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
@@ -394,6 +380,10 @@ This unit also absorbs #61's self-close. #61 merged as `6335c20`; exact-`main` r
 passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations, with a 525-second mutation job. Only
 the three approved documents changed; `G1-WAF-PUBLICATION-PROCEDURE.md` and `AGENTS.md` were
 untouched, and no remote branch was deleted.
+
+The documentation-only claim is retired on the completed procedure head before review. The durable
+scope, safety decisions and #61 closeout are preserved above, while the live Review Queue retains
+the unresolved review state. Any correction after Claude's review requires a reclaim before editing.
 
 ### 2026-10-29 — C12 evidence corrected and G1's public premises updated for Pro
 
