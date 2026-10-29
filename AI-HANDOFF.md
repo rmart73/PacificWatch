@@ -80,24 +80,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**CLAIMED 2026-10-29 by ChatGPT Codex — event-aware hazard-classifier contract amendment.**
-
-- **Branch:** `codex/active-hazard-contract`
-- **Scope:** amend `HAZARD-CLASSIFIER-CONTRACT.md` to decide and specify whether the hazard News
-  view requires an asserted current/recent hazard event rather than hazard vocabulary alone;
-  distinguish active events from aftermath/consequence reporting, permanent background features
-  and explicit no-threat/negated statements; define independently testable acceptance criteria and
-  implementation boundaries. Update this board and absorb #63's self-close.
-- **Out of scope:** changing `api/news/hazard.js`, `api/news.js`, `index.html`, tests, workflow,
-  dependencies, WAF/Vercel state, existing production classification or any remote branch.
-- **Ownership:** Codex owns the contract decision; Claude performs read-only contract review, then
-  claims any later implementation separately under the established split.
+No active claims.
 
 ## Active Branches
 
-| Agent | Branch | Purpose |
-|---|---|---|
-| ChatGPT Codex | `codex/active-hazard-contract` | Specify event-aware hazard classification before any implementation |
+No active branches are claimed. The documentation-only event-assertion amendment is complete on
+`codex/active-hazard-contract` and is in the accepted self-retirement review window; any correction
+requires a reclaim before editing.
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -114,7 +103,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | G1 owner-only WAF procedure after the Pro upgrade | **#62 merged as `45fb2e4`; review closed with no defects.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Closed as documentation. The procedure has not been executed and current dashboard state remains unverified; execution requires fresh owner authorization |
 | G1 unpublished temporary-rule draft cleanup | **Open, low-severity future-touch clarification.** Revision 6 removes a published temporary rule on every exit, but a rule created and abandoned before Publish could remain as an unenforcing draft and trigger a confusing leftover-rule stop in a later Phase 0 | When the procedure is next edited, explicitly discard an unpublished temporary-rule draft too. This is not a current enforcement hazard and does not authorize a standalone procedure edit or dashboard action |
-| Hazard classifier false positives | **CLOSED at H01–H18.** Contract merged as #32, implementation as #33 in `afff98b`, production verified, and the Nolo noise is gone. The separate aftermath/consequence distinction is now claimed as the H19–H24 amendment below | None for H01–H18; do not conflate the accepted implementation with the proposed event-assertion change |
+| Hazard classifier false positives | **CLOSED at H01–H18.** Contract merged as #32, implementation as #33 in `afff98b`, production verified, and the Nolo noise is gone. The separate aftermath/consequence distinction is now specified by the H19–H24 amendment below | None for H01–H18; do not conflate the accepted implementation with the proposed event-assertion change |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
 | October 9 Phase 1 engineering brief (PW-101–PW-106) | #46 merged; the disambiguated brief and current-code mapping are preserved on `main` | Closed; implementation proceeds only under later, non-overlapping claims |
@@ -122,7 +111,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **Contract amendment claimed on `codex/active-hazard-contract`; not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The proposed H19–H24 add a third gate: an asserted event or ongoing operational impact. They distinguish active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude performs read-only contract review. **No classifier change is authorized until the amendment is reviewed and merged**; implementation is a later Claude claim, not keyword tuning in this unit |
+| Hazard classification of aftermath vs active hazard | **H19–H24 drafted on `codex/active-hazard-contract`; awaiting Claude's read-only contract review. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude reviews the completed documentation head. **No classifier change is authorized until the amendment is reviewed and merged**; implementation is a later Claude claim, not keyword tuning in this unit |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
@@ -397,6 +386,10 @@ unchanged.
 This unit changes the contract and board only. `api/news.js`, `api/news/hazard.js`, tests, the UI,
 workflow, dependencies and production classification remain untouched. Claude reviews the contract
 read-only; only after merge may Claude claim a separate implementation under the established split.
+
+The documentation-only claim is retired on this completed contract head. The decision and rationale
+are preserved in the contract and this log; the unresolved review state remains live in the Review
+Queue. Any review correction requires a reclaim before editing.
 
 The unit also absorbs #63's self-close. #63 merged as `e17acc0`; exact-`main` run `40956767354`
 passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations with 196 verdict lines, and the
