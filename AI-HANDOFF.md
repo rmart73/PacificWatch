@@ -80,21 +80,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**RECLAIMED 2026-10-29 by ChatGPT Codex — #64 contract-review clarifications.**
-
-- **Branch:** `codex/active-hazard-contract`
-- **Scope:** implement Claude's two non-blocking read-only observations without changing the
-  accepted boundary: state how H07 composes a same-locality anchor across a resolved title and an
-  active summary, while a denied local impact cannot anchor a remote event; and make explicit that
-  a bare past closure does not assert an ongoing operational state. Update the board lifecycle.
-- **Out of scope:** classifier or test changes, new fixtures or acceptance criteria, application,
-  workflow, dependencies, WAF/Vercel state, production classification and remote branches.
+No active claims.
 
 ## Active Branches
 
-| Agent | Branch | Purpose |
-|---|---|---|
-| ChatGPT Codex | `codex/active-hazard-contract` | Apply #64's two contract-review clarifications |
+No active branches are claimed. #64's two contract clarifications are complete on
+`codex/active-hazard-contract` and the documentation-only claim is retired again; any further edit
+requires another reclaim.
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -119,7 +111,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **#64 passed Claude's read-only review with no blockers; its two one-line clarifications are reclaimed before merge. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Codex clarifies H07/H22 composition and the bare past-closure boundary, then retires again on the corrected documentation head. **No classifier change is authorized until the amendment is merged**; implementation is a later Claude claim |
+| Hazard classification of aftermath vs active hazard | **#64 passed Claude's read-only review with no blockers; both observations are clarified on the corrected documentation head. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude verifies the corrected final head, then the owner may merge. **No classifier change is authorized until the amendment is merged**; implementation is a later Claude claim |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
@@ -405,6 +397,10 @@ anchor in a resolved title may compose with an active same-locality summary, whi
 the denial of the only local impact cannot localize a remote event; and the past-closure example now
 states that `a flood closed the road` is insufficient unless the record asserts the closure remains
 active. These clarify the existing corpus boundary without adding a fixture or changing H19–H24.
+
+The claim was reclaimed before those edits and is retired again on the corrected documentation
+head. The contract and this log preserve both clarifications, and the Review Queue carries the
+final-head verification state. Any further correction requires another reclaim.
 
 The unit also absorbs #63's self-close. #63 merged as `e17acc0`; exact-`main` run `40956767354`
 passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations with 196 verdict lines, and the
