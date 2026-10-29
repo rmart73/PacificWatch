@@ -66,7 +66,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
-| Closed-claims cleanup | **Complete on `claude/retire-final-closed-blocks`, not yet merged.** #58 retired six of eight blocks after verifying every unique item survives in its authority and kept two whose rules had no home; #59 placed those rules in `AGENTS.md`; this unit retires the last two. The Active claims section went from 810 lines to claims only | Awaiting read-only review and the owner's merge. The *Historical external-state dating* row is a separate open item and is not closed by this |
+| Closed-claims cleanup | **Complete on `claude/retire-final-closed-blocks`, not yet merged.** #58 retired six of eight blocks after verifying every unique item survives in its authority and kept two whose rules had no home; #59 placed those rules in `AGENTS.md`; this unit retires the last two. The Active claims section went from 810 lines to current coordination with no historical `Closed:` blocks | Awaiting read-only review and the owner's merge. The *Historical external-state dating* row is a separate open item and is not closed by this |
 | Durable working rules follow-through | **#59 merged as `8db47f3`.** Exact-`main` run `40822299845` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. Three rules are now in `AGENTS.md`: ownership is not transferred by working on another agent's branch, security reports separate evidence from inference, and external-state claims carry their verification date and source | Closed. Claude's read-only review passed the rules and raised one non-blocking gap, which was corrected before merge |
 | October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks it left standing were audited and retired across #58, #59 and this unit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
@@ -77,7 +77,14 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed.**
+**Retire the final two closed blocks — Claude Code, `claude/retire-final-closed-blocks`.
+RECLAIMED 2026-10-29** a second time, to finish applying one correction rather than its first
+instance. `AI-HANDOFF.md` only.
+
+The "claims only" assertion was corrected inside *Active claims* and left standing in two other
+places that repeat it. Fixing where a finding points and not where the same statement also lives is
+how one defect becomes three.
+
 
 This unit was reclaimed once for five review corrections and retired again on the corrected final
 head, as #57's rule prescribes. Its durable-content verification, the five corrections and its
@@ -368,8 +375,8 @@ the blocks.
 **What the three-unit sequence was actually for.** The cleanup could have been one commit deleting
 eight blocks. It took three units because the rule #57 added makes retirement a content question:
 six blocks could go immediately, two could not until their content had somewhere to live, and the
-honest answer to "can this be deleted" was no for two of them for a week. The section is now
-claims only, which is the state it needed to be in to work as a concurrency lock.
+honest answer to "can this be deleted" was no for two of them for a week. No historical
+`Closed:` block remains, which is the state the section needed to be in to work as a concurrency lock.
 
 **Kept live on purpose:** the *Historical external-state dating* row. #59's rule governs
 external-state claims as they are added or updated, so pre-existing undated ones remain an
