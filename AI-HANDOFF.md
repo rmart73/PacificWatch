@@ -78,12 +78,26 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**CLAIMED 2026-10-29 by ChatGPT Codex — Pro-safe G1 owner WAF procedure rewrite.**
+
+- **Branch:** `codex/pro-waf-procedure`
+- **Scope:** rewrite `G1-WAF-PUBLICATION-PROCEDURE.md` so an authorized verification creates
+  and later removes a separately scoped preview-only rate-limit rule while leaving the production
+  rule untouched; add an execution-time Phase 0 that verifies and records the current dashboard
+  state rather than assuming the 2026-09-28 observation remains current; preserve the revision
+  2–5 owner-authorization gates, valid restoration preconditions, and Codex's first-hand `429`
+  observation requirement. Update this board for coordination and to absorb #61's self-close.
+- **Out of scope:** changing any Vercel dashboard or WAF setting; running the owner-only procedure;
+  changing application code, tests, workflows, dependencies, contracts or `AGENTS.md`; deleting
+  any remote branch; changing the accepted G01–G18 behaviour.
+- **Review:** Claude performs read-only review before merge. This documentation-only claim may
+  self-retire on its final documentation head and must be reclaimed before any later correction.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
+| ChatGPT Codex | `codex/pro-waf-procedure` | Rewrite the G1 owner WAF procedure for a separate Pro preview-only test rule without touching production |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
