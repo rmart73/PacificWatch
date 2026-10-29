@@ -75,7 +75,15 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**No unit is claimed.**
+**Closed-claims cleanup — Claude Code, `claude/closed-claims-cleanup`. RECLAIMED 2026-10-29**
+a second time, for one review finding. `AI-HANDOFF.md` only; the preservation map and the two kept
+blocks are unchanged.
+
+The finding: the Outstanding Verification entry said the current dashboard configuration is
+unknown and then asserted the rule is unchanged and still enforcing. Those cannot both be true in
+the same paragraph. The assertion is being dated to its last verified observation rather than left
+reading as current, since a dashboard check is owner-side and has not been done.
+
 
 The closed-claims cleanup retired its own claim on this final documentation head, which #57's rule
 permits for a documentation-only unit. It was reclaimed once, for three review corrections, and
@@ -271,8 +279,16 @@ performs #28's expected self-close transition immediately after the merge.
   **What genuinely remains owner-side is project dashboard state**, which no document can answer:
   whether the published rule is still the single 100-per-60 rule, whether any further rules now
   exist under the higher Pro allowance, and what usage-based rate limiting has actually cost. The
-  rule itself is unchanged and still enforcing; nothing in the application depends on the outcome,
-  the contract's accuracy does.
+  **Last verified state, and it is not current.** At G1's closeout on 2026-09-28 the dashboard held
+  exactly one rule — the final 100-per-60, path-only, IP-keyed, enforcing 429 — confirmed from the
+  platform's own traffic log after the temporary 5-per-60 test was removed. That is a month-old
+  observation of **external project state that changes without a deploy**, so it is recorded as the
+  last verified reading rather than as the present configuration. An earlier version of this entry
+  said the current state was unknown and then asserted the rule was unchanged and enforcing, which
+  cannot both hold.
+
+  Nothing in the application depends on the answer; the contract's accuracy does, and so does any
+  future claim that the published control is still the one the contract describes.
 
 - **F005 changed tiles:** closed by the user's report of Claude's production verification;
   local render matched #12 head 968d73d at merge. Both replacement destinations resolve.
