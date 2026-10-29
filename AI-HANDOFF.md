@@ -79,23 +79,12 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**CLAIMED 2026-10-29 by ChatGPT Codex — #62 board-only closeout.**
-
-- **Branch:** `codex/62-closeout`
-- **Scope:** reconcile the Current Work row, Review Queue disposition and `main` pointer with #62's
-  reviewed merge and exact-`main` run; preserve the one accepted future-touch item that an
-  unpublished temporary WAF-rule draft must also be discarded; record the explicit decision not to
-  retain the non-blocking Phase 0 dating observation.
-- **Out of scope:** changing the Revision 6 procedure, contracts, `AGENTS.md`, application, tests,
-  workflow, dependencies, Vercel/WAF/dashboard state or any remote branch.
-- **Review:** Claude performs read-only review. This documentation-only claim may self-retire on its
-  final documentation head and must be reclaimed before any correction.
+No active claims.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| ChatGPT Codex | `codex/62-closeout` | Reconcile #62's merged board state and preserve one future-touch procedure item |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -388,6 +377,10 @@ discard an unpublished draft as well as remove a published rule. This does not a
 standalone procedure change. Claude's second observation — stating the capture date in Phase 0 when
 Phase 5 already requires the dated inventory — is deliberately not retained as work; it was a
 non-blocking clarity preference rather than a known operational gap.
+
+The board-only claim is retired on this final documentation head. Its merged-state reconciliation,
+outstanding owner verification and future-touch item all remain in live sections; any review
+correction requires a reclaim before editing.
 
 ### 2026-10-29 — G1's owner procedure rewritten around an isolated Pro test rule
 
