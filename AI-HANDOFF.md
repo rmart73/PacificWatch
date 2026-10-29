@@ -77,17 +77,12 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Retire the final two closed blocks — Claude Code, `claude/retire-final-closed-blocks`.
-RECLAIMED 2026-10-29** for five review corrections, all mine. `AI-HANDOFF.md` only; the retirements
-themselves and the `AGENTS.md` verification are unchanged.
+**No unit is claimed.**
 
-1. The pointer advanced to #59 but kept **#58's** run as its evidence.
-2. The #56 Current Work row still says all eight blocks remain.
-3. A **second** Review Queue row named "Closed-claims cleanup" still describes two blocks retained
-   awaiting a later unit — my line helper matched only the first of the two same-named rows.
-4. Active Branches still places the merged `codex/durable-working-rules` in a review window.
-5. The cleanup row read `Complete`/`Closed` before this PR merged, and *Active claims* claimed to
-   hold "claims and nothing else" while carrying eleven lines of history.
+This unit was reclaimed once for five review corrections and retired again on the corrected final
+head, as #57's rule prescribes. Its durable-content verification, the five corrections and its
+reason for keeping the external-state dating row out of scope are in the Handoff Log entry for
+2026-10-29. Reclaim before any further edit.
 
 **No historical `Closed:` blocks remain here.** The audit trail for all eight is in the Handoff Log
 entries for 2026-10-28 and 2026-10-29; this section carries current coordination only.
