@@ -156,10 +156,10 @@ is happening*. The third gate is satisfied only when the title and summary asser
 
 This is an **assertion gate**, not an age calculation. A recent publication timestamp cannot make
 an anniversary, retrospective, permanent feature or old event active. Past-tense grammar also
-cannot decide the label by itself: “a flood closed the road” may describe an active closure, while
-“wildfire reshaped insurance law” is consequence reporting with no current hazard or protective
-state. The implementation must use reviewable, named constructions rather than one global tense or
-recency heuristic.
+cannot decide the label by itself: “a flood closed the road” does not assert a current closure,
+while “the road remains closed after the flood” does. Likewise, “wildfire reshaped insurance law”
+is consequence reporting with no current hazard or protective state. The implementation must use
+reviewable, named constructions rather than one global tense or recency heuristic.
 
 The following do **not** supply the third gate:
 
@@ -178,8 +178,10 @@ Negation and resolution are scoped to the claim they modify, not applied as a re
 record that says “No tsunami threat; flash flood warning remains in effect for Oʻahu” qualifies on
 the independently asserted flood warning. Conversely, “No tsunami threat to Hawaiʻi after a Japan
 earthquake” does not qualify: the only Hawaiʻi impact is expressly denied, so the remote earthquake
-cannot borrow that anchor. The Hawaiʻi anchor must support the qualifying assertion, though title
-and summary may still provide complementary parts of the same assertion as H07 requires.
+cannot borrow that anchor. Under H07, an anchor in a resolved title may still support a different
+active same-locality claim in the summary; an anchor inside a denial of the only local impact may
+not. Title and summary may therefore provide complementary parts of the qualifying assertion, but
+a denied local impact cannot manufacture locality for an otherwise remote event.
 
 The purpose is not to suppress every story written after landfall. An evacuation still ordered, a
 shelter still open, an outage still affecting residents or a hazard-caused road still closed is
@@ -315,7 +317,7 @@ fail if the implementation used publisher identity instead of the content.
 | H19 | Hazard language and locality are insufficient without an asserted event or ongoing operational impact. Publication time, source identity and current clock state cannot supply the third gate. | Required amendment negatives and positives, null/empty cases, plus a mutation that removes or unconditionally passes the event gate and is caught. |
 | H20 | Negated or resolved hazard claims do not qualify by themselves, while an independent active claim in the same record may qualify. | `No tsunami threat` and cancelled-advisory negatives; mixed tsunami/flood, contained-fire/active-order and lifted/active split-field positives; mutations that make negation a record-wide veto or ignore it are caught. |
 | H21 | Permanent/background features and indirect aftermath do not become events merely by co-occurring with hazard vocabulary and a Hawaiʻi anchor. Direct public-safety consequences that remain active still qualify. | Lava-field, anniversary, preparedness and four consequence-family negatives paired with active closure, outage, evacuation and hazard-continuation positives. |
-| H22 | The Hawaiʻi anchor belongs to the qualifying assertion; a denied Hawaiʻi impact cannot localize an otherwise remote event. H07 cross-field evidence remains supported. | Japan-earthquake/no-Hawaiʻi-threat negative beside the existing Japan-quake/Hawaiʻi-advisory positive, plus title/summary complementary cases in both directions. |
+| H22 | The Hawaiʻi anchor supports the qualifying assertion. H07 permits a resolved title's anchor to compose with an active same-locality summary, but a denied Hawaiʻi impact cannot localize an otherwise remote event. | Japan-earthquake/no-Hawaiʻi-threat negative beside the existing Japan-quake/Hawaiʻi-advisory positive, plus title/summary complementary cases in both directions. |
 | H23 | The event decision is expressed through named, reviewable groups or helpers, not a single opaque replacement expression, age cutoff or global stop-word list. | Source review; focused mutations for each negative family and each surviving positive family; zero `MISSED`, `ANCHOR LOST` or `AMBIGUOUS`. |
 | H24 | Implementation changes only classifier semantics and named News verification. H01–H18, canonical representations, whole-pool filtering, schema, cache/WAF controls and dependency-free runtime remain intact. | Existing pure, API, DOM and mutation suites stay green; contemporaneous H15/H16 ledgers add event-gate results and enumerate every changed label before merge. |
 

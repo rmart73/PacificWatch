@@ -399,6 +399,13 @@ The documentation-only claim is retired on this completed contract head. The dec
 are preserved in the contract and this log; the unresolved review state remains live in the Review
 Queue. Any review correction requires a reclaim before editing.
 
+Claude's read-only review of the first #64 head found no blockers and recommended merge. Two
+clarifications were still worth making before implementation: H07 now states explicitly that an
+anchor in a resolved title may compose with an active same-locality summary, while an anchor inside
+the denial of the only local impact cannot localize a remote event; and the past-closure example now
+states that `a flood closed the road` is insufficient unless the record asserts the closure remains
+active. These clarify the existing corpus boundary without adding a fixture or changing H19–H24.
+
 The unit also absorbs #63's self-close. #63 merged as `e17acc0`; exact-`main` run `40956767354`
 passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations with 196 verdict lines, and the
 mutation job ran 516 seconds. It changed the board only, performed no owner procedure step or
