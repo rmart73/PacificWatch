@@ -66,7 +66,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
-| October Phase 1 board closeout |
+| October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks remain for their separately claimed durable-content audit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
 | October Phase 1 PW-103 — mobile ticker | **#52 merged as `170ef17`.** Exact-`main` run passed attempt 1 at 442 pure, 591 DOM and 179 of 179 mutations in a 410-second job, and production is byte-identical to the merged blob. The 390px browser pass found the ticker continuous, comfortably faster, and free of the opening dead interval behind the ALERTS tag | Closed. **AC-103-03 remains `NOT TESTED`** for genuine iOS Safari; desktop responsive emulation was explicitly not accepted as iOS evidence |
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
@@ -178,7 +178,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
-| Closed-claims cleanup | **Audited under #57's rule.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 113. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule whose home is `AGENTS.md`, which a board-scoped unit may not edit. The row previously said six blocks occupied "most of an 810-line section"; that was true before #56 retired two claims | Codex to place both rules in `AGENTS.md`; a later claimed unit then retires the last two blocks in two lines |
+| Closed-claims cleanup | **Audited under #57's rule.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 62. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule whose home is `AGENTS.md`, which a board-scoped unit may not edit. The row previously said six blocks occupied "most of an 810-line section"; that was true before #56 retired two claims | Codex to place both rules in `AGENTS.md`; a later claimed unit then retires the last two blocks in two lines |
 
 **`main` is merged through #57 and serving production.** Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
@@ -257,38 +257,36 @@ performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
 
-- **The G1 rate-limit constraints were written for Vercel Hobby, and the plan is now Pro.**
+- **The G1 contract's rate-limit constraints describe Vercel Hobby; the project is on Pro.**
   [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md) records, from Vercel's
-  documentation at the time, that WAF rate limiting allows **one rule per project**, counts
-  **per region** so multi-region traffic can exceed a single configured limit, and that publishing
-  the rule requires a **pricing acknowledgement** and separate owner authorization. The published
-  rule itself is unchanged and still enforcing at 100-per-60.
+  documentation at the time, one rate-limit rule per project and 1,000,000 included allowed
+  requests. **Current published documentation settles most of this, so it is not an owner-side
+  question** — an earlier version of this entry wrongly said it was:
 
-  What is unverified is whether those *constraints* still describe a Pro project. If Pro permits
-  more than one rule, or changes the included allowance, then the contract's stated bound and the
-  reasoning behind accepting a per-IP, per-region limit are both describing a plan the project is
-  no longer on. **This is a security control, so it is recorded live rather than retired as
-  settled history** — which is why the closed-claims cleanup moved it here instead of deleting it
-  with the block that carried it.
+  | | Hobby, as the contract records | Pro, per current docs |
+  |---|---|---|
+  | rules per project | 1 | **40** |
+  | included requests | 1,000,000 allowed | **usage-based** |
+  | counting algorithm | fixed window | fixed window (unchanged) |
+  | counting window | 10s – 10min | 10s – 10min (unchanged) |
+  | counting keys | IP, JA4 Digest | IP, JA4 Digest (unchanged) |
+  | counters | per region | **per region (unchanged)** |
+  | pricing step | acknowledgement before the first rule | still required on the first rule |
 
-  Checking it needs the Vercel dashboard and current Vercel documentation, both owner-side. No
-  agent should infer the answer from the contract's own text, which is what being written against
-  the older plan means. Nothing in the application depends on the outcome; the contract's accuracy
-  does.
+  Sources: [WAF Rate Limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)
+  and [Regional Pricing](https://vercel.com/docs/pricing/regional-pricing).
 
-- **Narrow evidence correction owed to the merged C12 amendment text.**
-  [CI-ACCEPTANCE-CONTRACT.md](CI-ACCEPTANCE-CONTRACT.md) and the #48 Handoff Log entry below carry
-  the censored-data wording #49 corrected. The contract reads “**At the observed cost**, 916
-  seconds uses 76.3% of 1,200 seconds” and the #48 log entry reads `916 / 1200 = 76.3%`; 916s is
-  not an observed cost but a lower bound from a run killed at the old ceiling, so the true
-  utilisation is unknown and may be higher. C12's own criterion row is **not** affected — it
-  rests on the cancellation itself, which is a fact, not on the percentage.
+  **The contract's acceptance reasoning survives.** It claimed a per-IP, per-region bound and
+  explicitly not global DDoS immunity, and per-region counting is retained on Pro — so the stated
+  bound still holds and there is no security regression. What is stale is the *constraint* text:
+  one-rule-per-project is now forty, and the fixed 1,000,000 allowance is now usage-based billing.
+  Correcting that wording belongs with Codex's C12-style evidence pass, not here.
 
-  The amendment's conclusion therefore stands: the suite exceeded 15 minutes and 20 is the next
-  ceiling to prove. This is a precision fix to stated evidence, not a reopening. It is **outside
-  #49's authorized scope** and must not be folded into a workflow-only PR. Codex owns claimed
-  edits to the contract. Recorded here so the wording does not drift once #47's completed run
-  supplies the figure that settles the real utilisation.
+  **What genuinely remains owner-side is project dashboard state**, which no document can answer:
+  whether the published rule is still the single 100-per-60 rule, whether any further rules now
+  exist under the higher Pro allowance, and what usage-based rate limiting has actually cost. The
+  rule itself is unchanged and still enforcing; nothing in the application depends on the outcome,
+  the contract's accuracy does.
 
 - **F005 changed tiles:** closed by the user's report of Claude's production verification;
   local render matched #12 head 968d73d at merge. Both replacement destinations resolve.
