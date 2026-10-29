@@ -78,12 +78,23 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**CLAIMED 2026-10-29 by ChatGPT Codex — #62 board-only closeout.**
+
+- **Branch:** `codex/62-closeout`
+- **Scope:** reconcile the Current Work row, Review Queue disposition and `main` pointer with #62's
+  reviewed merge and exact-`main` run; preserve the one accepted future-touch item that an
+  unpublished temporary WAF-rule draft must also be discarded; record the explicit decision not to
+  retain the non-blocking Phase 0 dating observation.
+- **Out of scope:** changing the Revision 6 procedure, contracts, `AGENTS.md`, application, tests,
+  workflow, dependencies, Vercel/WAF/dashboard state or any remote branch.
+- **Review:** Claude performs read-only review. This documentation-only claim may self-retire on its
+  final documentation head and must be reclaimed before any correction.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
+| ChatGPT Codex | `codex/62-closeout` | Reconcile #62's merged board state and preserve one future-touch procedure item |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
