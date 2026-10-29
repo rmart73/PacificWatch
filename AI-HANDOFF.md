@@ -76,6 +76,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
 | C12 and G1 contract-evidence wording | **#61 merged as `6335c20`.** Exact-`main` run `40938272982` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 525-second mutation job. The C12 evidence wording and Pro plan premises are corrected, and the unsafe Hobby-era owner procedure was reserved for this separate claimed rewrite | Closed. `G1-WAF-PUBLICATION-PROCEDURE.md` and `AGENTS.md` were untouched by #61 |
 | G1 Pro-safe owner WAF procedure | **#62 merged as `45fb2e4`.** Exact-`main` run `40950076631` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 492-second mutation job. Revision 6 uses a separately created and removed preview-only rule and never edits production | Closed as a reviewed procedure. It was not executed, no dashboard state was verified, and the owner-only re-verification remains outstanding below |
+| G1 Pro-safe procedure closeout | **#63 merged as `e17acc0`.** Exact-`main` run `40956767354` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 516-second mutation job. The board now distinguishes the reviewed procedure from its unperformed owner action and retains the unpublished-draft gap for a future touch | Closed. No procedure step, dashboard action or remote-branch deletion occurred |
 
 ### Active claims
 
@@ -83,8 +84,9 @@ No active claims.
 
 ## Active Branches
 
-| Agent | Branch | Purpose |
-|---|---|---|
+No active branches are claimed. #64's two contract clarifications are complete on
+`codex/active-hazard-contract` and the documentation-only claim is retired again; any further edit
+requires another reclaim.
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -101,7 +103,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
 | G1 owner-only WAF procedure after the Pro upgrade | **#62 merged as `45fb2e4`; review closed with no defects.** Revision 6 replaces the Hobby-era in-place production-rule edit with a separately created and removed preview-only rule. Phase 0 dates and captures the actual plan, rule inventory, preview and protection scope before any external action | Closed as documentation. The procedure has not been executed and current dashboard state remains unverified; execution requires fresh owner authorization |
 | G1 unpublished temporary-rule draft cleanup | **Open, low-severity future-touch clarification.** Revision 6 removes a published temporary rule on every exit, but a rule created and abandoned before Publish could remain as an unenforcing draft and trigger a confusing leftover-rule stop in a later Phase 0 | When the procedure is next edited, explicitly discard an unpublished temporary-rule draft too. This is not a current enforcement hazard and does not authorize a standalone procedure edit or dashboard action |
-| Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
+| Hazard classifier false positives | **CLOSED at H01–H18.** Contract merged as #32, implementation as #33 in `afff98b`, production verified, and the Nolo noise is gone. The separate aftermath/consequence distinction is now specified by the H19–H24 amendment below | None for H01–H18; do not conflate the accepted implementation with the proposed event-assertion change |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
 | October 9 Phase 1 engineering brief (PW-101–PW-106) | #46 merged; the disambiguated brief and current-code mapping are preserved on `main` | Closed; implementation proceeds only under later, non-overlapping claims |
@@ -109,13 +111,13 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
+| Hazard classification of aftermath vs active hazard | **#64 passed Claude's read-only review with no blockers; both observations are clarified on the corrected documentation head. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude verifies the corrected final head, then the owner may merge. **No classifier change is authorized until the amendment is merged**; implementation is a later Claude claim |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #62.** Its exact-`main` run `40950076631` passed attempt 1 at head
-`45fb2e4` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 492 seconds. Claims and handoffs for
+**`main` is merged through #63.** Its exact-`main` run `40956767354` passed attempt 1 at head
+`e17acc0` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 516 seconds. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -356,6 +358,54 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — event-aware hazard contract drafted; implementation remains separate
+
+Codex chose to amend the classifier's public meaning. H01–H18 correctly decide whether a record
+contains hazard language and explicit Hawaiʻi relevance, but those two gates cannot distinguish an
+asserted event from a reference to one. H19–H24 therefore add a third gate: the record must assert
+that a hazard is occurring, expected, newly observed or still causing a protective action or direct
+public-safety disruption. Publication recency, a current clock, outlet identity and past-tense
+grammar cannot substitute for that assertion.
+
+The boundary is operational rather than grammatical. A road that remains closed by flood damage,
+an evacuation order still in effect, a shelter still open or an outage still affecting residents
+remains eligible after the initiating hazard has passed. Litigation, prices, supplies, tourism,
+aid administration, anniversaries, exercises and permanent terrain do not qualify merely because
+they name a hazard. Explicit denial or resolution removes only the claim it modifies: `No tsunami
+threat` cannot manufacture a Hawaiʻi event from a remote earthquake, while an independently active
+flood warning in the same record may still qualify.
+
+The deterministic corpus carries all three symptom families that prompted the decision — indirect
+aftermath, permanent/background features and explicit negation — alongside paired positives that
+prevent a global stop-word veto. The qualifying assertion must carry the Hawaiʻi relevance; a
+denied local impact cannot lend its anchor to an otherwise remote event. H15/H16 live-feed review,
+the whole-pool representation, G1 controls, response shape and dependency-free runtime remain
+unchanged.
+
+This unit changes the contract and board only. `api/news.js`, `api/news/hazard.js`, tests, the UI,
+workflow, dependencies and production classification remain untouched. Claude reviews the contract
+read-only; only after merge may Claude claim a separate implementation under the established split.
+
+The documentation-only claim is retired on this completed contract head. The decision and rationale
+are preserved in the contract and this log; the unresolved review state remains live in the Review
+Queue. Any review correction requires a reclaim before editing.
+
+Claude's read-only review of the first #64 head found no blockers and recommended merge. Two
+clarifications were still worth making before implementation: H07 now states explicitly that an
+anchor in a resolved title may compose with an active same-locality summary, while an anchor inside
+the denial of the only local impact cannot localize a remote event; and the past-closure example now
+states that `a flood closed the road` is insufficient unless the record asserts the closure remains
+active. These clarify the existing corpus boundary without adding a fixture or changing H19–H24.
+
+The claim was reclaimed before those edits and is retired again on the corrected documentation
+head. The contract and this log preserve both clarifications, and the Review Queue carries the
+final-head verification state. Any further correction requires another reclaim.
+
+The unit also absorbs #63's self-close. #63 merged as `e17acc0`; exact-`main` run `40956767354`
+passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations with 196 verdict lines, and the
+mutation job ran 516 seconds. It changed the board only, performed no owner procedure step or
+dashboard action, and deleted no remote branch.
 
 ### 2026-10-29 — #62 merged; procedure review closed without execution
 
