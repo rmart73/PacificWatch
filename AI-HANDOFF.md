@@ -8,7 +8,7 @@ That archive is historical evidence, not an active claim board.
 
 ## Current Work
 
-Updated 2026-10-28. PR state was checked through GitHub. Production observations below are
+Updated 2026-10-29. PR state was checked through GitHub. Production observations below are
 attributed to the user-relayed Claude report, except the #21 deploy check, the **#26 closeout
 verification**, the **#28 production verification**, the **#31 documentation deploy**, the
 **#32 documentation deploy**, the **#33 classifier deploy**, the **#34 closeout deploy**, and the
@@ -66,7 +66,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-106 — consolidated validation | **#54 merged as `97e610f`.** Exact-`main` run passed attempt 1 at 450 pure, 661 DOM and 192 of 192 mutations; production serves the merged HTML blob | Closed. The browser matrix remains explicitly incomplete as recorded below |
 | OlaPono product rename | **#55 merged as `1263545`.** PR head `8000530` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations; the exact-`main` run passed all three jobs and production is byte-identical to the merged blob. Desktop and 390px checks found no clipping, wrapping or layout regression | Closed. `nechicoa.app` remains reserved and unconnected; historical and infrastructure identifiers were deliberately left alone |
 | Durable claim-retirement rule | **#57 merged as `51878da`.** Exact-`main` run `40735446185` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. The rule now treats retiring a claim as a content change, names the Review Queue and Outstanding Verification as the live homes for unresolved material, and limits self-retirement to documentation-only units | Closed. Claude's read-only review raised two completeness findings, both implemented before merge |
-| Closed-claims cleanup | **Complete on `claude/retire-final-closed-blocks`, not yet merged.** #58 retired six of eight blocks after verifying every unique item survives in its authority and kept two whose rules had no home; #59 placed those rules in `AGENTS.md`; this unit retires the last two. The Active claims section went from 810 lines to current coordination with no historical `Closed:` blocks | Awaiting read-only review and the owner's merge. The *Historical external-state dating* row is a separate open item and is not closed by this |
+| Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks after verifying every unique item survives in its authority, #59 placed the two missing rules in `AGENTS.md`, and #60 retired the final two. Exact-`main` run `40911418550` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 516-second mutation job | Closed. Active claims now contains no historical `Closed:` blocks. The *Historical external-state dating* row remains a separate open item |
 | Durable working rules follow-through | **#59 merged as `8db47f3`.** Exact-`main` run `40822299845` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations. Three rules are now in `AGENTS.md`: ownership is not transferred by working on another agent's branch, security reports separate evidence from inference, and external-state claims carry their verification date and source | Closed. Claude's read-only review passed the rules and raised one non-blocking gap, which was corrected before merge |
 | October Phase 1 board closeout | **#56 merged as `ac7afb7`.** The board-only reconciliation passed six read-only findings across three rounds; its exact-`main` run passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations | Closed. The eight historical claim blocks it left standing were audited and retired across #58, #59 and this unit |
 | October Phase 1 PW-105 — wave logo animation | **#53 merged as `2ae2cf6`.** Exact-`main` run passed attempt 1 at 442 pure, 619 DOM and 186 of 186 mutations, and production matches the merged blob. The Chromium pass watched beyond a full 9-second cycle at 110% zoom: no seam, snap, pause or layout movement | Closed. **Firefox, Safari and genuine reduced-motion rendering remain `NOT TESTED`** |
@@ -74,25 +74,16 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | October Phase 1 PW-104 — Ventusky precipitation default | **#51 merged as `fb3d77c`.** Exact-`main` run passed attempt 1 at 425 pure, 572 DOM and 166 of 166 mutations, production serves the merged blob, and the browser pass found the three-hour layer rendering nonempty with its labelling clear | Closed. Codex reviewed the accumulation-versus-nowcast tradeoff and approved it for the storm |
 | Mutation harness concurrency | **#50 merged as `70cc74d`.** The mutation job runs 191s on the PR head and 196s on exact `main`, about 16% of ceiling against 92% before. The negative MISSED probe was proven hosted, including `exit code 1` propagating to a failed required check | Closed. Headroom restored for PW-103 through PW-106 |
 | C12 mutation timeout — workflow implementation | **#49 merged as `73ca4f5`.** The mutation ceiling on `main` is 20 minutes and the exact-`main` run passed attempt 1 at 137 of 137. Two review rounds corrected the PR's evidence, never its one-line diff | Closed. C12 keeps its hard 20-minute ceiling; the wording correction and the 75%-of-ceiling capacity trigger are Codex's, sequenced after a completed hosted figure exists |
+| C12 and G1 contract-evidence wording | **Complete on `codex/contract-evidence-wording`, awaiting final-head re-review and merge.** Contract substance passed; the live board now records that the Hobby-era owner procedure is unsafe operational guidance on Pro and defers its rewrite to a separate claimed unit | Documentation-only claim retired again on the corrected final head. Reclaim before any further edit. No procedure, workflow, WAF or dashboard change is part of this correction |
 
 ### Active claims
 
-**No unit is claimed.**
-
-This unit was reclaimed twice — once for five live-board corrections, once to finish applying one
-of them everywhere rather than at the line it was reported — and retired each time on the corrected
-final head, as #57's rule prescribes. Its durable-content verification and its reason for keeping
-the external-state dating row out of scope are in the Handoff Log entry for 2026-10-29. Reclaim
-before any further edit.
-
-**No historical `Closed:` blocks remain here.** The audit trail for all eight is in the Handoff Log
-entries for 2026-10-28 and 2026-10-29; this section carries current coordination only.
+No active claims.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Claude | claude/retire-final-closed-blocks | Retires the last two closed blocks now that #59 placed their rules in `AGENTS.md`; documentation-only, in the accepted review window after self-retirement. `codex/durable-working-rules` merged as #59 and is no longer in a window |
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -107,22 +98,22 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Stage 3 closeout record | #31 merged in `565f686`; documentation-only deploy independently verified | Closed |
 | Observation-truthfulness contract (Q007, Q008) | Merged as #23 in `a3f9897`; re-reviewed with all three findings resolved | Closed; the contract is authoritative |
 | G1 abuse/cost bounding implementation | **CLOSED.** #26 merged as `9e2cfec` and verified in production; G01–G18 accepted | None. G03 confirmed against production traffic |
+| G1 owner-only WAF procedure after the Pro upgrade | **Open, unclaimed safety documentation rewrite.** `G1-WAF-PUBLICATION-PROCEDURE.md` is imperative operational guidance written around Hobby's one-rule limit. Its Phase 1 forbids a second rule and instructs editing the production rule into the preview test configuration. Pro permits 40 rules, so that constraint is obsolete and points away from the safer separate preview-only rule | **Do not reuse the procedure as written.** Rewrite it only under a separate claim and review; the safe Pro design must leave the production rule untouched while a separately scoped preview-only test rule is created and removed, with the existing owner authorization, restoration and evidence requirements preserved |
 | Hazard classifier false positives | **CLOSED.** Contract merged as #32, implementation as #33 in `afff98b`, production verified. The Nolo noise is gone; four aftermath/consequence items are recorded below as a possible future amendment | None. H01–H18 complete |
 | Hazard-classifier closeout record | #34 merged in `77ed33c`; documentation-only deploy independently verified | Closed |
 | Deleted merged remote branch vs the AGENTS convention | #45 merged in `a14d31f`; the durable `AGENTS.md` rule requires captured immutable IDs and accepts direct ancestry, merged-PR ancestry across the squash boundary, or exact historical tree equality | Closed. **No deletion authorized** |
 | October 9 Phase 1 engineering brief (PW-101–PW-106) | #46 merged; the disambiguated brief and current-code mapping are preserved on `main` | Closed; implementation proceeds only under later, non-overlapping claims |
 | PW-101/PW-102 implementation | **#47 merged as `93afdee`.** The hosted mutation run that was cancelled by C12's old ceiling was superseded: #49 raised the ceiling and #50 replaced the serial harness, and the corrected head then passed attempt 1 at 425 pure, 549 DOM and 157 of 157 mutations in a 316-second job. Two read-only review rounds found four defects first, all in behaviour rather than in any diff | Closed. The browser rows stay `NOT TESTED` |
-| C12 mutation-ceiling amendment | **Closed as a contract and workflow change.** The amendment merged as #48 and its implementation as #49, so C12 is authoritative at 5/10/20 minutes and `main` carries the 20-minute mutation ceiling. The row previously described "the measured 916-second hosted workload" with "23.7% headroom" — that framing is retracted: 916s was a **censored lower bound** from a run killed at the old ceiling, not a measurement. **Still open:** the narrow evidence-wording correction and the capacity-review trigger at 75% of ceiling. Both now have completed figures to use. 963s for the 146-case corpus; and for 196 cases under the bounded pool, **a 492-second mutation job — 41.0% of the ceiling — with a 480-second suite step, in run `40715252122` at head `28215b9`**. The earlier draft of this row said 507s, which was the superseded head `8da9935`; a current-state figure has to come from the current head. Each figure is tied to its run and its metric on purpose, so a later head does not silently invalidate it and so the job and step numbers are never mixed again | Codex owns the contract text. No further workflow or ruleset change is implied |
+| C12 mutation-ceiling amendment | **Closed as a contract and workflow change; evidence correction proposed on the current documentation branch.** The amendment merged as #48 and its implementation as #49, so C12 remains authoritative at 5/10/20 minutes. The proposed correction retracts the old framing of 916s as a completed measurement: it was a **censored lower bound** from cancelled run `38103799949`. Completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s; run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. The proposal also makes a completed job at or above 75% a capacity-review trigger, not a verdict change | Claude reviews the proposed contract wording. No workflow or ruleset change is implied |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
-| Closed-claims cleanup | **Complete on the branch, awaiting merge.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and this unit retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Open only until this PR merges. The *Historical external-state dating* row is a separate item and is not closed by it |
+| Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #59.** Its exact-`main` run `40822299845` passed attempt 1 at head
-`8db47f3` with 450 pure, 669 DOM and 196 of 196 mutations. The figure cited here previously was run
-`40817543177`, which is #58's at `6797349` — the pointer advanced and its evidence did not. Claims and handoffs for
+**`main` is merged through #60.** Its exact-`main` run `40911418550` passed attempt 1 at head
+`d635fcd` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 516 seconds. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -199,11 +190,10 @@ performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
 
-- **The G1 contract's rate-limit constraints describe Vercel Hobby; the project is on Pro.**
-  [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md) records, from Vercel's
-  documentation at the time, one rate-limit rule per project and 1,000,000 included allowed
-  requests. **Current published documentation settles most of this, so it is not an owner-side
-  question** — an earlier version of this entry wrongly said it was:
+- **The G1 contract's public plan premises are being corrected for Pro; dashboard state remains
+  unverified.** [G1-ABUSE-BOUNDING-CONTRACT.md](G1-ABUSE-BOUNDING-CONTRACT.md) recorded the Hobby
+  limits that applied when G1 was written. Vercel's published documentation was rechecked on
+  **2026-10-29** and settles the public plan comparison:
 
   | | Hobby, as the contract records | Pro, per current docs |
   |---|---|---|
@@ -218,11 +208,12 @@ performs #28's expected self-close transition immediately after the merge.
   Sources: [WAF Rate Limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)
   and [Regional Pricing](https://vercel.com/docs/pricing/regional-pricing).
 
-  **The contract's acceptance reasoning survives.** It claimed a per-IP, per-region bound and
+  **The contract's acceptance reasoning survives.** It claims a per-IP, per-region bound and
   explicitly not global DDoS immunity, and per-region counting is retained on Pro — so the stated
   bound still holds and there is no security regression. What is stale is the *constraint* text:
-  one-rule-per-project is now forty, and the fixed 1,000,000 allowance is now usage-based billing.
-  Correcting that wording belongs with Codex's C12-style evidence pass, not here.
+  one-rule-per-project is now forty, and the fixed 1,000,000 Hobby allowance is now usage-based
+  billing on Pro. The current documentation branch corrects those premises without changing the
+  accepted G01–G18 behaviour.
 
   **What genuinely remains owner-side is project dashboard state**, which no document can answer:
   whether the published rule is still the single 100-per-60 rule, whether any further rules now
@@ -357,6 +348,50 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-29 — C12 evidence corrected and G1's public premises updated for Pro
+
+Codex re-read the hosted records rather than carrying the board's untethered figures into the
+contracts. Run `38103799949` at #47 head `0d479f2` was cancelled without a summary after about 916
+seconds, so 916s is a censored lower bound and cannot support a completed-utilization claim. The
+completed serial measurement is run `38118022258` at `2ebfbe6`: 146 of 146 in a 963-second mutation
+job, 80.3% of the 1,200-second ceiling. The later bounded-pool measurement is run `40715252122` at
+`28215b9`: 196 of 196 in a 492-second job with a 480-second suite step, 41.0% of the ceiling. C12
+keeps its 5/10/20-minute hard limits and adds a review trigger: a completed mutation job at or above
+75% of its ceiling requires capacity review before the crossing cost-increasing PR, or the next
+cost-increasing change, merges; it does not change the verdict or authorize a timeout increase,
+split check or partial result.
+
+Vercel's public rate-limit and pricing documentation was rechecked on 2026-10-29. On Pro the public
+limit is 40 rules per project and allowed requests are usage-based; fixed windows, the 10-second to
+10-minute range, IP/JA4 keys and per-region counters remain unchanged. The G1 contract's per-IP,
+per-region security claim therefore survives; only its Hobby-era plan premises were stale. This
+documentation check does not inspect the project dashboard. Its last verified state remains the
+2026-09-28 G1 closeout observation recorded under Outstanding Verification.
+
+This unit also absorbs #60's self-close. #60 merged as `d635fcd`; exact-`main` run `40911418550`
+passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations, with a 516-second mutation job. No
+remote branch was deleted.
+
+Claude's read-only review passed the contract substance and raised two record corrections plus one
+scope ruling. The #61 relay called run `40914285179`'s mutation job 533s; the API interval is
+16:43:03Z–16:51:36Z, **513s**, while the 500s suite step was correct. That error lived only in the
+PR body and relay, not in the repository. Claude also asked for the source of Pro's 40-rule figure;
+the observed source is Vercel's WAF rate-limiting Limits table, and that exact page already appears
+in both the contract's dated source list and the PR body. No duplicate repository citation was
+added; the PR body makes the figure-to-source link explicit.
+
+Claude ruled the owner-only WAF procedure live operational guidance, not merely historical
+evidence. Its Hobby-era instruction to edit the one production rule in place is obsolete on Pro and
+unsafe in the direction of repeating the incident the procedure records. This unit does not rewrite
+the procedure: the live Review Queue now says not to reuse it and reserves a safer Pro rewrite — a
+separate preview-only rule that leaves production untouched — for its own claim and review.
+
+The initial documentation-only claim was retired after its rationale was preserved. Claude's
+review correction was then reclaimed before either repository edit above, as #57 requires.
+With the live safety item preserved, the corrected documentation-only claim was retired again on
+the final head. Any further edit requires another reclaim.
+
+
 ### 2026-10-29 — the last two closed blocks retired; the cleanup chain is complete
 
 #58 retired six of eight historical `Closed:` blocks and kept two, because each carried a
@@ -448,10 +483,11 @@ in `AGENTS.md`.
 
 #### What the audit turned up beyond the blocks
 
-The G1 rate-limit constraints were written against **Vercel Hobby**. The plan is now **Pro**, so
-whether one-rule-per-project, the included-request allowance and the pricing acknowledgement still
-describe the published rule is unverified. It is a security control, so it moved to Outstanding
-Verification rather than retiring as settled history.
+The G1 rate-limit constraints were written against **Vercel Hobby**. When this audit ran, the plan
+had moved to **Pro** and the public plan comparison had not yet been reverified, so the item moved
+to Outstanding Verification rather than retiring as settled history. The 2026-10-29 contract-
+evidence pass later settled the public limits from Vercel's documentation; the mutable project
+dashboard state remains unverified.
 
 The observation-contract block carried an open question — whether a durable rule should govern
 closing a merged board claim. **#57 answered it.** Recorded because the thread closing is the
@@ -682,7 +718,7 @@ reserved for separate work under its own review. No optimisation may omit cases,
 accept a partial summary or change the stable check identity.
 
 
-### 2026-10-10 — #47 exceeded C12; measured 20-minute amendment drafted
+### 2026-10-10 — #47 exceeded C12; 20-minute recovery amendment drafted
 
 The owner authorized this documentation-only contract review after #47's required
 `mutation coverage` job was cancelled by the 15-minute ceiling. Codex independently read hosted run
@@ -693,11 +729,12 @@ DOM successful, mutation cancelled without a final summary. The mutation setup l
 GitHub reports approximately 916 seconds. Claude's local 146-of-146 result remains diagnostic
 support only and is not substituted for that hosted failure.
 
-The measured workload is 146 mutation cases, 81 of which spawn the DOM suite, against a DOM suite
-that grew from 436 to 503 assertions. The amendment changes C12's mutation ceiling from 15 to 20
-minutes and leaves pure at 5 and DOM at 10. The calculation is explicit: `916 / 1200 = 76.3%`,
-which restores the gate's historical 75–79% utilization. Twenty-five minutes would use about 61%
-and is not supported by this evidence.
+The workload contains 146 mutation cases, 81 of which spawn the DOM suite, against a DOM suite that
+grew from 436 to 503 assertions. The amendment changes C12's mutation ceiling from 15 to 20 minutes
+and leaves pure at 5 and DOM at 10. The first draft treated `916 / 1200 = 76.3%` as completed
+utilization; that statement was later retracted because the run was cancelled. The accurate claim
+is only that the cancelled job had already consumed 76.3% of the prospective ceiling. Completed
+run `38118022258` later measured the 146-case serial corpus at 963s, 80.3% of 1,200 seconds.
 
 The required-check gate stays intact. There is no inherent ruleset deadlock if C18 is followed:
 this contract PR branches from `main` and runs its existing 137-case corpus under the current
