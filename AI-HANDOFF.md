@@ -75,21 +75,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Closed-claims cleanup — Claude Code, `claude/closed-claims-cleanup`. RECLAIMED 2026-10-29**
-a second time, for one review finding. `AI-HANDOFF.md` only; the preservation map and the two kept
-blocks are unchanged.
+**No unit is claimed.**
 
-The finding: the Outstanding Verification entry said the current dashboard configuration is
-unknown and then asserted the rule is unchanged and still enforcing. Those cannot both be true in
-the same paragraph. The assertion is being dated to its last verified observation rather than left
-reading as current, since a dashboard check is owner-side and has not been done.
-
-
-The closed-claims cleanup retired its own claim on this final documentation head, which #57's rule
-permits for a documentation-only unit. It was reclaimed once, for three review corrections, and
-retired again here — which is the reclaim path the rule requires rather than an exception to it.
-Its preservation map, its reasons for keeping two blocks and the items it moved live are in the
-Handoff Log entry for 2026-10-28.
+The closed-claims cleanup retired its own claim on this final documentation head, as #57's rule
+permits for a documentation-only unit. It was reclaimed twice for review corrections and retired
+again each time, which is the path the rule prescribes rather than an exception to it. Its
+preservation map, its reasons for keeping two blocks and the items it moved live are in the Handoff
+Log entry for 2026-10-28.
 
 **Two blocks are kept deliberately.** Each carries a prospective working rule whose authority is
 [AGENTS.md](AGENTS.md), which this unit may not edit. Filing a live rule into the Handoff Log would
