@@ -77,19 +77,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Retire the final two closed blocks — Claude Code, `claude/retire-final-closed-blocks`.
-RECLAIMED 2026-10-29** a second time, to finish applying one correction rather than its first
-instance. `AI-HANDOFF.md` only.
+**No unit is claimed.**
 
-The "claims only" assertion was corrected inside *Active claims* and left standing in two other
-places that repeat it. Fixing where a finding points and not where the same statement also lives is
-how one defect becomes three.
-
-
-This unit was reclaimed once for five review corrections and retired again on the corrected final
-head, as #57's rule prescribes. Its durable-content verification, the five corrections and its
-reason for keeping the external-state dating row out of scope are in the Handoff Log entry for
-2026-10-29. Reclaim before any further edit.
+This unit was reclaimed twice — once for five live-board corrections, once to finish applying one
+of them everywhere rather than at the line it was reported — and retired each time on the corrected
+final head, as #57's rule prescribes. Its durable-content verification and its reason for keeping
+the external-state dating row out of scope are in the Handoff Log entry for 2026-10-29. Reclaim
+before any further edit.
 
 **No historical `Closed:` blocks remain here.** The audit trail for all eight is in the Handoff Log
 entries for 2026-10-28 and 2026-10-29; this section carries current coordination only.
