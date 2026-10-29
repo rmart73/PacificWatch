@@ -75,63 +75,12 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Closed-claims cleanup — Claude Code, `claude/closed-claims-cleanup`.** Claimed 2026-10-28 before
-editing `AI-HANDOFF.md`, in its own commit ahead of the work, on the owner's authorization and
-Codex's direction. Branched from `main` at `51878da`. **Files claimed: `AI-HANDOFF.md` only.**
+**No unit is claimed.**
 
-Governed by the durable claim-retirement rule in [AGENTS.md](AGENTS.md), merged as #57: retiring a
-claim is a content change, each unique item must be verified to survive in the appropriate
-authority before removal, unresolved material stays live in the Review Queue or Outstanding
-Verification, and a documentation-only unit may retire its own claim on its final head.
-
-**The deliverable is the preservation map below, not a deletion count.** Six of the eight blocks
-retire; **two do not**, and the reason is the rule working as intended rather than an obstacle.
-
-| # | block | unique content | where it survives | outcome |
-|---|---|---|---|---|
-| 1 | October 9 brief intake (#46) | the brief as authority for PW-101–PW-106; the filename disambiguation from the historical source-health Phase 1 | `OCTOBER-2026-PHASE-1-ENGINEERING-BRIEF.md`; the 2026-10-10 Handoff Log entry; the merge in Current Work | **retire** |
-| 2 | remote-branch convention (#45) | capture tip and tree IDs before deletion; the three accepted proofs; `git branch -r --merged main` has false negatives; selected-file equality is never proof | `AGENTS.md` → *Verifying a merged remote branch before deletion*, in full, verified line by line | **retire** |
-| 3 | G1 abuse/cost contract (#25) | WAF managed rate limiting, 60-second fixed window, per-region counters, one rule per project, publishing as external project state, CORS earning no G1 credit | `G1-ABUSE-BOUNDING-CONTRACT.md`, all six verified in its text | **retire**, with one item moved live |
-| 4 | end-of-night pause checkpoint | **that working on another agent's branch does not transfer ownership of their unit** | nowhere — it is a lasting working rule and belongs in `AGENTS.md`, which this unit may not edit | **keep** |
-| 5 | Q007/Q008 Stage 1 (#24) | the disclosed scope expansion, retained original-versus-final scope, and the suite figures at merge | the contract holds the boundaries; the disclosure and figures are **moved to the Handoff Log** by this unit | **retire** after preservation |
-| 6 | observation-truthfulness contract (#23) | the contract; and its open question, whether a durable rule should govern closing a merged board claim | `OBSERVATION-TRUTHFULNESS-CONTRACT.md`; **the open question is now answered** by #57's rule | **retire** |
-| 7 | board and AGENTS reconciliation (#22) | that a retained branch was content-identical to `main` though its pre-squash commits were not ancestors | `AGENTS.md`, as the squash-boundary reasoning behind proof 3 | **retire** |
-| 8 | security and launch-readiness review (#21) | **the reporting rule**: verified protections, concrete gaps and unverified items reported separately; findings scoped to the checks actually performed; neither a green suite nor an HTTP 200 is security clearance | the report is in `LAUNCH-READINESS.md`, but **the reporting rule is in neither that file nor `AGENTS.md`** | **keep** |
-
-**Why blocks 4 and 8 are kept.** Each carries a prospective working rule, and the rule's own
-instruction is to move such content to `AGENTS.md`. This unit is scoped to `AI-HANDOFF.md`, so it
-cannot. Filing a prospective rule into the Handoff Log would be the mistake the rule was amended to
-prevent — burying live guidance in a historical entry. Both are flagged for Codex; once they are in
-`AGENTS.md`, a later claimed unit can retire them in two lines.
-
-**One unresolved item moves live rather than retiring with block 3.** The G1 rate-limit constraints
-were written against **Vercel Hobby** — one rule per project, the included-request allowance, and a
-pricing acknowledgement before publishing. **The plan is now Pro.** Whether those constraints still
-describe the published rule is unverified, and it is a security control, so it goes to Outstanding
-Verification rather than being retired as settled history.
-
-**Also corrected:** the Review Queue row for this cleanup still says the blocks "occupy most of an
-810-line section". That was true before #56 retired two claims; the section is now 277 lines, of
-which the eight blocks are 264.
-
-**Absorbs #57's self-close**, which it could not record itself: the live `main` pointer and a
-Current Work row advance through #57 and its exact-`main` result.
-
-**Documentation only.** No `index.html`, `test/`, `api/`, `vercel.json`, workflow, contract,
-`AGENTS.md`, dependency, Vercel, ruleset or domain change, and no remote branch deletion — the
-eight blocks are board text, not branches. Per #57's rule this unit retires its own claim on its
-final documentation head, and will reclaim before any post-review edit.
-
-
-**No unit is claimed. October 2026 Phase 1 is complete.**
-
-PW-101 through PW-106 are merged and production verified, and the product is renamed. The two
-blocks that stood here — PW-106 and the OlaPono rename — are closed, and their substance is in
-Current Work and the Handoff Log. Leaving merged work under *Active claims* is exactly what stops
-this section working as a concurrency lock, which is the one job it has.
-
-Nothing below this line is an active claim. The eight `Closed:` blocks that follow are historical
-and are the subject of the still-open closed-claims cleanup item in the Review Queue.
+The closed-claims cleanup retired its own claim on this final documentation head, which #57's rule
+permits for a documentation-only unit. Its preservation map, its reasons for keeping two blocks and
+the items it moved live are recorded in the Handoff Log entry for 2026-10-28. If review requires a
+further edit, it is reclaimed before editing.
 
 **Two blocks are kept deliberately.** Each carries a prospective working rule whose authority is
 [AGENTS.md](AGENTS.md), which this unit may not edit. Filing a live rule into the Handoff Log would
