@@ -165,6 +165,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classification of aftermath vs active hazard | **Open, unclaimed, possible future contract amendment — not a #33 defect.** Four of the 22 production hazard items are *consequences* of past hazards rather than active ones: Maui wildfire attorney fee caps, pumpkin supply after severe weather, Kauaʻi businesses awaiting aid after Lowell, and tourism spending after major storms. Each passes **both gates correctly** — a real Hawaiʻi place and real hazard language — so the implementation is faithful to H01–H18. What the contract does not distinguish is *"a hazard is occurring"* from *"a hazard occurred and these are the consequences"* | Codex decides whether that distinction is wanted. **This is not authorization to change classification**, and no keyword is to be tuned against it |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#58 merged as `6797349`.** Six of eight blocks retired after verifying every unique item survives in its authority; the Active claims section went from 277 lines to 62. **Two are kept deliberately** — the end-of-night checkpoint and the launch-readiness review each carry a prospective working rule. This branch proposes both rules in `AGENTS.md` and leaves the source blocks intact until that authority merges | After this rules unit merges, a later claimed board unit retires the last two blocks in two lines |
+| Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
 **`main` is merged through #58.** Exact-`main` run `40817543177` passed attempt 1 at 450 pure,
 669 DOM and 196 of 196 mutations. Claims and handoffs for
@@ -420,6 +421,13 @@ workflow, contract, dependency, Vercel setting or remote branch changed.
 
 The documentation-only claim was retired on the final head after this rationale was preserved.
 Any review correction requires a reclaim before editing.
+
+Claude's read-only review passed the three rules and found one non-blocking completeness gap: the
+prospective scope deliberately leaves pre-existing external-state claims unaudited, but that known
+set was disclosed only in the PR body. Codex reclaimed before editing and moved it into the live
+Review Queue. The entry does not invent a bulk-retrofit promise; it requires dated, sourced
+reverification when an older claim is next relied upon or updated, and a separately claimed unit
+for any historical audit.
 
 ### 2026-10-28 — closed-claims cleanup; six blocks retired, two kept
 
