@@ -1044,8 +1044,8 @@ const mutations = [
 
   /* The idiom strip is what separates "a flood of donations" from a flood. */
   { name: 'idiom stripping removed',
-    from: "  const text = stripPhrases(clause, HAZARD_IDIOMS);",
-    to:   "  const text = clause;",
+    from: "  const text = stripPhrases(clause, HAZARD_IDIOMS);\n  const tokens = clause.split(' ');\n  let at = phrasePositions(tokens, HAZARD_DIRECT);",
+    to:   "  const text = clause;\n  const tokens = clause.split(' ');\n  let at = phrasePositions(tokens, HAZARD_DIRECT);",
     expect: ['an idiom supplies no hazard evidence to the clause gate'],
     suite: 'news', target: 'api' },
 
@@ -1118,7 +1118,7 @@ const mutations = [
      clause resolves it. Scoping that one by proximity instead lets a cancellation five tokens
      away miss the advisory it cancels. */
   { name: 'a protective action resolved only by proximity',
-    from: "        if (resolution.length > 0 && !inForceElsewhere()) continue;",
+    from: "        if (resolution.length > 0 && !resolvedElsewhere(i, 1) && !inForceElsewhere()) continue;",
     to:   "        if (reaches(resolution, i, false)) continue;",
     expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
     suite: 'news', target: 'api' },
@@ -1136,32 +1136,38 @@ const mutations = [
 
   /* H21: history. The anniversary piece is the case publication recency cannot decide. */
   { name: 'the historical frame removed',
-    from: "  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);",
-    to:   "  const framed = hasAny(clause, EXERCISE_FRAME);",
+    from: "  return hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME) ||",
+    to:   "  return hasAny(clause, EXERCISE_FRAME) ||",
     expect: ['an anniversary is not an event, however recently published'],
     suite: 'news', target: 'api' },
 
   /* H21: preparedness. A drill that `continues` is not a hazard that continues. */
   { name: 'the preparedness frame removed',
-    from: "  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);",
-    to:   "  const framed = hasAny(clause, HISTORICAL_FRAME);",
+    from: "  return hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME) ||",
+    to:   "  return hasAny(clause, HISTORICAL_FRAME) ||",
     expect: ['a preparedness drill is not an event'],
     suite: 'news', target: 'api' },
 
   /* H21: indirect aftermath, the family that prompted the amendment. */
   { name: 'the indirect-aftermath frame removed',
-    from: "  const indirect = hasAny(clause, INDIRECT_FRAME);",
-    to:   "  const indirect = false;",
+    from: "         hasAny(clause, INDIRECT_FRAME);",
+    to:   "         false;",
     expect: ['litigation aftermath is not an event'],
     suite: 'news', target: 'api' },
 
-  /* H21 in the other direction, which is the easy thing to get wrong: the indirect guard must not
+  /* H21 in the other direction, which is the easy thing to get wrong: the disqualifiers must not
      reach a direct consequence, or a highway still closed by flood damage is deleted because the
-     same sentence mentions rebuilding funds. */
-  { name: 'the indirect frame also suppresses active consequences',
+     same sentence mentions rebuilding funds or an anniversary.
+
+     This was TWO cases, one for history and one for indirect aftermath. They are one now because
+     the code is: all three frames disqualify the same two groups and never the third, so they are
+     a single named predicate and two cases would be the same mutation. Both records are asserted
+     in the conjunction below. */
+  { name: 'the frame disqualifiers also suppress active consequences',
     from: "  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
-    to:   "  if (!indirect && live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
-    expect: ['indirect aftermath does not suppress a still-open closure'],
+    to:   "  if (!clauseDisqualified(clause) && live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
+    expect: ['indirect aftermath does not suppress a still-open closure',
+             'an anniversary framing does not close an open hazard closure'],
     suite: 'news', target: 'api' },
 
   /* H22: a denied local impact must not localize a remote event. */
@@ -1205,13 +1211,13 @@ const mutations = [
 
   /* H19: each of the three assertion groups carries records the other two do not. */
   { name: 'the hazard-onset group removed',
-    from: "  if (!framed && !indirect && live(EVENT_ONSET, false)) return 'onset';",
+    from: "  if (!clauseDisqualified(clause) && live(EVENT_ONSET, false)) return 'onset';",
     to:   "",
     expect: ['true:  hazard continuation'],
     suite: 'news', target: 'api' },
 
   { name: 'the protective-action group removed',
-    from: "  if (!framed && !indirect && live(PROTECTIVE_ACTION, true)) return 'protective';",
+    from: "  if (!clauseDisqualified(clause) && live(PROTECTIVE_ACTION, true)) return 'protective';",
     to:   "",
     expect: ['while an advisory in effect does'],
     suite: 'news', target: 'api' },
@@ -1228,7 +1234,7 @@ const mutations = [
     from: "  'possible', 'potential', 'risk', 'imminent', 'brace', 'braces', 'bracing',",
     to:   "",
     expect: ['a flash flood forecast qualifies on \"possible\"',
-             'open shelters qualify when the islands brace for flash flooding'],
+             'bracing for flash flooding is an asserted event'],
     suite: 'news', target: 'api' },
 
   { name: 'a season treated as an event again',
@@ -1284,10 +1290,11 @@ const mutations = [
 
   /* The capture record that proved the protective-subject rule: open shelters lending their
      anchor to the clause that says what the islands are bracing for. */
-  { name: 'a protective action no longer lends its anchor',
-    from: "    if (wantsAction && hasAny(clause, PROTECTIVE_SUBJECT) &&",
-    to:   "    if (false && hasAny(clause, PROTECTIVE_SUBJECT) &&",
-    expect: ['a protective action IN FORCE lends to a qualifying hazard'],
+  /* H22: a clause the event gate would throw out must not lend its locality. */
+  { name: 'a disqualified clause allowed to lend its anchor',
+    from: "    if (clauseDisqualified(clause)) continue;",
+    to:   "",
+    expect: ['an indirect-aftermath clause does not lend its anchor'],
     suite: 'news', target: 'api' },
 
   /* §4 research, both directions. The object discriminates a finding from an observation, so
@@ -1296,10 +1303,11 @@ const mutations = [
   /* §4: an observation qualifies on what it observed, so the hazard has to come first. Without
      this a report ABOUT a hazard qualifies, whatever its object is called. */
   { name: 'the observation word-order rule removed',
-    from: "      if (reportVerbs.indexOf(i) !== -1 && closestDistance(evidence, i, true) === -1) continue;",
+    from: "      if (reportVerbs.indexOf(i) !== -1 && !observesHazard(tokens, evidence, i)) continue;",
     to:   "",
     expect: ['and a report sitting beside the hazard word is still only a report',
-             'a report about a hazard does not qualify, whatever the object is called'],
+             'a report about a hazard does not qualify, whatever the object is called',
+             'and a research report does not qualify with the hazard before it'],
     suite: 'news', target: 'api' },
 
   { name: 'the observation verbs deleted again',
@@ -1312,14 +1320,14 @@ const mutations = [
   /* H20: the different-locality rescue, both directions. Without it a live order for Olowalu is
      deleted; ignoring the locality resurrects an order that is no longer in effect anywhere. */
   { name: 'the different-locality rescue removed',
-    from: "        if (resolution.length > 0 && !inForceElsewhere()) continue;",
+    from: "        if (resolution.length > 0 && !resolvedElsewhere(i, 1) && !inForceElsewhere()) continue;",
     to:   "        if (resolution.length > 0) continue;",
     expect: ['an order lifted for one place and in force for another is still in force'],
     suite: 'news', target: 'api' },
 
   { name: 'the in-force rescue ignores which locality it names',
-    from: "        if (there && there !== here) return true;",
-    to:   "        return true;",
+    from: "      if (there && there !== here) return true;",
+    to:   "      return true;",
     expect: ['an in-force phrase naming the same place as the resolution rescues nothing'],
     suite: 'news', target: 'api' },
 
@@ -1341,13 +1349,6 @@ const mutations = [
     expect: ['a negation after the assertion does not cancel it'],
     suite: 'news', target: 'api' },
 
-  /* H21: history must not veto a consequence that is still open. */
-  { name: 'historical framing also suppresses active consequences',
-    from: "  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
-    to:   "  if (!framed && live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
-    expect: ['an anniversary framing does not close an open hazard closure'],
-    suite: 'news', target: 'api' },
-
 
 
   /* H22: the fragment allowlist is CLOSED on purpose. Opened up, every clause becomes a bare
@@ -1358,13 +1359,6 @@ const mutations = [
     expect: ['a preposition does not make a clause a continuation of the assertion'],
     suite: 'news', target: 'api' },
 
-  /* H20: the locality scan stops at the next claim. Without that it runs past it and hands a
-     resolution the locality that belongs to the in-force phrase after it. */
-  { name: 'the claim-locality scan runs past the next claim',
-    from: "  for (let p = i + width; p < tokens.length; p++) {\n    if (stops.indexOf(p) !== -1) break;",
-    to:   "  for (let p = i + width; p < tokens.length; p++) {",
-    expect: ['a two-locality order works in either word order'],
-    suite: 'news', target: 'api' },
 
   /* §4: a clause break at `after` separates an active consequence from the hazard that caused
      it, and the contract names that construction as qualifying. */
@@ -1388,6 +1382,43 @@ const mutations = [
     from: "  const anchors = hawaiiAnchorPositions(tokens);\n  if (!anchors.length) return false;",
     to:   "  const anchors = tokens.map((t, i) => i);\n  if (!anchors.length) return false;",
     expect: ['bare island does not anchor'],
+    suite: 'news', target: 'api' },
+
+  /* §4: the head test has two sides and both carry records. Dropping the subject side rejects
+     a compound hazard subject; dropping the object side rejects a hazard after the verb. */
+  { name: 'the observation subject side removed',
+    from: "  for (let k = 1; k <= OBJECT_HEAD_REACH; k++) {\n    if (evidence.indexOf(i - k) !== -1) return true;\n  }",
+    to:   "",
+    expect: ['a compound hazard subject still observes'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the observation object head reach narrowed to adjacency',
+    from: "const OBJECT_HEAD_REACH = 2;",
+    to:   "const OBJECT_HEAD_REACH = 1;",
+    expect: ['and a compound hazard object does too'],
+    suite: 'news', target: 'api' },
+
+  /* H20: a protective subject consults its OWN locality, not only an in-force phrase. The live
+     capture found this: a warning in force for Hawaii Island and cancelled for East Maui was
+     being deleted whole. */
+  { name: 'the protective subject ignores its own locality',
+    from: "        if (resolution.length > 0 && !resolvedElsewhere(i, 1) && !inForceElsewhere()) continue;",
+    to:   "        if (resolution.length > 0 && !inForceElsewhere()) continue;",
+    expect: ['a warning in force for one island survives a cancellation for another'],
+    suite: 'news', target: 'api' },
+
+  /* H07: the same-hazard lender, both directions. Removing it loses the complementary-evidence
+     record the capture found; ignoring WHICH hazard turns it back into any-clause-lends. */
+  { name: 'the same-hazard lender removed',
+    from: "    if (qualified.some(q => sharesHazardSubject(clause, q.clause))) return true;",
+    to:   "",
+    expect: ['a clause naming the same hazard subject lends its locality'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the same-hazard lender ignores which hazard',
+    from: "  return hazardTerms(a).some(t => terms.indexOf(t) !== -1);",
+    to:   "  return true;",
+    expect: ['nor does it when the hazard clause names no place at all'],
     suite: 'news', target: 'api' },
 
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes

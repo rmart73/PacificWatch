@@ -503,41 +503,87 @@ function eventEvidencePositions(clause) {
   return hazardEvidencePositions(clause).filter(p => standing.indexOf(p) === -1);
 }
 
-/* WHICH PLACE a claim is about. A locality attaches to the phrase that introduces it, so the scan
-   runs outward from the claim and STOPS at the next claim-bearing token -- another resolution, an
-   in-force phrase or another assertion. Preferring any following anchor instead was positionally
-   asymmetric: in "Evacuation order for Lahaina lifted, remains in effect for Olowalu" it handed
-   `lifted` the distant Olowalu rather than the Lahaina it actually modifies. */
+/* WHICH PLACE a claim is about: the nearest anchor at or after it, falling back to the nearest one
+   before it. A locality attaches to the phrase that introduces it, and `for Lahaina` follows the
+   claim it modifies.
+
+   This used to STOP the scan at the next claim-bearing token, so that in "Evacuation order for
+   Lahaina lifted, remains in effect for Olowalu" the word `lifted` was not handed the distant
+   Olowalu. That became dead weight once a protective SUBJECT consults its own locality: all six
+   two-locality records decide the same way without it, and no mutation could show the stop list
+   was load-bearing. It is gone rather than kept as a decision nothing can prove. */
 function claimLocality(tokens, i, width) {
-  const stops = phrasePositions(tokens, RESOLUTION)
-    .concat(phrasePositions(tokens, ALERT_IN_FORCE))
-    .concat(phrasePositions(tokens, EVENT_ONSET))
-    .concat(phrasePositions(tokens, PROTECTIVE_ACTION))
-    .concat(phrasePositions(tokens, ACTIVE_CONSEQUENCE))
-    .filter(p => p < i || p >= i + width);
   const anchors = hawaiiAnchorPositions(tokens);
   for (let p = i + width; p < tokens.length; p++) {
-    if (stops.indexOf(p) !== -1) break;
     if (anchors.indexOf(p) !== -1) return tokens[p];
   }
   for (let p = i - 1; p >= 0; p--) {
-    if (stops.indexOf(p) !== -1) break;
     if (anchors.indexOf(p) !== -1) return tokens[p];
   }
   return '';
 }
 
-/* The verbs that report an observation. They are onset verbs -- §4 makes observation of a physical
-   hazard qualifying -- but only when the hazard is what is observed. The same verb reports a
-   FINDING about a hazard, and then the hazard follows the verb as its topic:
+/* The verbs that report an observation. §4 makes observation of a physical hazard qualifying, so
+   these are onset verbs -- but only when the hazard is WHAT WAS OBSERVED rather than the subject a
+   finding is about. Two mechanisms were tried and both were wrong:
 
-     "Flooding observed in rainfall measurements across Hilo"   hazard first  -> an observation
-     "Researchers reported new evidence about lava at Kilauea"  hazard after  -> a report
+     a list of research objects   open-ended both ways: `evidence` missing, `measurements` rejecting
+                                  a real observation
+     hazard before/after the verb English permits both orders for both families:
+                                  "USGS detected an earthquake near Hilo"      is an observation
+                                  "Kilauea lava chemistry findings reported"   is a report
 
-   This replaces a list of research objects, which was open-ended in both directions: `evidence`
-   and `results` were missing, and `measurements` wrongly rejected a real observation. Word order
-   expresses the construction; a vocabulary of objects only moved its boundary. */
+   What separates them is whether the hazard HEADS the verb's noun phrase. "detected an earthquake
+   near Hilo" ends the phrase right after the hazard; "reported lava chemistry changes" carries two
+   more nouns, so `lava` is a modifier of `changes`. */
 const REPORT_VERBS = ['observed', 'detected', 'recorded', 'reported'];
+
+/* May sit between the verb and its object without changing which noun is the object. */
+const OBJECT_DETERMINERS = [
+  'a', 'an', 'the', 'this', 'that', 'new', 'another', 'one', 'two', 'three',
+  'several', 'multiple', 'possible', 'minor', 'major', 'strong', 'moderate',
+  'light', 'heavy', 'small', 'large', 'first', 'second'
+];
+/* Tokens that CLOSE a noun phrase. A phrase-ender within two tokens after the hazard means the
+   hazard is the head or the head's immediate modifier -- which keeps "detected earthquake swarm
+   near Hilo" working while rejecting "reported lava chemistry changes at Kilauea". */
+const PHRASE_ENDERS = [
+  'near', 'in', 'on', 'at', 'across', 'off', 'along', 'from', 'to', 'of', 'by', 'for',
+  'over', 'around', 'between', 'under', 'about', 'with', 'through', 'during',
+  'after', 'before', 'and', 'or', 'that', 'which',
+  'was', 'were', 'is', 'are', 'has', 'have', 'had', 'as', 'while'
+];
+const OBJECT_HEAD_REACH = 2;
+
+function observesHazard(tokens, evidence, i) {
+  /* A hazard just before the verb is its subject: "flooding observed", "earthquake swarm detected".
+     The same two-token allowance applies here, so a compound subject still counts. */
+  for (let k = 1; k <= OBJECT_HEAD_REACH; k++) {
+    if (evidence.indexOf(i - k) !== -1) return true;
+  }
+  /* Otherwise the hazard has to HEAD the verb's object phrase: reachable past determiners only,
+     and closed by a phrase-ender within two tokens. */
+  for (let p = i + 1; p < tokens.length; p++) {
+    if (evidence.indexOf(p) !== -1) {
+      for (let k = p + 1; k <= p + OBJECT_HEAD_REACH; k++) {
+        if (k >= tokens.length) return true;
+        if (PHRASE_ENDERS.indexOf(tokens[k]) !== -1) return true;
+      }
+      return false;
+    }
+    if (OBJECT_DETERMINERS.indexOf(tokens[p]) === -1) return false;
+  }
+  return false;
+}
+
+/* History, preparedness and indirect aftermath all disqualify the same two groups and never the
+   third, so they are ONE named predicate rather than two locals used identically. It is also what
+   gate 1 needs: a clause the event gate would throw out must not be allowed to lend its locality
+   to a clause it has nothing to do with. */
+function clauseDisqualified(clause) {
+  return hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME) ||
+         hasAny(clause, INDIRECT_FRAME);
+}
 
 /* The one place the third gate is decided, for one clause. Returns the group that qualified, or
    '' -- a named result rather than a bare boolean so the ledgers can say WHICH group fired. */
@@ -549,23 +595,28 @@ function clauseEventState(clause) {
   const negation = phrasePositions(tokens, NEGATION);
   const resolution = phrasePositions(tokens, RESOLUTION);
   const reportVerbs = phrasePositions(tokens, REPORT_VERBS);
-  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);
-  const indirect = hasAny(clause, INDIRECT_FRAME);
 
-  /* A protective action whose clause carries a resolution is normally resolved by it. The one
-     exception the contract requires: a resolution and an in-force phrase that name DIFFERENT
-     places are different claims -- "the evacuation order, lifted for Lahaina, remains in effect
-     for Olowalu" is a live order for Olowalu. */
+
+  /* A resolution and a claim that name DIFFERENT places are different claims. Both must NAME a
+     place: an unnamed resolution is not a different locality, it is no locality, and without that
+     "cancelled, no longer in effect for Hawaii" would rescue itself.
+
+     `resolvedElsewhere` asks it of one position. The live capture is what forced it to apply to
+     the protective SUBJECT and not only to an in-force phrase: "Flash flood warning for Hawaii
+     Island, warning canceled for East Maui" is a warning in force for Hawaii Island, and scoping
+     the cancellation only through `in effect` phrases deleted it. */
+  const resolvedElsewhere = (i, width) => {
+    const here = claimLocality(tokens, i, width);
+    if (!here) return false;
+    for (const r of resolution) {
+      const there = claimLocality(tokens, r, 1);
+      if (there && there !== here) return true;
+    }
+    return false;
+  };
   const inForceElsewhere = () => {
     for (const i of phrasePositions(tokens, ALERT_IN_FORCE)) {
-      const here = claimLocality(tokens, i, 1);
-      if (!here) continue;
-      for (const r of resolution) {
-        const there = claimLocality(tokens, r, 1);
-        /* Both have to NAME a place. An unnamed resolution is not a different locality, it is no
-           locality -- without this, "cancelled, no longer in effect for Hawaii" rescues itself. */
-        if (there && there !== here) return true;
-      }
+      if (resolvedElsewhere(i, 1)) return true;
     }
     return false;
   };
@@ -575,9 +626,11 @@ function clauseEventState(clause) {
       if (!reaches(evidence, i, false)) continue;
       if (reaches(negation, i, true)) continue;
       /* An observation qualifies on what it observed, so the hazard has to come FIRST. */
-      if (reportVerbs.indexOf(i) !== -1 && closestDistance(evidence, i, true) === -1) continue;
+      if (reportVerbs.indexOf(i) !== -1 && !observesHazard(tokens, evidence, i)) continue;
       if (namesTheAction) {
-        if (resolution.length > 0 && !inForceElsewhere()) continue;
+        /* The action survives a resolution elsewhere in its clause when the resolution names a
+           different place than it does, or when an in-force phrase does. */
+        if (resolution.length > 0 && !resolvedElsewhere(i, 1) && !inForceElsewhere()) continue;
       } else if (reaches(resolution, i, false)) continue;
       return true;
     }
@@ -586,8 +639,8 @@ function clauseEventState(clause) {
 
   /* H21: history, preparedness and indirect aftermath disqualify a hazard assertion and a
      protective action, but NOT a direct consequence that remains active. */
-  if (!framed && !indirect && live(EVENT_ONSET, false)) return 'onset';
-  if (!framed && !indirect && live(PROTECTIVE_ACTION, true)) return 'protective';
+  if (!clauseDisqualified(clause) && live(EVENT_ONSET, false)) return 'onset';
+  if (!clauseDisqualified(clause) && live(PROTECTIVE_ACTION, true)) return 'protective';
   if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';
   return '';
 }
@@ -641,6 +694,25 @@ function isLocalityFragment(clause) {
   return true;
 }
 
+/* The hazard SUBJECTS a clause names, whether or not its context row is satisfied there. A clause
+   that says `swell` and a clause that says `swell` are about the same hazard; a clause that says
+   `wildfire` and one that says `shelter` are not. Row satisfaction is deliberately NOT required,
+   because the whole point is a clause that carries locality and a partial hazard mention while the
+   evidence that satisfies the row sits in the other field. */
+function hazardTerms(clause) {
+  const text = stripPhrases(clause, HAZARD_IDIOMS);
+  const found = [];
+  for (const phrase of HAZARD_DIRECT) if (hasPhrase(text, phrase)) found.push(phrase);
+  for (const g of HAZARD_CONTEXT) {
+    for (const t of g.terms) if (hasPhrase(text, t)) found.push(t);
+  }
+  return found;
+}
+function sharesHazardSubject(a, b) {
+  const terms = hazardTerms(b);
+  return hazardTerms(a).some(t => terms.indexOf(t) !== -1);
+}
+
 /* Gate 1, scoped to the assertion it has to support — H06, H07, H22.
 
    There is no remote-place deny-list any more. It could not work: H06 is a semantic requirement
@@ -651,23 +723,32 @@ function isLocalityFragment(clause) {
      - a clause carrying the HAZARD the assertion is about, lending to a qualifying protective
        action or consequence (required positive 2: "Maui brush fire is contained, but the
        evacuation order remains in effect"); or
-     - a clause naming a protective action that is IN FORCE, lending to a qualifying hazard
-       (the capture record "O'ahu shelters open" beside "the islands brace for flash flooding").
-       In force is the point: a cancelled advisory and an animal shelter expanding capacity both
-       name a protective subject and neither is about the hazard; or
+     - a clause naming the SAME hazard subject as the qualifying assertion, which is H07's
+       complementary-evidence case: "Large northwest swell expected to hit Hawai'i this weekend"
+       carries the locality and the word `swell`, while the summary clause carries the ocean
+       context that satisfies the row. The live capture is what showed this was needed; and
      - a bare locality fragment continuing the clause before it (required positive 11).
 
-   A hazard clause with no locality of its own therefore no longer borrows from unrelated local
-   prose, which is what H22 asks for and what three rounds of deny-lists could not deliver. */
+   A clause the EVENT GATE would throw out never lends, whatever it contains: an indirect-aftermath
+   clause about a wildfire fee hearing is not evidence of where a tsunami advisory applies.
+
+   Protective-action lending is gone. It was the rule that let "O'ahu shelters open" localize "the
+   islands brace for flash flooding", and it could not be stated tightly enough to exclude "Maui
+   nonprofit animal shelter open for adoptions" -- `wildfire` is in the shelter row's own context,
+   so even requiring the shelter to be in force and for THAT hazard admitted it. The capture record
+   it was keeping is now a false negative, recorded in the handoff as a finding rather than
+   asserted as a label.
+
+   The residual that remains is named there too: hazard-lends-to-protective is a CATEGORY match,
+   so two unrelated hazards in one record still compose. Closing it drops required positive 2. */
 function hasLocalAnchor(qualified, clauses) {
   if (qualified.some(q => anchorSupports(q.clause))) return true;
   const wantsHazard = qualified.some(q => q.state === 'protective' || q.state === 'consequence');
-  const wantsAction = qualified.some(q => q.state === 'onset');
   for (const clause of clauses) {
     if (!anchorSupports(clause)) continue;
+    if (clauseDisqualified(clause)) continue;
     if (wantsHazard && clauseHazardEvidence(clause)) return true;
-    if (wantsAction && hasAny(clause, PROTECTIVE_SUBJECT) &&
-        (hasAny(clause, PROTECTIVE_ISSUANCE) || hasAny(clause, ALERT_IN_FORCE))) return true;
+    if (qualified.some(q => sharesHazardSubject(clause, q.clause))) return true;
     if (isLocalityFragment(clause)) return true;
   }
   return false;

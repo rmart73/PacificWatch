@@ -720,10 +720,14 @@ async function main() {
      continuation of the clause that carries the assertion. */
   check('  while a prepositional continuation of the assertion does lend its anchor',
     classify('Flood warning issued', 'for Maui through tonight.'), true);
-  /* And a clause naming a protective action is about the same event as the hazard beside it,
-     which is the capture record that proved it. */
-  check('  and so does a clause naming an open shelter',
-    classify('O\u02BBahu shelters open', 'The islands brace for flash flooding.'), true);
+  /* A third lending rule used to live here: a clause naming a protective action in force could
+     lend to a qualifying hazard. It is GONE. It could not be stated tightly enough to exclude
+     "Maui nonprofit animal shelter open for adoptions" -- `wildfire` is in the shelter row's own
+     context, so even requiring the shelter to be in force and for that hazard admitted it. The
+     record it was keeping is now a false negative and is recorded in the handoff as a finding,
+     not asserted here as a label. */
+  check('  and an animal shelter in force lends nothing, which is why that rule is gone',
+    classify('Wildfire threatens homes.', 'Maui nonprofit animal shelter open for adoptions.'), false);
   check('  while a remote origin that states a Hawaii advisory still qualifies',
     classify('Japan quake prompts tsunami advisory for Hawaii.', ''), true);
   check('  and a resolved Hawaii clause still composes with an active one',
@@ -780,8 +784,6 @@ async function main() {
   /* The three lending rules that DO hold, each with the record that requires it. */
   check('  a hazard clause lends to a qualifying protective action',
     classify('Maui brush fire is contained, but the evacuation order remains in effect.', ''), true);
-  check('  a protective action IN FORCE lends to a qualifying hazard',
-    classify('O\u02BBahu shelters open', 'The islands brace for flash flooding.'), true);
   check('  and a bare locality fragment lends to the clause it continues',
     classify('Flood warning issued', 'for Maui through tonight.'), true);
 
@@ -803,6 +805,37 @@ async function main() {
      handed the Olowalu that belongs to `remains in effect`. */
   check('a two-locality order works in either word order',
     classify('Evacuation order for Lahaina lifted, remains in effect for Olowalu.', ''), true);
+
+  console.log('\nH22/§4 — the two cases round 4 found, and the compound nouns they exposed:');
+  /* A clause the EVENT GATE would throw out must not lend its locality to a clause it has
+     nothing to do with. An indirect-aftermath wildfire hearing is not evidence of where a
+     tsunami advisory applies. */
+  check('an indirect-aftermath clause does not lend its anchor',
+    classify('Tsunami advisory remains in effect.', 'Maui wildfire attorney fee caps debated.'), false);
+  /* §4 observation: English permits both word orders for both families, so the test is whether
+     the hazard HEADS the verb's noun phrase rather than which side of the verb it sits on. */
+  check('an observation qualifies with the hazard after the verb',
+    classify('USGS detected an earthquake near Hilo.', ''), true);
+  check('  and a research report does not qualify with the hazard before it',
+    classify('K\u012Blauea lava chemistry findings reported by researchers.', ''), false);
+  /* The compound-noun shapes the head test has to admit, in both orders. */
+  check('a compound hazard subject still observes',
+    classify('Earthquake swarm detected near Hilo.', ''), true);
+  check('  and a compound hazard object does too',
+    classify('USGS detected earthquake swarm near Hilo.', ''), true);
+
+  console.log('\nH15/H16 — two false negatives the fifth capture found, both live hazard records:');
+  /* A warning in force for one island and cancelled for another, verbatim from the capture.
+     Scoping the cancellation only through in-force phrases deleted an active flash flood warning,
+     so a protective SUBJECT now consults its own locality too. */
+  check('a warning in force for one island survives a cancellation for another',
+    classify('First Alert Weather Day: Flash flood warning for Hawaii Island, warning canceled for East Maui', ''), true);
+  /* H07 complementary evidence: the title carries the locality and the word `swell`, the summary
+     carries the ocean context that satisfies the row. Removing protective-action lending lost this
+     record too, and a lender naming the SAME hazard subject is what recovers it. */
+  check('a clause naming the same hazard subject lends its locality',
+    classify('Large northwest swell expected to hit Hawai\u02BBi this weekend',
+             'A larger northwest swell arrives late Saturday, pushing north shore waves above the high surf advisory threshold.'), true);
 
   console.log('\nThree records that keep load-bearing rules load-bearing:');
   /* The negation inside the event gate, where the anchor-denial rule cannot also decide it: the
@@ -828,11 +861,12 @@ async function main() {
   check('a flash flood forecast qualifies on "possible"',
     classify('Flash flooding possible for Maui County, O\u02BBahu: Wednesday Forecast',
              'Heavy rain is expected Wednesday afternoon, with the highest probability over Maui County.'), true);
-  /* FALSE NEGATIVE the capture found: open shelters, where the only event language was `brace`
-     and it sat in a different clause from the anchor. */
-  check('open shelters qualify when the islands brace for flash flooding',
-    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
-             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+  /* FALSE NEGATIVE the capture found: the only event language in the record was `brace`. The
+     original record put that word in a different clause from its anchor and was kept by a lending
+     rule that review has since shown to be unsound, so it is now a recorded false negative. The
+     VOCABULARY the capture proved is still asserted, with the anchor in the qualifying clause. */
+  check('bracing for flash flooding is an asserted event',
+    classify('Oahu braces for flash flooding.', ''), true);
   /* FALSE POSITIVE the capture found, in the family the amendment exists for: mitigation work
      months after a storm is long-term recovery, and a SEASON is a background condition. */
   check('mitigation work amid hurricane season is recovery reporting, not a hazard',
