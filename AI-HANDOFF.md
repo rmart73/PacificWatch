@@ -77,7 +77,7 @@ against the merged Git blob and checked both canonical news endpoints directly.
 | C12 and G1 contract-evidence wording | **#61 merged as `6335c20`.** Exact-`main` run `40938272982` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 525-second mutation job. The C12 evidence wording and Pro plan premises are corrected, and the unsafe Hobby-era owner procedure was reserved for this separate claimed rewrite | Closed. `G1-WAF-PUBLICATION-PROCEDURE.md` and `AGENTS.md` were untouched by #61 |
 | G1 Pro-safe owner WAF procedure | **#62 merged as `45fb2e4`.** Exact-`main` run `40950076631` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 492-second mutation job. Revision 6 uses a separately created and removed preview-only rule and never edits production | Closed as a reviewed procedure. It was not executed, no dashboard state was verified, and the owner-only re-verification remains outstanding below |
 | G1 Pro-safe procedure closeout | **#63 merged as `e17acc0`.** Exact-`main` run `40956767354` passed attempt 1 at 450 pure, 669 DOM and 196 of 196 mutations in a 516-second mutation job. The board now distinguishes the reviewed procedure from its unperformed owner action and retains the unpublished-draft gap for a future touch | Closed. No procedure step, dashboard action or remote-branch deletion occurred |
-| Event-aware hazard contract and composition boundary | **#64 merged as `b746dd9`; the composition clarification is complete on `codex/hazard-composition-boundary` and awaiting read-only review.** The clarification forbids transferring locality through repeated lexical subjects across independent fields and records the Need2Know shelter story and northwest-swell story as conservative recall boundaries | #65 remains parked. After this clarification merges, Claude rebases, removes direct shared-subject lending, updates fixtures and mutations, and runs the final implementation head |
+| Event-aware hazard contract and composition boundary | **#64 merged as `b746dd9`; the corrected composition clarification is complete on `codex/hazard-composition-boundary` after one blocking review finding.** The clarification now forbids locality transfer through both repeated lexical subjects and conjunction topology, rewrites positives 2 and 6 so their active claims state `Maui`, and records the Need2Know shelter story and northwest-swell story as conservative recall boundaries | #65 remains parked. After this clarification merges, Claude rebases, removes direct shared-subject and same-field-conjunction lending, updates fixtures and mutations, and runs the final implementation head |
 
 ### Active claims
 
@@ -123,7 +123,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`; H01–H24 are authoritative.** Seven implementation-review rounds then proved that repeated lexical subjects across independent fields cannot establish event identity or transfer locality without admitting an indistinguishable remote hazard. The clarification on `codex/hazard-composition-boundary` chooses the conservative boundary and rewrites amendment positive 6 so the active summary states its own Maui locality | Claude reviews the clarification. After it merges, #65 rebases and removes direct shared-subject lending; no eighth lexical mechanism or further live capture is owed |
+| Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`; H01–H24 are authoritative pending the clarification on `codex/hazard-composition-boundary`.** Seven implementation-review rounds proved that repeated lexical subjects cannot establish event identity; #66 review then proved the preserved same-field conjunction path admits the same remote adversary. The corrected authority permits only direct locality in the qualifying claim or an adjacent bare-locality continuation, and rewrites positives 2 and 6 accordingly | Claude re-reviews the corrected clarification. After it merges, #65 removes both inference paths; no eighth lexical mechanism or further live capture is owed |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
@@ -380,11 +380,16 @@ Both repeat the exact subject, so direct shared-subject lending still transferre
 remote event. The earlier Need2Know shelter item and the live northwest-swell item are the converse:
 genuinely local hazard stories whose active clause leaves locality implicit.
 
-The contract chooses the conservative boundary. Independent fields do not transfer locality through
-repeated hazard or protective vocabulary. Direct anchors, adjacent bare-locality continuations and
-the bounded same-field hazard-to-protective conjunction remain valid. Amendment positive 6 now
-states `Maui` in its active summary so it still proves that resolution is claim-scoped without
-assuming cross-field event identity.
+The contract chooses the conservative boundary. Independent claims do not transfer locality through
+repeated hazard/protective vocabulary or conjunction topology. A qualifying assertion must carry
+its own anchor or receive one from an adjacent bare-locality fragment that can only continue it.
+
+Claude's first #66 review proved why this applies inside one field too: “Maui brush fire is
+contained, but a California evacuation order remains in effect” satisfies the proposed bounded
+hazard-to-protective conjunction rule exactly as positive 2 did. Removing that path dropped only
+positive 2 as originally worded. Positive 2 now repeats `Maui` in its active clause, just as
+positive 6 repeats it in the active summary; both still prove that resolution is claim-scoped
+without assuming event identity or transferring locality.
 
 The Need2Know and northwest-swell records remain correctly understood as local hazard reporting, but
 are named conservative false negatives under the deterministic classifier. They remain in the mixed
@@ -394,7 +399,8 @@ future recovery needs its own contracted source of event identity or locality. T
 under amended H16, not permission to average away a future captured miss.
 
 #65 is parked until this documentation-only authority merges. Claude then rebases, removes direct
-shared-subject lending, updates its fixtures and mutations, and runs once at the final head. The
+shared-subject and same-field-conjunction lending, updates its fixtures and mutations, and runs once
+at the final head. The
 twelve-run CI carry-forward sweep is separate bookkeeping and not part of this contract unit.
 
 ### 2026-10-29 — event-aware hazard contract drafted; implementation remains separate
