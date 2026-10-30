@@ -847,20 +847,30 @@ async function main() {
   check('a locality fragment away from the assertion does not continue it',
     classify('Wildfire threatens homes.', 'Crews responded. In Maui.'), false);
 
-  check('a witness sharing only the FIELD with the assertion is not a relationship',
+  /* A WITNESS no longer composes at all, in either form. Sharing a field was reachable, and so
+     was sharing a conjunction chain: replacing the sentence boundary below with `while` reopened
+     exactly the same path, because a chain proves syntactic reachability and not shared-event
+     identity. Both shapes are asserted false; the live record this cost is a finding in the
+     handoff, not a label asserted here. */
+  check('a witness sharing only the FIELD with the assertion does not compose',
     classify('Maui animal shelters expand capacity.',
              'Shelters receive donations. California wildfire threatens homes.'), false);
-  check('  while a witness in the assertion\u2019s own conjunction chain is',
-    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
-             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+  check('  and nor does one sharing a conjunction chain with it',
+    classify('Maui animal shelters expand capacity.',
+             'Shelters receive donations while California wildfire threatens homes.'), false);
 
   check('a resolved hazard does not lend to an unrelated advisory by category alone',
     classify('Tsunami advisory remains in effect.', 'Maui brush fire contained.'), false);
   check('  while an explicit conjunction inside one field does compose',
     classify('Maui brush fire is contained, but the evacuation order remains in effect.', ''), true);
-  check('  and a subject shared with the field carrying the assertion does',
-    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
-             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+  /* The conjunction path proves "a hazard and the protective action it caused" only when the
+     assertion introduces no physical hazard of its own that the lender does not share. Without
+     that it was still category lending with one syntactic condition bolted on. */
+  check('  but not when the protective action names a second hazard',
+    classify('Maui brush fire is contained, but California wildfire evacuation order remains in effect.', ''), false);
+  check('  and a subject shared with the ASSERTION ITSELF composes',
+    classify('Large northwest swell expected to hit Hawai\u02BBi this weekend',
+             'A larger northwest swell arrives late Saturday, pushing north shore waves above the high surf advisory threshold.'), true);
   check('  and a bare locality continuation does',
     classify('Flood warning issued', 'for Maui through tonight.'), true);
 

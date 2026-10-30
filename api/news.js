@@ -758,49 +758,40 @@ function hazardTerms(clause) {
   return found;
 }
 
-/* The clauses reachable from j by captured conjunctions, inside one field. "Here is what to know
-   about shelters AND public transportation AS the islands brace for flash flooding" is one
-   assertion chain of three clauses; a sentence boundary starts a new one.
-
-   This is what makes a witness mean something. Sharing a FIELD with the assertion was not enough:
-   "Shelters receive donations. California wildfire threatens homes." puts a shelter witness and a
-   wildfire claim in one summary with nothing connecting them. */
-function conjunctionChain(clauses, j) {
-  const chain = [j];
-  for (let k = j; k > 0; k--) {
-    if (!clauses[k].joined || clauses[k].field !== clauses[k - 1].field) break;
-    chain.push(k - 1);
-  }
-  for (let k = j + 1; k < clauses.length; k++) {
-    if (!clauses[k].joined || clauses[k].field !== clauses[k - 1].field) break;
-    chain.push(k);
-  }
-  return chain;
+/* The PHYSICAL hazard subjects a clause names: its hazard terms minus the ones that are protective
+   actions. `evacuation` is in both vocabularies, and the distinction matters -- required positive
+   2's protective clause names no physical hazard of its own, while
+   "but California wildfire evacuation order remains in effect" names `wildfire`. */
+function physicalHazards(clause) {
+  return hazardTerms(clause).filter(t => PROTECTIVE_SUBJECT.indexOf(t) === -1);
 }
 
 /* Gate 1, scoped to the assertion it has to support — H06, H07, H22.
 
-   An anchor inside the qualifying clause is always enough. Borrowing needs a relationship that
-   connects the lender TO THE QUALIFYING ASSERTION, not merely to something else in the record.
-   Review's two findings were the same defect twice: the implementation had two edges and never
-   proved they formed one claim. So each branch below names both ends.
+   An anchor inside the qualifying clause is always enough. Borrowing requires a relationship this
+   code can PROVE between the lender and the qualifying assertion. Six mechanisms were tried and
+   each was broken by a new adversary, every one of which worked the same way: the relationship was
+   stated in a comment and the code checked something weaker. These two branches check what they
+   claim, and nothing else composes.
 
      (1) a bare locality fragment IMMEDIATELY BESIDE the assertion -- required positive 11's
-         "Flood warning issued" / "for Maui through tonight", where the fragment continues the
-         clause that carries the assertion and nothing else;
-     (2) a HAZARD-bearing clause joined to the assertion by a captured conjunction inside one
-         field, where the assertion is a protective action or a consequence -- required positive
-         2's "Maui brush fire is contained, BUT the evacuation order remains in effect", which is
-         a hazard and the protective action it caused, explicitly joined. A conjunction alone is
-         not the relationship: "Maui council meets today, while California wildfire threatens
-         homes" joins two unrelated claims, and the lender there carries no hazard at all;
-     (3) a subject shared with a clause in the assertion's own conjunction chain -- the live
-         Need2Know record, where `shelters` is in the title and again in the summary clause that
-         chains into the flood claim through `and` and `as`.
+         "Flood warning issued" / "for Maui through tonight". The fragment makes no claim of its
+         own, so continuing the adjacent clause is all it can be doing.
 
-   Category alone may not compose, which is review's ruling, and nor may a clause the event gate
-   disqualifies as history, preparedness or indirect aftermath. A RESOLVED clause may still lend,
-   because required positive 2 depends on it. */
+     (2) a clause naming THE SAME SUBJECT as the qualifying assertion itself -- required positive
+         6 shares `evacuation` across the two fields, and the live swell record shares `swell`.
+         One edge, both ends, no intermediary: the lender and the assertion name the same thing.
+
+     (3) a hazard clause joined to its protective action by a captured conjunction inside one
+         field -- required positive 2's "Maui brush fire is contained, BUT the evacuation order
+         remains in effect". The assertion must introduce NO physical hazard of its own that the
+         lender does not share, which is what separates positive 2 from
+         "but California wildfire evacuation order remains in effect".
+
+   What is NOT here, and was: a witness anywhere in the assertion's conjunction chain. A chain
+   proves syntactic reachability and not shared-event identity -- replacing a sentence boundary
+   with `while` reopened the same path -- and the cost of removing it is recorded in the handoff as
+   a contract question rather than patched with a seventh mechanism. */
 function hasLocalAnchor(qualified, clauses) {
   if (qualified.some(q => anchorSupports(q.text))) return true;
   for (let i = 0; i < clauses.length; i++) {
@@ -808,22 +799,21 @@ function hasLocalAnchor(qualified, clauses) {
     if (!anchorSupports(lender.text)) continue;
     if (clauseDisqualified(lender.text)) continue;
     const subjects = claimSubjects(lender.text);
-    const lenderHazards = hazardTerms(lender.text);
+    const lenderHazards = physicalHazards(lender.text);
     for (const q of qualified) {
       const j = clauses.indexOf(q);
       /* (1) */
       if (Math.abs(i - j) === 1 && isLocalityFragment(lender.text)) return true;
       /* (2) */
+      if (subjects.some(t => hasPhrase(q.text, t))) return true;
+      /* (3) */
+      /* The assertion introducing no physical hazard the lender lacks is doing all the work here.
+         A condition requiring q.state to be protective or consequence stood beside it and became
+         redundant the moment this one existed -- every record decided the same way without it and
+         no mutation could show it mattered -- so it is gone rather than kept. */
       if (lenderHazards.length && lender.field === q.field && Math.abs(i - j) === 1 &&
           (i < j ? q.joined : lender.joined) &&
-          (q.state === 'protective' || q.state === 'consequence')) return true;
-      /* (3) */
-      if (subjects.length) {
-        for (const k of conjunctionChain(clauses, j)) {
-          if (clauses[k] === lender) continue;
-          if (subjects.some(t => hasPhrase(clauses[k].text, t))) return true;
-        }
-      }
+          physicalHazards(q.text).every(t => lenderHazards.indexOf(t) !== -1)) return true;
     }
   }
   return false;

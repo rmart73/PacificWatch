@@ -1270,8 +1270,8 @@ const mutations = [
      the subject test restores the category rule and a resolved Maui brush fire localizes an
      unrelated tsunami advisory again. */
   { name: 'the shared-subject test dropped from composition',
-    from: "          if (subjects.some(t => hasPhrase(clauses[k].text, t))) return true;",
-    to:   "          return true;",
+    from: "      if (subjects.some(t => hasPhrase(q.text, t))) return true;",
+    to:   "      return true;",
     expect: ['a resolved hazard does not lend to an unrelated advisory by category alone'],
     suite: 'news', target: 'api' },
 
@@ -1456,16 +1456,22 @@ const mutations = [
     expect: ['and a no-hazard lender cannot compose even with a protective assertion'],
     suite: 'news', target: 'api' },
 
-  { name: 'the conjunction branch stops requiring a protective or consequence assertion',
-    from: "          (q.state === 'protective' || q.state === 'consequence')) return true;",
+
+  /* H22: the conjunction path has to prove the protective action belongs to the LENDER's hazard.
+     Without it the path composes two different hazard events, which is category lending with one
+     syntactic condition bolted on. */
+  { name: 'the conjunction path stops checking which hazard the action belongs to',
+    from: "          physicalHazards(q.text).every(t => lenderHazards.indexOf(t) !== -1)) return true;",
     to:   "          true) return true;",
-    expect: ['nor is a hazard clause joined to an unrelated remote hazard'],
+    expect: ['but not when the protective action names a second hazard'],
     suite: 'news', target: 'api' },
 
-  { name: 'the witness chain widened back to the whole field',
-    from: "        for (const k of conjunctionChain(clauses, j)) {",
-    to:   "        for (let k = 0; k < clauses.length; k++) {",
-    expect: ['a witness sharing only the FIELD with the assertion is not a relationship'],
+  /* The converse: a protective subject is not a physical hazard, so required positive 2's own
+     clause must not be read as introducing one. */
+  { name: 'protective subjects counted as physical hazards',
+    from: "  return hazardTerms(clause).filter(t => PROTECTIVE_SUBJECT.indexOf(t) === -1);",
+    to:   "  return hazardTerms(clause);",
+    expect: ['while an explicit conjunction inside one field does compose'],
     suite: 'news', target: 'api' },
 
   { name: 'the fragment branch stops requiring adjacency to the assertion',
