@@ -977,7 +977,7 @@ const mutations = [
   /* H03: the locality gate is the half that makes this a LOCAL hazard feed rather than a keyword
      search. Removing it restores the predecessor's behaviour on the two mainland stories. */
   { name: 'the locality gate removed',
-    from: "  return hasLocalAnchor(clauses, qualifying);",
+    from: "  return hasLocalAnchor(qualified, clauses);",
     to:   "  return true;",
     expect: ['false: California wildfire forces thousands to evacuate.'],
     suite: 'news', target: 'api' },
@@ -996,11 +996,10 @@ const mutations = [
   { name: 'word boundaries loosened to substring containment',
     from: "  return (' ' + norm + ' ').indexOf(' ' + phrase + ' ') !== -1;",
     to:   "  return norm.indexOf(phrase) !== -1;",
-    /* Gate 2 is a position list built from exact token matches, so loosening `hasPhrase` no longer
-       reaches it. Where it still decides an answer is the LOCALITY vocabulary, which is matched
-       the same way: with containment, "kona" matches inside "konared" and a drink launch anchors
-       in Hawaii. */
-    expect: ['kona does not match inside konared'],
+    /* `hasPhrase` no longer decides the hazard or locality vocabularies -- both are position
+       lists built from exact token matches. Where it still decides an answer is the FRAME
+       vocabularies, which are tested with hasAny: `poll` sits inside `pollution`. */
+    expect: ['an indirect-frame word does not match inside a longer word'],
     suite: 'news', target: 'api' },
 
   /* H05, one per context-dependent family: each must require its context, not just its term. */
@@ -1064,8 +1063,8 @@ const mutations = [
   /* H19: the gate itself. Removing it restores the behaviour the amendment was written against:
      hazard vocabulary plus a Hawaii anchor labelled a fee-cap hearing as a hazard. */
   { name: 'the event-assertion gate removed',
-    from: "  if (!qualifying.length) return false;",
-    to:   "",
+    from: "    if (state) qualified.push({ clause: clause, state: state });",
+    to:   "    qualified.push({ clause: clause, state: state || 'onset' });",
     expect: ['false: Maui wildfire attorney fee caps debated.'],
     suite: 'news', target: 'api' },
 
@@ -1079,16 +1078,18 @@ const mutations = [
   /* H20: negation record-wide is the mistake that looks like a fix. It scores every negative and
      deletes a flash flood warning that is in effect beside a denied tsunami. */
   { name: 'negation becomes a record-wide veto',
-    from: "  const qualifying = clauses.filter(clause => clauseEventState(clause));",
-    to:   "  const qualifying = clauses.some(c => hasAny(c, NEGATION)) ? [] : clauses.filter(clause => clauseEventState(clause));",
+    from: "  if (!qualified.length) return false;",
+    to:   "  if (!qualified.length || clauses.some(c => hasAny(c, NEGATION))) return false;",
     expect: ['true:  negated claim beside an independent active one'],
     suite: 'news', target: 'api' },
 
   /* H20, the converse: negation ignored entirely brings back the denied-threat false positive. */
+  /* Pointed at the record where the anchor-denial rule cannot also decide it: the denial follows
+     the anchor, so the only thing negated is the forecast. */
   { name: 'negation ignored',
     from: "      if (reaches(negation, i, true)) continue;",
     to:   "",
-    expect: ['false: No tsunami threat to Hawai\u02BBi after Japan eart'],
+    expect: ['a negated forecast does not qualify even when the anchor is not denied'],
     suite: 'news', target: 'api' },
 
   /* H20: the negation window. Widened to the whole clause, a denial of injuries cancels the
@@ -1164,20 +1165,21 @@ const mutations = [
     suite: 'news', target: 'api' },
 
   /* H22: a denied local impact must not localize a remote event. */
+  /* H22: an anchor inside a hazard denial cannot localize a claim outside it. The test is whether
+     the negation covering the anchor also covers hazard vocabulary -- which is what keeps "no
+     injuries in the Maui brush fire evacuation" working. */
   { name: 'the denial-scoped anchor rule removed',
-    from: "    if (isDenialClause(clause)) continue;",
-    to:   "",
-    /* Pointed at the record the remote-locality rule cannot also decide, so this case proves the
-       denial rule rather than riding on its neighbour. */
-    expect: ['and a denial is still not a lender when no remote place is named'],
+    from: "      if (evidence.some(e => e >= n && e - n <= CLAIM_REACH)) { denied = true; break; }",
+    to:   "      denied = true; break;",
+    expect: ['a denial of injuries does not cancel the evacuation in the same clause'],
     suite: 'news', target: 'api' },
 
-  /* H22/H07, the converse: treating a RESOLVED clause as a denial would refuse the anchor that
-     the contract explicitly says may compose with an active summary. */
-  { name: 'a resolved clause treated as a denial',
-    from: "function isDenialClause(clause) {",
-    to:   "function isDenialClause(clause) {\n  if (hasAny(clause, RESOLUTION)) return true;",
-    expect: ['a resolved TITLE anchor composes with an active summary'],
+  /* H22, the other direction: the denial test is per ANCHOR, not per clause. Applied clause-wide
+     it deletes a live evacuation because the same sentence reports no injuries. */
+  { name: 'a negation anywhere disqualifies the clause anchor',
+    from: "  for (const a of anchors) {",
+    to:   "  if (negation.length) return false;\n  for (const a of anchors) {",
+    expect: ['a denial of injuries does not cancel the evacuation in the same clause'],
     suite: 'news', target: 'api' },
 
   /* H23: clause splitting is the structure the whole gate rests on. Collapse it and a storm that
@@ -1255,18 +1257,19 @@ const mutations = [
 
   /* ---- The three defects read-only review found ---- */
 
-  /* H06: a qualifying clause that names a remote place must carry its own anchor. Without this a
-     resolved Maui clause about a DIFFERENT hazard localizes a California wildfire. */
-  { name: 'a remote hazard clause allowed to borrow an anchor',
-    from: "      qualifying.every(clause => hasAny(clause, REMOTE_LOCALITY))) return false;",
-    to:   "      false) return false;",
-    expect: ['nor does a resolved clause about a DIFFERENT hazard'],
+  /* H22: WHAT is being localized decides what may lend. A hazard clause lends to a qualifying
+     protective action, never to a qualifying hazard -- otherwise a resolved Maui flood advisory
+     localizes an Alberta wildfire. */
+  { name: 'the hazard-lending rule ignores what is being localized',
+    from: "  const wantsHazard = qualified.some(q => q.state === 'protective' || q.state === 'consequence');",
+    to:   "  const wantsHazard = true;",
+    expect: ['an unlisted remote place does not borrow an unrelated resolved clause'],
     suite: 'news', target: 'api' },
 
   /* H22: the lending clause has to be ABOUT the claim. Without this, any non-denial clause lends,
      which is the original blocker: unrelated local prose localizes a hazard with no place. */
-  { name: 'any non-denial clause allowed to lend its anchor',
-    from: "    if (clauseHazardEvidence(clause) || hasAny(clause, PROTECTIVE_SUBJECT) ||\n        isContinuation(clause)) return true;",
+  { name: 'any anchored clause allowed to lend',
+    from: "    if (wantsHazard && clauseHazardEvidence(clause)) return true;",
     to:   "    return true;",
     expect: ['nor does it when the hazard clause names no place at all'],
     suite: 'news', target: 'api' },
@@ -1282,18 +1285,21 @@ const mutations = [
   /* The capture record that proved the protective-subject rule: open shelters lending their
      anchor to the clause that says what the islands are bracing for. */
   { name: 'a protective action no longer lends its anchor',
-    from: "    if (clauseHazardEvidence(clause) || hasAny(clause, PROTECTIVE_SUBJECT) ||",
-    to:   "    if (clauseHazardEvidence(clause) ||",
-    expect: ['and so does a clause naming an open shelter'],
+    from: "    if (wantsAction && hasAny(clause, PROTECTIVE_SUBJECT) &&",
+    to:   "    if (false && hasAny(clause, PROTECTIVE_SUBJECT) &&",
+    expect: ['a protective action IN FORCE lends to a qualifying hazard'],
     suite: 'news', target: 'api' },
 
   /* §4 research, both directions. The object discriminates a finding from an observation, so
      removing it readmits the research family, and deleting the observation verbs instead -- which
      is what the previous round did -- deletes a real detection. */
-  { name: 'the research-object discrimination removed',
-    from: "      if (reaches(research, i, false)) continue;",
+  /* §4: an observation qualifies on what it observed, so the hazard has to come first. Without
+     this a report ABOUT a hazard qualifies, whatever its object is called. */
+  { name: 'the observation word-order rule removed',
+    from: "      if (reportVerbs.indexOf(i) !== -1 && closestDistance(evidence, i, true) === -1) continue;",
     to:   "",
-    expect: ['and a report sitting beside the hazard word is still only a report'],
+    expect: ['and a report sitting beside the hazard word is still only a report',
+             'a report about a hazard does not qualify, whatever the object is called'],
     suite: 'news', target: 'api' },
 
   { name: 'the observation verbs deleted again',
@@ -1312,9 +1318,9 @@ const mutations = [
     suite: 'news', target: 'api' },
 
   { name: 'the in-force rescue ignores which locality it names',
-    from: "        if (claimLocality(tokens, anchorsAt, r) !== here) return true;",
+    from: "        if (there && there !== here) return true;",
     to:   "        return true;",
-    expect: ['while the same order with no second locality stays resolved'],
+    expect: ['an in-force phrase naming the same place as the resolution rescues nothing'],
     suite: 'news', target: 'api' },
 
   /* H19/H20: the assertion has to be ABOUT a hazard that sits beside it. Without the proximity
@@ -1343,6 +1349,46 @@ const mutations = [
     suite: 'news', target: 'api' },
 
 
+
+  /* H22: the fragment allowlist is CLOSED on purpose. Opened up, every clause becomes a bare
+     locality fragment and unrelated local prose lends again. */
+  { name: 'the locality fragment allowlist opened up',
+    from: "    if (FRAGMENT_TOKENS.indexOf(tokens[i]) === -1) return false;",
+    to:   "",
+    expect: ['a preposition does not make a clause a continuation of the assertion'],
+    suite: 'news', target: 'api' },
+
+  /* H20: the locality scan stops at the next claim. Without that it runs past it and hands a
+     resolution the locality that belongs to the in-force phrase after it. */
+  { name: 'the claim-locality scan runs past the next claim',
+    from: "  for (let p = i + width; p < tokens.length; p++) {\n    if (stops.indexOf(p) !== -1) break;",
+    to:   "  for (let p = i + width; p < tokens.length; p++) {",
+    expect: ['a two-locality order works in either word order'],
+    suite: 'news', target: 'api' },
+
+  /* §4: a clause break at `after` separates an active consequence from the hazard that caused
+     it, and the contract names that construction as qualifying. */
+  { name: 'after restored as a clause boundary',
+    from: "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(?:but|while|however|although|though|as|and|meanwhile)\\s/;",
+    to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(?:but|while|however|although|though|as|and|meanwhile|after)\\s/;",
+    expect: ['a road that remains closed after flooding is an active consequence'],
+    suite: 'news', target: 'api' },
+
+  /* H02: whole-token matching for the hazard and locality vocabularies now lives in
+     phrasePositions, so that is where the boundary has to be proven. Loosening it to containment
+     is the predecessor's defect in the place it can still happen. */
+  { name: 'position matching loosened to substring containment',
+    from: "        if (tokens[i + k] !== parts[k]) { hit = false; break; }",
+    to:   "        if (tokens[i + k].indexOf(parts[k]) === -1) { hit = false; break; }",
+    expect: ['vog still does not match inside vogue when the record asserts continuation'],
+    suite: 'news', target: 'api' },
+
+  /* H04: and the locality half of the same property. */
+  { name: 'the anchor position helper bypassed',
+    from: "  const anchors = hawaiiAnchorPositions(tokens);\n  if (!anchors.length) return false;",
+    to:   "  const anchors = tokens.map((t, i) => i);\n  if (!anchors.length) return false;",
+    expect: ['bare island does not anchor'],
+    suite: 'news', target: 'api' },
 
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
      a real evacuation order, which is the failure this whole contract exists to prevent. */

@@ -765,6 +765,59 @@ async function main() {
   check('  while a volcano update in research voice still qualifies on what the lava does',
     classify('HVO researchers report lava continues at Kilauea.', ''), true);
 
+  console.log('\nH06/H22/§4 — the four discriminating cases round 3 found:');
+
+  /* BLOCKER 1, and the reason there is no remote-place list any more. A bounded deny-list left
+     `Alberta` reachable, a leading preposition made any clause a continuation, and bare `shelter`
+     made the contract's own animal-shelter negative into a lender. Locality is a positive rule
+     now: the anchor has to belong to the qualifying claim. */
+  check('an unlisted remote place does not borrow an unrelated resolved clause',
+    classify('Alberta wildfire threatens homes.', 'Flood advisory for Maui cancelled.'), false);
+  check('a preposition does not make a clause a continuation of the assertion',
+    classify('Wildfire threatens homes.', 'In Maui, the council meets today.'), false);
+  check('the animal-shelter negative does not become a lender',
+    classify('Wildfire threatens homes.', 'Maui nonprofit animal shelter expands capacity.'), false);
+  /* The three lending rules that DO hold, each with the record that requires it. */
+  check('  a hazard clause lends to a qualifying protective action',
+    classify('Maui brush fire is contained, but the evacuation order remains in effect.', ''), true);
+  check('  a protective action IN FORCE lends to a qualifying hazard',
+    classify('O\u02BBahu shelters open', 'The islands brace for flash flooding.'), true);
+  check('  and a bare locality fragment lends to the clause it continues',
+    classify('Flood warning issued', 'for Maui through tonight.'), true);
+
+  /* BLOCKER 2: word order expresses the research construction, where a vocabulary of objects
+     could not. The hazard is what is OBSERVED when it comes first, and the TOPIC of a report
+     when it comes after. */
+  check('a report about a hazard does not qualify, whatever the object is called',
+    classify('Researchers reported new evidence about lava at K\u012Blauea.', ''), false);
+  check('  and an observation of a hazard qualifies even with a research object present',
+    classify('Flooding observed in rainfall measurements across Hilo.', ''), true);
+
+  /* BLOCKER 3: §4 names this construction explicitly, and a clause break at `after` put the
+     consequence in one clause and its hazard in the other so that neither qualified. */
+  check('a road that remains closed after flooding is an active consequence',
+    classify('Maui road remains closed after flooding.', ''), true);
+
+  /* BLOCKER 4: the same two-locality order as the fixture above, in ordinary word order. The
+     locality scan has to run outward from the claim and stop at the next claim, or `lifted` is
+     handed the Olowalu that belongs to `remains in effect`. */
+  check('a two-locality order works in either word order',
+    classify('Evacuation order for Lahaina lifted, remains in effect for Olowalu.', ''), true);
+
+  console.log('\nThree records that keep load-bearing rules load-bearing:');
+  /* The negation inside the event gate, where the anchor-denial rule cannot also decide it: the
+     denial follows the anchor, so only the assertion is negated. */
+  check('a negated forecast does not qualify even when the anchor is not denied',
+    classify('Maui is not expected to see flooding.', ''), false);
+  /* The in-force rescue must compare localities, not merely find one. Here the resolution and the
+     in-force phrase name the SAME place, so there is nothing to rescue. */
+  check('an in-force phrase naming the same place as the resolution rescues nothing',
+    classify('Tsunami advisory for Hawaii cancelled, no longer in effect for Hawaii.', ''), false);
+  /* Whole-token matching in the frame vocabularies, not only in the hazard ones: `poll` sits
+     inside `pollution`, and INDIRECT_FRAME carries `poll`. */
+  check('an indirect-frame word does not match inside a longer word',
+    classify('Flood warning issued for Oahu amid pollution concerns', ''), true);
+
   console.log('\nH15/H16 — six records from the 2026-10-29 five-feed capture, verbatim shapes:');
   /* These are not invented prose. Each is a real decoded title+summary shape from the capture
      required by H15, kept as a regression fixture because the authored corpus did not contain it.
