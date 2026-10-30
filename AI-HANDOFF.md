@@ -118,6 +118,18 @@ consequence family is handled. If the capture contains no instance of one of the
 consequence families, that will be reported as an absence of evidence for that family, not as
 evidence the family is handled.
 
+**Evidence, complete as of the third commit on this branch.**
+
+| Owed | State |
+|---|---|
+| 9 amendment negatives, 6 positives | Green, and each negative additionally proved to reach the third gate |
+| Mutation per negative and surviving positive family | 221 of 221 caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
+| H15 contemporaneous capture | 170 items, five feeds, zero feed failures, 2026-10-29. Ledger below |
+| H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
+
+Suites: **519 pure** (was 450), **669 DOM** (unchanged), **221 of 221 mutations** (was 196).
+Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
+
 ## Active Branches
 
 | Agent | Branch | Purpose |
@@ -152,6 +164,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
+| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`, not yet merged.** Three gates, decided per clause: hazard evidence, an asserted event or active operational impact, and locality from a clause that does not deny the only local impact. 519 pure, 669 DOM, 221 of 221 mutations. The live capture found four defects the deterministic corpus did not, two of them false negatives on real hazard records, and all four are fixed with fixtures and mutations | Awaiting Codex's read-only review and the owner's merge. Two items are referred up rather than decided: the bare-`islands` locality residual and the explainer-about-an-active-storm ambiguity, both below |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
 **`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
@@ -232,6 +245,37 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **A real Hawaiʻi flood watch is dropped because its only locality word is “the islands.”**
+  From the 2026-10-29 capture: *“Tuesday Evening Forecast — Heavy rain overnight as a monsoon trough
+  brings flood risk to the islands,”* whose summary carries “a flood watch is in effect now until
+  early Thursday morning.” It passes the hazard and event gates and fails locality, because bare
+  `island` is deliberately excluded under H04 as an ambiguous generic phrase. **The previous
+  classifier dropped it too, so this is a pre-existing H04 gap, not a regression.**
+
+  It was **not** fixed in the implementation unit, on purpose. `the islands` would anchor any
+  story about any islands, which is the exact collision H04 names for bare `ocean view`, and H03
+  forbids resolving it by noticing that KITV is a Hawaiʻi outlet. A qualified construction with
+  its own fixtures is a vocabulary decision for the contract, not a silent tweak inside an
+  implementation claim. **Recorded as a named unresolved item rather than averaged into a
+  precision figure, per H16.**
+
+- **One capture item is genuinely ambiguous and is recorded as ambiguous, not tuned.**
+  *“Tropical Storm Olana: Why Hawaiʻi should stay prepared, even without a direct hit.”* Olana is
+  a real active storm, so the story is not aftermath; but the record asserts no hazard to
+  Hawaiʻi — it explains why preparation matters anyway — and §4 says a story that merely names
+  the event does not qualify. It now classifies **false**, as a side effect of adding contracted
+  negation forms: its only event clause reads “storms that don’t directly hit us.”
+
+  The contraction fix is correct on its own terms and would have been made regardless. **It did
+  not decide the ambiguity, and this entry does not claim it did.** If an explainer about a named
+  active storm should be eligible, that is a §4 amendment and not an implementation change.
+
+- **A latent clause-scoping residual, recorded before anyone finds it as a defect.** Locality is
+  now taken per clause, so a two-word anchor split by a clause boundary would not match. No anchor
+  in the current vocabulary contains a boundary token, so this is latent rather than active; it
+  becomes real the first time an anchor containing `and`, `as`, `after`, `but` or sentence
+  punctuation is added.
 
 - **Revision 6 of the owner WAF procedure exists but has not been executed.** #62 was a
   documentation-only rewrite: no Vercel dashboard or WAF state was inspected or changed, no test
@@ -397,6 +441,81 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — H19–H24 implemented; the H15/H16 capture ledgers
+
+**What the gate is.** Three named assertion groups — hazard onset, protective action, active
+operational consequence — four named disqualifiers — negation, resolution, history and
+preparedness, indirect aftermath — one persistence group that overrides resolution inside a
+clause, and a permanent-feature subtraction so terrain cannot vouch for a closure. Every one is a
+named list with its own mutation, which is what H23 asks for instead of one expression.
+
+**Why per clause.** Five of the contract's six required positives carry resolved or negated
+language. A record-wide veto on `contained`, `lifted` or `no` scores every negative in the
+amendment and deletes an evacuation order that is still in force. The structure is the decision;
+the vocabulary is secondary.
+
+**One deliberate deletion.** The record-wide hazard-evidence gate is gone. A clause-scoped test
+implies it, so keeping both left two checks where neither could be shown to be load-bearing — a
+mutation removing either changed no answer, because the other still rejected the record. Gate 2
+now lives in one named helper, `clauseHazardEvidence`, and the suite asserts on that helper rather
+than on a copy of it.
+
+**Five green mutations were green for the wrong reason.** The gate-2 cases for word boundaries,
+`swell`, `emergency`, `warning` and compound context all survived the new gate: their fixtures
+asserted no event, so loosening the vocabulary changed no answer. Each now has an
+assertion-bearing twin. The suite had been passing because the fixtures had stopped
+discriminating, which is the same failure mode as the PW-106 tests that asserted only
+“does not throw.”
+
+#### H15 ledger — 2026-10-29 capture, five feeds, 170 items, zero feed failures
+
+Old classifier is `b746dd9`. New is this branch. Same decoded pool, same shipped parser. Eight
+labels changed: **14 hazard items before, 8 after.** Titles are recorded as H15 requires; no feed
+body is stored.
+
+| # | Source | Old → new | Title | Contract rationale |
+|---|---|---|---|---|
+| 1 | Star-Advertiser | false → **true** | Evacuation warning issued for Kipahulu District of Haleakala National Park | H04 locality gap the capture proved. A real Maui evacuation warning that passed the hazard and event gates; `haleakala` and `kipahulu` added with provenance. The old classifier dropped it too |
+| 2 | Star-Advertiser | true → false | Letter: Are representatives up to climate policy challenge? | §4 indirect: an opinion letter. No clause asserts an event. This record is why `likely` was kept OUT of the forecast group |
+| 3 | KHON2 | true → false | Team Rubicon focuses on Maui mitigation work amid hurricane season | H21 long-term recovery, plus a season as a background condition. Both fixed and both fixtured separately |
+| 4 | KITV 4 | true → false | Airbnb.org expands emergency housing support for Hawaiʻi disaster survivors | H21 aid administration. No hazard, protective action or active consequence asserted |
+| 5 | KITV 4 | true → false | Kauai Hurricane Lowell Business Recovery Grant Program no longer accepting applications | H21 aid administration, and the grant program is itself closed |
+| 6 | KITV 4 | true → false | Tropical Storm Olana: Why Hawaiʻi should stay prepared, even without a direct hit | **Recorded as ambiguous, not as a clean rejection.** See Outstanding Verification |
+| 7 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.0M earthquake near Bonin Islands, Japan | H20 and H22, live. The only Hawaiʻi impact is expressly denied, so the remote quake cannot borrow the anchor |
+| 8 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.2M earthquake in Vanuatu in Melanesia | As above. Required negative 1 appeared twice in one capture |
+
+**The eight retained hazard items,** with the group that qualified each: a flash flood warning and
+Hawaiʻi Island flood advisory (protective), the Kipahulu evacuation warning (protective), Maui
+evacuations and closures (protective), a large northwest swell expected to hit (onset), flash
+flooding possible for Maui County (onset), six Molokaʻi schools closed due to flooding
+(consequence), Oʻahu shelters open as the islands brace (onset), and shelters on Oʻahu and Maui for
+heavy rain (onset). Every one is current operational information.
+
+#### H16 ledger — the locality-only list, resolved item by item
+
+Three items had hazard evidence and no locality. H16 forbids averaging them, so each is resolved
+as a proved local anchor, a proved non-Hawaiʻi item, or a blocker:
+
+| Item | Resolution |
+|---|---|
+| Tuesday Evening Forecast — monsoon trough brings flood risk **to the islands** | **Proved local, unresolved.** A real flood watch in effect. Named in Outstanding Verification as a pre-existing H04 gap, referred up rather than fixed inside this claim |
+| Newsom signs order protecting Pacific Coast Highway from El Niño storms | **Proved non-Hawaiʻi.** California. Correctly rejected |
+| Melania Trump says she secured a one-city ceasefire for humanitarian aid | **Proved non-Hawaiʻi.** Correctly rejected |
+
+**The absence I committed to reporting as an absence.** Of the four production consequence
+families in the amendment, this capture contained an instance of **one**: aid administration,
+twice, both correctly rejected. It contained **no** litigation item, **no** supplies item and
+**no** tourism or price item. For those three families the capture is **evidence of nothing**, not
+evidence they are handled. The durable claim for all four rests on the deterministic fixtures and
+their mutations, exactly as the contract's evidence-interpretation section says it must.
+
+**Also found, and not a precision story.** Two of the four capture defects were FALSE NEGATIVES:
+real hazard records the implementation dropped. A review that had looked only at what the new
+classifier removed would have scored this capture as a clean six-item precision win and shipped
+both. That is the failure mode H16 exists to prevent, and it is the fourth time on this project
+that review of behaviour, not a green suite, found the defect.
+
 
 ### 2026-10-29 — the H19–H24 implementation claimed; #64 absorbed
 
