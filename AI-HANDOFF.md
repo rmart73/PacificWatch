@@ -118,18 +118,19 @@ consequence family is handled. If the capture contains no instance of one of the
 consequence families, that will be reported as an absence of evidence for that family, not as
 evidence the family is handled.
 
-**Evidence, complete as of the ninth commit on this branch** (three implementation commits, three
-review rounds, three board updates).
+**Evidence, complete as of the current branch head.** An earlier version counted commits here and
+went stale within the day; per the volatile-identifier rule this entry now points at the PR's own
+checks rather than naming a head that the next commit supersedes.
 
 | Owed | State |
 |---|---|
 | 9 amendment negatives, 6 positives | Green, and **all nine are asserted to reach the third gate**, which is what the contract requires. For one round the lava-field case did not, because the permanent-feature subtraction had been folded into gate 2; review ruled the contract stands and the subtraction moved to the event gate |
-| Mutation per negative and surviving positive family | **237 of 237** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
+| Mutation per negative and surviving positive family | **240 of 240** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
 | H15 contemporaneous capture | 170 items, five feeds, zero feed failures. **Four captures taken**; the last three are identical to each other, so each round's changes are shown not to regress real feed text. Ledger below is the first |
-| Exact-head hosted run | `40995302071` at `a61b3c4`, **attempt 2**, 552 / 669 / 237 of 237 with 237 verdict lines. **Attempt 1 failed on a non-reproducible `MISSED`** in an unrelated N02 case and is recorded in Outstanding Verification rather than omitted |
+| Exact-head hosted run | **See the PR's required checks**, which always describe the current head. Naming a run ID here made the row wrong one commit later. The one historical fact worth keeping: run `40995302071` **attempt 1** failed on a non-reproducible `MISSED` in an unrelated N02 case, recorded in Outstanding Verification rather than omitted |
 | H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
 
-Suites: **552 pure** (was 450), **669 DOM** (unchanged), **237 of 237 mutations** (was 196).
+Suites: **558 pure** (was 450), **669 DOM** (unchanged), **240 of 240 mutations** (was 196).
 Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
 
 ## Active Branches
@@ -255,22 +256,25 @@ performs #28's expected self-close transition immediately after the merge.
   `a61b3c4` reported `237 of 237` with 237 verdict lines.** Both attempts ran well inside the
   ceiling: 488s and 511s against 1200s.
 
-  **Why this matters more than one flaky case.** The harness scores a mutant that produces no
-  output as `MISSED`, because it looks for a `FAIL` line and finds none. A child process that
-  crashed, was killed, or wrote nothing under contention is therefore indistinguishable from an
-  assertion that genuinely failed to discriminate. That is a defect in the **evidence model**, not
-  in the classifier: it means a green mutation run cannot by itself distinguish "every case was
-  caught" from "every case either was caught or silently produced nothing".
+  **A CORRECTION. The previous version of this entry said a green mutation run cannot distinguish
+  "every case was caught" from "every case silently produced nothing". That is false, and review
+  was right to reject it.** The harness is fail-CLOSED: in `runCase()` an empty child output
+  produces no matching `FAIL` lines, so `caught.length` cannot equal `expect.length`, the case
+  resolves as `MISSED`, the shared counter increments and the run exits nonzero. A green run
+  therefore **does** exclude a silent child, and the green gate on this branch is valid.
+
+  What a RED attempt cannot distinguish is **why** it was red: genuine non-discrimination against a
+  silent or crashed child. That is a diagnosis gap, not a validity gap, and it is the whole of what
+  an explicit `NO OUTPUT` verdict would buy.
 
   **Not diagnosed, and deliberately not guessed at.** One occurrence in four hosted mutation runs
   on this branch. CI pins Node `24.21.0` and local development runs `18.20.4`, so a version-
   dependent difference was the first hypothesis and is **ruled out** by the same case passing on
   the hosted runner in runs `40977966070`, `40984518638` and `40990747098`, and again on attempt 2.
 
-  **Recommended for a separate C-series unit, not fixed here:** give the harness an explicit
-  verdict for "the mutant produced no output at all", so a silent child can never be reported as
-  a missed assertion. That is a change to the evidence model and belongs with C12/C13, outside
-  this claim's boundary.
+  **Still worth a separate C-series unit, but it does not gate this PR:** an explicit
+  `NO OUTPUT` verdict would make a red attempt diagnosable. Per review's ruling, #65 does not wait
+  on it, because the green gate was never in question.
 
 - **A real Hawaiʻi flood watch is dropped because its only locality word is “the islands.”**
   From the 2026-10-29 capture: *“Tuesday Evening Forecast — Heavy rain overnight as a monsoon trough
@@ -297,15 +301,26 @@ performs #28's expected self-close transition immediately after the merge.
   not decide the ambiguity, and this entry does not claim it did.** If an explainer about a named
   active storm should be eligible, that is a §4 amendment and not an implementation change.
 
-- **A protective action described as `open` can lend its anchor.** Gate 1 lets a clause naming a
-  protective action **in force** lend locality to a qualifying hazard, which is what the capture
-  record *“Oʻahu shelters open”* beside *“the islands brace for flash flooding”* requires. Bare
-  `open` is in the issuance list because that is how a shelter notice is actually written.
+- **One live capture record is a known false negative, and it is a finding rather than a residual
+  I am claiming.** *“Need2Know: Oʻahu shelters open…”* beside *“…as the islands brace for flash
+  flooding”* classifies **false**. Its locality sits in a clause naming a protective action and
+  its hazard in another, and the rule that used to join them — a protective action in force may
+  lend its locality — was **removed**, because it could not be stated tightly enough to exclude
+  *“Maui nonprofit animal shelter open for adoptions”*. `wildfire` is in the shelter row's own
+  context, so even requiring the shelter to be in force and for that hazard admitted the animal
+  shelter.
 
-  The residual: an **animal** shelter described as open, in a record that also carries a hazard,
-  would lend. The contract's own animal-shelter negative uses *“expands capacity”* and is
-  rejected, and so is a *cancelled* advisory — both are asserted. This is narrower than the
-  deny-list it replaced and it is named rather than implied shut.
+  The fixture is **not** asserted as false. The record's correct label is true, and asserting the
+  label the implementation happens to produce is the mistake this unit has already made twice. The
+  vocabulary the capture proved (`brace`) is asserted on a record whose anchor is in the
+  qualifying clause.
+
+- **Hazard-lends-to-protective is still a CATEGORY match.** Two unrelated hazards in one record
+  compose: *“Tsunami advisory remains in effect.”* beside *“Maui brush fire burns 200 acres.”*
+  would classify true. The lender must now also name the same hazard subject or carry the hazard
+  the assertion is about, and the indirect-aftermath shape review found is rejected, but same-event
+  identity is not established. **Closing it drops required positive 2**, which is why it is named
+  here rather than fixed, and the contract says to stop for review in exactly that case.
 - **A latent clause-scoping residual, recorded before anyone finds it as a defect.** Locality is
   now taken per clause, so a two-word anchor split by a clause boundary would not match. No anchor
   in the current vocabulary contains a boundary token, so this is latent rather than active; it
@@ -476,6 +491,55 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — review round 4, and a capture I reported without running
+
+**First, a reporting failure of mine.** I reported a fifth capture in-session with figures that
+came from a stale file: the capture script had crashed on a renamed helper and I had run it with
+`2>/dev/null`, so the crash was invisible and the previous run's ledger was still on disk. The
+figures were re-derived from a run with errors visible, and that run found **two false negatives
+the suppressed one would never have shown**. Suppressing stderr on an evidence-producing script is
+the error, not the crash.
+
+| Blocker | The record | Ruling |
+|---|---|---|
+| H22 | `Tsunami advisory remains in effect.` / `Maui wildfire attorney fee caps debated.` | The positive rules matched categories, not the same event |
+| H22 | `Wildfire threatens homes.` / `Maui nonprofit animal shelter open for adoptions.` | The open-shelter residual is **not** acceptable |
+| §4 | `USGS detected an earthquake near Hilo.` | Word order is not the discriminator either |
+| §4 | `Kīlauea lava chemistry findings reported by researchers.` | — in the other direction |
+
+**What replaced the word-order rule.** Whether the hazard HEADS the verb's noun phrase. "detected
+an earthquake near Hilo" closes the phrase right after the hazard; "reported lava chemistry
+changes" carries two more nouns, so `lava` modifies `changes`. Both sides of the verb are covered,
+so `earthquake swarm detected` and `detected earthquake swarm` both qualify. Three mechanisms have
+now been tried for this one contract sentence — an object vocabulary, word order, and phrase
+headedness — and the third is the first that is about the grammar the sentence describes.
+
+**The two capture defects, both live hazard records.** A flash flood warning in force for Hawaii
+Island and cancelled for East Maui was being deleted whole, because a cancellation was scoped only
+through in-force phrases; a protective SUBJECT now consults its own locality. And a northwest-swell
+record lost its locality when protective lending was removed, because its title carries the place
+and the word `swell` while its summary carries the ocean context that satisfies the row — which
+is precisely H07 complementary evidence. A lender naming the **same hazard subject** recovers it
+and rejects every adversarial record from all four rounds.
+
+**A mechanism deleted for being unprovable.** `claimLocality` stopped its scan at the next
+claim-bearing token. Once the protective subject consulted its own locality, all six two-locality
+records decided the same way without it and no mutation could show the stop list mattered. Deleted
+rather than kept. **That is the seventh decision on this unit that nothing could prove**, and the
+first one I removed before review had to ask.
+
+**A claim of mine that was simply wrong.** The board said a green mutation run cannot distinguish
+"every case caught" from "every case silently produced nothing". It can: the harness is
+fail-closed, an empty child output cannot satisfy the conjunction, and the run exits nonzero. The
+entry is corrected in place and says what it used to say. The real gap is narrower — a RED
+attempt cannot say **why** it was red — and review ruled that this does not gate the PR.
+
+**A second wrong label retracted, for the same reason as the first two.** The open-animal-shelter
+residual is withdrawn. Three retractions now, all of the same shape: I recorded something honestly
+and then treated the record as permission. The rule stands: **a residual is a finding, not a
+permission.**
+
 
 ### 2026-10-29 — review round 3: the deny-lists came out
 
