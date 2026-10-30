@@ -126,11 +126,11 @@ checks rather than naming a head that the next commit supersedes.
 |---|---|
 | 9 amendment negatives, 6 positives | Green, and **all nine are asserted to reach the third gate**, which is what the contract requires. For one round the lava-field case did not, because the permanent-feature subtraction had been folded into gate 2; review ruled the contract stands and the subtraction moved to the event gate |
 | Mutation per negative and surviving positive family | **246 of 246** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
-| H15 contemporaneous capture | 170 items, five feeds, zero feed failures on every run. **Nine valid captures.** A ninth result was reported in-session and is **not** a capture: the script had crashed and the figures came from a stale file. Captures 5, 7 and 8 each found a defect the deterministic corpus did not. Ledger below is the first |
+| H15 contemporaneous capture | 170 items, five feeds, zero feed failures on every run. **Ten valid captures.** A ninth result was reported in-session and is **not** a capture: the script had crashed and the figures came from a stale file. Captures 5, 7 and 8 each found a defect the deterministic corpus did not. Ledger below is the first |
 | Exact-head hosted run | **See the PR's required checks**, which always describe the current head. Naming a run ID here made the row wrong one commit later. The one historical fact worth keeping: run `40995302071` **attempt 1** failed on a non-reproducible `MISSED` in an unrelated N02 case, recorded in Outstanding Verification rather than omitted |
 | H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
 
-Suites: **574 pure** (was 450), **669 DOM** (unchanged), **246 of 246 mutations** (was 196).
+Suites: **575 pure** (was 450), **669 DOM** (unchanged), **246 of 246 mutations** (was 196).
 Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
 
 ## Active Branches
@@ -167,7 +167,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
-| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`; review rounds 1—6 closed, not yet merged.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 574 pure, 669 DOM, 246 of 246 mutations. Nine valid live captures found seven defects the deterministic corpus did not; six rounds of read-only review found eighteen contract blockers the captures did not, every one of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. **Two residuals the board previously recorded as accepted were wrong** and are now passing assertions — see the round-2 and round-3 logs. One referred item remains open |
+| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`; review rounds 1—7 closed. One contract question is open and is the reason this is not ready to merge.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 575 pure, 669 DOM, 246 of 246 mutations. Ten valid live captures found seven defects the deterministic corpus did not; seven rounds of read-only review found twenty contract blockers the captures did not, every one of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. **Two residuals the board previously recorded as accepted were wrong** and are now passing assertions — see the round-2 and round-3 logs. One referred item remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
 **`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
@@ -248,6 +248,34 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **OPEN CONTRACT QUESTION, and the reason the implementation unit is not ready to merge: what
+  relationship may a conjunction chain assert?** Composition now requires the lender and the
+  qualifying assertion to name **the same subject directly**. That rejects every adversary across
+  seven review rounds and keeps required positives 2, 6 and 11. It costs one live capture record.
+
+  | | anchored clause | witness clause | assertion clause |
+  |---|---|---|---|
+  | *Need2Know* (correct label **true**) | `Oʻahu shelters open …` | `… about shelters` | `the islands brace for flash flooding` |
+  | adversary (correct label **false**) | `Maui animal shelters expand capacity` | `Shelters receive donations` | `California wildfire threatens homes` |
+
+  **The clause graphs are identical** — an anchored clause whose subject is `shelters`, a witness
+  clause repeating `shelters`, and a conjunction-joined hazard clause naming a different hazard.
+  The only textual difference is the word `California`. Separating them requires detecting a
+  competing locality in the hazard clause, which is a place-name gazetteer, and that was rejected
+  in round 3 as a bounded list standing in for a semantic rule.
+
+  **So this is not a mechanism I have failed to find; it is a question the contract has not
+  answered.** Seven mechanisms have been tried on this one path and each was broken by a new
+  adversary of the same shape. The contract needs to say either (a) that a two-edge chain through
+  a shared protective subject composes, and accept the false positive it admits, or (b) that it
+  does not, and accept this false negative. **I have implemented (b)**, because a false positive
+  on a remote hazard violates H06 and H22 outright while the false negative is a recall gap. The
+  fixture is deleted rather than flipped to false — the record's correct label is true.
+
+  Not urgent in production terms: the record has rotated out of the feed, and the tenth capture
+  retains seven items with no shelter record dropped. It will recur the next time an outlet
+  writes a shelter headline that way.
 
 - **The mutation harness produced a non-reproducible `MISSED`, and it was not on a case this
   branch touched.** Run `40995302071` **attempt 1** reported `236 of 237` with one `MISSED` on
@@ -478,6 +506,38 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — review round 7: the seventh mechanism, and a question instead of an eighth
+
+Both blockers were the same defect for the third round running: **the comment claimed a
+relationship and the code checked something weaker.** The conjunction path said "a hazard and the
+protective action it caused" and proved hazard category + protective category + a conjunction. The
+witness path said the witness was connected to the assertion and proved that it was reachable from
+it.
+
+**The conjunction path is now provable.** The assertion must introduce no physical hazard the
+lender does not share, which is exactly what separates required positive 2 from *“but California
+wildfire evacuation order remains in effect”*. `physicalHazards()` is hazard terms minus protective
+subjects, because `evacuation` is in both vocabularies and that overlap is the whole distinction.
+
+**The witness path is removed rather than narrowed, and that is the substance of this round.** A
+conjunction chain proves syntactic reachability, not shared-event identity: replacing round 5's
+sentence boundary with `while` reopened the identical path. I checked whether any further
+restriction could separate the live record from the adversary and **it cannot** — their clause
+graphs are the same, and the only difference is a place name in the hazard clause. The table is in
+Outstanding Verification.
+
+**What this round should change about how I work.** Seven mechanisms on one path, each broken by an
+adversary of the same shape, and the useful move in round 5 was a ruling rather than a mechanism.
+I should have escalated after the third, not the seventh. The signal was available each time: when
+a fix needs a *bounded list of the world* to work, it is answering a question the contract has not
+asked yet.
+
+**An eighth unprovable condition removed.** The conjunction path also required `q.state` to be
+protective or consequence; the physical-hazard restriction subsumed it the moment it existed. Every
+record decided the same way without it and no mutation could show it mattered. Removed before
+review had to ask, which is now twice.
+
 
 ### 2026-10-29 — review round 6: two edges are not a claim
 
