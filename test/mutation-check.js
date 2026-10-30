@@ -977,7 +977,7 @@ const mutations = [
   /* H03: the locality gate is the half that makes this a LOCAL hazard feed rather than a keyword
      search. Removing it restores the predecessor's behaviour on the two mainland stories. */
   { name: 'the locality gate removed',
-    from: "  return hasLocalAnchor(clauses);",
+    from: "  return hasLocalAnchor(clauses, qualifying);",
     to:   "  return true;",
     expect: ['false: California wildfire forces thousands to evacuate.'],
     suite: 'news', target: 'api' },
@@ -1045,8 +1045,8 @@ const mutations = [
 
   /* The idiom strip is what separates "a flood of donations" from a flood. */
   { name: 'idiom stripping removed',
-    from: "  const text = stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES);",
-    to:   "  const text = stripPhrases(clause, PERMANENT_FEATURES);",
+    from: "  const text = stripPhrases(clause, HAZARD_IDIOMS);",
+    to:   "  const text = clause;",
     expect: ['an idiom supplies no hazard evidence to the clause gate'],
     suite: 'news', target: 'api' },
 
@@ -1064,7 +1064,7 @@ const mutations = [
   /* H19: the gate itself. Removing it restores the behaviour the amendment was written against:
      hazard vocabulary plus a Hawaii anchor labelled a fee-cap hearing as a hazard. */
   { name: 'the event-assertion gate removed',
-    from: "  if (!clauses.some(clause => clauseEventState(clause))) return false;",
+    from: "  if (!qualifying.length) return false;",
     to:   "",
     expect: ['false: Maui wildfire attorney fee caps debated.'],
     suite: 'news', target: 'api' },
@@ -1079,8 +1079,8 @@ const mutations = [
   /* H20: negation record-wide is the mistake that looks like a fix. It scores every negative and
      deletes a flash flood warning that is in effect beside a denied tsunami. */
   { name: 'negation becomes a record-wide veto',
-    from: "  if (!clauses.some(clause => clauseEventState(clause))) return false;",
-    to:   "  if (clauses.some(clause => hasAny(clause, NEGATION))) return false;\n  if (!clauses.some(clause => clauseEventState(clause))) return false;",
+    from: "  const qualifying = clauses.filter(clause => clauseEventState(clause));",
+    to:   "  const qualifying = clauses.some(c => hasAny(c, NEGATION)) ? [] : clauses.filter(clause => clauseEventState(clause));",
     expect: ['true:  negated claim beside an independent active one'],
     suite: 'news', target: 'api' },
 
@@ -1101,15 +1101,15 @@ const mutations = [
 
   /* H20: resolution record-wide deletes the contained fire whose evacuation order stands. */
   { name: 'resolution becomes a record-wide veto',
-    from: "  /* Gate 3: locality, from a clause that does not deny the only local impact. */",
+    from: "  /* Gate 3: locality that supports one of those assertions. */",
     to:   "  if (clauses.some(clause => hasAny(clause, RESOLUTION))) return false;",
     expect: ['true:  resolved hazard, active protective action'],
     suite: 'news', target: 'api' },
 
   /* H20, the converse: resolution ignored brings back the cancelled advisory. */
   { name: 'a resolved state no longer disqualifies its clause',
-    from: "      if (namesTheAction ? resolution.length > 0 : reaches(resolution, i, false)) continue;",
-    to:   "",
+    from: "      if (namesTheAction) {",
+    to:   "      if (false) {",
     expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
     suite: 'news', target: 'api' },
 
@@ -1117,17 +1117,20 @@ const mutations = [
      clause resolves it. Scoping that one by proximity instead lets a cancellation five tokens
      away miss the advisory it cancels. */
   { name: 'a protective action resolved only by proximity',
-    from: "      if (namesTheAction ? resolution.length > 0 : reaches(resolution, i, false)) continue;",
-    to:   "      if (reaches(resolution, i, false)) continue;",
+    from: "        if (resolution.length > 0 && !inForceElsewhere()) continue;",
+    to:   "        if (reaches(resolution, i, false)) continue;",
     expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
     suite: 'news', target: 'api' },
 
   /* H21: permanent terrain. Without the subtraction, `lava` vouches for a trail closure. */
-  { name: 'the permanent-feature subtraction removed',
-    from: "  const text = stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES);",
-    to:   "  const text = stripPhrases(clause, HAZARD_IDIOMS);",
+  /* The subtraction now sits at the EVENT gate, not at gate 2: the hazard word stays observable
+     and the record is rejected for asserting no event. Removing it lets a standing feature vouch
+     for a closure and a season vouch for a hazard that continues. */
+  { name: 'standing features allowed to supply an event',
+    from: "  return hazardEvidencePositions(clause).filter(p => standing.indexOf(p) === -1);",
+    to:   "  return hazardEvidencePositions(clause);",
     expect: ['a lava field is terrain, not an event',
-             'a permanent feature supplies no hazard evidence to the clause gate'],
+             'a season on its own is background, not an event'],
     suite: 'news', target: 'api' },
 
   /* H21: history. The anniversary piece is the case publication recency cannot decide. */
@@ -1164,7 +1167,9 @@ const mutations = [
   { name: 'the denial-scoped anchor rule removed',
     from: "    if (isDenialClause(clause)) continue;",
     to:   "",
-    expect: ['an anchor inside the denial of the only local impact does not localize a remote quake'],
+    /* Pointed at the record the remote-locality rule cannot also decide, so this case proves the
+       denial rule rather than riding on its neighbour. */
+    expect: ['and a denial is still not a lender when no remote place is named'],
     suite: 'news', target: 'api' },
 
   /* H22/H07, the converse: treating a RESOLVED clause as a denial would refuse the anchor that
@@ -1190,8 +1195,10 @@ const mutations = [
     to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:,]+(?=\\s|$)",
     /* Both directions of the comma decision, in one case. Splitting loses the storm that
        continues, AND it resurrects an order that was lifted and is no longer in effect. */
-    expect: ['a parenthetical comma does not break a storm away from its continuation',
-             'and the expired order it would otherwise have resurrected stays false'],
+    /* Only the storm. With a hard comma boundary the expired order stays false for a different
+       reason -- its anchor ends up in a fragment that may not lend -- so pairing it here would be
+       a conjunction that cannot fire. The in-force rescue has its own two cases. */
+    expect: ['a parenthetical comma does not break a storm away from its continuation'],
     suite: 'news', target: 'api' },
 
   /* H19: each of the three assertion groups carries records the other two do not. */
@@ -1248,11 +1255,66 @@ const mutations = [
 
   /* ---- The three defects read-only review found ---- */
 
-  /* H06/H22: without this, unrelated local prose localizes a remote hazard. */
-  { name: 'the remote-locality restriction on borrowed anchors removed',
-    from: "    if (remote && !clauseHazardEvidence(clause)) continue;",
+  /* H06: a qualifying clause that names a remote place must carry its own anchor. Without this a
+     resolved Maui clause about a DIFFERENT hazard localizes a California wildfire. */
+  { name: 'a remote hazard clause allowed to borrow an anchor',
+    from: "      qualifying.every(clause => hasAny(clause, REMOTE_LOCALITY))) return false;",
+    to:   "      false) return false;",
+    expect: ['nor does a resolved clause about a DIFFERENT hazard'],
+    suite: 'news', target: 'api' },
+
+  /* H22: the lending clause has to be ABOUT the claim. Without this, any non-denial clause lends,
+     which is the original blocker: unrelated local prose localizes a hazard with no place. */
+  { name: 'any non-denial clause allowed to lend its anchor',
+    from: "    if (clauseHazardEvidence(clause) || hasAny(clause, PROTECTIVE_SUBJECT) ||\n        isContinuation(clause)) return true;",
+    to:   "    return true;",
+    expect: ['nor does it when the hazard clause names no place at all'],
+    suite: 'news', target: 'api' },
+
+  /* H07: and the converse -- without the continuation rule, required positive 11's complementary
+     fields stop composing. */
+  { name: 'the prepositional continuation rule removed',
+    from: "  'for', 'in', 'on', 'at', 'near', 'across', 'through', 'over', 'along', 'from', 'to', 'of',",
     to:   "",
-    expect: ['unrelated local prose does not localize a remote hazard'],
+    expect: ['while a prepositional continuation of the assertion does lend its anchor'],
+    suite: 'news', target: 'api' },
+
+  /* The capture record that proved the protective-subject rule: open shelters lending their
+     anchor to the clause that says what the islands are bracing for. */
+  { name: 'a protective action no longer lends its anchor',
+    from: "    if (clauseHazardEvidence(clause) || hasAny(clause, PROTECTIVE_SUBJECT) ||",
+    to:   "    if (clauseHazardEvidence(clause) ||",
+    expect: ['and so does a clause naming an open shelter'],
+    suite: 'news', target: 'api' },
+
+  /* §4 research, both directions. The object discriminates a finding from an observation, so
+     removing it readmits the research family, and deleting the observation verbs instead -- which
+     is what the previous round did -- deletes a real detection. */
+  { name: 'the research-object discrimination removed',
+    from: "      if (reaches(research, i, false)) continue;",
+    to:   "",
+    expect: ['and a report sitting beside the hazard word is still only a report'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the observation verbs deleted again',
+    from: "  'observed', 'detected', 'recorded', 'reported'",
+    to:   "",
+    expect: ['an observed hazard qualifies on the observation',
+             'and so does a detected one'],
+    suite: 'news', target: 'api' },
+
+  /* H20: the different-locality rescue, both directions. Without it a live order for Olowalu is
+     deleted; ignoring the locality resurrects an order that is no longer in effect anywhere. */
+  { name: 'the different-locality rescue removed',
+    from: "        if (resolution.length > 0 && !inForceElsewhere()) continue;",
+    to:   "        if (resolution.length > 0) continue;",
+    expect: ['an order lifted for one place and in force for another is still in force'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the in-force rescue ignores which locality it names',
+    from: "        if (claimLocality(tokens, anchorsAt, r) !== here) return true;",
+    to:   "        return true;",
+    expect: ['while the same order with no second locality stays resolved'],
     suite: 'news', target: 'api' },
 
   /* H19/H20: the assertion has to be ABOUT a hazard that sits beside it. Without the proximity
@@ -1280,13 +1342,6 @@ const mutations = [
     expect: ['an anniversary framing does not close an open hazard closure'],
     suite: 'news', target: 'api' },
 
-  /* §4 research: restoring a passive reporting verb is the one-word change that brings the
-     research family back, and the HVO positive proves the fix is not a `research` stop-word. */
-  { name: 'passive reporting restored as hazard onset',
-    from: "  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning'",
-    to:   "  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning', 'reported'",
-    expect: ['and a report sitting beside the hazard word is still only a report'],
-    suite: 'news', target: 'api' },
 
 
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
