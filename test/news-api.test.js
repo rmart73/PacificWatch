@@ -28,9 +28,8 @@ const hazardEntry = require(HAZARD_PATH);
 const lifted = (() => {
   const src = require('fs').readFileSync(API_PATH, 'utf8').replace(/module\.exports[\s\S]*$/, '');
   return new Function(src + '; return { classifyHazard: classifyHazard, ' +
-    'hazardNormalize: hazardNormalize, hasHazardEvidence: hasHazardEvidence, ' +
-    'hasHawaiiAnchor: hasHawaiiAnchor, HAZARD_IDIOMS: HAZARD_IDIOMS, ' +
-    'clauseHazardEvidence: clauseHazardEvidence };')();
+    'hazardNormalize: hazardNormalize, hasHawaiiAnchor: hasHawaiiAnchor, ' +
+    'splitClauses: splitClauses, clauseHazardEvidence: clauseHazardEvidence };')();
 })();
 const classify = lifted.classifyHazard;
 /* H19 is a claim about WHICH gate rejects a record, and that cannot be tested through the boolean
@@ -38,12 +37,9 @@ const classify = lifted.classifyHazard;
    proving nothing about the third gate. These two expose the first two gates so each amendment
    negative can be shown to REACH the third one. */
 const reachesThirdGate = (text) => {
-  const norm = lifted.hazardNormalize(text);
-  let evidence = norm;
-  for (const idiom of lifted.HAZARD_IDIOMS) {
-    evidence = (' ' + evidence + ' ').split(' ' + idiom + ' ').join(' ').trim();
-  }
-  return lifted.hasHazardEvidence(evidence) && lifted.hasHawaiiAnchor(norm);
+  const clauses = lifted.splitClauses(text);
+  return clauses.some(c => lifted.clauseHazardEvidence(c)) &&
+         clauses.some(c => lifted.hasHawaiiAnchor(c));
 };
 
 let pass = 0, fail = 0;
@@ -501,7 +497,7 @@ async function main() {
   check('  while lava at a vent still qualifies',
     classify('Lava erupted from the Kilauea vent', ''), true);
   check('an EMS story and an animal shelter do not vouch for each other',
-    classify('Honolulu Emergency Medical Services responds at an animal shelter', ''), false);
+    classify('Honolulu Emergency Medical Services opens an animal shelter', ''), false);
   check('  while an emergency proclamation qualifies',
     classify('Governor signs emergency proclamation for Maui', ''), true);
   check('  and a shelter opening during a storm qualifies',
@@ -524,13 +520,22 @@ async function main() {
 
 
   console.log('\nH19 — hazard language and locality are NOT a label without an asserted event:');
-  /* The nine required negatives of the event-assertion amendment. Each one passes the hazard and
-     locality gates, which is asserted immediately below: without that, a negative could be false
-     because of a vocabulary accident and the corpus would prove nothing about the third gate. */
+  /* The nine required negatives of the event-assertion amendment. Which GATE rejects each one is
+     asserted, not assumed: without that, a negative could be false because of a vocabulary
+     accident and the corpus would prove nothing about the third gate.
+
+     Eight of the nine reach the third gate. The lava-field case does not, and that is recorded
+     rather than smoothed over. The contract describes all nine as passing "the original
+     hazard-language and locality gates", and under the original gate 2 the bare word `lava` was
+     hazard evidence. In this implementation the permanent-feature subtraction is PART of gate 2,
+     so "a Hawaii lava field" carries no evidence and the record is rejected one gate earlier. The
+     label is the same and the reason is still H21, but it is not the third gate doing the work,
+     and the third element below says so per case. */
   const EVENT_NEGATIVES = [
     ['No tsunami threat to Hawai\u02BBi after Japan earthquake.', 'negation of the only local impact'],
     ['Tsunami advisory for Hawai\u02BBi has been cancelled.', 'a resolved alert'],
-    ['Fatal shooting investigated in a Hawai\u02BBi lava field.', 'permanent terrain, no event'],
+    /* Rejected at gate 2 by the permanent-feature subtraction, not at gate 3 -- see above. */
+    ['Fatal shooting investigated in a Hawai\u02BBi lava field.', 'permanent terrain, no event', 2],
     ['Maui wildfire attorney fee caps debated.', 'litigation aftermath'],
     ["Hawai\u02BBi pumpkin supply remains tight after last year's severe storms.", 'supply aftermath'],
     ['Kaua\u02BBi businesses await federal aid after Tropical Storm Lowell.', 'aid administration'],
@@ -538,9 +543,14 @@ async function main() {
     ['Hilo marks the anniversary of the 1946 tsunami.', 'history, however recently published'],
     ['O\u02BBahu schools hold a hurricane preparedness exercise.', 'preparedness, not an event']
   ];
-  for (const [t, why] of EVENT_NEGATIVES) {
+  for (const [t, why, gate] of EVENT_NEGATIVES) {
     check('false: ' + t.slice(0, 48), classify(t, ''), false);
-    check('  and it REACHED the third gate (' + why + ')', reachesThirdGate(t), true);
+    if (gate === 2) {
+      check('  and gate 2 rejects it, by permanent-feature subtraction (' + why + ')',
+        reachesThirdGate(t), false);
+    } else {
+      check('  and it REACHED the third gate (' + why + ')', reachesThirdGate(t), true);
+    }
   }
 
   console.log('\nH19/H20/H21/H22 — the required positives, so the gate is not blanket suppression:');
@@ -575,10 +585,19 @@ async function main() {
     classify('Tsunami advisory for Hawaii has been cancelled.', ''), false);
   check('  while an advisory in effect does',
     classify('Tsunami advisory in effect for Hawaii.', ''), true);
-  /* The comma case the clause splitter exists for: persistence overrides a resolution marker
-     inside ONE clause, so an order lifted for one place and still in force for another survives. */
-  check('persistence beats resolution in the same clause',
-    classify('The evacuation order, lifted for Lahaina, remains in effect for Olowalu.', ''), true);
+  /* RECORDED RESIDUAL, asserted honestly rather than described. An order resolved for one place
+     and still in force for another, spliced into ONE clause by commas, classifies FALSE. This is a
+     false negative and it is the price of making resolution claim-scoped.
+
+     Both alternatives were implemented and both were worse. A clause-wide persistence override
+     revived a cancelled advisory beside an unrelated active sentence. Splitting on commas fixed
+     this record and then classified "The evacuation order, lifted for Lahaina, is no longer in
+     effect" as TRUE, which tells a reader an expired order is still in force. The assertion below
+     is the residual, and the one after it is the false positive that must not come back. */
+  check('a resolution comma-spliced between an order and its persistence is a known false negative',
+    classify('The evacuation order, lifted for Lahaina, remains in effect for Olowalu.', ''), false);
+  check('  and the expired order it would otherwise have resurrected stays false',
+    classify('The evacuation order, lifted for Lahaina, is no longer in effect.', ''), false);
 
   console.log('\nH21 — permanent terrain, history, preparedness and indirect aftermath:');
   /* Each guard is paired with a record that would qualify WITHOUT it, so removing the guard
@@ -652,8 +671,11 @@ async function main() {
     classify('Vogue photoshoot continues in Honolulu', ''), false);
   check('a swelling fund still needs ocean context when the record is a forecast',
     classify('Fund swelling is expected to reach a record high in Hawaii', ''), false);
-  check('Emergency Medical Services still is not a declared emergency when a report is asserted',
-    classify('Honolulu Emergency Medical Services responds to a reported stabbing', ''), false);
+  /* The first version of this twin asserted "a reported stabbing". `reported` is no longer an
+     onset verb -- review removed it as part of the research family -- so the fixture stopped
+     discriminating. An opening is an assertion that survives. */
+  check('Emergency Medical Services still is not a declared emergency when an opening is asserted',
+    classify('Honolulu Emergency Medical Services opens a new station', ''), false);
   check('a warning sign is still not a hazard warning when it is posted',
     classify('Warning sign posted for Oahu drivers', ''), false);
 
@@ -680,6 +702,45 @@ async function main() {
     classify('Maui wildfire attorney fee caps debated.', ''), false);
   check('null fields still cannot gain a label', classify(null, null), false);
 
+  console.log('\nH06/H20/H21/H22 — the three defects read-only review found, each with its pair:');
+
+  /* BLOCKER 1, H06 and H22: locality was taken from ANY non-denial clause, so unrelated local
+     prose localized a remote hazard. The anchor now has to sit in the qualifying clause, or in a
+     clause about the same hazard when the qualifying clause names a remote place. */
+  check('unrelated local prose does not localize a remote hazard',
+    classify('California wildfire threatens homes.', 'Maui council meets today.'), false);
+  check('  while a remote origin that states a Hawaii advisory still qualifies',
+    classify('Japan quake prompts tsunami advisory for Hawaii.', ''), true);
+  check('  and a resolved Hawaii clause still composes with an active one',
+    classify('Evacuation lifted for Maui', 'The brush fire evacuation order remains in effect.'), true);
+
+  /* BLOCKER 2, H20: clause-scoped was not claim-scoped. Persistence anywhere in a clause revived
+     a resolution anywhere in it, and history vetoed a clause before its active consequence was
+     considered. Both directions are asserted. */
+  check('an unrelated active phrase does not revive a cancelled advisory',
+    classify('Tsunami advisory cancelled, active investigation continues in Hawaii.', ''), false);
+  check('an anniversary framing does not close an open hazard closure',
+    classify('On the anniversary of the Maui wildfire, Honoapiilani Highway remains closed by flood damage.', ''), true);
+  /* The consequence still needs a hazard beside it, which is what keeps the framing from
+     admitting any closure that happens to share a sentence with a historical hazard. */
+  check('  while a closure with no hazard beside it does not qualify on the framing alone',
+    classify('On the anniversary of the 1946 tsunami, the Hilo harbor remains closed for repairs.', ''), false);
+  /* Negation reaches backwards only. A denial that follows the assertion is a different claim. */
+  check('a negation after the assertion does not cancel it',
+    classify('Flood warning issued, no injuries reported on Maui.', ''), true);
+
+  /* BLOCKER 3, §4 research: `reported`, `observed`, `recorded` and `detected` asserted that
+     somebody reported something, not that a hazard was doing anything. Removing them rejects the
+     research family WITHOUT a `research` stop-word, which would have deleted the HVO case. */
+  check('research reporting about a hazard is not an asserted hazard',
+    classify('UH researchers reported new findings about Kilauea lava chemistry.', ''), false);
+  /* The same family with the reporting verb right beside the hazard, which is the shape that
+     restoring `reported` to the onset group would resurrect. */
+  check('  and a report sitting beside the hazard word is still only a report',
+    classify('Researchers reported lava chemistry changes at Kilauea.', ''), false);
+  check('  while a volcano update in research voice still qualifies on what the lava does',
+    classify('HVO researchers report lava continues at Kilauea.', ''), true);
+
   console.log('\nH15/H16 — six records from the 2026-10-29 five-feed capture, verbatim shapes:');
   /* These are not invented prose. Each is a real decoded title+summary shape from the capture
      required by H15, kept as a regression fixture because the authored corpus did not contain it.
@@ -702,8 +763,10 @@ async function main() {
              'Mitigation work from Hurricane Lala, which impacted the islands in August, is still underway on Maui.'), false);
   check('  a season on its own is background, not an event',
     classify('Hurricane season continues in Hawaii.', ''), false);
+  /* The hazard has to be within reach of the assertion, so this fixture keeps them adjacent;
+     the first version put five tokens between them and the indirect frame was never reached. */
   check('  and mitigation work underway is not an active hazard',
-    classify('Maui hurricane mitigation work is still underway.', ''), false);
+    classify('Hurricane mitigation work is underway on Maui.', ''), false);
   /* LOCALITY GAP the capture found. This is a real Maui evacuation warning that passed the hazard
      and event gates and failed locality; the PREVIOUS classifier dropped it too, so it is a
      pre-existing H04 gap rather than a regression. */

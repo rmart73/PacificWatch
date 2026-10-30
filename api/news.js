@@ -276,13 +276,11 @@ const RESOLUTION = [
   'have passed', 'passed', 'passes', 'subsided', 'receded', 'cleared', 'stood down'
 ];
 
-/* Persistence — H20/H21. These assert that a state continues, and they override a resolution
-   marker in the SAME clause, which is the comma case above: an order lifted for one place and
-   still in effect for another is a live order. */
-const PERSISTENCE = [
-  'remains', 'remain', 'remaining', 'remains in effect', 'still', 'continues', 'continue',
-  'continuing', 'ongoing', 'in effect', 'stays', 'stay', 'active', 'persists', 'persist'
-];
+/* There is no PERSISTENCE group any more, and its absence is deliberate. It existed to revive a
+   resolved clause, and review showed that a clause-wide revival is unsound: in "Tsunami advisory
+   cancelled, active investigation continues in Hawaii" the persistence belongs to the
+   investigation and revived the advisory. Resolution is now scoped to the claim it modifies, so
+   nothing needs reviving -- an active claim beside a resolved one is simply a different claim. */
 
 /* Group A — onset, approach, forecast, observation, continuation or escalation of the hazard
    itself. Tense is not the test: "lava erupted from the Kilauea vent" is an observation of an
@@ -304,8 +302,16 @@ const EVENT_ONSET = [
   'sends', 'sent', 'hits', 'hit', 'hitting', 'strikes', 'struck', 'striking',
   'batters', 'battered', 'threatens', 'threatening', 'threat', 'threatened',
   'prompts', 'prompted', 'triggers', 'triggered', 'sparks', 'sparked',
-  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning',
-  'reported', 'observed', 'recorded', 'detected'
+  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning'
+  /* 'reported', 'observed', 'recorded' and 'detected' were here and are deliberately gone. They
+     assert that somebody REPORTED something, not that a hazard is doing anything, and review
+     found what that produces: "UH researchers reported new findings about Kilauea lava chemistry"
+     qualified as an active hazard. Research is one of the indirect families §4 names, and this is
+     the precise reason it is indirect -- a report about a hazard is not the hazard.
+
+     They are NOT replaced by putting 'research' in INDIRECT_FRAME, because that would also delete
+     "HVO researchers report lava continues at Kilauea", which is a real volcano update and is a
+     required positive below. The distinction the contract wants is the verb, not the noun. */
 ];
 
 /* Group B — a protective action. A warning, advisory, evacuation order or shelter named in a
@@ -384,15 +390,16 @@ function stripPhrases(norm, phrases) {
   return out;
 }
 
-/* How far back a negation reaches. Four tokens covers "no tsunami threat" and "not expected to
-   bring flooding" without crossing into the next claim; the clause boundary is the hard limit. */
-const NEGATION_REACH = 4;
+/* How far an association reaches, in tokens, inside one clause. Negation, resolution and the
+   hazard evidence itself are associated with the assertion they modify by this window rather than
+   by presence anywhere in the clause. Clause-scoped was not enough: review found both failures it
+   produces. "Tsunami advisory cancelled, active investigation continues in Hawaii" revived a
+   cancelled advisory, because persistence anywhere overrode resolution anywhere. */
+const CLAIM_REACH = 4;
 
-/* True when at least ONE occurrence of some phrase is not preceded by a negation inside its
-   reach. Written per-occurrence on purpose: "no tsunami threat; flood warning in effect" has a
-   negated and an unnegated assertion in the same record, and only the second decides. */
-function hasUnnegated(norm, phrases) {
-  const tokens = norm.split(' ');
+/* Start positions of every occurrence of every phrase, in token space. */
+function phrasePositions(tokens, phrases) {
+  const at = [];
   for (const phrase of phrases) {
     const parts = phrase.split(' ');
     for (let i = 0; i + parts.length <= tokens.length; i++) {
@@ -400,34 +407,104 @@ function hasUnnegated(norm, phrases) {
       for (let k = 0; k < parts.length; k++) {
         if (tokens[i + k] !== parts[k]) { hit = false; break; }
       }
-      if (!hit) continue;
-      const before = tokens.slice(Math.max(0, i - NEGATION_REACH), i).join(' ');
-      if (!hasAny(before, NEGATION)) return true;
+      if (hit) at.push(i);
     }
   }
-  return false;
+  return at;
 }
 
-/* Gate 2 for one clause: hazard evidence, with idioms and permanent features subtracted first.
-   Named and separate so the suite can assert on the SAME expression the gate uses rather than on
-   a copy of it -- the two subtractions are only observable here, because a clause they empty out
-   asserts nothing afterwards and the boolean alone cannot say which subtraction did it. */
+/* Distance from i to the closest listed position, or -1 when there is none. `before` restricts the
+   search to positions ahead of i, which is what negation needs: "no tsunami threat" cancels the
+   threat, while "threat ... no injuries" does not. */
+function closestDistance(positions, i, before) {
+  let best = -1;
+  for (const p of positions) {
+    if (before && p >= i) continue;
+    const d = Math.abs(p - i);
+    if (best === -1 || d < best) best = d;
+  }
+  return best;
+}
+function reaches(positions, i, before) {
+  const d = closestDistance(positions, i, before);
+  return d !== -1 && d <= CLAIM_REACH;
+}
+
+/* One row of the decision table is satisfied when its context requirement is met. `allOf` is a
+   conjunction of groups and `context` the single-group form; a row declares one or the other.
+
+   This is shared, and that matters: the position list and the boolean each had their own copy of
+   this test, and a mutation loosening the conjunction changed only one of them. Two copies of a
+   decision cannot be shown to be load-bearing, which is the same reason the record-wide evidence
+   gate came out. */
+function rowSatisfied(norm, g) {
+  if (g.allOf) return g.allOf.every(group => hasAny(norm, group));
+  return hasAny(norm, g.context);
+}
+
+/* WHERE the hazard evidence sits, which is also WHETHER there is any -- gate 2 and the proximity
+   test are one authority rather than two. For a context-dependent family the TERM carries the
+   evidence and only when its row is satisfied, and a phrase removed by a subtraction is not
+   evidence at all.
+
+   Requiring an assertion to sit near one of these positions is what rejects "Researchers reported
+   lava chemistry changes at Kilauea" from qualifying on a reporting verb, and what stops an
+   anniversary piece about a harbour closed for repairs from qualifying on a closure whose only
+   nearby hazard is the historical one. */
+function hazardEvidencePositions(clause) {
+  const text = stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES);
+  const tokens = clause.split(' ');
+  let at = phrasePositions(tokens, HAZARD_DIRECT);
+  for (const g of HAZARD_CONTEXT) {
+    if (rowSatisfied(text, g)) at = at.concat(phrasePositions(tokens, g.terms));
+  }
+  return at.filter(p => hasPhrase(text, tokens[p]));
+}
+
+/* Gate 2 for one clause. Named so the suite can assert on the SAME expression the gate uses rather
+   than on a copy of it: the idiom and permanent-feature subtractions empty a clause of evidence,
+   and through the label alone that is indistinguishable from "no event asserted". */
 function clauseHazardEvidence(clause) {
-  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));
+  return hazardEvidencePositions(clause).length > 0;
 }
 
 /* The one place the third gate is decided, for one clause. Returns the group that qualified, or
    '' -- a named result rather than a bare boolean so the ledgers can say WHICH group fired. */
 function clauseEventState(clause) {
-  /* The assertion has to be about a hazard. */
-  if (!clauseHazardEvidence(clause)) return '';
-  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';
-  /* Resolution is cancelled by persistence in the same clause, never record-wide. */
-  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';
+  const tokens = clause.split(' ');
+  /* Gate 2, and the positions the assertions below have to sit near. */
+  const evidence = hazardEvidencePositions(clause);
+  if (!evidence.length) return '';
+  const negation = phrasePositions(tokens, NEGATION);
+  const resolution = phrasePositions(tokens, RESOLUTION);
+  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);
   const indirect = hasAny(clause, INDIRECT_FRAME);
-  if (!indirect && hasUnnegated(clause, EVENT_ONSET)) return 'onset';
-  if (!indirect && hasUnnegated(clause, PROTECTIVE_ACTION)) return 'protective';
-  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';
+
+  /* One occurrence is live when the hazard is within reach of it and nothing within reach negates
+     or resolves it. `namesTheAction` is true for a protective action, because a warning or an
+     evacuation order IS the subject of its clause -- so a resolution anywhere in that clause
+     resolves it, which is what makes "Tsunami advisory for Hawaii has been cancelled" false. A
+     hazard verb or a consequence belongs to whatever sits beside it, so both are scoped by reach
+     and a resolution elsewhere in the clause does not touch them. */
+  const live = (phrases, namesTheAction) => {
+    for (const i of phrasePositions(tokens, phrases)) {
+      if (!reaches(evidence, i, false)) continue;
+      if (reaches(negation, i, true)) continue;
+      if (namesTheAction ? resolution.length > 0 : reaches(resolution, i, false)) continue;
+      return true;
+    }
+    return false;
+  };
+
+  /* H21: history, preparedness and indirect aftermath disqualify a hazard assertion and a
+     protective action, but NOT a direct consequence that remains active. The contract is explicit
+     that an active public-safety consequence still qualifies, and the review case is exactly that:
+     "On the anniversary of the Maui wildfire, Honoapiilani Highway remains closed by flood damage"
+     is an open closure whatever framed the sentence. The consequence still needs a hazard beside
+     it, which is what keeps an anniversary piece about a harbour closed for repairs out. */
+  if (!framed && !indirect && live(EVENT_ONSET, false)) return 'onset';
+  if (!framed && !indirect && live(PROTECTIVE_ACTION, true)) return 'protective';
+  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';
   return '';
 }
 
@@ -442,25 +519,45 @@ function isDenialClause(clause) {
   return clauseHazardEvidence(clause);
 }
 
+/* REMOTE LOCALITY — H06. A bounded, named list, seeded the same way the Hawaii vocabulary was:
+   the contract's own negatives plus real capture text. It is deliberately not a world gazetteer,
+   and the residual is recorded in the handoff rather than implied to be closed. */
+const REMOTE_LOCALITY = [
+  /* the contract's H06 negatives */
+  'california', 'texas',
+  /* every remote origin the 2026-10-29 five-feed capture actually carried */
+  'japan', 'bonin islands', 'vanuatu', 'melanesia', 'russia', 'ukraine',
+  'pacific coast highway',
+  /* the other mainland and Pacific origins these feeds carry wire copy from */
+  'florida', 'louisiana', 'carolina', 'oregon', 'alaska', 'arizona', 'nevada',
+  'los angeles', 'san francisco', 'new york', 'mexico', 'puerto rico',
+  'philippines', 'taiwan', 'guam', 'indonesia', 'new zealand', 'australia', 'chile',
+  'mainland'
+];
+
+/* Gate 1, scoped to the assertion it has to support.
+   An anchor inside the qualifying clause is always enough. Otherwise H06 applies: a qualifying
+   clause that names a remote place may not borrow locality from prose about something else, which
+   is what made "California wildfire threatens homes / Maui council meets today" classify true. It
+   may still borrow from a clause that is about the same hazard, which is what H07's cross-field
+   positives need. */
 function hasLocalAnchor(clauses) {
+  const qualifying = clauses.filter(clause => clauseEventState(clause));
+  if (qualifying.some(clause => hasHawaiiAnchor(clause))) return true;
+  const remote = qualifying.length > 0 &&
+                 qualifying.every(clause => hasAny(clause, REMOTE_LOCALITY));
   for (const clause of clauses) {
     if (isDenialClause(clause)) continue;
-    if (hasHawaiiAnchor(clause)) return true;
+    if (!hasHawaiiAnchor(clause)) continue;
+    if (remote && !clauseHazardEvidence(clause)) continue;
+    return true;
   }
   return false;
 }
-
-function hasHazardEvidence(norm) {
-  if (hasAny(norm, HAZARD_DIRECT)) return true;
-  for (const g of HAZARD_CONTEXT) {
-    if (!hasAny(norm, g.terms)) continue;
-    /* allOf is a conjunction of groups: every group must contribute. context is the single-group
-       form. A row declares one or the other, never both. */
-    if (g.allOf) { if (g.allOf.every(group => hasAny(norm, group))) return true; }
-    else if (hasAny(norm, g.context)) return true;
-  }
-  return false;
-}
+/* There is no record-wide hasHazardEvidence() any more. It was the second copy of gate 2: a
+   clause-scoped test implies it, and `hazardEvidencePositions` above answers both whether there
+   is evidence and where it is. Keeping the boolean meant a mutation removing either one changed
+   no answer, because the other still rejected the record. */
 
 function hasHawaiiAnchor(norm) {
   return hasAny(norm, HAWAII_ANCHORS);

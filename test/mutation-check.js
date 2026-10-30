@@ -983,12 +983,11 @@ const mutations = [
     suite: 'news', target: 'api' },
 
   /* The converse: evidence alone must not be droppable either, or every local story qualifies. */
-  /* The evidence gate moved INTO the clause test when the record-wide duplicate was removed, so
-     this case follows it. Without it "closed" is an active consequence on its own and the DMV
-     comes back. */
-  { name: 'the hazard-evidence gate removed',
-    from: "  if (!clauseHazardEvidence(clause)) return '';",
-    to:   "",
+  /* Gate 2 is now a position list, so the way to remove it is to make it answer yes with nothing
+     to point at. Without it "closed" is an active consequence on its own and the DMV comes back. */
+  { name: 'the clause evidence gate answers yes with no evidence',
+    from: "  return at.filter(p => hasPhrase(text, tokens[p]));",
+    to:   "  return at.length ? at : [0];",
     expect: ['false: Honolulu DMV closed for holiday.'],
     suite: 'news', target: 'api' },
 
@@ -997,10 +996,11 @@ const mutations = [
   { name: 'word boundaries loosened to substring containment',
     from: "  return (' ' + norm + ' ').indexOf(' ' + phrase + ' ') !== -1;",
     to:   "  return norm.indexOf(phrase) !== -1;",
-    /* The original expectation stopped discriminating: with loose containment "Vogue photoshoot in
-       Honolulu" gains evidence but still asserts no event, so it stays false and the mutation
-       survived. The twin fixture asserts continuation. */
-    expect: ['vog still does not match inside vogue when the record asserts continuation'],
+    /* Gate 2 is a position list built from exact token matches, so loosening `hasPhrase` no longer
+       reaches it. Where it still decides an answer is the LOCALITY vocabulary, which is matched
+       the same way: with containment, "kona" matches inside "konared" and a drink launch anchors
+       in Hawaii. */
+    expect: ['kona does not match inside konared'],
     suite: 'news', target: 'api' },
 
   /* H05, one per context-dependent family: each must require its context, not just its term. */
@@ -1019,7 +1019,7 @@ const mutations = [
   { name: 'emergency qualifies without declaration context',
     from: "    context: ['declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
     to:   "    context: ['services', 'declaration', 'declared', 'proclamation', 'disaster', 'evacuation', 'evacuate',",
-    expect: ['Emergency Medical Services still is not a declared emergency when a report is asserted'],
+    expect: ['Emergency Medical Services still is not a declared emergency when an opening is asserted'],
     suite: 'news', target: 'api' },
 
   { name: 'warning qualifies without a named hazard',
@@ -1045,8 +1045,8 @@ const mutations = [
 
   /* The idiom strip is what separates "a flood of donations" from a flood. */
   { name: 'idiom stripping removed',
-    from: "  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));",
-    to:   "  return hasHazardEvidence(stripPhrases(clause, PERMANENT_FEATURES));",
+    from: "  const text = stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES);",
+    to:   "  const text = stripPhrases(clause, PERMANENT_FEATURES);",
     expect: ['an idiom supplies no hazard evidence to the clause gate'],
     suite: 'news', target: 'api' },
 
@@ -1086,16 +1086,16 @@ const mutations = [
 
   /* H20, the converse: negation ignored entirely brings back the denied-threat false positive. */
   { name: 'negation ignored',
-    from: "      if (!hasAny(before, NEGATION)) return true;",
-    to:   "      return true;",
+    from: "      if (reaches(negation, i, true)) continue;",
+    to:   "",
     expect: ['false: No tsunami threat to Hawai\u02BBi after Japan eart'],
     suite: 'news', target: 'api' },
 
   /* H20: the negation window. Widened to the whole clause, a denial of injuries cancels the
      evacuation mentioned after it. */
-  { name: 'the negation window widened to the whole clause',
-    from: "      const before = tokens.slice(Math.max(0, i - NEGATION_REACH), i).join(' ');",
-    to:   "      const before = tokens.slice(0, i).join(' ');",
+  { name: 'the claim-association window widened to the whole clause',
+    from: "const CLAIM_REACH = 4;",
+    to:   "const CLAIM_REACH = 40;",
     expect: ['a denial of injuries does not cancel the evacuation in the same clause'],
     suite: 'news', target: 'api' },
 
@@ -1108,38 +1108,39 @@ const mutations = [
 
   /* H20, the converse: resolution ignored brings back the cancelled advisory. */
   { name: 'a resolved state no longer disqualifies its clause',
-    from: "  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';",
+    from: "      if (namesTheAction ? resolution.length > 0 : reaches(resolution, i, false)) continue;",
     to:   "",
     expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
     suite: 'news', target: 'api' },
 
-  /* H20: persistence has to beat resolution inside one clause, or an order lifted for one place
-     and still in force for another is lost. */
-  { name: 'persistence no longer overrides resolution in the same clause',
-    from: "  if (!hasAny(clause, PERSISTENCE) && hasAny(clause, RESOLUTION)) return '';",
-    to:   "  if (hasAny(clause, RESOLUTION)) return '';",
-    expect: ['persistence beats resolution in the same clause'],
+  /* H20: a protective action NAMES what its clause is about, so a resolution anywhere in that
+     clause resolves it. Scoping that one by proximity instead lets a cancellation five tokens
+     away miss the advisory it cancels. */
+  { name: 'a protective action resolved only by proximity',
+    from: "      if (namesTheAction ? resolution.length > 0 : reaches(resolution, i, false)) continue;",
+    to:   "      if (reaches(resolution, i, false)) continue;",
+    expect: ['false: Tsunami advisory for Hawai\u02BBi has been cancelled.'],
     suite: 'news', target: 'api' },
 
   /* H21: permanent terrain. Without the subtraction, `lava` vouches for a trail closure. */
   { name: 'the permanent-feature subtraction removed',
-    from: "  return hasHazardEvidence(stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES));",
-    to:   "  return hasHazardEvidence(stripPhrases(clause, HAZARD_IDIOMS));",
+    from: "  const text = stripPhrases(stripPhrases(clause, HAZARD_IDIOMS), PERMANENT_FEATURES);",
+    to:   "  const text = stripPhrases(clause, HAZARD_IDIOMS);",
     expect: ['a lava field is terrain, not an event',
              'a permanent feature supplies no hazard evidence to the clause gate'],
     suite: 'news', target: 'api' },
 
   /* H21: history. The anniversary piece is the case publication recency cannot decide. */
   { name: 'the historical frame removed',
-    from: "  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';",
-    to:   "  if (hasAny(clause, EXERCISE_FRAME)) return '';",
+    from: "  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);",
+    to:   "  const framed = hasAny(clause, EXERCISE_FRAME);",
     expect: ['an anniversary is not an event, however recently published'],
     suite: 'news', target: 'api' },
 
   /* H21: preparedness. A drill that `continues` is not a hazard that continues. */
   { name: 'the preparedness frame removed',
-    from: "  if (hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME)) return '';",
-    to:   "  if (hasAny(clause, HISTORICAL_FRAME)) return '';",
+    from: "  const framed = hasAny(clause, HISTORICAL_FRAME) || hasAny(clause, EXERCISE_FRAME);",
+    to:   "  const framed = hasAny(clause, HISTORICAL_FRAME);",
     expect: ['a preparedness drill is not an event'],
     suite: 'news', target: 'api' },
 
@@ -1154,8 +1155,8 @@ const mutations = [
      reach a direct consequence, or a highway still closed by flood damage is deleted because the
      same sentence mentions rebuilding funds. */
   { name: 'the indirect frame also suppresses active consequences',
-    from: "  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
-    to:   "  if (!indirect && hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
+    from: "  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
+    to:   "  if (!indirect && live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
     expect: ['indirect aftermath does not suppress a still-open closure'],
     suite: 'news', target: 'api' },
 
@@ -1187,24 +1188,27 @@ const mutations = [
   { name: 'a comma treated as a clause boundary',
     from: "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)",
     to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:,]+(?=\\s|$)",
-    expect: ['a parenthetical comma does not break a storm away from its continuation'],
+    /* Both directions of the comma decision, in one case. Splitting loses the storm that
+       continues, AND it resurrects an order that was lifted and is no longer in effect. */
+    expect: ['a parenthetical comma does not break a storm away from its continuation',
+             'and the expired order it would otherwise have resurrected stays false'],
     suite: 'news', target: 'api' },
 
   /* H19: each of the three assertion groups carries records the other two do not. */
   { name: 'the hazard-onset group removed',
-    from: "  if (!indirect && hasUnnegated(clause, EVENT_ONSET)) return 'onset';",
+    from: "  if (!framed && !indirect && live(EVENT_ONSET, false)) return 'onset';",
     to:   "",
     expect: ['true:  hazard continuation'],
     suite: 'news', target: 'api' },
 
   { name: 'the protective-action group removed',
-    from: "  if (!indirect && hasUnnegated(clause, PROTECTIVE_ACTION)) return 'protective';",
+    from: "  if (!framed && !indirect && live(PROTECTIVE_ACTION, true)) return 'protective';",
     to:   "",
     expect: ['while an advisory in effect does'],
     suite: 'news', target: 'api' },
 
   { name: 'the active-consequence group removed',
-    from: "  if (hasUnnegated(clause, ACTIVE_CONSEQUENCE)) return 'consequence';",
+    from: "  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
     to:   "",
     expect: ['true:  resolved hazard, active closure'],
     suite: 'news', target: 'api' },
@@ -1242,6 +1246,49 @@ const mutations = [
     expect: ['a contracted negation counts as a negation'],
     suite: 'news', target: 'api' },
 
+  /* ---- The three defects read-only review found ---- */
+
+  /* H06/H22: without this, unrelated local prose localizes a remote hazard. */
+  { name: 'the remote-locality restriction on borrowed anchors removed',
+    from: "    if (remote && !clauseHazardEvidence(clause)) continue;",
+    to:   "",
+    expect: ['unrelated local prose does not localize a remote hazard'],
+    suite: 'news', target: 'api' },
+
+  /* H19/H20: the assertion has to be ABOUT a hazard that sits beside it. Without the proximity
+     requirement a research report and an unrelated active phrase both qualify. */
+  { name: 'the hazard-evidence proximity requirement removed',
+    from: "      if (!reaches(evidence, i, false)) continue;",
+    to:   "",
+    /* Both earlier expectations were already false for other reasons. What the proximity rule
+       alone decides is a closure whose only nearby hazard is the historical one. */
+    expect: ['while a closure with no hazard beside it does not qualify on the framing alone'],
+    suite: 'news', target: 'api' },
+
+  /* H20: negation reaches backwards only. Reaching forward deletes a live warning because the
+     same sentence reports that nobody was hurt. */
+  { name: 'negation reaches forward as well as back',
+    from: "      if (reaches(negation, i, true)) continue;",
+    to:   "      if (reaches(negation, i, false)) continue;",
+    expect: ['a negation after the assertion does not cancel it'],
+    suite: 'news', target: 'api' },
+
+  /* H21: history must not veto a consequence that is still open. */
+  { name: 'historical framing also suppresses active consequences',
+    from: "  if (live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
+    to:   "  if (!framed && live(ACTIVE_CONSEQUENCE, false)) return 'consequence';",
+    expect: ['an anniversary framing does not close an open hazard closure'],
+    suite: 'news', target: 'api' },
+
+  /* §4 research: restoring a passive reporting verb is the one-word change that brings the
+     research family back, and the HVO positive proves the fix is not a `research` stop-word. */
+  { name: 'passive reporting restored as hazard onset',
+    from: "  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning'",
+    to:   "  'rises', 'rising', 'overflows', 'overflowing', 'burns', 'burning', 'reported'",
+    expect: ['and a report sitting beside the hazard word is still only a report'],
+    suite: 'news', target: 'api' },
+
+
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
      a real evacuation order, which is the failure this whole contract exists to prevent. */
   { name: 'the Olowalu-era anchors dropped from the vocabulary',
@@ -1275,8 +1322,8 @@ const mutations = [
 
   /* Finding 1: each half of the compound conjunction, and the two tightened rows. */
   { name: 'compound context collapses back to a single list',
-    from: "    if (g.allOf) { if (g.allOf.every(group => hasAny(norm, group))) return true; }",
-    to:   "    if (g.allOf) { if (g.allOf.some(group => hasAny(norm, group))) return true; }",
+    from: "  if (g.allOf) return g.allOf.every(group => hasAny(norm, group));",
+    to:   "  if (g.allOf) return g.allOf.some(group => hasAny(norm, group));",
     expect: ['a swelling fund still needs ocean context when the record is a forecast'],
     suite: 'news', target: 'api' },
 
