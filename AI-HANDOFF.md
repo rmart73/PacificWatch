@@ -118,17 +118,17 @@ consequence family is handled. If the capture contains no instance of one of the
 consequence families, that will be reported as an absence of evidence for that family, not as
 evidence the family is handled.
 
-**Evidence, complete as of the seventh commit on this branch** (three implementation commits, two
-review rounds, two board updates).
+**Evidence, complete as of the ninth commit on this branch** (three implementation commits, three
+review rounds, three board updates).
 
 | Owed | State |
 |---|---|
 | 9 amendment negatives, 6 positives | Green, and **all nine are asserted to reach the third gate**, which is what the contract requires. For one round the lava-field case did not, because the permanent-feature subtraction had been folded into gate 2; review ruled the contract stands and the subtraction moved to the event gate |
-| Mutation per negative and surviving positive family | **232 of 232** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
-| H15 contemporaneous capture | 170 items, five feeds, zero feed failures, 2026-10-29. Ledger below |
+| Mutation per negative and surviving positive family | **237 of 237** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
+| H15 contemporaneous capture | 170 items, five feeds, zero feed failures. **Four captures taken**; the last three are identical to each other, so each round's changes are shown not to regress real feed text. Ledger below is the first |
 | H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
 
-Suites: **539 pure** (was 450), **669 DOM** (unchanged), **232 of 232 mutations** (was 196).
+Suites: **552 pure** (was 450), **669 DOM** (unchanged), **237 of 237 mutations** (was 196).
 Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
 
 ## Active Branches
@@ -165,7 +165,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
-| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`; review rounds 1 and 2 closed, not yet merged.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 539 pure, 669 DOM, 232 of 232 mutations. The live capture found four defects the deterministic corpus did not; two rounds of read-only review then found seven contract blockers the capture did not, all of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. Two items remain referred up and are recorded below. **One residual the board previously recorded as accepted was wrong** and is now a passing assertion in the corpus — see the round-2 log |
+| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`; review rounds 1, 2 and 3 closed, not yet merged.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 552 pure, 669 DOM, 237 of 237 mutations. The live capture found four defects the deterministic corpus did not; three rounds of read-only review then found eleven contract blockers the capture did not, every one of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. **Two residuals the board previously recorded as accepted were wrong** and are now passing assertions — see the round-2 and round-3 logs. One referred item remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
 **`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
@@ -272,17 +272,15 @@ performs #28's expected self-close transition immediately after the merge.
   not decide the ambiguity, and this entry does not claim it did.** If an explainer about a named
   active storm should be eligible, that is a §4 amendment and not an implementation change.
 
-- **`REMOTE_LOCALITY` is a bounded list, and that bound is what remains.** Round 2 closed the
-  larger hole: a lending clause must now be *about the claim* — carrying hazard vocabulary,
-  naming a protective action, or being a prepositional continuation of the clause before it — so
-  *“Wildfire threatens homes / Maui council meets today”* is **false** and is asserted as such.
+- **A protective action described as `open` can lend its anchor.** Gate 1 lets a clause naming a
+  protective action **in force** lend locality to a qualifying hazard, which is what the capture
+  record *“Oʻahu shelters open”* beside *“the islands brace for flash flooding”* requires. Bare
+  `open` is in the issuance list because that is how a shelter notice is actually written.
 
-  What is left is narrower and is named rather than implied shut: an **unlisted** remote place in a
-  qualifying clause whose record also contains a *hazard-bearing* local clause about something else
-  would still borrow. The list is seeded from the contract's H06 negatives plus every remote origin
-  the 2026-10-29 capture carried, and extending it is a vocabulary change with capture provenance,
-  exactly as the Hawaiʻi vocabulary was built.
-
+  The residual: an **animal** shelter described as open, in a record that also carries a hazard,
+  would lend. The contract's own animal-shelter negative uses *“expands capacity”* and is
+  rejected, and so is a *cancelled* advisory — both are asserted. This is narrower than the
+  deny-list it replaced and it is named rather than implied shut.
 - **A latent clause-scoping residual, recorded before anyone finds it as a defect.** Locality is
   now taken per clause, so a two-word anchor split by a clause boundary would not match. No anchor
   in the current vocabulary contains a boundary token, so this is latent rather than active; it
@@ -453,6 +451,47 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — review round 3: the deny-lists came out
+
+Four blockers, seven discriminating records, all reproduced before anything changed. **Three of
+the four were the same mistake in three places:** a deny-list standing in for a semantic rule.
+
+| Mechanism | How it failed | What replaced it |
+|---|---|---|
+| `REMOTE_LOCALITY` | A bounded list of captured place names left `Alberta` reachable | **Deleted.** Locality is a positive rule: the anchor must belong to the qualifying claim |
+| `RESEARCH_OBJECT` | Open-ended in both directions — `evidence` missing, `measurements` wrongly rejecting a real observation | **Deleted.** Word order: an observation qualifies on the hazard that PRECEDES it |
+| `CONTINUATION_OPENERS` | A leading preposition made `In Maui, the council meets today` a continuation | **Closed allowlist** of fragment tokens, so a fragment is defined by what it may contain |
+| the `after` break | Separated `remains closed` from `flooding`, so neither clause qualified | **Removed.** A preposition joins a claim to its cause |
+
+**The lesson, and it is the one I should have drawn two rounds earlier.** Every time a rule was
+stated as *“and not these particular words”* it was reachable by a word not on the list, and every
+time it was stated as *“only when the text does this”* it held. Three rounds of review were spent
+finding members of three deny-lists. The positive rules are also shorter: gate 1 is four named
+cases, where it used to be a list of thirty places plus three exceptions.
+
+**What gate 1 is now.** An anchor inside the qualifying clause and outside any hazard denial; or a
+clause carrying the HAZARD lending to a qualifying protective action; or a clause naming a
+protective action **in force** lending to a qualifying hazard; or a bare locality fragment
+continuing the clause before it. `in force` is the load-bearing word — a cancelled advisory and
+an animal shelter expanding capacity both name a protective subject and neither is about the
+hazard.
+
+**A second wrong label retracted.** The bounded `REMOTE_LOCALITY` residual was recorded as
+accepted; review declined it, correctly, and this is the second time a residual I wrote down
+honestly was simply not mine to accept. The pattern is now explicit: **a residual is a finding,
+not a permission.** Round 2 retracted one for the same reason.
+
+**One more duplicated authority.** `hasHawaiiAnchor()` became dead code while the gate matched
+anchors through a separate expression, so the whole-token property the H04 fixtures assert was no
+longer reachable from production. Both are built on one position helper now. **Six duplicated
+decisions across three rounds**, every one invisible to a green suite and every one surfaced by a
+mutation scoring `MISSED`.
+
+**A fourth capture** is identical to the second and third — 170 items, zero feed failures, 15
+hazard before and 8 after, the same eight retained and the same single locality-only residual — so
+deleting the deny-list and tightening locality substantially did not cost a single real record.
+
 
 ### 2026-10-29 — review round 2: four more blockers, and one of them was my own wrong label
 
