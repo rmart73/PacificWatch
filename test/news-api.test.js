@@ -680,6 +680,51 @@ async function main() {
     classify('Maui wildfire attorney fee caps debated.', ''), false);
   check('null fields still cannot gain a label', classify(null, null), false);
 
+  console.log('\nH15/H16 — six records from the 2026-10-29 five-feed capture, verbatim shapes:');
+  /* These are not invented prose. Each is a real decoded title+summary shape from the capture
+     required by H15, kept as a regression fixture because the authored corpus did not contain it.
+     Four were defects the capture found and the deterministic corpus did not. */
+
+  /* FALSE NEGATIVE the capture found: a real flash flood forecast. The headline's only event word
+     was `possible`, which the first implementation did not carry. */
+  check('a flash flood forecast qualifies on "possible"',
+    classify('Flash flooding possible for Maui County, O\u02BBahu: Wednesday Forecast',
+             'Heavy rain is expected Wednesday afternoon, with the highest probability over Maui County.'), true);
+  /* FALSE NEGATIVE the capture found: open shelters, where the only event language was `brace`
+     and it sat in a different clause from the anchor. */
+  check('open shelters qualify when the islands brace for flash flooding',
+    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
+             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+  /* FALSE POSITIVE the capture found, in the family the amendment exists for: mitigation work
+     months after a storm is long-term recovery, and a SEASON is a background condition. */
+  check('mitigation work amid hurricane season is recovery reporting, not a hazard',
+    classify('Team Rubicon focuses on Maui mitigation work amid hurricane season',
+             'Mitigation work from Hurricane Lala, which impacted the islands in August, is still underway on Maui.'), false);
+  check('  a season on its own is background, not an event',
+    classify('Hurricane season continues in Hawaii.', ''), false);
+  check('  and mitigation work underway is not an active hazard',
+    classify('Maui hurricane mitigation work is still underway.', ''), false);
+  /* LOCALITY GAP the capture found. This is a real Maui evacuation warning that passed the hazard
+     and event gates and failed locality; the PREVIOUS classifier dropped it too, so it is a
+     pre-existing H04 gap rather than a regression. */
+  check('a Haleakala evacuation warning anchors',
+    classify('Evacuation warning issued for Kipahulu District of Haleakala National Park', ''), true);
+  check('  while the anchor alone is still not hazard evidence',
+    classify('Haleakala summit road repaving finishes this week', ''), false);
+  /* The amendment's negation negative, found live and twice in one capture. */
+  check('the live no-tsunami-threat wire story does not qualify',
+    classify('No tsunami threat to Hawaii after 7.0M earthquake near Bonin Islands, Japan',
+             'There is no tsunami threat to Hawaii. A 7.0 magnitude earthquake hit near Bonin Islands in Japan on Saturday afternoon.'), false);
+  /* A contraction is how people actually write a negation, and it survives normalization as one
+     token. Without it the denial below reads as an asserted hit. */
+  check('a contracted negation counts as a negation',
+    classify("Storms that don't hit Hawaii directly can still have an impact", ''), false);
+  /* An opinion letter. `likely` was left out of the forecast group for exactly this record: its
+     text carries real brush-fire and hurricane language and the phrase "what is likely behind". */
+  check('an opinion letter about climate policy does not qualify',
+    classify('Letter: Are representatives up to climate policy challenge?',
+             'As the general election approaches, recent disasters due to hurricanes, heavy Kona low storms and brush fires are on locals\u2019 minds. I wonder what is likely behind the increased severity.'), false);
+
   console.log('\nN02 — the handler emits publication time as null or canonical ISO, nothing else:');
   const CANON_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
   /* Canonicality is parse-AND-round-trip, never regex shape alone. A raw

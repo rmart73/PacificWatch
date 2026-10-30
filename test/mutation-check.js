@@ -1209,6 +1209,39 @@ const mutations = [
     expect: ['true:  resolved hazard, active closure'],
     suite: 'news', target: 'api' },
 
+  /* ---- The four defects the 2026-10-29 capture found, each kept load-bearing ---- */
+
+  { name: 'the capture-proved forecast language dropped',
+    from: "  'possible', 'potential', 'risk', 'imminent', 'brace', 'braces', 'bracing',",
+    to:   "",
+    expect: ['a flash flood forecast qualifies on \"possible\"',
+             'open shelters qualify when the islands brace for flash flooding'],
+    suite: 'news', target: 'api' },
+
+  { name: 'a season treated as an event again',
+    from: "  'hurricane season', 'wildfire season', 'fire season', 'storm season', 'surf season',",
+    to:   "",
+    expect: ['a season on its own is background, not an event'],
+    suite: 'news', target: 'api' },
+
+  { name: 'mitigation and long-term recovery dropped from the indirect frame',
+    from: "  'mitigation', 'mitigation work', 'recovery', 'recovery work', 'long term recovery', 'rebuilding',",
+    to:   "",
+    expect: ['and mitigation work underway is not an active hazard'],
+    suite: 'news', target: 'api' },
+
+  { name: 'the capture-proved Haleakala anchors dropped',
+    from: "  'haleakala', 'kipahulu',",
+    to:   "",
+    expect: ['a Haleakala evacuation warning anchors'],
+    suite: 'news', target: 'api' },
+
+  { name: 'contracted negation forms ignored',
+    from: "  \"don't\", \"doesn't\", \"didn't\", \"won't\", \"isn't\", \"aren't\", \"wasn't\", \"weren't\",",
+    to:   "",
+    expect: ['a contracted negation counts as a negation'],
+    suite: 'news', target: 'api' },
+
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
      a real evacuation order, which is the failure this whole contract exists to prevent. */
   { name: 'the Olowalu-era anchors dropped from the vocabulary',

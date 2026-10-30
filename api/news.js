@@ -107,8 +107,12 @@ const HAWAII_ANCHORS = [
      contract names for bare "Ocean View". A further construction needs its own capture evidence
      and its own fixtures. */
   'hawaiian islands', 'hawaiian electric',
-  /* A Hawai'i place the authored list did not contain, found in the capture. */
+  /* Hawai'i places the authored list did not contain, each found in a real five-feed capture. */
   'papahanaumokuakea',
+  /* From the 2026-10-29 capture: "Evacuation warning issued for Kipahulu District of Haleakala
+     National Park" was a real Maui evacuation warning that passed both other gates and failed
+     locality. Pre-existing H04 gap, not a regression -- the prior classifier dropped it too. */
+  'haleakala', 'kipahulu',
   /* commonly reported places -- contract plus capture */
   'hilo', 'kona', 'kailua kona', 'puna', 'kilauea', 'mauna loa', 'mauna kea',
   'lahaina', 'kahului', "lihu'e", 'lihue', 'waikiki', "wai'anae", 'waianae',
@@ -243,7 +247,12 @@ const PERMANENT_FEATURES = [
   'volcanoes national park', 'volcano national park',
   'tsunami zone', 'tsunami zones', 'tsunami evacuation zone', 'tsunami evacuation zones',
   'flood zone', 'flood zones', 'floodplain', 'floodplains', 'flood plain',
-  'dormant volcano', 'extinct volcano'
+  'dormant volcano', 'extinct volcano',
+  /* A SEASON is a background condition in exactly the way a floodplain is. From the capture:
+     "Team Rubicon focuses on Maui mitigation work amid hurricane season" qualified because
+     `hurricane season continues` read as a hazard that continues. */
+  'hurricane season', 'wildfire season', 'fire season', 'storm season', 'surf season',
+  'rainy season', 'dry season'
 ];
 
 /* Explicit negation — H20. SCOPED: a marker cancels only an assertion that follows it within a
@@ -251,7 +260,12 @@ const PERMANENT_FEATURES = [
    "No tsunami threat" sits beside a flash flood warning that is still in effect. */
 const NEGATION = [
   'no', 'not', 'none', 'never', 'nor', 'without', 'unlikely', 'no threat', 'not expected',
-  'ruled out', 'denies', 'denied', 'dismissed'
+  'ruled out', 'denies', 'denied', 'dismissed',
+  /* Contractions survive normalization as single tokens, so they have to be listed or a negation
+     written the way people write it does not count. `no longer` is deliberately absent: it is a
+     RESOLUTION marker, and treating it as a denial would also strip that clause's anchor. */
+  "don't", "doesn't", "didn't", "won't", "isn't", "aren't", "wasn't", "weren't",
+  "can't", 'cannot'
 ];
 
 /* Resolved states — H20. Same scoping, and PERSISTENCE below overrides them inside one clause. */
@@ -277,6 +291,13 @@ const EVENT_ONSET = [
   'approaches', 'approaching', 'nears', 'nearing', 'heads', 'heading', 'moves', 'moving',
   'tracks', 'tracking', 'forecast', 'forecasts', 'forecasted', 'expected', 'anticipated',
   'predicted', 'continues', 'continuing', 'ongoing', 'underway', 'in progress',
+  /* From the live capture, where their absence dropped two real hazard records: a flash flood
+     forecast headlined "Flash flooding possible for Maui County" and an open-shelter story whose
+     only event language was "the islands brace for flash flooding". `likely` is deliberately NOT
+     here -- it reclassified an opinion letter about climate policy, whose text reads "what is
+     likely behind the increased incidence", as an active hazard. */
+  'possible', 'potential', 'risk', 'imminent', 'brace', 'braces', 'bracing',
+  'warned', 'arrives', 'arriving', 'impacted', 'impacts', 'impacting',
   'intensifies', 'intensifying', 'strengthens', 'strengthening', 'escalates', 'escalating',
   'grows', 'growing', 'spreads', 'spreading', 'develops', 'developing', 'forms', 'forming',
   'erupts', 'erupted', 'erupting', 'eruption', 'eruptions',
@@ -343,6 +364,11 @@ const INDIRECT_FRAME = [
   'spending', 'tourism', 'tourist', 'tourists', 'visitor arrivals', 'bookings',
   'prices', 'price', 'supply', 'supplies', 'shortage', 'economy', 'economic', 'revenue',
   'profits', 'sales', 'audit', 'rebuilding funds', 'recovery funds', 'recovery plan',
+  /* The contract names long-term recovery as an indirect family and the capture supplied the
+     case: mitigation work still underway months after a storm is recovery reporting, not an
+     active hazard. The residual risk is recorded in the handoff -- an active search-and-recovery
+     operation would also carry `recovery`, and no capture item exercised that. */
+  'mitigation', 'mitigation work', 'recovery', 'recovery work', 'long term recovery', 'rebuilding',
   'legislature', 'lawmakers', 'politics', 'political', 'campaign', 'election', 'ballot',
   'poll', 'polls', 'debated', 'debate'
 ];
