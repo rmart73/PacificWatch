@@ -118,16 +118,17 @@ consequence family is handled. If the capture contains no instance of one of the
 consequence families, that will be reported as an absence of evidence for that family, not as
 evidence the family is handled.
 
-**Evidence, complete as of the third commit on this branch.**
+**Evidence, complete as of the fifth commit on this branch** (three implementation commits, one
+review round, one board update).
 
 | Owed | State |
 |---|---|
-| 9 amendment negatives, 6 positives | Green, and each negative additionally proved to reach the third gate |
-| Mutation per negative and surviving positive family | 221 of 221 caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
+| 9 amendment negatives, 6 positives | Green, and each negative asserts **which gate rejects it**. Eight reach the third gate; the lava-field case is rejected one gate earlier by the permanent-feature subtraction, which is part of gate 2 here. Recorded per case rather than averaged |
+| Mutation per negative and surviving positive family | **226 of 226** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
 | H15 contemporaneous capture | 170 items, five feeds, zero feed failures, 2026-10-29. Ledger below |
 | H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
 
-Suites: **519 pure** (was 450), **669 DOM** (unchanged), **221 of 221 mutations** (was 196).
+Suites: **530 pure** (was 450), **669 DOM** (unchanged), **226 of 226 mutations** (was 196).
 Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
 
 ## Active Branches
@@ -164,7 +165,7 @@ Merged branches are omitted from this active list; this does not imply remote br
 | Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
-| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`, not yet merged.** Three gates, decided per clause: hazard evidence, an asserted event or active operational impact, and locality from a clause that does not deny the only local impact. 519 pure, 669 DOM, 221 of 221 mutations. The live capture found four defects the deterministic corpus did not, two of them false negatives on real hazard records, and all four are fixed with fixtures and mutations | Awaiting Codex's read-only review and the owner's merge. Two items are referred up rather than decided: the bare-`islands` locality residual and the explainer-about-an-active-storm ambiguity, both below |
+| Hazard-classifier event-assertion implementation | **Complete on `claude/hazard-event-assertion`; review round 1 closed, not yet merged.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 530 pure, 669 DOM, 226 of 226 mutations. The live capture found four defects the deterministic corpus did not; read-only review then found three contract blockers the capture did not, all of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. Three items are referred up rather than decided and are recorded below; two residuals are asserted as tests rather than described |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
 **`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
@@ -270,6 +271,33 @@ performs #28's expected self-close transition immediately after the merge.
   The contraction fix is correct on its own terms and would have been made regardless. **It did
   not decide the ambiguity, and this entry does not claim it did.** If an explainer about a named
   active storm should be eligible, that is a §4 amendment and not an implementation change.
+
+- **A resolution comma-spliced between an order and its persistence is a known false negative.**
+  *“The evacuation order, lifted for Lahaina, remains in effect for Olowalu”* classifies **false**.
+  This is the price of making resolution claim-scoped, and both alternatives were implemented and
+  measured before settling here:
+
+  | Design | This record | *“…lifted for Lahaina, is no longer in effect”* |
+  |---|---|---|
+  | clause-wide persistence override | true | **true — a false positive** |
+  | comma as a sub-clause boundary | true | **true — a false positive** |
+  | claim-scoped resolution (shipped) | **false — a false negative** | false |
+
+  The shipped choice is the one whose error does not tell a reader that an expired evacuation
+  order is still in force. Both rows are **asserted as tests**, not described: the residual and
+  the false positive that must not come back. Closing it properly needs the order and its
+  predicate associated by something other than token distance, which is a contract question.
+
+- **`REMOTE_LOCALITY` is a bounded list, and that bound is the residual.** H06 locality borrowing
+  is now restricted when the qualifying clause names a remote place, and the list is seeded from
+  the contract's own negatives plus every remote origin the capture actually carried. **An
+  unlisted remote place still borrows unrelated local prose**, and so does a hazard clause that
+  names no place at all — *“Wildfire threatens homes / Maui council meets today”* is still true.
+
+  That second case is **pre-existing and was worse before**: the prior classifier took its anchor
+  from anywhere in the record. It is not closed here because the only clean fix — requiring the
+  anchor clause to carry hazard evidence — drops required positive 11, and the contract says to
+  stop for review rather than weaken a gate that drops a required positive.
 
 - **A latent clause-scoping residual, recorded before anyone finds it as a defect.** Locality is
   now taken per clause, so a two-word anchor split by a clause boundary would not match. No anchor
@@ -442,6 +470,56 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
 
 ## Handoff Log
 
+### 2026-10-29 — review round 1 on the event gate: clause-scoped was not claim-scoped
+
+Read-only review found three contract blockers. All three reproduced exactly as described, which
+is worth recording on its own: they were specified precisely enough to be executable, and the
+first thing done with them was to run them rather than reason about them.
+
+| Blocker | The record | Why the implementation was wrong |
+|---|---|---|
+| H06/H22 | `California wildfire threatens homes.` / `Maui council meets today.` | Locality came from ANY non-denial clause, so unrelated local prose localized a remote hazard |
+| H20 | `Tsunami advisory cancelled, active investigation continues in Hawaii.` | Persistence anywhere in a clause revived a resolution anywhere in it |
+| H21 | `On the anniversary of the Maui wildfire, Honoapiilani Highway remains closed by flood damage.` | History vetoed the clause before its active consequence was considered |
+| §4 | `UH researchers reported new findings about Kilauea lava chemistry.` | `reported` was a hazard-onset verb |
+
+**The structural lesson.** Per-clause was the right shape and the wrong granularity. A clause can
+carry two claims, and every marker — negation, resolution, framing, and the hazard evidence
+itself — has to be associated with the claim it modifies, not with the clause it appears in. The
+`PERSISTENCE` group is gone entirely as a result: it existed only to revive a resolved clause, and
+once resolution is claim-scoped there is nothing to revive — an active claim beside a resolved one
+is simply a different claim.
+
+**The §4 research fix is a verb fix, not a stop-word.** Adding `research` to the indirect frame
+would have rejected the family and also deleted *“HVO researchers report lava continues at
+Kilauea”*, which review explicitly asked to preserve. Removing the passive reporting verbs does
+both: a report *about* a hazard is not the hazard, while what the lava does still counts.
+
+**Two defects in my own work, found while fixing theirs, and neither was reported by the suites.**
+The row-satisfaction test had two copies, so the mutation loosening the `allOf` conjunction changed
+only one of them and was scored `MISSED`. Gate 2 had two copies again for the same reason the
+record-wide gate came out in the first place. Both are now single named helpers. **Duplicated
+decisions are the recurring failure mode on this unit** — three times now, a second copy of a
+decision has meant no mutation could prove either copy was load-bearing.
+
+**Six twin fixtures stopped discriminating,** for the same reason five did in the previous round:
+their assertion verb was removed by the research fix, or sat out of reach of its hazard once
+proximity was required. Every one was repaired rather than deleted. That is eleven fixtures across
+two rounds that were passing without testing anything, and in both rounds the suite was green
+throughout.
+
+**A second capture, taken after the changes, confirmed no regression:** 170 items, zero feed
+failures, 15 hazard before and 8 after, seven changed labels all correct rejections, and the single
+remaining locality-only rejection is the recorded bare-`islands` item. The feed had rotated, so the
+item set is not identical to the first capture — this confirms the changes, it does not re-prove
+the first ledger.
+
+**Rulings accepted from review,** recorded so they are not re-litigated: bare `the islands` stays
+unresolved, because H03 and H04 do not permit publisher identity to repair it; the Olana
+preparedness explainer is false under the current contract unless its text asserts a current
+Hawaiʻi impact; and the latent boundary-split anchor issue may remain recorded.
+
+
 ### 2026-10-29 — H19–H24 implemented; the H15/H16 capture ledgers
 
 **What the gate is.** Three named assertion groups — hazard onset, protective action, active
@@ -485,7 +563,9 @@ body is stored.
 | 7 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.0M earthquake near Bonin Islands, Japan | H20 and H22, live. The only Hawaiʻi impact is expressly denied, so the remote quake cannot borrow the anchor |
 | 8 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.2M earthquake in Vanuatu in Melanesia | As above. Required negative 1 appeared twice in one capture |
 
-**The eight retained hazard items,** with the group that qualified each: a flash flood warning and
+**The eight FINAL hazard items,** with the group that qualified each. Seven were retained and one
+was added, which is what 14 → 8 with one addition and seven removals means; an earlier version of
+this line said "eight retained" and that was wrong: a flash flood warning and
 Hawaiʻi Island flood advisory (protective), the Kipahulu evacuation warning (protective), Maui
 evacuations and closures (protective), a large northwest swell expected to hit (onset), flash
 flooding possible for Maui County (onset), six Molokaʻi schools closed due to flooding
