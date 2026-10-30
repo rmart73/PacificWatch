@@ -80,13 +80,66 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**Hazard-classifier event-assertion implementation — Claude Code,
+`claude/hazard-event-assertion`. CLAIMED 2026-10-29.**
+
+Implements H19–H24 from [HAZARD-CLASSIFIER-CONTRACT.md](HAZARD-CLASSIFIER-CONTRACT.md), merged as
+#64. Scope is exactly the contract's implementation boundary:
+
+- `api/news.js` — classifier semantics only.
+- `test/news-api.test.js` — the named News corpus.
+- `test/mutation-check.js` — mutation cases for the new gate.
+- `AI-HANDOFF.md` — this claim and its evidence.
+
+**Out of scope and not touched:** feeds, canonical routing, edge query normalization, WAF, response
+shape, client presentation, `timeAgo()`, runtime dependencies, the workflow, and any Vercel or
+domain setting. H01–H18 are preserved, not re-litigated.
+
+**Two fixtures on `main` contradict the merged amendment and are corrected here, not worked
+around.** The bulk-feed fixture title `Tsunami advisory lifted for Hawaii County` is required
+negative 2's shape and must now classify false, and the two mutation cases anchored on
+`return hasHazardEvidence(evidenceText) && hasHawaiiAnchor(norm);` lose their anchor when that
+line becomes three gates. Both are recorded as contract-driven corrections rather than as
+incidental test edits.
+
+**Evidence owed before merge,** per H19–H24:
+
+1. The nine amendment negatives and six amendment positives green, with each negative additionally
+   proved to pass gates 1 and 2 — so the third gate is demonstrably the thing rejecting it, not a
+   vocabulary accident.
+2. A focused mutation per negative family and per surviving positive family, with zero `MISSED`,
+   `ANCHOR LOST` or `AMBIGUOUS`.
+3. Contemporaneous H15/H16 ledgers over one five-feed capture: every changed label with title,
+   source, old and new result and contract rationale, plus the separate
+   `hazard evidence = true / locality = false` list resolved item by item.
+
+**Stated in advance, because it decides how the ledger may be read:** a live capture cannot prove a
+consequence family is handled. If the capture contains no instance of one of the four production
+consequence families, that will be reported as an absence of evidence for that family, not as
+evidence the family is handled.
+
+**Evidence, complete as of the current branch head.** An earlier version counted commits here and
+went stale within the day; per the volatile-identifier rule this entry now points at the PR's own
+checks rather than naming a head that the next commit supersedes.
+
+| Owed | State |
+|---|---|
+| 9 amendment negatives, 6 positives | Green, and **all nine are asserted to reach the third gate**, which is what the contract requires. For one round the lava-field case did not, because the permanent-feature subtraction had been folded into gate 2; review ruled the contract stands and the subtraction moved to the event gate |
+| Mutation per negative and surviving positive family | **246 of 246** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
+| H15 contemporaneous capture | 170 items, five feeds, zero feed failures on every run. **Ten valid captures.** A ninth result was reported in-session and is **not** a capture: the script had crashed and the figures came from a stale file. Captures 5, 7 and 8 each found a defect the deterministic corpus did not. Ledger below is the first |
+| Exact-head hosted run | **See the PR's required checks**, which always describe the current head. Naming a run ID here made the row wrong one commit later. The one historical fact worth keeping: run `40995302071` **attempt 1** failed on a non-reproducible `MISSED` in an unrelated N02 case, recorded in Outstanding Verification rather than omitted |
+| H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
+
+Suites: **575 pure** (was 450), **669 DOM** (unchanged), **246 of 246 mutations** (was 196).
+Runtime `dependencies` remains absent. No workflow, routing, WAF, schema or client file is touched.
 
 ## Active Branches
 
-No active branches are claimed. #64's two contract clarifications are complete on
-`codex/active-hazard-contract` and the documentation-only claim is retired again; any further edit
-requires another reclaim.
+| Agent | Branch | Purpose |
+|---|---|---|
+| Claude | `claude/hazard-event-assertion` | The H19–H24 classifier implementation claimed above. Code and tests, so it is not in the documentation-only self-retirement window: the claim stays live until the owner merges |
+
+`codex/active-hazard-contract` merged as #64 and is no longer in a review window.
 Merged branches are omitted from this active list; this does not imply remote branch deletion.
 
 ## Review Queue
@@ -111,13 +164,15 @@ Merged branches are omitted from this active list; this does not imply remote br
 | C12 mutation-ceiling amendment | **Closed as a contract, workflow and evidence correction.** The amendment merged as #48, its implementation as #49 and its evidence correction as #61. C12 remains authoritative at 5/10/20 minutes. The old 916s figure is correctly framed as a **censored lower bound** from cancelled run `38103799949`; completed run `38118022258` at `2ebfbe6` measured the 146-case serial corpus at 963s, and run `40715252122` at `28215b9` measured the 196-case bounded-pool corpus at a 492-second job (480-second suite step), 41.0% of the ceiling. A completed job at or above 75% is a capacity-review trigger, not a verdict change | Closed. No workflow ceiling, required-check or ruleset change was part of #61 |
 | News publication-time handling | **CLOSED.** Contract merged as #35 in `2875d0f`; implementation merged as #36 in `9348284`; production HTML byte-identical to merged `main`; N01–N16 accepted | None. The future-value defect is fixed, malformed input remains defense-in-depth, and the server invariant is asserted and mutation-proven |
 | CI for independently reproducible suite evidence | **Closed end to end.** Contract #38, implementation #39, closeout #40, C16 record #41, closeout #42, C09 amendment #43 and runner-family correction #44 are merged. The exact-`main` #44 run passed attempt 1 on the explicit `ubuntu-24.04` family | None. C01–C18 and amended C09 are implemented. **C12 is no longer unchanged:** it was amended by #48 and implemented by #49, so the mutation ceiling is 20 minutes |
-| Hazard classification of aftermath vs active hazard | **#64 passed Claude's read-only review with no blockers; both observations are clarified on the corrected documentation head. This is not a #33 defect.** H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact. It distinguishes active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | Claude verifies the corrected final head, then the owner may merge. **No classifier change is authorized until the amendment is merged**; implementation is a later Claude claim |
+| Hazard classification of aftermath vs active hazard | **#64 merged as `b746dd9`** after Claude's read-only review of the final head found no blockers; the two earlier observations were clarified before merge. This was never a #33 defect — H01–H18 correctly classify on hazard language plus locality. The amendment adds a third gate: an asserted event or ongoing operational impact, distinguishing active hazards and direct public-safety consequences from indirect aftermath, permanent terrain, history, preparedness and negated or resolved threats | **Closed as a contract; H19–H24 are authoritative.** The implementation is claimed above and is a separate unit. Production classifier behavior is unchanged until it merges |
 | Visual layout refinement | Deferred by the owner; not yet claimed | Needs an agreed design first |
 | Closed-claims cleanup | **#60 merged as `d635fcd`.** #58 retired six of eight blocks, #59 placed the two remaining rules in `AGENTS.md`, and #60 retired the last two after verifying both rules on `main`. No historical `Closed:` block remains | Closed. The *Historical external-state dating* row is a separate item and remains open |
+| Hazard-classifier event-assertion implementation | **On `claude/hazard-event-assertion`; review rounds 1—7 closed and the escalated question ruled. BLOCKED: one H22 blocker cannot be fixed without dropping required positive 6, so a contract clarification owned by Codex merges first.** Three gates, decided per **claim** rather than per clause after review: hazard evidence beside the assertion, an asserted event or active operational impact, and locality that supports the qualifying assertion. 575 pure, 669 DOM, 246 of 246 mutations. Ten valid live captures found seven defects the deterministic corpus did not; seven rounds of read-only review found twenty contract blockers the captures did not, every one of which reproduced exactly as described | Awaiting Codex's re-review and the owner's merge. **Two residuals the board previously recorded as accepted were wrong** and are now passing assertions — see the round-2 and round-3 logs. One referred item remains open |
 | Historical external-state dating | **Open, unclaimed and unaudited.** #59's rule governs external-state claims when they are added or updated; pre-existing claims that predate it were not audited by that scoped unit and may still lack a verification date or observed source | No bulk retrofit is implied. Before an older claim is next relied upon or updated, reverify it and attach the date and source; any separate historical audit requires its own claim |
 
-**`main` is merged through #63.** Its exact-`main` run `40956767354` passed attempt 1 at head
-`e17acc0` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 516 seconds. Claims and handoffs for
+**`main` is merged through #64.** Its exact-`main` run `40969052324` passed attempt 1 at head
+`b746dd9` with 450 pure, 669 DOM and 196 of 196 mutations; the mutation job ran 503 seconds. The
+figure cited here previously was run `40956767354`, which is #63's at `e17acc0`. Claims and handoffs for
 #13–#15 are preserved in the archive, and the completed #14 test correction is recorded below.
 
 **PW-101/PW-102 is complete.** #47 merged as `93afdee` with its exact-`main` run green at 425 pure,
@@ -193,6 +248,57 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **RULED, and the implementation unit is BLOCKED ON A CONTRACT CHANGE that Codex owns.** The
+  composition question escalated in round 7 is answered: **option (b)** — a two-edge conjunction
+  chain through a shared protective subject does **not** establish composition. The ruling is
+  broader than the question asked: **repeating the same lexical subject across independent fields
+  also does not prove event identity.**
+
+  Review then found the same impossibility through the supposedly direct branch. Title
+  *Maui brush fire is contained.* with summary *California brush fire threatens homes.* classifies
+  **true** at head `6b466f6`, because both clauses carry the exact token `brush fire`. So *same
+  subject* meant same vocabulary token, not same event — the identical defect in the branch I had
+  argued was the provable one. Verified before anything was changed.
+
+  **Why this cannot be fixed here, and why the contract moves first.** Removing the direct
+  shared-subject path fixes the adversary and costs two things. Measured at `6b466f6`:
+
+  | Record | Depends on the path | After removal |
+  |---|---|---|
+  | **Required positive 6** | resolved title anchor plus active summary | **false** — a required positive would be dropped |
+  | **Live capture: the northwest swell** | `swell` and the anchor in the title, ocean context in the summary | **false** — a second documented false negative |
+  | Required positive 2 | same-field conjunction | holds |
+  | Required positive 11 | adjacent bare-locality fragment | holds |
+  | Live capture: the mauka forecast | adjacent bare-locality fragment | holds |
+
+  The contract says to stop for review rather than weaken a gate that drops a required positive,
+  so the path stays until the authority changes. **Codex owns a narrow clarification** preserving
+  direct anchors and adjacent fragments and the bounded same-field conjunction case, forbidding
+  locality borrowing from subject repetition across independent fields, rewriting required
+  positive 6 so its active summary states its own locality, and recording the accepted recall
+  boundary with the reason publisher identity and a gazetteer stay forbidden.
+
+  **One addition this unit owes that clarification.** The swell record is a second casualty and is
+  not in the stated list. It is the strongest form of the pattern — a *physical* hazard repeated
+  across fields rather than a protective one, with no anchor at all in its qualifying clause — so
+  naming it is cheaper than rediscovering it after the rebase.
+
+  **Sequence agreed:** the clarification merges first; then this branch rebases, removes the direct
+  shared-subject path, updates its fixtures and mutations, and runs once at the final head. No
+  further live capture is needed to repeat a trade-off already demonstrated.
+- **`HAZARD_COMPOUNDS` is a bounded positive vocabulary, and that bound is the residual.** The
+  observation head test asks whether the hazard HEADS the noun phrase the verb takes, and a
+  compound such as *earthquake swarm* has a head (`swarm`) that is not itself hazard vocabulary.
+  Those heads are listed. **A compound head that is not listed reads as a non-hazard head and the
+  observation is rejected** — a recall gap, and the safer direction, but a gap. Extending the list
+  is a vocabulary change with the same provenance discipline as the locality list, and the list is
+  used only by the head test so it cannot widen what counts as hazard evidence.
+- **A latent clause-scoping residual, recorded before anyone finds it as a defect.** Locality is
+  now taken per clause, so a two-word anchor split by a clause boundary would not match. No anchor
+  in the current vocabulary contains a boundary token, so this is latent rather than active; it
+  becomes real the first time an anchor containing `and`, `as`, `after`, `but` or sentence
+  punctuation is added.
 
 - **Revision 6 of the owner WAF procedure exists but has not been executed.** #62 was a
   documentation-only rewrite: no Vercel dashboard or WAF state was inspected or changed, no test
@@ -358,6 +464,426 @@ three failed attempts; it is not open and must not be re-raised. Q011 is done: #
   not the merge itself.
 
 ## Handoff Log
+
+### 2026-10-29 — the composition question is ruled, and the unit is parked on the contract
+
+**Ruling: option (b).** A two-edge conjunction chain through a shared protective subject does not
+establish composition, and the ruling is broader than the question — repeating the same lexical
+subject across independent fields does not prove event identity either. The witness-chain
+mechanism stays removed and the Need2Know fixture stays deleted rather than flipped to false.
+
+**The same impossibility then turned up through the direct branch.** Title *Maui brush fire is
+contained.* with summary *California brush fire threatens homes.* classifies true, because both
+clauses carry the token `brush fire`. Same vocabulary token, not same event — which is the
+identical defect in the one branch I had argued was provable.
+
+**I did not build an eighth mechanism, and I did not implement the removal either.** Removing the
+path drops **required positive 6**, and the contract says to stop for review rather than weaken a
+gate that drops a required positive. The measurement is this round's deliverable instead: the
+removal fixes the adversary, keeps positives 2 and 11 and the mauka capture, and costs positive 6
+plus the live northwest-swell record. The table is in Outstanding Verification.
+
+**What I owe the clarification that it did not ask for:** the swell record is a second casualty,
+the strongest form of the pattern — a physical hazard repeated across fields rather than a
+protective one, with no anchor at all in its qualifying clause.
+
+**The shape of this whole unit, for whoever reads it next.** Seven review rounds, twenty blockers,
+and the two moves that actually ended arguments were rulings rather than mechanisms: round 5's
+definition of composition and round 7's decision about what structure may assert. Eight of my own
+decisions could not be proven by any mutation, and four residuals I recorded honestly were not
+mine to accept. **The durable lesson is that a dependency-free lexical classifier cannot settle
+questions of event identity, and the moment a fix needs a bounded list of the world, the contract
+— not the code — is what has to change.**
+
+
+### 2026-10-29 — review round 7: the seventh mechanism, and a question instead of an eighth
+
+Both blockers were the same defect for the third round running: **the comment claimed a
+relationship and the code checked something weaker.** The conjunction path said "a hazard and the
+protective action it caused" and proved hazard category + protective category + a conjunction. The
+witness path said the witness was connected to the assertion and proved that it was reachable from
+it.
+
+**The conjunction path is now provable.** The assertion must introduce no physical hazard the
+lender does not share, which is exactly what separates required positive 2 from *“but California
+wildfire evacuation order remains in effect”*. `physicalHazards()` is hazard terms minus protective
+subjects, because `evacuation` is in both vocabularies and that overlap is the whole distinction.
+
+**The witness path is removed rather than narrowed, and that is the substance of this round.** A
+conjunction chain proves syntactic reachability, not shared-event identity: replacing round 5's
+sentence boundary with `while` reopened the identical path. I checked whether any further
+restriction could separate the live record from the adversary and **it cannot** — their clause
+graphs are the same, and the only difference is a place name in the hazard clause. The table is in
+Outstanding Verification.
+
+**What this round should change about how I work.** Seven mechanisms on one path, each broken by an
+adversary of the same shape, and the useful move in round 5 was a ruling rather than a mechanism.
+I should have escalated after the third, not the seventh. The signal was available each time: when
+a fix needs a *bounded list of the world* to work, it is answering a question the contract has not
+asked yet.
+
+**An eighth unprovable condition removed.** The conjunction path also required `q.state` to be
+protective or consequence; the physical-hazard restriction subsumed it the moment it existed. Every
+record decided the same way without it and no mutation could show it mattered. Removed before
+review had to ask, which is now twice.
+
+
+### 2026-10-29 — review round 6: two edges are not a claim
+
+Two blockers, and they were one defect stated twice: **every composition branch had a
+relationship at one end only.** A conjunction joined the lender to the clause beside it without
+saying anything about the hazard; a witness shared a field with the assertion without connecting
+to it. Both were mine, and both are the same mistake as round 4's category match in a new form.
+
+| Branch | Had | Needs |
+|---|---|---|
+| bare locality fragment | fragment anywhere in the record | fragment **immediately beside** the assertion |
+| explicit clause structure | any captured conjunction between adjacent clauses | a **hazard** in the lender and a **protective action or consequence** as the assertion |
+| shared subject | a witness anywhere in the assertion's field | a witness in the assertion's own **conjunction chain** |
+
+`conjunctionChain()` is what makes a witness mean anything, and it is also why the live Need2Know
+record survives the narrowing: its shelter witness chains into the flood claim through `and` and
+`as`. That is a real connection. Sharing a field was not.
+
+**A variant of my own now falls too.** *“Maui brush fire is contained, while California wildfire
+threatens homes”* composed under the looser rule. I found it while checking the fix and it is
+asserted alongside review's records, because the next reviewer should not have to find it again.
+
+**Both new fixtures had to be isolated, and that is the recurring lesson of this unit in
+miniature.** Either condition on the conjunction branch alone rejects review's record, so neither
+could be shown to matter until a record existed where only one applies. That is the eighth and
+ninth time a condition on this unit could not be proven until a fixture was built to separate it
+from its sibling.
+
+**Four stale or dead authorities removed**, all found by review rather than by me: a comment
+citing `RESEARCH_OBJECT` after it was deleted, a comment recording a residual that had been
+closed, a dead `sharesHazardSubject()`, and a gate 1 comment that claimed every clause the event
+gate rejects is barred from lending. That last one was simply false — a resolved clause lends by
+design, because required positive 2 depends on it. **Comments are claims about the code and go
+stale exactly like a board entry.**
+
+
+### 2026-10-29 — review round 5: a ruling settled what four rounds of mechanism could not
+
+**The most useful thing in five rounds was not a defect report, it was a ruling.** H07 composition
+had been my guess four times over — a deny-list, a category match, a preposition test, a
+protective-in-force rule — and each one was reachable. Review ruled instead on what composition
+*means*: a shared subject, an explicit clause structure, or a bare locality continuation may
+establish it, and category alone may not. That is three implementable cases, and implementing them
+as given closed **both** the category false positive and the open-shelter false negative at once.
+
+The open-shelter record composes on a shared **subject**: `shelters` is in the title and again in
+the summary clause that introduces the flood claim. The animal-shelter adversary has no such
+witness. I had been looking for a property of the lending clause, and the property was a
+relationship between two clauses.
+
+**Clause splitting now captures the conjunction**, so a clause knows its field and whether an
+explicit conjunction joined it to the clause before. That is what separates required positive 2's
+`but` from a sentence boundary between two unrelated assertions — the distinction the ruling
+turns on.
+
+**§4's observation sentence took four mechanisms.** An object vocabulary (open-ended), word order
+(wrong in both directions), a token window (recognized only noun phrases shaped like my own
+examples, so `a magnitude 4 earthquake` failed on `magnitude`), and finally **phrase headedness**:
+the hazard must head the noun phrase the verb takes. The first three asked about distance; only
+the fourth asks about the phrase the sentence actually contains.
+
+**The seventh capture found a false positive the corpus could not.** NWS headlines are present
+tense, so an expired warning reads *Flash Flood Warnings Expire*, and bare `expire` was missing.
+The same record's active flooding threat had its locality in *mauka areas of Maui*, which local
+forecasts write constantly. Both are vocabulary, both are fixtured, and the mauka fixture had to
+be **isolated** — the capture record also carries *Hawaii Island*, which is a locality fragment in
+its own right, so it could not show that `mauka` mattered.
+
+**Capture bookkeeping, corrected.** There are **eight** valid captures. A ninth reported figure
+was never a capture: the script had crashed and I read a stale file. Captures 5, 7 and 8 each
+found a defect the deterministic corpus did not, which is the whole argument for H15 existing.
+
+
+### 2026-10-29 — review round 4, and a capture I reported without running
+
+**First, a reporting failure of mine.** I reported a fifth capture in-session with figures that
+came from a stale file: the capture script had crashed on a renamed helper and I had run it with
+`2>/dev/null`, so the crash was invisible and the previous run's ledger was still on disk. The
+figures were re-derived from a run with errors visible, and that run found **two false negatives
+the suppressed one would never have shown**. Suppressing stderr on an evidence-producing script is
+the error, not the crash.
+
+| Blocker | The record | Ruling |
+|---|---|---|
+| H22 | `Tsunami advisory remains in effect.` / `Maui wildfire attorney fee caps debated.` | The positive rules matched categories, not the same event |
+| H22 | `Wildfire threatens homes.` / `Maui nonprofit animal shelter open for adoptions.` | The open-shelter residual is **not** acceptable |
+| §4 | `USGS detected an earthquake near Hilo.` | Word order is not the discriminator either |
+| §4 | `Kīlauea lava chemistry findings reported by researchers.` | — in the other direction |
+
+**What replaced the word-order rule.** Whether the hazard HEADS the verb's noun phrase. "detected
+an earthquake near Hilo" closes the phrase right after the hazard; "reported lava chemistry
+changes" carries two more nouns, so `lava` modifies `changes`. Both sides of the verb are covered,
+so `earthquake swarm detected` and `detected earthquake swarm` both qualify. Three mechanisms have
+now been tried for this one contract sentence — an object vocabulary, word order, and phrase
+headedness — and the third is the first that is about the grammar the sentence describes.
+
+**The two capture defects, both live hazard records.** A flash flood warning in force for Hawaii
+Island and cancelled for East Maui was being deleted whole, because a cancellation was scoped only
+through in-force phrases; a protective SUBJECT now consults its own locality. And a northwest-swell
+record lost its locality when protective lending was removed, because its title carries the place
+and the word `swell` while its summary carries the ocean context that satisfies the row — which
+is precisely H07 complementary evidence. A lender naming the **same hazard subject** recovers it
+and rejects every adversarial record from all four rounds.
+
+**A mechanism deleted for being unprovable.** `claimLocality` stopped its scan at the next
+claim-bearing token. Once the protective subject consulted its own locality, all six two-locality
+records decided the same way without it and no mutation could show the stop list mattered. Deleted
+rather than kept. **That is the seventh decision on this unit that nothing could prove**, and the
+first one I removed before review had to ask.
+
+**A claim of mine that was simply wrong.** The board said a green mutation run cannot distinguish
+"every case caught" from "every case silently produced nothing". It can: the harness is
+fail-closed, an empty child output cannot satisfy the conjunction, and the run exits nonzero. The
+entry is corrected in place and says what it used to say. The real gap is narrower — a RED
+attempt cannot say **why** it was red — and review ruled that this does not gate the PR.
+
+**A second wrong label retracted, for the same reason as the first two.** The open-animal-shelter
+residual is withdrawn. Three retractions now, all of the same shape: I recorded something honestly
+and then treated the record as permission. The rule stands: **a residual is a finding, not a
+permission.**
+
+
+### 2026-10-29 — review round 3: the deny-lists came out
+
+Four blockers, seven discriminating records, all reproduced before anything changed. **Three of
+the four were the same mistake in three places:** a deny-list standing in for a semantic rule.
+
+| Mechanism | How it failed | What replaced it |
+|---|---|---|
+| `REMOTE_LOCALITY` | A bounded list of captured place names left `Alberta` reachable | **Deleted.** Locality is a positive rule: the anchor must belong to the qualifying claim |
+| `RESEARCH_OBJECT` | Open-ended in both directions — `evidence` missing, `measurements` wrongly rejecting a real observation | **Deleted.** Word order: an observation qualifies on the hazard that PRECEDES it |
+| `CONTINUATION_OPENERS` | A leading preposition made `In Maui, the council meets today` a continuation | **Closed allowlist** of fragment tokens, so a fragment is defined by what it may contain |
+| the `after` break | Separated `remains closed` from `flooding`, so neither clause qualified | **Removed.** A preposition joins a claim to its cause |
+
+**The lesson, and it is the one I should have drawn two rounds earlier.** Every time a rule was
+stated as *“and not these particular words”* it was reachable by a word not on the list, and every
+time it was stated as *“only when the text does this”* it held. Three rounds of review were spent
+finding members of three deny-lists. The positive rules are also shorter: gate 1 is four named
+cases, where it used to be a list of thirty places plus three exceptions.
+
+**What gate 1 is now.** An anchor inside the qualifying clause and outside any hazard denial; or a
+clause carrying the HAZARD lending to a qualifying protective action; or a clause naming a
+protective action **in force** lending to a qualifying hazard; or a bare locality fragment
+continuing the clause before it. `in force` is the load-bearing word — a cancelled advisory and
+an animal shelter expanding capacity both name a protective subject and neither is about the
+hazard.
+
+**A second wrong label retracted.** The bounded `REMOTE_LOCALITY` residual was recorded as
+accepted; review declined it, correctly, and this is the second time a residual I wrote down
+honestly was simply not mine to accept. The pattern is now explicit: **a residual is a finding,
+not a permission.** Round 2 retracted one for the same reason.
+
+**One more duplicated authority.** `hasHawaiiAnchor()` became dead code while the gate matched
+anchors through a separate expression, so the whole-token property the H04 fixtures assert was no
+longer reachable from production. Both are built on one position helper now. **Six duplicated
+decisions across three rounds**, every one invisible to a green suite and every one surfaced by a
+mutation scoring `MISSED`.
+
+**A fourth capture** is identical to the second and third — 170 items, zero feed failures, 15
+hazard before and 8 after, the same eight retained and the same single locality-only residual — so
+deleting the deny-list and tightening locality substantially did not cost a single real record.
+
+
+### 2026-10-29 — review round 2: four more blockers, and one of them was my own wrong label
+
+| Blocker | The record | Ruling |
+|---|---|---|
+| H06/H22 | `California wildfire threatens homes.` / `Flood advisory for Maui cancelled.` | A deny-list cannot establish that an anchor supports the assertion. **“Same hazard” was in my comment and not in the code** |
+| §4 | `Earthquake detected near Hilo`, `Lava observed at Kīlauea` | Observation of a physical hazard IS qualifying; deleting the observation verbs was wrong |
+| H20 | `The evacuation order, lifted for Lahaina, remains in effect for Olowalu.` | **Must be true.** Implementation difficulty does not authorize pinning a false negative into the corpus |
+| H19/H21 | `Fatal shooting investigated in a Hawaiʻi lava field.` | The contract stands: keep the hazard evidence observable and reject at the event gate |
+
+**The one I most need to remember.** I recorded a wrong expected label as an accepted residual,
+with a table of alternatives to justify it. The table was honest and the conclusion was not mine to
+draw: the contract says the record is true, so “my three designs all fail” is a reason to find a
+fourth design, not a reason to assert false. The fourth design was locality — a resolution and an
+in-force phrase that point at different places are different claims — and review had already said
+so in one sentence. **Recording a residual honestly is not the same as being allowed to have it.**
+
+**The §4 lesson runs the other way from round 1.** In round 1 I removed the observation verbs to
+reject research reporting, which fixed the family and broke the contract's own category: §4 names
+observation as qualifying. The verb was never the discriminator — the OBJECT is. `lava observed at
+Kīlauea` and `researchers reported lava chemistry changes` use the same kind of verb, and only one
+names a finding. Both a `research` stop-word and a verb deletion were tried and both broke a
+required record; `RESEARCH_OBJECT` keeps `data`, `models` and `trends` out on purpose, because
+radar data detecting rotation is an observation and not a paper.
+
+**Gate separation, which is the structural result of this round.** Gate 2 asks whether hazard
+vocabulary is present; the event gate asks whether anything is happening. Folding the
+permanent-feature subtraction into gate 2 collapsed the two and quietly changed H01–H18 evidence
+semantics — which is why the lava-field negative stopped reaching the third gate and why the
+amendment's proof of H19 was weaker than it looked. The subtraction now applies only to the
+positions that can support an EVENT.
+
+**Two more duplicated decisions of mine, found by the same `MISSED` verdicts as last round.** Once
+gate 1 needed the qualifying clauses, the event gate was derived twice — in `classifyHazard` and
+again inside `hasLocalAnchor` — so removing either changed no answer. It is computed once and
+handed over. **That is five duplicated decisions across two rounds**, every one of them invisible
+to a green suite and every one of them caught by a mutation scoring `MISSED`. The pattern is now
+explicit enough to state as a rule: if two expressions can answer the same question, no mutation
+can prove either is load-bearing.
+
+**A third live capture** is unchanged from the second — 170 items, zero feed failures, 15 hazard
+before and 8 after, the same seven rejections and the same single locality-only residual — so
+restoring the observation verbs added no false positives on real feed text.
+
+
+### 2026-10-29 — review round 1 on the event gate: clause-scoped was not claim-scoped
+
+Read-only review found three contract blockers. All three reproduced exactly as described, which
+is worth recording on its own: they were specified precisely enough to be executable, and the
+first thing done with them was to run them rather than reason about them.
+
+| Blocker | The record | Why the implementation was wrong |
+|---|---|---|
+| H06/H22 | `California wildfire threatens homes.` / `Maui council meets today.` | Locality came from ANY non-denial clause, so unrelated local prose localized a remote hazard |
+| H20 | `Tsunami advisory cancelled, active investigation continues in Hawaii.` | Persistence anywhere in a clause revived a resolution anywhere in it |
+| H21 | `On the anniversary of the Maui wildfire, Honoapiilani Highway remains closed by flood damage.` | History vetoed the clause before its active consequence was considered |
+| §4 | `UH researchers reported new findings about Kilauea lava chemistry.` | `reported` was a hazard-onset verb |
+
+**The structural lesson.** Per-clause was the right shape and the wrong granularity. A clause can
+carry two claims, and every marker — negation, resolution, framing, and the hazard evidence
+itself — has to be associated with the claim it modifies, not with the clause it appears in. The
+`PERSISTENCE` group is gone entirely as a result: it existed only to revive a resolved clause, and
+once resolution is claim-scoped there is nothing to revive — an active claim beside a resolved one
+is simply a different claim.
+
+**The §4 research fix is a verb fix, not a stop-word.** Adding `research` to the indirect frame
+would have rejected the family and also deleted *“HVO researchers report lava continues at
+Kilauea”*, which review explicitly asked to preserve. Removing the passive reporting verbs does
+both: a report *about* a hazard is not the hazard, while what the lava does still counts.
+
+**Two defects in my own work, found while fixing theirs, and neither was reported by the suites.**
+The row-satisfaction test had two copies, so the mutation loosening the `allOf` conjunction changed
+only one of them and was scored `MISSED`. Gate 2 had two copies again for the same reason the
+record-wide gate came out in the first place. Both are now single named helpers. **Duplicated
+decisions are the recurring failure mode on this unit** — three times now, a second copy of a
+decision has meant no mutation could prove either copy was load-bearing.
+
+**Six twin fixtures stopped discriminating,** for the same reason five did in the previous round:
+their assertion verb was removed by the research fix, or sat out of reach of its hazard once
+proximity was required. Every one was repaired rather than deleted. That is eleven fixtures across
+two rounds that were passing without testing anything, and in both rounds the suite was green
+throughout.
+
+**A second capture, taken after the changes, confirmed no regression:** 170 items, zero feed
+failures, 15 hazard before and 8 after, seven changed labels all correct rejections, and the single
+remaining locality-only rejection is the recorded bare-`islands` item. The feed had rotated, so the
+item set is not identical to the first capture — this confirms the changes, it does not re-prove
+the first ledger.
+
+**Rulings accepted from review,** recorded so they are not re-litigated: bare `the islands` stays
+unresolved, because H03 and H04 do not permit publisher identity to repair it; the Olana
+preparedness explainer is false under the current contract unless its text asserts a current
+Hawaiʻi impact; and the latent boundary-split anchor issue may remain recorded.
+
+
+### 2026-10-29 — H19–H24 implemented; the H15/H16 capture ledgers
+
+**What the gate is.** Three named assertion groups — hazard onset, protective action, active
+operational consequence — four named disqualifiers — negation, resolution, history and
+preparedness, indirect aftermath — one persistence group that overrides resolution inside a
+clause, and a permanent-feature subtraction so terrain cannot vouch for a closure. Every one is a
+named list with its own mutation, which is what H23 asks for instead of one expression.
+
+**Why per clause.** Five of the contract's six required positives carry resolved or negated
+language. A record-wide veto on `contained`, `lifted` or `no` scores every negative in the
+amendment and deletes an evacuation order that is still in force. The structure is the decision;
+the vocabulary is secondary.
+
+**One deliberate deletion.** The record-wide hazard-evidence gate is gone. A clause-scoped test
+implies it, so keeping both left two checks where neither could be shown to be load-bearing — a
+mutation removing either changed no answer, because the other still rejected the record. Gate 2
+now lives in one named helper, `clauseHazardEvidence`, and the suite asserts on that helper rather
+than on a copy of it.
+
+**Five green mutations were green for the wrong reason.** The gate-2 cases for word boundaries,
+`swell`, `emergency`, `warning` and compound context all survived the new gate: their fixtures
+asserted no event, so loosening the vocabulary changed no answer. Each now has an
+assertion-bearing twin. The suite had been passing because the fixtures had stopped
+discriminating, which is the same failure mode as the PW-106 tests that asserted only
+“does not throw.”
+
+#### H15 ledger — 2026-10-29 capture, five feeds, 170 items, zero feed failures
+
+Old classifier is `b746dd9`. New is this branch. Same decoded pool, same shipped parser. Eight
+labels changed: **14 hazard items before, 8 after.** Titles are recorded as H15 requires; no feed
+body is stored.
+
+| # | Source | Old → new | Title | Contract rationale |
+|---|---|---|---|---|
+| 1 | Star-Advertiser | false → **true** | Evacuation warning issued for Kipahulu District of Haleakala National Park | H04 locality gap the capture proved. A real Maui evacuation warning that passed the hazard and event gates; `haleakala` and `kipahulu` added with provenance. The old classifier dropped it too |
+| 2 | Star-Advertiser | true → false | Letter: Are representatives up to climate policy challenge? | §4 indirect: an opinion letter. No clause asserts an event. This record is why `likely` was kept OUT of the forecast group |
+| 3 | KHON2 | true → false | Team Rubicon focuses on Maui mitigation work amid hurricane season | H21 long-term recovery, plus a season as a background condition. Both fixed and both fixtured separately |
+| 4 | KITV 4 | true → false | Airbnb.org expands emergency housing support for Hawaiʻi disaster survivors | H21 aid administration. No hazard, protective action or active consequence asserted |
+| 5 | KITV 4 | true → false | Kauai Hurricane Lowell Business Recovery Grant Program no longer accepting applications | H21 aid administration, and the grant program is itself closed |
+| 6 | KITV 4 | true → false | Tropical Storm Olana: Why Hawaiʻi should stay prepared, even without a direct hit | **Recorded as ambiguous, not as a clean rejection.** See Outstanding Verification |
+| 7 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.0M earthquake near Bonin Islands, Japan | H20 and H22, live. The only Hawaiʻi impact is expressly denied, so the remote quake cannot borrow the anchor |
+| 8 | KITV 4 | true → false | No tsunami threat to Hawaii after 7.2M earthquake in Vanuatu in Melanesia | As above. Required negative 1 appeared twice in one capture |
+
+**The eight FINAL hazard items,** with the group that qualified each. Seven were retained and one
+was added, which is what 14 → 8 with one addition and seven removals means; an earlier version of
+this line said "eight retained" and that was wrong: a flash flood warning and
+Hawaiʻi Island flood advisory (protective), the Kipahulu evacuation warning (protective), Maui
+evacuations and closures (protective), a large northwest swell expected to hit (onset), flash
+flooding possible for Maui County (onset), six Molokaʻi schools closed due to flooding
+(consequence), Oʻahu shelters open as the islands brace (onset), and shelters on Oʻahu and Maui for
+heavy rain (onset). Every one is current operational information.
+
+#### H16 ledger — the locality-only list, resolved item by item
+
+Three items had hazard evidence and no locality. H16 forbids averaging them, so each is resolved
+as a proved local anchor, a proved non-Hawaiʻi item, or a blocker:
+
+| Item | Resolution |
+|---|---|
+| Tuesday Evening Forecast — monsoon trough brings flood risk **to the islands** | **Proved local, unresolved.** A real flood watch in effect. Named in Outstanding Verification as a pre-existing H04 gap, referred up rather than fixed inside this claim |
+| Newsom signs order protecting Pacific Coast Highway from El Niño storms | **Proved non-Hawaiʻi.** California. Correctly rejected |
+| Melania Trump says she secured a one-city ceasefire for humanitarian aid | **Proved non-Hawaiʻi.** Correctly rejected |
+
+**The absence I committed to reporting as an absence.** Of the four production consequence
+families in the amendment, this capture contained an instance of **one**: aid administration,
+twice, both correctly rejected. It contained **no** litigation item, **no** supplies item and
+**no** tourism or price item. For those three families the capture is **evidence of nothing**, not
+evidence they are handled. The durable claim for all four rests on the deterministic fixtures and
+their mutations, exactly as the contract's evidence-interpretation section says it must.
+
+**Also found, and not a precision story.** Two of the four capture defects were FALSE NEGATIVES:
+real hazard records the implementation dropped. A review that had looked only at what the new
+classifier removed would have scored this capture as a clean six-item precision win and shipped
+both. That is the failure mode H16 exists to prevent, and it is the fourth time on this project
+that review of behaviour, not a green suite, found the defect.
+
+
+### 2026-10-29 — the H19–H24 implementation claimed; #64 absorbed
+
+#64 merged as `b746dd9` and could not record its own merge, so this claim advances the pointer and
+closes the amendment row. The contract row previously carried #63's run beside a pointer that had
+already moved, which is the same pointer/evidence mismatch #60 corrected; it is fixed here rather
+than left for a later sweep.
+
+**What the third gate has to be, and what it must not be.** H23 forbids an opaque replacement
+expression, an age cutoff and a global stop-word list, and the reason is visible in the corpus: six
+of the amendment's own required positives contain resolved or negated language. A record-wide veto
+on `lifted`, `contained` or `no` would score well on the negatives and delete an evacuation order
+that is still in effect. The gate therefore has to be scoped to the clause that carries each claim,
+which is a structural decision, not a vocabulary one.
+
+**Recorded in advance as a known residual, so it is not discovered as a finding later.** Locality
+is taken from any clause that is not a denial, which is what H22 requires: a resolved title's
+anchor may compose with an active summary, a denied local impact may not localize a remote event.
+A record whose only anchor sits inside a denial while a *different* active claim appears in another
+clause — `No tsunami threat to Hawaii; flash flood warning remains in effect` with no second anchor
+— will classify false. The contract's required positive 5 carries `O‘ahu` in its active clause, so
+the corpus does not decide this case. It is recorded as ambiguous for Codex to rule on rather than
+tuned silently in either direction.
+
 
 ### 2026-10-29 — event-aware hazard contract drafted; implementation remains separate
 
