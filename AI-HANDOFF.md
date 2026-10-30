@@ -81,23 +81,13 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-**Hazard-classifier composition-boundary clarification — ChatGPT Codex,
-`codex/hazard-composition-boundary`. CLAIMED 2026-10-29.**
-
-Documentation-only authority for the contract decision reached during #65 review. Scope is exactly
-`HAZARD-CLASSIFIER-CONTRACT.md` and `AI-HANDOFF.md`: forbid locality borrowing from lexical
-subject repetition across independent fields; preserve direct anchors, adjacent bare-locality
-continuations and the bounded same-field conjunction case; rewrite amendment positive 6 so the
-active assertion states its own Maui locality; and record the Need2Know shelter item and northwest-
-swell item as known conservative recall boundaries. No classifier, test, feed, route, client,
-workflow, dependency, WAF, Vercel or production setting changes are authorized. #65 remains parked
-until this clarification merges, after which Claude rebases and implements it.
+No active claims.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | `codex/hazard-composition-boundary` | Documentation-only clarification claimed above; contract work complete and preparing for review |
+| Codex | `codex/hazard-composition-boundary` | Documentation-only clarification complete in the accepted self-retirement review window; any further edit requires reclaim |
 | Claude | `claude/hazard-event-assertion` | #65 implementation parked at the measured ruling head until the clarification merges |
 
 `codex/active-hazard-contract` merged as #64 and is no longer in a review window.
