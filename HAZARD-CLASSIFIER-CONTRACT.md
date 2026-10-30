@@ -1,9 +1,9 @@
 # Pacific Watch — Hazard-classifier acceptance contract
 
-Status: **accepted and authoritative at H01–H18**, merged as #32 in `1b3c822` after Claude's
-read-only review (three rounds: the circular locality vocabulary, the `dependencies` wording, and
-the bare `Ocean View` collision) and the owner's merge decision. H19–H24 are the event-assertion
-amendment and govern the next implementation after this amendment is reviewed and merged.
+Status: **accepted and authoritative at H01–H24**. H01–H18 merged as #32 in `1b3c822` after
+Claude's read-only review and the owner's merge decision. H19–H24 merged as #64 in `b746dd9`.
+This revision clarifies the composition boundary exposed during #65 implementation review: lexical
+subject repetition across independent fields does not prove event identity or transfer locality.
 
 It merged still reading "proposed for review" — the fourth contract in this project to do so — and
 was corrected by the first claim that followed it. A status line describing a document's own
@@ -178,10 +178,20 @@ Negation and resolution are scoped to the claim they modify, not applied as a re
 record that says “No tsunami threat; flash flood warning remains in effect for Oʻahu” qualifies on
 the independently asserted flood warning. Conversely, “No tsunami threat to Hawaiʻi after a Japan
 earthquake” does not qualify: the only Hawaiʻi impact is expressly denied, so the remote earthquake
-cannot borrow that anchor. Under H07, an anchor in a resolved title may still support a different
-active same-locality claim in the summary; an anchor inside a denial of the only local impact may
-not. Title and summary may therefore provide complementary parts of the qualifying assertion, but
-a denied local impact cannot manufacture locality for an otherwise remote event.
+cannot borrow that anchor. H07 permits title and summary to provide complementary evidence only when the Hawaiʻi locality of
+the qualifying assertion remains independently provable. An anchor in one field does not transfer
+to an unanchored assertion in the other merely because both repeat the same lexical hazard or
+protective subject: matching `brush fire`, `evacuation`, `shelter` or `swell` is not proof
+that two clauses describe the same event. Composition remains permitted through a direct anchor in
+the qualifying assertion, an adjacent bare-locality fragment that can only continue that assertion,
+or the bounded same-field conjunction case where a hazard clause is joined to its protective action
+and the assertion introduces no physical hazard absent from the lender.
+
+An anchor inside a denial of the only local impact may not localize a remote event. Likewise, an
+anchor in a resolved title cannot localize an otherwise unanchored active summary through subject
+repetition alone. This conservative boundary can reject a genuinely local story whose prose leaves
+the active assertion's locality implicit; that is a named recall limitation, not permission to use
+publisher identity or a place-name gazetteer as substitute evidence.
 
 The purpose is not to suppress every story written after landfall. An evacuation still ordered, a
 shelter still open, an outage still affecting residents or a hazard-caused road still closed is
@@ -283,10 +293,29 @@ past tense or negation:
 4. “Power outage after severe weather still affects Hilo residents.”
 5. “No tsunami threat; flash flood warning remains in effect for Oʻahu.”
 6. Title “Evacuation lifted for one Maui neighborhood”; summary “Brush fire threatens a second
-   neighborhood and its evacuation order remains active.”
+   Maui neighborhood and its evacuation order remains active.”
 
 Every positive contains an independently asserted event or current operational state. Items 2–6
 also contain resolved or negated language, so a record-wide stop-word veto must fail the corpus.
+Item 6 deliberately repeats `Maui` in the active summary. The resolved title proves that a
+record-wide resolution veto is wrong; it does not lend its anchor to an independently unanchored
+claim.
+
+Two captured local stories define the accepted conservative recall boundary rather than new
+required positives:
+
+- an Oʻahu-shelters title whose summary later says that “the islands” are bracing for flash
+  flooding; and
+- a Hawaiʻi northwest-swell title whose summary supplies the ocean context but names only generic
+  “north shore”.
+
+Both are genuinely local hazard reporting. Both nevertheless classify false once unsupported
+cross-field subject lending is removed, because the qualifying clause carries no independently
+recognized Hawaiʻi anchor. The mixed `/api/news` representation still returns them; the focused
+`/api/news/hazard` representation may omit them. Restoring either by publisher identity, by a
+two-edge conjunction chain, or by a bounded catalogue of non-Hawaiʻi places would also admit a
+remote event with the same clause graph. A future improvement requires a separately contracted
+source of event identity or locality, not another lexical exception.
 
 The corpus must exercise title-only, summary-only, and cross-field evidence; ASCII and diacritic
 spellings; case and punctuation variation; entity-decoded text; and at least one locality that would
@@ -302,7 +331,7 @@ fail if the implementation used publisher identity instead of the content.
 | H04 | The maintained locality vocabulary meets the minimum set and is seeded from the Nolo evidence plus a real five-feed capture spanning at least three publication dates; bare `HI`, bare `island`, and ambiguous generic place phrases fail. | Provenance ledger for captured anchors plus table-driven positive and negative locality fixtures independent of the implementation list, including the bare `ocean view` collision. |
 | H05 | Direct and context-dependent hazard language follows the decision table. | Every required positive and negative passes; mutations restoring `erupt`, `swell`, `emergency`, `warning`, `closed`, or bare `outage` as substrings are caught. |
 | H06 | A remote hazard remains false unless the text states Hawaiʻi impact; remote origin plus Hawaiʻi impact may pass. | California/Texas negatives and the Japan-quake/Hawaiʻi-tsunami positive. |
-| H07 | Title and summary can supply complementary evidence. | Required positive 11, plus the inverse arrangement and summary-only cases. |
+| H07 | Title and summary can supply complementary evidence only where the qualifying assertion's locality remains independently provable; repeated lexical subjects across independent fields do not transfer locality. | Required positive 11, its inverse arrangement and summary-only cases; a same-token Maui/California adversary must remain false. |
 | H08 | Missing or empty title/summary cannot gain a label from substituted source, fetch, or current-state data. | Null/empty fixtures; no fallback to outlet name or URL. |
 | H09 | `/api/news` still returns every selected item with an explicit boolean; `/api/news/hazard` contains only items classified true by the same helper. | Handler-level assertions on both entrypoints. |
 | H10 | Hazard filtering still precedes sorting/capping over the full deduplicated pool. | Existing sixty-item adversarial fixture remains green. |
@@ -311,13 +340,13 @@ fail if the implementation used publisher identity instead of the content.
 | H13 | Every classifier assertion is load-bearing. | Mutation cases cover locality removal, boundary loosening, each context-dependent family, a required true-positive removal, and filter/helper divergence; zero `MISSED`, `ANCHOR LOST`, or `AMBIGUOUS`. |
 | H14 | The pure/API suites still run with nothing installed and runtime `dependencies` remains absent or empty. | Empty-directory dependency-free run plus `package.json` diff; do not add an empty key merely to satisfy this row. |
 | H15 | The implementation is reviewed against a contemporaneous raw-feed capture, not only invented prose. | Run old and new classifiers over the same decoded five-feed pool; enumerate every changed label with title, source, old/new result, and contract rationale. Do not commit full copyrighted feed bodies. |
-| H16 | Live evidence cannot hide false negatives or vocabulary gaps behind a precision-only tally. | Review every item removed by the new classifier and every new/retained hazard item. Separately enumerate every `hazard evidence = true / locality = false` item and resolve it as a proved local anchor, proved non-Hawaiʻi item, or blocker; unresolved items are never averaged away. |
+| H16 | Live evidence cannot hide false negatives or vocabulary gaps behind a precision-only tally. | Review every item removed by the new classifier and every new/retained hazard item. Separately enumerate every `hazard evidence = true / locality = false` item and resolve it as a proved local anchor, proved non-Hawaiʻi item, blocker, or contract-authorized conservative recall boundary whose indistinguishable remote adversary is recorded. Unresolved items are never averaged away. |
 | H17 | Preview preserves both canonical representations and their G1 cache identity while showing the new labels. | `/api/news` remains mixed, `/api/news/hazard` is a subset by classifier truth, both paths resolve, arbitrary query variants converge, and the representations stay distinct. |
 | H18 | Production verification is separate from implementation and merge. | After owner-approved merge: served code equals merged `main`; both endpoints return `200`; capture one mixed and one hazard-only response and record any ambiguous classification honestly. |
 | H19 | Hazard language and locality are insufficient without an asserted event or ongoing operational impact. Publication time, source identity and current clock state cannot supply the third gate. | Required amendment negatives and positives, null/empty cases, plus a mutation that removes or unconditionally passes the event gate and is caught. |
-| H20 | Negated or resolved hazard claims do not qualify by themselves, while an independent active claim in the same record may qualify. | `No tsunami threat` and cancelled-advisory negatives; mixed tsunami/flood, contained-fire/active-order and lifted/active split-field positives; mutations that make negation a record-wide veto or ignore it are caught. |
+| H20 | Negated or resolved hazard claims do not qualify by themselves, while an independently localized active claim in the same record may qualify. | `No tsunami threat` and cancelled-advisory negatives; mixed tsunami/flood, contained-fire/active-order and rewritten lifted/active split-field positives; mutations that make negation a record-wide veto or ignore it are caught. |
 | H21 | Permanent/background features and indirect aftermath do not become events merely by co-occurring with hazard vocabulary and a Hawaiʻi anchor. Direct public-safety consequences that remain active still qualify. | Lava-field, anniversary, preparedness and four consequence-family negatives paired with active closure, outage, evacuation and hazard-continuation positives. |
-| H22 | The Hawaiʻi anchor supports the qualifying assertion. H07 permits a resolved title's anchor to compose with an active same-locality summary, but a denied Hawaiʻi impact cannot localize an otherwise remote event. | Japan-earthquake/no-Hawaiʻi-threat negative beside the existing Japan-quake/Hawaiʻi-advisory positive, plus title/summary complementary cases in both directions. |
+| H22 | The Hawaiʻi anchor supports the qualifying assertion. A resolved or anchored field does not localize an independent unanchored field through lexical subject repetition; a denied Hawaiʻi impact likewise cannot localize a remote event. | Japan-earthquake/no-Hawaiʻi-threat negative beside the Japan-quake/Hawaiʻi-advisory positive; rewritten positive 6 with `Maui` in the active summary; same-token Maui/California adversary; named Need2Know and northwest-swell recall boundaries. |
 | H23 | The event decision is expressed through named, reviewable groups or helpers, not a single opaque replacement expression, age cutoff or global stop-word list. | Source review; focused mutations for each negative family and each surviving positive family; zero `MISSED`, `ANCHOR LOST` or `AMBIGUOUS`. |
 | H24 | Implementation changes only classifier semantics and named News verification. H01–H18, canonical representations, whole-pool filtering, schema, cache/WAF controls and dependency-free runtime remain intact. | Existing pure, API, DOM and mutation suites stay green; contemporaneous H15/H16 ledgers add event-gate results and enumerate every changed label before merge. |
 
@@ -332,6 +361,11 @@ If a live item is genuinely ambiguous, record it as ambiguous and decide whether
 an amendment; do not tune a keyword solely to make that day's precision number look better. If an
 implementation cannot satisfy locality without dropping a required positive, stop for review rather
 than weakening the gate silently.
+
+A contract-authorized conservative recall boundary is a resolution, not a precision win: record the
+real local item, the indistinguishable remote adversary and the forbidden inference that would be
+needed to separate them. It never authorizes silently dropping a future captured item, and it must
+be revisited if a new deterministic source of event identity or locality becomes available.
 
 ## Implementation boundary
 
