@@ -812,6 +812,11 @@ async function main() {
      tsunami advisory applies. */
   check('an indirect-aftermath clause does not lend its anchor',
     classify('Tsunami advisory remains in effect.', 'Maui wildfire attorney fee caps debated.'), false);
+  /* The same rule where composition would otherwise succeed: the lender shares its subject with
+     the field carrying the assertion, so only the disqualifier stops it. Without that, litigation
+     about a flood warning would say where the flood warning applies. */
+  check('  including when it shares a subject with the assertion',
+    classify('Flood warning remains in effect.', 'Maui flood warning litigation continues in court.'), false);
   /* §4 observation: English permits both word orders for both families, so the test is whether
      the hazard HEADS the verb's noun phrase rather than which side of the verb it sits on. */
   check('an observation qualifies with the hazard after the verb',
@@ -823,6 +828,42 @@ async function main() {
     classify('Earthquake swarm detected near Hilo.', ''), true);
   check('  and a compound hazard object does too',
     classify('USGS detected earthquake swarm near Hilo.', ''), true);
+
+  console.log('\nH07/H22/§4 — the review ruling on composition, and the three cases round 5 found:');
+  /* THE RULING, implemented: a shared subject, an explicit clause structure, or a bare locality
+     continuation may establish composition. Hazard-or-protective CATEGORY alone may not. */
+  check('a resolved hazard does not lend to an unrelated advisory by category alone',
+    classify('Tsunami advisory remains in effect.', 'Maui brush fire contained.'), false);
+  check('  while an explicit conjunction inside one field does compose',
+    classify('Maui brush fire is contained, but the evacuation order remains in effect.', ''), true);
+  check('  and a subject shared with the field carrying the assertion does',
+    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
+             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+  check('  and a bare locality continuation does',
+    classify('Flood warning issued', 'for Maui through tonight.'), true);
+
+  /* §4 observation, as phrase headedness. The hazard has to HEAD the noun phrase the verb takes. */
+  check('an unlisted modifier does not break a physical observation',
+    classify('USGS detected a magnitude 4 earthquake near Hilo.', ''), true);
+  check('  while a research artefact heading the phrase is still a report',
+    classify('Lava findings reported by researchers at K\u012Blauea.', ''), false);
+
+  console.log('\nH15/H16 — the seventh capture: one false positive and one near-miss:');
+  /* FALSE POSITIVE: NWS headlines are present tense, so an expired warning reads 'Warnings
+     Expire'. Bare `expire` was missing and the warning read as in force. */
+  check('an expired warning is not in force',
+    classify('First Alert Forecast: Flash Flood Warnings Expire for East Maui', ''), false);
+  /* The same record WITH its summary is still a hazard, for the right reason: the flooding threat
+     that remains. Its locality sits in `mauka areas of Maui`, which local forecasts write
+     constantly, so those two words joined the fragment vocabulary. */
+  /* A record where the mauka fragment is the ONLY path to a locality. The capture record below
+     also carries 'Hawaii Island', which is a locality fragment in its own right, so it cannot
+     show that these two words matter. */
+  check('a mauka fragment lends its locality',
+    classify('Flash flooding continues this evening', 'for the mauka areas of Maui.'), true);
+  check('  while a flooding threat that remains still qualifies, through a mauka fragment',
+    classify('First Alert Forecast: Flash Flood Warnings Expire for East Maui and East Big Island',
+             'The threat of flooding will remain into the evening, primarily for the windward and mauka areas of Maui and Hawaii Island.'), true);
 
   console.log('\nH15/H16 — two false negatives the fifth capture found, both live hazard records:');
   /* A warning in force for one island and cancelled for another, verbatim from the capture.

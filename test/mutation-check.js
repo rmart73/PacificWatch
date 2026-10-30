@@ -1063,8 +1063,8 @@ const mutations = [
   /* H19: the gate itself. Removing it restores the behaviour the amendment was written against:
      hazard vocabulary plus a Hawaii anchor labelled a fee-cap hearing as a hazard. */
   { name: 'the event-assertion gate removed',
-    from: "    if (state) qualified.push({ clause: clause, state: state });",
-    to:   "    qualified.push({ clause: clause, state: state || 'onset' });",
+    from: "    if (state) { clause.state = state; qualified.push(clause); }",
+    to:   "    { clause.state = state || 'onset'; qualified.push(clause); }",
     expect: ['false: Maui wildfire attorney fee caps debated.'],
     suite: 'news', target: 'api' },
 
@@ -1079,7 +1079,7 @@ const mutations = [
      deletes a flash flood warning that is in effect beside a denied tsunami. */
   { name: 'negation becomes a record-wide veto',
     from: "  if (!qualified.length) return false;",
-    to:   "  if (!qualified.length || clauses.some(c => hasAny(c, NEGATION))) return false;",
+    to:   "  if (!qualified.length || clauses.some(c => hasAny(c.text, NEGATION))) return false;",
     expect: ['true:  negated claim beside an independent active one'],
     suite: 'news', target: 'api' },
 
@@ -1103,7 +1103,7 @@ const mutations = [
   /* H20: resolution record-wide deletes the contained fire whose evacuation order stands. */
   { name: 'resolution becomes a record-wide veto',
     from: "  /* Gate 3: locality that supports one of those assertions. */",
-    to:   "  if (clauses.some(clause => hasAny(clause, RESOLUTION))) return false;",
+    to:   "  if (clauses.some(clause => hasAny(clause.text, RESOLUTION))) return false;",
     expect: ['true:  resolved hazard, active protective action'],
     suite: 'news', target: 'api' },
 
@@ -1191,8 +1191,8 @@ const mutations = [
   /* H23: clause splitting is the structure the whole gate rests on. Collapse it and a storm that
      has passed resolves an outage story that is still about outages. */
   { name: 'clause splitting collapsed to one clause per field',
-    from: "    .split(CLAUSE_BREAK_RE)",
-    to:   "    .split(/\\u0000/)",
+    from: "    const parts = String(pair[0] == null ? '' : pair[0]).toLowerCase().split(CLAUSE_BREAK_RE);",
+    to:   "    const parts = [String(pair[0] == null ? '' : pair[0]).toLowerCase()];",
     expect: ['\"Hawaiian Electric\" anchors'],
     suite: 'news', target: 'api' },
 
@@ -1266,16 +1266,19 @@ const mutations = [
   /* H22: WHAT is being localized decides what may lend. A hazard clause lends to a qualifying
      protective action, never to a qualifying hazard -- otherwise a resolved Maui flood advisory
      localizes an Alberta wildfire. */
-  { name: 'the hazard-lending rule ignores what is being localized',
-    from: "  const wantsHazard = qualified.some(q => q.state === 'protective' || q.state === 'consequence');",
-    to:   "  const wantsHazard = true;",
-    expect: ['an unlisted remote place does not borrow an unrelated resolved clause'],
+  /* H07, per review's ruling: a shared SUBJECT may compose, a shared category may not. Dropping
+     the subject test restores the category rule and a resolved Maui brush fire localizes an
+     unrelated tsunami advisory again. */
+  { name: 'the shared-subject test dropped from composition',
+    from: "        if (subjects.some(t => hasPhrase(witness.text, t))) return true;",
+    to:   "        return true;",
+    expect: ['a resolved hazard does not lend to an unrelated advisory by category alone'],
     suite: 'news', target: 'api' },
 
   /* H22: the lending clause has to be ABOUT the claim. Without this, any non-denial clause lends,
      which is the original blocker: unrelated local prose localizes a hazard with no place. */
   { name: 'any anchored clause allowed to lend',
-    from: "    if (wantsHazard && clauseHazardEvidence(clause)) return true;",
+    from: "    if (isLocalityFragment(lender.text)) return true;",
     to:   "    return true;",
     expect: ['nor does it when the hazard clause names no place at all'],
     suite: 'news', target: 'api' },
@@ -1292,9 +1295,11 @@ const mutations = [
      anchor to the clause that says what the islands are bracing for. */
   /* H22: a clause the event gate would throw out must not lend its locality. */
   { name: 'a disqualified clause allowed to lend its anchor',
-    from: "    if (clauseDisqualified(clause)) continue;",
+    from: "    if (clauseDisqualified(lender.text)) continue;",
     to:   "",
-    expect: ['an indirect-aftermath clause does not lend its anchor'],
+    /* Pointed at the record where composition would otherwise succeed, so this case proves the
+       disqualifier rather than riding on the shared-subject test. */
+    expect: ['including when it shares a subject with the assertion'],
     suite: 'news', target: 'api' },
 
   /* §4 research, both directions. The object discriminates a finding from an observation, so
@@ -1302,8 +1307,8 @@ const mutations = [
      is what the previous round did -- deletes a real detection. */
   /* §4: an observation qualifies on what it observed, so the hazard has to come first. Without
      this a report ABOUT a hazard qualifies, whatever its object is called. */
-  { name: 'the observation word-order rule removed',
-    from: "      if (reportVerbs.indexOf(i) !== -1 && !observesHazard(tokens, evidence, i)) continue;",
+  { name: 'the observation head test removed',
+    from: "      if (reportVerbs.indexOf(i) !== -1 && !observesHazard(tokens, coverage, i)) continue;",
     to:   "",
     expect: ['and a report sitting beside the hazard word is still only a report',
              'a report about a hazard does not qualify, whatever the object is called',
@@ -1363,8 +1368,8 @@ const mutations = [
   /* §4: a clause break at `after` separates an active consequence from the hazard that caused
      it, and the contract names that construction as qualifying. */
   { name: 'after restored as a clause boundary',
-    from: "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(?:but|while|however|although|though|as|and|meanwhile)\\s/;",
-    to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(?:but|while|however|although|though|as|and|meanwhile|after)\\s/;",
+    from: "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(but|while|however|although|though|as|and|meanwhile)\\s/;",
+    to:   "const CLAUSE_BREAK_RE = /(?<!\\b[a-z])[.!?;:]+(?=\\s|$)|\\s(but|while|however|although|though|as|and|meanwhile|after)\\s/;",
     expect: ['a road that remains closed after flooding is an active consequence'],
     suite: 'news', target: 'api' },
 
@@ -1387,15 +1392,16 @@ const mutations = [
   /* §4: the head test has two sides and both carry records. Dropping the subject side rejects
      a compound hazard subject; dropping the object side rejects a hazard after the verb. */
   { name: 'the observation subject side removed',
-    from: "  for (let k = 1; k <= OBJECT_HEAD_REACH; k++) {\n    if (evidence.indexOf(i - k) !== -1) return true;\n  }",
+    from: "  if (i - 1 > start && coverage.indexOf(i - 1) !== -1) return true;",
     to:   "",
     expect: ['a compound hazard subject still observes'],
     suite: 'news', target: 'api' },
 
-  { name: 'the observation object head reach narrowed to adjacency',
-    from: "const OBJECT_HEAD_REACH = 2;",
-    to:   "const OBJECT_HEAD_REACH = 1;",
-    expect: ['and a compound hazard object does too'],
+  { name: 'the observation object side removed',
+    from: "  if (end > i + 1 && coverage.indexOf(end - 1) !== -1) return true;",
+    to:   "",
+    expect: ['and a compound hazard object does too',
+             'an unlisted modifier does not break a physical observation'],
     suite: 'news', target: 'api' },
 
   /* H20: a protective subject consults its OWN locality, not only an in-force phrase. The live
@@ -1409,16 +1415,34 @@ const mutations = [
 
   /* H07: the same-hazard lender, both directions. Removing it loses the complementary-evidence
      record the capture found; ignoring WHICH hazard turns it back into any-clause-lends. */
-  { name: 'the same-hazard lender removed',
-    from: "    if (qualified.some(q => sharesHazardSubject(clause, q.clause))) return true;",
+  /* The hazard-phenomenon compounds exist only for the head test. Dropping them makes a real
+     USGS detection read as a non-hazard head. */
+  { name: 'the hazard-compound heads dropped',
+    from: "  'earthquake swarm', 'earthquake swarms', 'quake swarm', 'quake swarms',",
     to:   "",
-    expect: ['a clause naming the same hazard subject lends its locality'],
+    expect: ['a compound hazard subject still observes',
+             'and a compound hazard object does too'],
     suite: 'news', target: 'api' },
 
-  { name: 'the same-hazard lender ignores which hazard',
-    from: "  return hazardTerms(a).some(t => terms.indexOf(t) !== -1);",
-    to:   "  return true;",
-    expect: ['nor does it when the hazard clause names no place at all'],
+  /* H07: the explicit-structure branch. Without it required positive 2's `but` stops composing. */
+  { name: 'explicit clause structure no longer composes',
+    from: "      if (lender.field === q.field && Math.abs(i - j) === 1 &&",
+    to:   "      if (false && Math.abs(i - j) === 1 &&",
+    expect: ['while an explicit conjunction inside one field does compose'],
+    suite: 'news', target: 'api' },
+
+  /* H20: the present-tense resolution form the capture found. */
+  { name: 'the bare expire resolution form dropped',
+    from: "  'expire',",
+    to:   "",
+    expect: ['an expired warning is not in force'],
+    suite: 'news', target: 'api' },
+
+  /* H04/H07: the local directional words that carry a real locality fragment. */
+  { name: 'the mauka and makai fragment words dropped',
+    from: "  'mauka', 'makai',",
+    to:   "",
+    expect: ['a mauka fragment lends its locality'],
     suite: 'news', target: 'api' },
 
   /* H04: the vocabulary gap that the Olowalu evacuation exposed. Removing those anchors deletes
