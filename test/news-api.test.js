@@ -832,6 +832,28 @@ async function main() {
   console.log('\nH07/H22/§4 — the review ruling on composition, and the three cases round 5 found:');
   /* THE RULING, implemented: a shared subject, an explicit clause structure, or a bare locality
      continuation may establish composition. Hazard-or-protective CATEGORY alone may not. */
+  /* Each composition branch has to connect the lender to the ASSERTION, not merely to something
+     else in the record. These two records have the relationship at one end only. */
+  check('a conjunction joining unrelated prose is not a relationship',
+    classify('Maui council meets today, while California wildfire threatens homes.', ''), false);
+  check('  nor is a hazard clause joined to an unrelated remote hazard',
+    classify('Maui brush fire is contained, while California wildfire threatens homes.', ''), false);
+  /* Each of the two conditions on the conjunction branch needs its own record, because either one
+     alone rejects the pair above and neither could then be shown to matter. */
+  check('  and a no-hazard lender cannot compose even with a protective assertion',
+    classify('Maui council meets today, while California issues evacuation orders.', ''), false);
+  /* The fragment branch has to be beside the assertion. A fragment two clauses away is not
+     continuing it. */
+  check('a locality fragment away from the assertion does not continue it',
+    classify('Wildfire threatens homes.', 'Crews responded. In Maui.'), false);
+
+  check('a witness sharing only the FIELD with the assertion is not a relationship',
+    classify('Maui animal shelters expand capacity.',
+             'Shelters receive donations. California wildfire threatens homes.'), false);
+  check('  while a witness in the assertion\u2019s own conjunction chain is',
+    classify('Need2Know: O\u02BBahu shelters open, public transportation services continue for now',
+             'Here is what to know about shelters and public transportation as the islands brace for flash flooding.'), true);
+
   check('a resolved hazard does not lend to an unrelated advisory by category alone',
     classify('Tsunami advisory remains in effect.', 'Maui brush fire contained.'), false);
   check('  while an explicit conjunction inside one field does compose',

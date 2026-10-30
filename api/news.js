@@ -334,7 +334,9 @@ const EVENT_ONSET = [
   /* §4 makes OBSERVATION of a physical hazard qualifying, so these stay. They were briefly deleted
      to reject research reporting and that was wrong: it made "Earthquake detected near Hilo" and
      "Lava observed at Kilauea" false, which are exactly the observations the contract admits.
-     The research family is discriminated by its OBJECT instead -- see RESEARCH_OBJECT. */
+     The research family is discriminated by observesHazard() instead, which asks whether the
+     hazard HEADS the noun phrase the verb takes. An object vocabulary was tried first and was
+     open-ended in both directions. */
   'observed', 'detected', 'recorded', 'reported'
 ];
 
@@ -365,9 +367,9 @@ const PROTECTIVE_SUBJECT = [
 const PROTECTIVE_ISSUANCE = [
   'evacuate', 'evacuated', 'ordered', 'mandatory',
   'declared', 'declares', 'signs', 'issued', 'issues', 'activated',
-  /* bare 'open' is how a shelter notice is actually written -- "O'ahu shelters open" --
-     and the capture record turns on it. The residual is recorded: an animal shelter described as
-     open, in a record that also carries a hazard, could lend its anchor. */
+  /* bare 'open' is how a shelter notice is actually written -- "O'ahu shelters open". It no longer
+     carries a lending residual: protective-action lending was removed, so naming an open shelter
+     cannot localize anything by itself. */
   'open', 'opens', 'opened', 'urged', 'urges', 'advised', 'advises'
 ];
 const PROTECTIVE_ACTION = PROTECTIVE_SUBJECT.concat(PROTECTIVE_ISSUANCE);
@@ -755,48 +757,77 @@ function hazardTerms(clause) {
   }
   return found;
 }
-function sharesHazardSubject(a, b) {
-  const terms = hazardTerms(b);
-  return hazardTerms(a).some(t => terms.indexOf(t) !== -1);
+
+/* The clauses reachable from j by captured conjunctions, inside one field. "Here is what to know
+   about shelters AND public transportation AS the islands brace for flash flooding" is one
+   assertion chain of three clauses; a sentence boundary starts a new one.
+
+   This is what makes a witness mean something. Sharing a FIELD with the assertion was not enough:
+   "Shelters receive donations. California wildfire threatens homes." puts a shelter witness and a
+   wildfire claim in one summary with nothing connecting them. */
+function conjunctionChain(clauses, j) {
+  const chain = [j];
+  for (let k = j; k > 0; k--) {
+    if (!clauses[k].joined || clauses[k].field !== clauses[k - 1].field) break;
+    chain.push(k - 1);
+  }
+  for (let k = j + 1; k < clauses.length; k++) {
+    if (!clauses[k].joined || clauses[k].field !== clauses[k - 1].field) break;
+    chain.push(k);
+  }
+  return chain;
 }
 
 /* Gate 1, scoped to the assertion it has to support — H06, H07, H22.
 
-   An anchor inside the qualifying clause is always enough. Borrowing needs a STATED relationship
-   between the lending clause and the assertion, which is review's ruling on H07: a shared subject,
-   an explicit clause structure, or a bare locality continuation may establish composition, and
-   matching categories may not.
+   An anchor inside the qualifying clause is always enough. Borrowing needs a relationship that
+   connects the lender TO THE QUALIFYING ASSERTION, not merely to something else in the record.
+   Review's two findings were the same defect twice: the implementation had two edges and never
+   proved they formed one claim. So each branch below names both ends.
 
-   The category rule is gone. "Tsunami advisory remains in effect." beside "Maui brush fire
-   contained." was composing because one clause carried some hazard and the other some protective
-   action, with nothing connecting them. */
+     (1) a bare locality fragment IMMEDIATELY BESIDE the assertion -- required positive 11's
+         "Flood warning issued" / "for Maui through tonight", where the fragment continues the
+         clause that carries the assertion and nothing else;
+     (2) a HAZARD-bearing clause joined to the assertion by a captured conjunction inside one
+         field, where the assertion is a protective action or a consequence -- required positive
+         2's "Maui brush fire is contained, BUT the evacuation order remains in effect", which is
+         a hazard and the protective action it caused, explicitly joined. A conjunction alone is
+         not the relationship: "Maui council meets today, while California wildfire threatens
+         homes" joins two unrelated claims, and the lender there carries no hazard at all;
+     (3) a subject shared with a clause in the assertion's own conjunction chain -- the live
+         Need2Know record, where `shelters` is in the title and again in the summary clause that
+         chains into the flood claim through `and` and `as`.
+
+   Category alone may not compose, which is review's ruling, and nor may a clause the event gate
+   disqualifies as history, preparedness or indirect aftermath. A RESOLVED clause may still lend,
+   because required positive 2 depends on it. */
 function hasLocalAnchor(qualified, clauses) {
   if (qualified.some(q => anchorSupports(q.text))) return true;
-  for (const lender of clauses) {
+  for (let i = 0; i < clauses.length; i++) {
+    const lender = clauses[i];
     if (!anchorSupports(lender.text)) continue;
-    /* A clause the event gate would throw out never lends, whatever it contains. */
     if (clauseDisqualified(lender.text)) continue;
-    /* (3) a bare locality fragment continues the clause before it — required positive 11. */
-    if (isLocalityFragment(lender.text)) return true;
     const subjects = claimSubjects(lender.text);
+    const lenderHazards = hazardTerms(lender.text);
     for (const q of qualified) {
-      /* (2) explicit clause structure: adjacent clauses in one field joined by a conjunction —
-         required positive 2's `but`. */
-      const i = clauses.indexOf(lender), j = clauses.indexOf(q);
-      if (lender.field === q.field && Math.abs(i - j) === 1 &&
-          (i < j ? q.joined : lender.joined)) return true;
-      /* (1) a shared subject, witnessed somewhere in the field that carries the assertion and
-         not only inside the lender itself. The live open-shelter record turns on this: `shelters`
-         is in the title and again in the summary that introduces the flood claim. */
-      for (const witness of clauses) {
-        if (witness === lender || witness.field !== q.field) continue;
-        if (subjects.some(t => hasPhrase(witness.text, t))) return true;
+      const j = clauses.indexOf(q);
+      /* (1) */
+      if (Math.abs(i - j) === 1 && isLocalityFragment(lender.text)) return true;
+      /* (2) */
+      if (lenderHazards.length && lender.field === q.field && Math.abs(i - j) === 1 &&
+          (i < j ? q.joined : lender.joined) &&
+          (q.state === 'protective' || q.state === 'consequence')) return true;
+      /* (3) */
+      if (subjects.length) {
+        for (const k of conjunctionChain(clauses, j)) {
+          if (clauses[k] === lender) continue;
+          if (subjects.some(t => hasPhrase(clauses[k].text, t))) return true;
+        }
       }
     }
   }
   return false;
 }
-
 /* WHERE the Hawaii anchors are. One authority: the gate needs positions and the suite needs a
    boolean, and building the boolean on the positions is what stops the two from disagreeing. */
 function hawaiiAnchorPositions(tokens) {
