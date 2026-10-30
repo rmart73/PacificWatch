@@ -81,13 +81,21 @@ against the merged Git blob and checked both canonical news endpoints directly.
 
 ### Active claims
 
-No active claims.
+**Hazard-classifier composition-boundary clarification — ChatGPT Codex,
+`codex/hazard-composition-boundary`. RECLAIMED 2026-10-29 after #66 review.**
+
+Claude's read-only review proved that the preserved same-field hazard-to-protective conjunction path
+admits the ruling's own remote adversary. Scope remains documentation-only and unchanged:
+`HAZARD-CLASSIFIER-CONTRACT.md` and `AI-HANDOFF.md`. Remove that path from the authority, rewrite
+amendment positive 2 so its active clause states `Maui`, update the durable reasoning and retire
+again on the corrected final head. No classifier, test, feed, route, client, workflow, dependency,
+WAF, Vercel or production-setting change is authorized.
 
 ## Active Branches
 
 | Agent | Branch | Purpose |
 |---|---|---|
-| Codex | `codex/hazard-composition-boundary` | Documentation-only clarification complete in the accepted self-retirement review window; any further edit requires reclaim |
+| Codex | `codex/hazard-composition-boundary` | Documentation-only clarification reclaimed after review proved the preserved conjunction path unsound |
 | Claude | `claude/hazard-event-assertion` | #65 implementation parked at the measured ruling head until the clarification merges |
 
 `codex/active-hazard-contract` merged as #64 and is no longer in a review window.
