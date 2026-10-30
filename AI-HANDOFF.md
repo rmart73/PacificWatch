@@ -126,6 +126,7 @@ review rounds, three board updates).
 | 9 amendment negatives, 6 positives | Green, and **all nine are asserted to reach the third gate**, which is what the contract requires. For one round the lava-field case did not, because the permanent-feature subtraction had been folded into gate 2; review ruled the contract stands and the subtraction moved to the event gate |
 | Mutation per negative and surviving positive family | **237 of 237** caught; zero `MISSED`, `ANCHOR LOST`, `AMBIGUOUS` |
 | H15 contemporaneous capture | 170 items, five feeds, zero feed failures. **Four captures taken**; the last three are identical to each other, so each round's changes are shown not to regress real feed text. Ledger below is the first |
+| Exact-head hosted run | `40995302071` at `a61b3c4`, **attempt 2**, 552 / 669 / 237 of 237 with 237 verdict lines. **Attempt 1 failed on a non-reproducible `MISSED`** in an unrelated N02 case and is recorded in Outstanding Verification rather than omitted |
 | H16 locality-only list resolved item by item | Three items, each resolved below; one is an unresolved residual and is named as one |
 
 Suites: **552 pure** (was 450), **669 DOM** (unchanged), **237 of 237 mutations** (was 196).
@@ -246,6 +247,30 @@ thing it describes moves, and writing a correct entry elsewhere does not update 
 performs #28's expected self-close transition immediately after the merge.
 
 ## Outstanding Verification and Decisions
+
+- **The mutation harness produced a non-reproducible `MISSED`, and it was not on a case this
+  branch touched.** Run `40995302071` **attempt 1** reported `236 of 237` with one `MISSED` on
+  *only the round-trip equality check removed* — an N02 publication-time case that exists
+  unchanged on `main` and in three earlier green runs on this branch. **Attempt 2 at the same head
+  `a61b3c4` reported `237 of 237` with 237 verdict lines.** Both attempts ran well inside the
+  ceiling: 488s and 511s against 1200s.
+
+  **Why this matters more than one flaky case.** The harness scores a mutant that produces no
+  output as `MISSED`, because it looks for a `FAIL` line and finds none. A child process that
+  crashed, was killed, or wrote nothing under contention is therefore indistinguishable from an
+  assertion that genuinely failed to discriminate. That is a defect in the **evidence model**, not
+  in the classifier: it means a green mutation run cannot by itself distinguish "every case was
+  caught" from "every case either was caught or silently produced nothing".
+
+  **Not diagnosed, and deliberately not guessed at.** One occurrence in four hosted mutation runs
+  on this branch. CI pins Node `24.21.0` and local development runs `18.20.4`, so a version-
+  dependent difference was the first hypothesis and is **ruled out** by the same case passing on
+  the hosted runner in runs `40977966070`, `40984518638` and `40990747098`, and again on attempt 2.
+
+  **Recommended for a separate C-series unit, not fixed here:** give the harness an explicit
+  verdict for "the mutant produced no output at all", so a silent child can never be reported as
+  a missed assertion. That is a change to the evidence model and belongs with C12/C13, outside
+  this claim's boundary.
 
 - **A real Hawaiʻi flood watch is dropped because its only locality word is “the islands.”**
   From the 2026-10-29 capture: *“Tuesday Evening Forecast — Heavy rain overnight as a monsoon trough
